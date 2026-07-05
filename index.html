@@ -319,7 +319,7 @@
   .lp-sub-item .lp-row-name { font-size: 0.69rem; }
   .modal-overlay { position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.55); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; padding: 20px; opacity: 0; pointer-events: none; transition: opacity 0.22s ease; }
   .modal-overlay.open { opacity: 1; pointer-events: all; }
-  .modal-box { background: #111; border: 1px solid rgba(255,255,255,0.11); border-radius: 20px; padding: 26px 24px; width: 100%; max-width: 380px; box-shadow: 0 32px 80px rgba(0,0,0,0.7); position: relative; transform: translateY(14px) scale(0.98); transition: transform 0.28s cubic-bezier(0.23,1,0.32,1); }
+  .modal-box { background: #111; border: 1px solid rgba(255,255,255,0.11); border-radius: 20px; padding: 26px 24px; width: 100%; max-width: 380px; max-height: 90vh; overflow-y: auto; box-shadow: 0 32px 80px rgba(0,0,0,0.7); position: relative; transform: translateY(14px) scale(0.98); transition: transform 0.28s cubic-bezier(0.23,1,0.32,1); }
   .modal-overlay.open .modal-box { transform: translateY(0) scale(1); }
   .modal-close { position: absolute; top: 14px; right: 16px; background: none; border: none; color: rgba(255,255,255,0.3); font-size: 1rem; cursor: pointer; padding: 4px; transition: color 0.15s; }
   .modal-close:hover { color: white; }
@@ -330,7 +330,7 @@
   .modal-divider { border: none; border-top: 1px solid rgba(255,255,255,0.07); margin: 16px 0; }
   .field { margin-bottom: 12px; }
   .field label { display: block; font-size: 0.72rem; color: rgba(255,255,255,0.4); margin-bottom: 5px; }
-  .field input { width: 100%; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 10px 12px; color: white; font-size: 0.85rem; font-family: inherit; outline: none; transition: border 0.2s; }
+  .field input, .field select { width: 100%; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 10px 12px; color: white; font-size: 0.85rem; font-family: inherit; outline: none; transition: border 0.2s; }
   .field input:focus { border-color: rgba(255,255,255,0.3); }
   .field input::placeholder { color: rgba(255,255,255,0.2); }
   .form-error { color: #fca5a5; font-size: 0.72rem; margin-top: -6px; margin-bottom: 10px; min-height: 16px; }
@@ -352,10 +352,11 @@
   .pw-billing-toggle { display:flex; background:rgba(255,255,255,0.06); border-radius:6px; padding:2px; gap:2px; margin-bottom:8px; width:100%; }
   .pw-btog { flex:1; font-size:0.6rem; font-weight:600; padding:3px 0; border-radius:4px; border:none; background:transparent; color:rgba(255,255,255,0.35); cursor:pointer; font-family:inherit; transition:all 0.15s; }
   .pw-btog.active { background:rgba(255,255,255,0.12); color:white; }
+  .pw-trial-note { font-size:0.6rem; color:#34d399; margin-top:5px; opacity:0.85; }
   .pw-rate-info-btn { background:none; border:none; color:rgba(255,255,255,0.28); font-size:0.65rem; cursor:pointer; padding:0; font-family:inherit; line-height:1; transition:color 0.15s; vertical-align:middle; }
   .pw-rate-info-btn:hover { color:rgba(255,255,255,0.6); }
   .pw-rate-tooltip { font-size:0.62rem; color:rgba(255,255,255,0.5); background:rgba(20,20,20,0.95); border:1px solid rgba(255,255,255,0.1); border-radius:7px; padding:8px 10px; line-height:1.5; position:fixed; z-index:9999; max-width:220px; pointer-events:none; display:none; }
-  #paypal-button-container { margin-top:8px; display:none; }
+
   .pw-plan-price strong { color: white; font-size: 1rem; font-weight: 700; }
   .pw-features { list-style: none; }
   .pw-compare { margin-bottom: 14px; }
@@ -1014,6 +1015,10 @@
         <div class="modal-sub" id="su-sub"></div>
       </div>
       <div class="field"><label id="lbl-su-name"></label><input type="text" id="su-name"></div>
+      <div class="field"><label id="lbl-su-sector"></label><select id="su-sector"><option value="" id="su-sector-ph"></option></select></div>
+      <div class="field"><label id="lbl-su-org"></label><input type="text" id="su-org"></div>
+      <div class="field"><label id="lbl-su-role"></label><input type="text" id="su-role"></div>
+      <div class="field"><label id="lbl-su-purpose"></label><select id="su-purpose"><option value="" id="su-purpose-ph"></option></select></div>
       <div class="field"><label id="lbl-su-email"></label><input type="email" id="su-email"></div>
       <div class="field"><label id="lbl-su-password"></label><input type="password" id="su-password" onkeydown="if(event.key==='Enter')signUp()"></div>
       <div class="form-error" id="su-error"></div>
@@ -1037,6 +1042,15 @@
       <div class="form-error" id="reset-error"></div>
       <button class="btn-primary" id="btn-reset" onclick="resetPassword()"></button>
     </div>
+    <div id="view-update-password" style="display:none">
+      <div class="modal-header">
+        <div class="modal-title" id="update-pw-title"></div>
+        <div class="modal-sub" id="update-pw-sub"></div>
+      </div>
+      <div class="field"><label id="lbl-update-pw"></label><input type="password" id="update-pw-input" onkeydown="if(event.key==='Enter')updatePassword()"></div>
+      <div class="form-error" id="update-pw-error"></div>
+      <button class="btn-primary" id="btn-update-pw" onclick="updatePassword()"></button>
+    </div>
   </div>
 </div>
 
@@ -1057,6 +1071,7 @@
         <div class="pw-plan-badge" id="pw-pro-badge"></div>
         <div class="pw-plan-name" id="pw-pro-name"></div>
         <div class="pw-billing-toggle"><button class="pw-btog active" id="pw-btog-annual" onclick="setPwBilling('annual')"></button><button class="pw-btog" id="pw-btog-monthly" onclick="setPwBilling('monthly')"></button></div><div class="pw-plan-price"><div style="display:flex;align-items:baseline;gap:4px;flex-wrap:wrap"><strong id="pw-pro-price">€20</strong><span id="pw-pro-period"></span><span id="pw-pro-billing" style="font-size:0.58rem;color:rgba(255,255,255,0.3);white-space:nowrap"></span><button class="pw-rate-info-btn" id="pw-rate-info-btn" onmouseenter="_showRateInfo(event)" onmousemove="_moveRateInfo(event)" onmouseleave="_hideRateInfo()">ⓘ</button></div></div>
+        <div class="pw-trial-note" id="pw-trial-note"></div>
       </div>
     </div>
     <div class="pw-compare">
@@ -1074,7 +1089,6 @@
     </div>
     <hr class="modal-divider">
     <button class="btn-pro" id="pw-cta-btn" onclick="startCheckout()"></button>
-    <div id="paypal-button-container"></div>
     <div class="modal-footer" id="pw-footer"></div>
   </div>
 </div>
@@ -1085,9 +1099,17 @@ const SUPABASE_ANON_KEY = "sb_publishable_Y0DUnurQBvQtZCUOQ-NAjg_Fux7jx_6";
 const PROXY             = "https://spring-recipe-402c.gkankia.workers.dev";
 const MAPBOX_TOKEN      = "pk.eyJ1Ijoiam9yam9uZTkwIiwiYSI6ImNrZ3R6M2FvdTBwbmwycXBibGRqM2w2enYifQ.BxjvFSGqefuC9yFCrXC-nQ";
 const MAPILLARY_TOKEN   = "MLY|24314119614934772|574fb7a546cc6d61a240f83f11e151c2";
-const PP_CLIENT_ID  = "ASHl2puRGvC9QUwNS0qXG1Cbb3c3_S5uwMMrNDGZRTyJC5xUGVbPavDMl4Vm_5ky0e-mV3Na7pJuW9OP";
-const PP_PLAN_ANNUAL  = "P-5CK4550526641281KNJEUS5Y";
-const PP_PLAN_MONTHLY = "P-2PT67781G32176748NJEUUCI";
+// ── Paddle ── set PADDLE_SANDBOX=true for testing, false for live
+const PADDLE_SANDBOX          = true;
+const PADDLE_TOKEN_SBX        = "test_c8d49e591f6e941d16296911e7e";
+const PADDLE_TOKEN_LIVE       = "LIVE_TOKEN_HERE";
+const PADDLE_PRICE_ANNUAL_SBX = "pri_01kwsdyem6rmzfe50ag2kcvtez";
+const PADDLE_PRICE_MONTHLY_SBX= "pri_01kwsdwvt5ne12q0xpap48473s";
+const PADDLE_PRICE_ANNUAL_LIVE= "LIVE_ANNUAL_PRICE_HERE";
+const PADDLE_PRICE_MONTHLY_LIVE="LIVE_MONTHLY_PRICE_HERE";
+const PADDLE_TOKEN        = PADDLE_SANDBOX ? PADDLE_TOKEN_SBX  : PADDLE_TOKEN_LIVE;
+const PADDLE_PRICE_ANNUAL = PADDLE_SANDBOX ? PADDLE_PRICE_ANNUAL_SBX  : PADDLE_PRICE_ANNUAL_LIVE;
+const PADDLE_PRICE_MONTHLY= PADDLE_SANDBOX ? PADDLE_PRICE_MONTHLY_SBX : PADDLE_PRICE_MONTHLY_LIVE;
 const OVERPASS_ENDPOINTS = [
   "https://overpass-api.de/api/interpreter",
   "https://overpass.openstreetmap.ru/api/interpreter",
@@ -1221,7 +1243,14 @@ const T = {
       siBtn:"Sign in", siForgot:"Forgot password?", siCreate:"Create account",
       siFooter:'<a onclick="showView(\'view-reset\')">Forgot password?</a> · <a onclick="showView(\'view-signup\')">Create account</a>',
       suTitle:"Create account", suSub:"Free to start — no credit card needed",
-      suName:"Full name", suEmail:"Email", suPassword:"Password (min 8 characters)",
+      suName:"Full name",
+      suSector:"Sector", suSectorPh:"Select your sector",
+      suSectors:["Architecture / Urban Design","Engineering","Real Estate / Development","Government / Public Sector","Academic / Research","Urban Planning","Construction","Finance / Investment","Legal","Other"],
+      suOrg:"Organisation (optional)",
+      suRole:"Role / Job title",
+      suPurpose:"Purpose of use", suPurposePh:"Select your purpose",
+      suPurposes:["Site analysis","Urban planning & research","Investment / Due diligence","Academic research","Professional services","Personal interest","Other"],
+      suEmail:"Email", suPassword:"Password (min 8 characters)",
       suBtn:"Create account",
       suFooter:'<a onclick="showView(\'view-signin\')">Already have an account? Sign in</a>',
       confirmTitle:"Check your email", confirmBtn:"Got it",
@@ -1230,7 +1259,9 @@ const T = {
       resetSent:"Reset link sent — check your inbox.",
       errFill:"Please fill in all fields.",
       errPassword:"Password must be at least 8 characters.",
-      errEmail:"Please enter your email."
+      errEmail:"Please enter your email.",
+      updatePwTitle:"Set new password",updatePwSub:"Enter your new password below.",
+      updatePwLabel:"New password",updatePwBtn:"Update password"
     },
     pw:{
       title:"Upgrade to Pro",sub:"Create a free account for 15 parcel views and 15 analyses. Pro gives you up to 1,000 views and analyses.",
@@ -1249,6 +1280,7 @@ const T = {
       r10:"Relief analysis<br><small style='opacity:.45;font-size:.9em'>Tbilisi only</small>",f10:"—",p10:"✓",
       cta:"Upgrade to Pro",notSignedIn:"No account?",createFirst:"Create a free account",
       comingSoon:"Payment coming soon! Contact us to upgrade manually.",
+      trialNote:"7-day free trial included",
       billingComingSoon:"Billing portal coming soon.",
       guestLimitTitle:"Guest limit reached",guestLimitSub:"You’ve used your 5 free parcel views. Create a free account for 15 views and 15 analyses.",
       guestAnalysisLimitTitle:"Guest limit reached",guestAnalysisLimitSub:"You’ve used your 5 free analyses. Create a free account for 15 parcel views and 15 analyses.",
@@ -1256,9 +1288,7 @@ const T = {
       freeAnalysisLimitTitle:"Free limit reached",freeAnalysisLimitSub:"You’ve used your 15 analyses. Upgrade to Pro for up to 1,000.",
       proLimitTitle:"Pro limit reached",proLimitSub:"You’ve used your 1,000 parcel views. Contact us to extend your limit.",
       proAnalysisLimitTitle:"Pro limit reached",proAnalysisLimitSub:"You’ve used your 1,000 analyses. Contact us to extend your limit.",
-    rateInfoBtn:"charged in EUR",
-    rateInfoAnnual:"Charged as €240/year (€20/month) via PayPal. Your bank may apply additional currency conversion fees.",
-    rateInfoMonthly:"Charged as €25/month via PayPal. Your bank may apply additional currency conversion fees."
+    rateInfoTip:"Different exchange rates and bank fees may apply."
     },
     polySelectBtn:"Draw", polySelectBtnActive:"Cancel",
     drawShapeType:"Shape", drawPolygon:"Polygon", drawRectangle:"Square", drawCircle:"Circle", drawLine:"Line",
@@ -1328,7 +1358,14 @@ const T = {
       siBtn:"შესვლა",
       siFooter:'<a onclick="showView(\'view-reset\')">პაროლი დაგავიწყდა?</a> · <a onclick="showView(\'view-signup\')">ანგარიშის შექმნა</a>',
       suTitle:"ანგარიშის შექმნა", suSub:"უფასოა — ბარათი არ სჭირდება",
-      suName:"სახელი", suEmail:"ელ-ფოსტა", suPassword:"პაროლი (მინ. 8 სიმბოლო)",
+      suName:"სახელი",
+      suSector:"სექტორი", suSectorPh:"აირჩიე სექტორი",
+      suSectors:["არქიტექტურა / ურბანული დიზაინი","ინჟინერია","უძრავი ქონება / დეველოპმენტი","მთავრობა / საჯარო სექტორი","აკადემია / კვლევა","ურბანული დაგეგმარება","მშენებლობა","ფინანსები / ინვესტიცია","იურიდიული","სხვა"],
+      suOrg:"ორგანიზაცია (არასავალდებულო)",
+      suRole:"როლი / პოზიცია",
+      suPurpose:"გამოყენების მიზანი", suPurposePh:"აირჩიე მიზანი",
+      suPurposes:["ადგილის ანალიზი","ურბანული დაგეგმარება და კვლევა","ინვესტიცია / დიუ-დილიჯენსი","აკადემიური კვლევა","პროფესიული მომსახურება","პირადი ინტერესი","სხვა"],
+      suEmail:"ელ-ფოსტა", suPassword:"პაროლი (მინ. 8 სიმბოლო)",
       suBtn:"ანგარიშის შექმნა",
       suFooter:'<a onclick="showView(\'view-signin\')">უკვე გაქვს ანგარიში? შედი</a>',
       confirmTitle:"შეამოწმე ელ-ფოსტა", confirmBtn:"კარგი",
@@ -1337,7 +1374,9 @@ const T = {
       resetSent:"ბმული გაიგზავნა — შეამოწმე ელ-ფოსტა.",
       errFill:"შეავსე ყველა ველი.",
       errPassword:"პაროლი უნდა იყოს მინიმუმ 8 სიმბოლო.",
-      errEmail:"შეიყვანე ელ-ფოსტა."
+      errEmail:"შეიყვანე ელ-ფოსტა.",
+      updatePwTitle:"ახალი პაროლის დაყენება",updatePwSub:"შეიყვანე ახალი პაროლი.",
+      updatePwLabel:"ახალი პაროლი",updatePwBtn:"პაროლის განახლება"
     },
     pw:{
       title:"Pro-ზე გადასვლა",sub:"შექმენი უფასო ანგარიში 50 ნაკვეთის ხედვისა და 50 ანალიზისთვის. Pro აძლევს ულიმიტო წვდომასა და პრემიუმ ფუნქციებს.",
@@ -1356,6 +1395,7 @@ const T = {
       r10:"რელიევის ანალიზი<br><small style='opacity:.45;font-size:.9em'>თბილისი თავ</small>",f10:"—",p10:"✓",
       cta:"Pro-ზე გადასვლა",notSignedIn:"ანგარიში არ გაქვს?",createFirst:"შექმენი უფასო ანგარიში",
       comingSoon:"გადახდა მალე! დაგვიკავშირდი Pro-ზე გადასასვლელად.",
+      trialNote:"მოიცავს 7-დღიან უფასო პერიოდს",
       billingComingSoon:"ბილინგის პორტალი მალე.",
       guestLimitTitle:"სტუმარის ლიმიტი",guestLimitSub:"გამოიყენე 5 უფასო ნაკვეთის ხედვა. შექმენი უფასო ანგარიში 15 ხედვისა და 15 ანალიზისთვის.",
       guestAnalysisLimitTitle:"სტუმარის ლიმიტი",guestAnalysisLimitSub:"გამოიყენე 5 უფასო ანალიზი. შექმენი უფასო ანგარიში 15 ხედვისა და 15 ანალიზისთვის.",
@@ -1363,9 +1403,8 @@ const T = {
       freeAnalysisLimitTitle:"ლიმიტი ამოიწურა",freeAnalysisLimitSub:"გამოიყენე 15 ანალიზი. Pro-ზე გადაიხადეთ 1,000-მდე მეტი.",
       proLimitTitle:"პრო ლიმიტი ამოიწურა",proLimitSub:"გამოიყენე 1,000 ნაკვეთის ხედვა. დაგვიკავშირდეთ.",
       proAnalysisLimitTitle:"პრო ლიმიტი ამოიწურა",proAnalysisLimitSub:"გამოიყენე 1,000 ანალიზი. დაგვიკავშირდეთ.",
-    rateInfoBtn:"გადახდა EUR-ში",
-    rateInfoAnnual:"გადახდა ხდება €240/წელ (€20/თვე) PayPal-ის მეშვეობით. ბანკმა შესაძლოა დამატებითი კონვერტაციის საკომისიო დააწესოს.",
-    rateInfoMonthly:"გადახდა ხდება €25/თვეში PayPal-ის მეშვეობით. ბანკმა შესაძლოა დამატებითი კონვერტაციის საკომისიო დააწესოს."
+    rateInfoTip:"შეიძლება განსხვავებული გაცვლითი კურსი და საბანკო საკომისიო მოქმედებდეს.",
+    
     },
     polySelectBtn:"დახატვა", polySelectBtnActive:"გაუქმება",
     drawShapeType:"ფორმა", drawPolygon:"პოლიგონი", drawRectangle:"კვადრატი", drawCircle:"წრე", drawLine:"ხაზი",
@@ -1473,6 +1512,16 @@ function applyLang(){
   document.getElementById("su-sub").textContent=auth.suSub;
   document.getElementById("lbl-su-name").textContent=auth.suName;
   document.getElementById("su-name").placeholder=lang==="en"?"Your name":"თქვენი სახელი";
+  document.getElementById("lbl-su-sector").textContent=auth.suSector||"";
+  const _sphEl=document.getElementById("su-sector-ph");if(_sphEl)_sphEl.textContent=auth.suSectorPh||"";
+  const _ssel=document.getElementById("su-sector");
+  if(_ssel){const _sv=_ssel.value;while(_ssel.options.length>1)_ssel.remove(1);(auth.suSectors||[]).forEach(s=>{const o=document.createElement("option");o.value=s;o.textContent=s;_ssel.appendChild(o);});_ssel.value=_sv;}
+  document.getElementById("lbl-su-org").textContent=auth.suOrg||"";
+  document.getElementById("lbl-su-role").textContent=auth.suRole||"";
+  document.getElementById("lbl-su-purpose").textContent=auth.suPurpose||"";
+  const _pphEl=document.getElementById("su-purpose-ph");if(_pphEl)_pphEl.textContent=auth.suPurposePh||"";
+  const _psel=document.getElementById("su-purpose");
+  if(_psel){const _pv=_psel.value;while(_psel.options.length>1)_psel.remove(1);(auth.suPurposes||[]).forEach(s=>{const o=document.createElement("option");o.value=s;o.textContent=s;_psel.appendChild(o);});_psel.value=_pv;}
   document.getElementById("lbl-su-email").textContent=auth.suEmail;
   document.getElementById("su-email").placeholder=lang==="en"?"you@example.com":"თქვენ@example.com";
   document.getElementById("lbl-su-password").textContent=auth.suPassword;
@@ -1489,6 +1538,10 @@ function applyLang(){
   document.getElementById("lbl-reset-email").textContent=auth.resetEmail;
   document.getElementById("reset-email").placeholder=lang==="en"?"you@example.com":"თქვენ@example.com";
   document.getElementById("btn-reset").textContent=auth.resetBtn;
+  const _upt=document.getElementById("update-pw-title");if(_upt)_upt.textContent=auth.updatePwTitle||"";
+  const _ups=document.getElementById("update-pw-sub");if(_ups)_ups.textContent=auth.updatePwSub||"";
+  const _upl=document.getElementById("lbl-update-pw");if(_upl)_upl.textContent=auth.updatePwLabel||"";
+  const _upb=document.getElementById("btn-update-pw");if(_upb)_upb.textContent=auth.updatePwBtn||"";
   // Paywall
   document.getElementById("pw-title").textContent=pw.title;
   document.getElementById("pw-sub").textContent=pw.sub;
@@ -1508,6 +1561,7 @@ function applyLang(){
     if(r)r.innerHTML=pw["r"+i]||"";if(g)g.textContent=pw["g"+i]||"";if(f)f.textContent=pw["f"+i];if(p)p.textContent=pw["p"+i];
   });
   document.getElementById("pw-cta-btn").textContent=pw.cta;
+  const _tn=document.getElementById("pw-trial-note");if(_tn)_tn.textContent=pw.trialNote||"";
   document.getElementById("pw-footer").innerHTML=`${pw.notSignedIn} <a onclick="openAuthForUpgrade()">${pw.createFirst}</a>`;
   updateUserUI();
   const abLabel = document.getElementById("analyse-btn-label");
@@ -1629,7 +1683,7 @@ async function updateSearchCounter(){
 
 // ── Auth modal ────────────────────────────────────────────────────────────────
 function showView(id){
-  ["view-signin","view-signup","view-confirm","view-reset"].forEach(v=>{
+  ["view-signin","view-signup","view-confirm","view-reset","view-update-password"].forEach(v=>{
     document.getElementById(v).style.display=v===id?"":"none";
   });
   ["si-error","su-error","reset-error"].forEach(e=>{const el=document.getElementById(e);if(el)el.textContent="";});
@@ -1658,13 +1712,17 @@ async function signUp(){
   const btn=document.getElementById("btn-signup");
   const errEl=document.getElementById("su-error");
   const name=document.getElementById("su-name").value.trim();
+  const sector=document.getElementById("su-sector").value;
+  const org=document.getElementById("su-org").value.trim();
+  const role=document.getElementById("su-role").value.trim();
+  const purpose=document.getElementById("su-purpose").value;
   const email=document.getElementById("su-email").value.trim();
   const password=document.getElementById("su-password").value;
   errEl.textContent="";
-  if(!email||!password){errEl.textContent=t().auth.errFill;return;}
+  if(!email||!password||!sector||!role||!purpose){errEl.textContent=t().auth.errFill;return;}
   if(password.length<8){errEl.textContent=t().auth.errPassword;return;}
   btn.disabled=true;btn.innerHTML=`<span class="spinner-sm"></span>`;
-  const{data,error}=await sb.auth.signUp({email,password,options:{data:{full_name:name},emailRedirectTo:location.origin+location.pathname}});
+  const{data,error}=await sb.auth.signUp({email,password,options:{data:{full_name:name,sector,organisation:org,role,purpose},emailRedirectTo:location.origin+location.pathname}});
   btn.disabled=false;btn.textContent=t().auth.suBtn;
   if(error){errEl.textContent=error.message;return;}
   if(data.session){await onAuthSuccess(data.session);closeAuthModal();}
@@ -1683,7 +1741,7 @@ async function resetPassword(){
   errEl.textContent="";
   if(!email){errEl.textContent=t().auth.errEmail;return;}
   btn.disabled=true;btn.innerHTML=`<span class="spinner-sm"></span>`;
-  const{error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:`${window.location.origin}?reset=1`});
+  const{error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});
   btn.disabled=false;btn.textContent=t().auth.resetBtn;
   if(error){errEl.textContent=error.message;return;}
   errEl.style.color="#86efac";errEl.textContent=t().auth.resetSent;
@@ -1739,6 +1797,25 @@ function _openPaywallLimit(ctx){
   const footer=document.getElementById("pw-footer");
   if(footer)footer.innerHTML=currentUser?"":`${pw.notSignedIn} <a onclick="openAuthForUpgrade()">${pw.createFirst}</a>`;
   openPaywall();
+}
+function _getRateTooltip(){
+  let tt=document.getElementById("pw-rate-tooltip");
+  if(!tt){tt=document.createElement("div");tt.id="pw-rate-tooltip";tt.className="pw-rate-tooltip";document.body.appendChild(tt);}
+  return tt;
+}
+function _showRateInfo(e){
+  const tt=_getRateTooltip();
+  tt.textContent=t().pw.rateInfoTip||"";
+  tt.style.left=(e.clientX+12)+"px";tt.style.top=(e.clientY+12)+"px";
+  tt.style.display="block";
+}
+function _moveRateInfo(e){
+  const tt=document.getElementById("pw-rate-tooltip");if(!tt)return;
+  tt.style.left=(e.clientX+12)+"px";tt.style.top=(e.clientY+12)+"px";
+}
+function _hideRateInfo(){
+  const tt=document.getElementById("pw-rate-tooltip");if(!tt)return;
+  tt.style.display="none";
 }
 function setPwBilling(mode){
   const pw=t().pw;
@@ -3824,73 +3901,64 @@ function clearPolygonSelect(){
 function closePaywall(){document.getElementById("paywall-modal").classList.remove("open");}
 function onPaywallOverlayClick(e){if(e.target===document.getElementById("paywall-modal"))closePaywall();}
 
-async function _loadPayPalSDK(){
+let _paddleReady=false;
+function _loadPaddleSDK(){
   return new Promise((resolve,reject)=>{
-    if(window.paypal){resolve();return;}
+    if(_paddleReady){resolve();return;}
+    if(window.Paddle){
+      if(PADDLE_SANDBOX)Paddle.Environment.set("sandbox");
+      Paddle.Initialize({token:PADDLE_TOKEN,eventCallback:_paddleEvent});
+      _paddleReady=true;resolve();return;
+    }
     const s=document.createElement("script");
-    s.src="https://www.paypal.com/sdk/js?client-id="+PP_CLIENT_ID+"&vault=true&intent=subscription";
-    s.onload=resolve;s.onerror=reject;
+    s.src="https://cdn.paddle.com/paddle/v2/paddle.js";
+    s.onload=()=>{
+      if(PADDLE_SANDBOX)Paddle.Environment.set("sandbox");
+      Paddle.Initialize({token:PADDLE_TOKEN,eventCallback:_paddleEvent});
+      _paddleReady=true;resolve();
+    };
+    s.onerror=reject;
     document.head.appendChild(s);
   });
 }
-async function _ppApprove(subscriptionID){
+function _paddleEvent(data){
+  if(data.name==="checkout.completed")_paddleSuccess(data);
+}
+async function _paddleSuccess(data){
+  const sid=data.data?.subscription_id||"";
   try{
-    const{error}=await sb.from("subscriptions").upsert({user_id:currentUser.id,plan:"pro",status:"active",paypal_subscription_id:subscriptionID},{onConflict:"user_id"});
-    if(error)throw error;
+    await sb.from("subscriptions").upsert({user_id:currentUser.id,plan:"pro",status:"active",paddle_subscription_id:sid},{onConflict:"user_id"});
   }catch(e){console.warn("Sub save:",e);}
   currentUser.plan="pro";
-  document.getElementById("paypal-button-container").style.display="none";
-  document.getElementById("pw-cta-btn").style.display="";
   closePaywall();updateUserUI();
-}
-function _getRateTooltip(){
-  let tt=document.getElementById("pw-rate-tooltip");
-  if(!tt){
-    tt=document.createElement("div");
-    tt.id="pw-rate-tooltip";
-    tt.className="pw-rate-tooltip";
-    document.body.appendChild(tt);
-  }
-  return tt;
-}
-function _showRateInfo(e){
-  const tt=_getRateTooltip();
-  const mode=document.getElementById("pw-btog-monthly")?.classList.contains("active")?"monthly":"annual";
-  tt.textContent=t().pw[mode==="annual"?"rateInfoAnnual":"rateInfoMonthly"];
-  tt.style.left=(e.clientX+12)+"px";tt.style.top=(e.clientY+12)+"px";
-  tt.style.display="block";
-}
-function _moveRateInfo(e){
-  const tt=document.getElementById("pw-rate-tooltip");if(!tt)return;
-  tt.style.left=(e.clientX+12)+"px";tt.style.top=(e.clientY+12)+"px";
-}
-function _hideRateInfo(){
-  const tt=document.getElementById("pw-rate-tooltip");if(!tt)return;
-  tt.style.display="none";
 }
 async function startCheckout(){
   if(!currentUser){closePaywall();_afterAuthCb=()=>openPaywall();openAuthModal("view-signup");return;}
-  const mode=document.getElementById("pw-btog-monthly")?.classList.contains("active")?"monthly":"annual";
-  const planId=mode==="annual"?PP_PLAN_ANNUAL:PP_PLAN_MONTHLY;
   const ctaBtn=document.getElementById("pw-cta-btn");
-  const container=document.getElementById("paypal-button-container");
-  if(!container)return;
-  ctaBtn.style.display="none";
-  container.style.display="block";
-  container.innerHTML='<div style="text-align:center;padding:10px;font-size:0.7rem;color:rgba(255,255,255,0.35)">Loading PayPal…</div>';
+  ctaBtn.disabled=true;ctaBtn.innerHTML='<span class="spinner-sm"></span>';
   try{
-    await _loadPayPalSDK();
-    container.innerHTML="";
-    paypal.Buttons({
-      style:{layout:"vertical",color:"gold",shape:"rect",label:"subscribe",height:40},
-      createSubscription(data,actions){return actions.subscription.create({plan_id:planId,subscriber:{email_address:currentUser.email}});},
-      async onApprove(data){await _ppApprove(data.subscriptionID);},
-      onCancel(){container.style.display="none";ctaBtn.style.display="";},
-      onError(err){console.error("PayPal:",err);container.innerHTML='<div style="color:rgba(255,100,100,0.7);font-size:0.68rem;padding:6px;text-align:center">Payment error. Please try again.</div>';}
-    }).render("#paypal-button-container");
-  }catch(e){
-    container.innerHTML='<div style="color:rgba(255,100,100,0.7);font-size:0.68rem;padding:6px;text-align:center">Could not load PayPal. Check your connection.</div>';
-  }
+    await _loadPaddleSDK();
+    const mode=document.getElementById("pw-btog-monthly")?.classList.contains("active")?"monthly":"annual";
+    Paddle.Checkout.open({
+      items:[{priceId:mode==="annual"?PADDLE_PRICE_ANNUAL:PADDLE_PRICE_MONTHLY,quantity:1}],
+      customer:{email:currentUser.email},
+      settings:{displayMode:"overlay",theme:"dark"}
+    });
+  }catch(e){console.error("Paddle:",e);}
+  finally{ctaBtn.disabled=false;ctaBtn.textContent=t().pw.cta||"Get Pro";}
+}
+
+async function updatePassword(){
+  const btn=document.getElementById("btn-update-pw");
+  const errEl=document.getElementById("update-pw-error");
+  const pw=document.getElementById("update-pw-input").value;
+  errEl.textContent="";
+  if(!pw||pw.length<8){errEl.textContent=t().auth.errPassword;return;}
+  btn.disabled=true;btn.innerHTML='<span class="spinner-sm"></span>';
+  const{error}=await sb.auth.updateUser({password:pw});
+  btn.disabled=false;btn.textContent=t().auth.updatePwBtn;
+  if(error){errEl.textContent=error.message;return;}
+  closeAuthModal();
 }
 
 function openBillingPortal(){
@@ -10335,7 +10403,11 @@ async function init(){
   const{data:{session}}=await sb.auth.getSession();
   if(session)await onAuthSuccess(session);
   sb.auth.onAuthStateChange(async(event,session)=>{
-    if(event==="SIGNED_IN"&&session){
+    if(event==="PASSWORD_RECOVERY"){
+      openAuthModal("view-update-password");
+      if(location.hash.includes("access_token"))history.replaceState(null,"",location.pathname);
+    }
+    else if(event==="SIGNED_IN"&&session){
       await onAuthSuccess(session);
       if(location.hash.includes("access_token"))history.replaceState(null,"",location.pathname);
     }
