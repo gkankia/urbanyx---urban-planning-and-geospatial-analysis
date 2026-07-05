@@ -71,25 +71,33 @@ app.post("/webhooks/paddle", async (req, res) => {
 async function handlePaddleEvent(event) {
   const data   = event.data;
   const userId = data?.custom_data?.user_id;
-  if (!userId) return;
+
+  console.log(`[paddle] event=${event.event_type} userId=${userId}`);
+
+  if (!userId) {
+    console.warn("[paddle] no user_id in custom_data — skipping");
+    return;
+  }
+
+  let result;
 
   switch (event.event_type) {
     case "transaction.completed":
     case "subscription.activated":
-      await supabase.from("subscriptions").upsert({
+      result = await supabase.from("subscriptions").upsert({
         user_id:                userId,
         plan:                   "pro",
         status:                 "active",
-        paddle_subscription_id: data.id ?? data.subscription_id ?? null,
+        paddle_subscription_id: data.subscription_id ?? data.id ?? null,
         billing_interval:       data.items?.[0]?.price?.billing_cycle?.interval ?? "month",
-        current_period_end:     data.next_billed_at ?? data.current_billing_period?.ends_at ?? null,
+        current_period_end:     data.billing_period?.ends_at ?? data.next_billed_at ?? null,
         paddle_customer_id:     data.customer_id ?? null,
         updated_at:             new Date().toISOString(),
       }, { onConflict: "user_id" });
       break;
 
     case "subscription.updated":
-      await supabase.from("subscriptions").update({
+      result = await supabase.from("subscriptions").update({
         status:             data.status === "active" ? "active" : data.status,
         current_period_end: data.current_billing_period?.ends_at ?? null,
         updated_at:         new Date().toISOString(),
@@ -97,8 +105,7 @@ async function handlePaddleEvent(event) {
       break;
 
     case "subscription.canceled":
-      // Keep pro access until billing period ends; webhook fires again at that point
-      await supabase.from("subscriptions").update({
+      result = await supabase.from("subscriptions").update({
         status:             "canceling",
         current_period_end: data.canceled_at ?? data.current_billing_period?.ends_at ?? null,
         updated_at:         new Date().toISOString(),
@@ -106,19 +113,29 @@ async function handlePaddleEvent(event) {
       break;
 
     case "subscription.past_due":
-      await supabase.from("subscriptions").update({
+      result = await supabase.from("subscriptions").update({
         status:     "past_due",
         updated_at: new Date().toISOString(),
       }).eq("user_id", userId);
       break;
 
     case "subscription.paused":
-      await supabase.from("subscriptions").update({
+      result = await supabase.from("subscriptions").update({
         status:     "paused",
         plan:       "free",
         updated_at: new Date().toISOString(),
       }).eq("user_id", userId);
       break;
+
+    default:
+      console.log(`[paddle] unhandled event type: ${event.event_type}`);
+      return;
+  }
+
+  if (result?.error) {
+    console.error(`[paddle] supabase error for ${event.event_type}:`, result.error);
+  } else {
+    console.log(`[paddle] supabase write OK for ${event.event_type}, userId=${userId}`);
   }
 }
 
