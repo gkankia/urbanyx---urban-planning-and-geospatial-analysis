@@ -1664,7 +1664,7 @@ async function signUp(){
   if(!email||!password){errEl.textContent=t().auth.errFill;return;}
   if(password.length<8){errEl.textContent=t().auth.errPassword;return;}
   btn.disabled=true;btn.innerHTML=`<span class="spinner-sm"></span>`;
-  const{data,error}=await sb.auth.signUp({email,password,options:{data:{full_name:name}}});
+  const{data,error}=await sb.auth.signUp({email,password,options:{data:{full_name:name},emailRedirectTo:location.origin+location.pathname}});
   btn.disabled=false;btn.textContent=t().auth.suBtn;
   if(error){errEl.textContent=error.message;return;}
   if(data.session){await onAuthSuccess(data.session);closeAuthModal();}
@@ -10335,7 +10335,10 @@ async function init(){
   const{data:{session}}=await sb.auth.getSession();
   if(session)await onAuthSuccess(session);
   sb.auth.onAuthStateChange(async(event,session)=>{
-    if(event==="SIGNED_IN"&&session)await onAuthSuccess(session);
+    if(event==="SIGNED_IN"&&session){
+      await onAuthSuccess(session);
+      if(location.hash.includes("access_token"))history.replaceState(null,"",location.pathname);
+    }
     else if(event==="SIGNED_OUT"){currentUser=null;updateUserUI();}
   });
 }
