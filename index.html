@@ -3942,7 +3942,7 @@ async function startCheckout(){
     Paddle.Checkout.open({
       items:[{priceId:mode==="annual"?PADDLE_PRICE_ANNUAL:PADDLE_PRICE_MONTHLY,quantity:1}],
       customer:{email:currentUser.email},
-      settings:{displayMode:"overlay",theme:"dark"}
+      customData:{user_id:currentUser.id}
     });
   }catch(e){console.error("Paddle:",e);}
   finally{ctaBtn.disabled=false;ctaBtn.textContent=t().pw.cta||"Get Pro";}
