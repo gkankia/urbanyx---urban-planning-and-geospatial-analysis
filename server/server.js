@@ -153,7 +153,7 @@ app.post("/api/paddle/cancel", requireAuth, async (req, res) => {
     .from("subscriptions")
     .select("paddle_subscription_id, billing_interval, current_period_end")
     .eq("user_id", req.user.id)
-    .eq("status", "active")
+    .in("status", ["active", "trialing"])
     .single();
 
   if (error || !sub?.paddle_subscription_id) {
