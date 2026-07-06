@@ -317,6 +317,10 @@
   .lp-sw.on::after { left:14px; background:#34d399; }
   .lp-sub-item { padding-left: 8px !important; }
   .lp-sub-item .lp-row-name { font-size: 0.69rem; }
+  .il-color-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+  .il-del-btn { background:none; border:none; cursor:pointer; color:rgba(255,255,255,0.2); font-size:0.65rem; line-height:1; padding:2px 3px; border-radius:4px; font-family:inherit; transition:color 0.15s,background 0.15s; }
+  .il-del-btn:hover { color:rgba(239,68,68,0.8); background:rgba(239,68,68,0.1); }
+  .il-count { font-size:0.56rem; color:rgba(255,255,255,0.2); flex-shrink:0; }
   .modal-overlay { position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.55); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; padding: 20px; opacity: 0; pointer-events: none; transition: opacity 0.22s ease; }
   .modal-overlay.open { opacity: 1; pointer-events: all; }
   .modal-box { background: #111; border: 1px solid rgba(255,255,255,0.11); border-radius: 20px; padding: 26px 24px; width: 100%; max-width: 380px; max-height: 90vh; overflow-y: auto; box-shadow: 0 32px 80px rgba(0,0,0,0.7); position: relative; transform: translateY(14px) scale(0.98); transition: transform 0.28s cubic-bezier(0.23,1,0.32,1); }
@@ -741,6 +745,9 @@
     <span class="lp-row-name" id="lbl-lp-forestfunds">Forest fund</span>
     <div class="lp-sw" id="forestfunds-sw"></div>
   </div>
+  <div class="lp-sep" id="il-panel-sep" style="display:none"></div>
+  <div class="lp-sec-title" id="il-panel-title" style="display:none">Imported Files</div>
+  <div id="il-panel-list"></div>
 </div>
 
 <div id="top-right">
