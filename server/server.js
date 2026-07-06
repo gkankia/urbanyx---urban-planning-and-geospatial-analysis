@@ -96,13 +96,19 @@ async function handlePaddleEvent(event) {
       }, { onConflict: "user_id" });
       break;
 
-    case "subscription.updated":
+    case "subscription.updated": {
+      const periodEnd = data.current_billing_period?.ends_at ?? null;
+      const periodInFuture = periodEnd && new Date(periodEnd) > new Date();
+      // Paddle emits status:"canceled" for subscriptions scheduled to cancel at period end.
+      // Map that to "canceling" so the client still grants Pro access until expiry.
+      const mappedStatus = (data.status === "canceled" && periodInFuture) ? "canceling" : data.status;
       result = await supabase.from("subscriptions").update({
-        status:             data.status === "active" ? "active" : data.status,
-        current_period_end: data.current_billing_period?.ends_at ?? null,
+        status:             mappedStatus,
+        current_period_end: periodEnd,
         updated_at:         new Date().toISOString(),
       }).eq("user_id", userId);
       break;
+    }
 
     case "subscription.canceled":
       result = await supabase.from("subscriptions").update({

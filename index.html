@@ -1762,8 +1762,17 @@ async function onAuthSuccess(session){
   let plan="free",isAdmin=false;
   try{
     const{data}=await sb.from("subscriptions").select("plan,status,billing_interval,current_period_end").eq("user_id",u.id).single();
-    if(data&&(data.status==="active"||data.status==="canceling"))plan=data.plan;
-    if(data){window._subInterval=data.billing_interval||"month";window._subPeriodEnd=data.current_period_end||null;window._subStatus=data.status||"free";}
+    if(data){
+      window._subInterval=data.billing_interval||"month";
+      window._subPeriodEnd=data.current_period_end||null;
+      const periodInFuture=data.current_period_end&&new Date(data.current_period_end)>new Date();
+      // Normalize Paddle statuses to our internal set:
+      // "trialing" → keep as-is (Paddle trial period)
+      // "canceled" with future period → "canceling" (scheduled, not immediate)
+      const effectiveStatus=(data.status==="canceled"&&periodInFuture)?"canceling":data.status;
+      window._subStatus=effectiveStatus||"free";
+      if(effectiveStatus==="active"||effectiveStatus==="trialing"||effectiveStatus==="canceling")plan=data.plan;
+    }
   }catch(e){console.warn("Plan fetch:",e);}
   try{
     const{data}=await sb.from("profiles").select("is_admin").eq("id",u.id).single();
@@ -3980,7 +3989,7 @@ function openBillingPortal(){
   const isCanceling=currentUser._subStatus==='canceling';
   const periodEnd=window._subPeriodEnd?new Date(window._subPeriodEnd):null;
   const daysLeft=periodEnd?Math.max(0,Math.ceil((periodEnd.getTime()-Date.now())/86400000)):null;
-  const isInTrial=isPro&&daysLeft!==null&&window._subInterval==='month'&&daysLeft>=23;
+  const isInTrial=isPro&&(currentUser._subStatus==='trialing'||(daysLeft!==null&&window._subInterval==='month'&&daysLeft>=23));
 
   document.getElementById('bill-title').textContent=bd.billingTitle;
   document.getElementById('bill-subtitle').textContent=isPro?bd.billingSubPro:bd.billingSubFree;
