@@ -3464,30 +3464,104 @@ async function handleDrawFileImport(evt){
     const validFeatures=fc.features.filter(f=>f&&f.geometry);
     if(!validFeatures.length){showToast(lang==='ka'?'ფაილში ფიჩერი ვერ მოიძებნა':'No features found in file',3500);return;}
 
-    _draw.deleteAll();
-    const addedIds=[];
-    for(const f of validFeatures){
-      try{const ids=_draw.add(f);if(ids?.length)addedIds.push(ids[0]);}catch(_){}
-    }
+    const cleanFc={type:'FeatureCollection',features:validFeatures};
 
-    // Fly map to imported extent
+    // Fly map to imported extent first
+    let coordsOk=false;
     try{
-      const bbox=turf.bbox({type:'FeatureCollection',features:validFeatures});
+      const bbox=turf.bbox(cleanFc);
       if(bbox.every(isFinite)&&bbox[0]>=-180&&bbox[2]<=180&&bbox[1]>=-90&&bbox[3]<=90){
         map.fitBounds([[bbox[0],bbox[1]],[bbox[2],bbox[3]]],{padding:60,maxZoom:18,duration:800});
-      } else {
-        showToast(lang==='ka'?'DXF კოორდინატები WGS84-ში არ ჩანს. შეამოწმეთ პროექცია.':'DXF coordinates outside WGS84 bounds — check the coordinate system.',5000);
+        coordsOk=true;
       }
     }catch(_){}
-
-    if(addedIds.length){
-      _drawnFeatureId=addedIds[0];
-      showToast((lang==='ka'?`${addedIds.length} ფიჩერი დაემატა`:`${addedIds.length} feature${addedIds.length>1?'s':''} imported`),3000);
+    if(!coordsOk&&_drawImportType==='dxf'){
+      showToast(lang==='ka'?'DXF კოორდინატები WGS84-ში არ ჩანს. შეამოწმეთ პროექცია.':'DXF coordinates outside WGS84 bounds — check the coordinate system.',5000);
     }
+
+    const layerName=file.name.replace(/\.[^.]+$/,'');
+    _addImportedLayer(layerName,cleanFc);
+    showToast((lang==='ka'?`${validFeatures.length} ფიჩერი დაემატა`:`${validFeatures.length} feature${validFeatures.length>1?'s':''} imported`),3000);
   }catch(e){
     console.error('[import]',e);
     showToast((lang==='ka'?'იმპორტი ვერ მოხერხდა: ':'Import failed: ')+(e.message||'unknown error'),4500);
   }
+}
+
+// ── Imported layer registry ───────────────────────────────────────────────────
+const _IMPORT_COLORS=['#818cf8','#34d399','#fb923c','#f472b6','#38bdf8','#facc15','#a78bfa'];
+let _importedLayers=[];
+
+function _addImportedLayer(name,fc){
+  const uid='il'+(Date.now().toString(36));
+  const color=_IMPORT_COLORS[_importedLayers.length%_IMPORT_COLORS.length];
+  const srcId=`import-${uid}-src`;
+
+  // Insert before the first draw-control layer so imports sit below drawn shapes
+  const drawLayer=map.getStyle().layers.find(l=>l.id.startsWith('gl-draw-'));
+  const before=drawLayer?.id;
+
+  map.addSource(srcId,{type:'geojson',data:fc});
+  map.addLayer({id:`import-${uid}-fill`,type:'fill',source:srcId,
+    filter:['match',['geometry-type'],['Polygon','MultiPolygon'],true,false],
+    paint:{'fill-color':color,'fill-opacity':0.18}
+  },before);
+  map.addLayer({id:`import-${uid}-line`,type:'line',source:srcId,
+    filter:['match',['geometry-type'],['Polygon','MultiPolygon','LineString','MultiLineString'],true,false],
+    paint:{'line-color':color,'line-width':1.8,'line-opacity':0.9}
+  },before);
+  map.addLayer({id:`import-${uid}-circle`,type:'circle',source:srcId,
+    filter:['match',['geometry-type'],['Point','MultiPoint'],true,false],
+    paint:{'circle-color':color,'circle-radius':5,'circle-opacity':0.9,'circle-stroke-width':1.5,'circle-stroke-color':'rgba(0,0,0,0.6)'}
+  },before);
+
+  _importedLayers.push({uid,name,color,visible:true,count:fc.features.length});
+  _renderImportedLayersPanel();
+}
+
+function _renderImportedLayersPanel(){
+  const sep=document.getElementById('il-panel-sep');
+  const title=document.getElementById('il-panel-title');
+  const list=document.getElementById('il-panel-list');
+  if(!sep||!title||!list)return;
+  const isKa=lang==='ka';
+  const hasLayers=_importedLayers.length>0;
+  sep.style.display=hasLayers?'':'none';
+  title.style.display=hasLayers?'':'none';
+  title.textContent=isKa?'იმპორტირებული ფაილები':'Imported Files';
+  list.innerHTML=_importedLayers.map(l=>`
+    <div class="lp-row il-row" id="ilrow-${l.uid}" style="align-items:center;gap:0">
+      <div style="display:flex;align-items:center;gap:7px;flex:1;min-width:0">
+        <span class="il-color-dot" style="background:${l.color}"></span>
+        <span class="lp-row-name" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1" title="${l.name}">${l.name}</span>
+        <span class="il-count">${l.count}</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:5px;flex-shrink:0;margin-left:6px">
+        <div class="lp-sw ${l.visible?'on':''}" id="ilsw-${l.uid}" onclick="event.stopPropagation();toggleImportedLayer('${l.uid}')"></div>
+        <button class="il-del-btn" onclick="event.stopPropagation();removeImportedLayer('${l.uid}')" title="${isKa?'წაშლა':'Remove'}">✕</button>
+      </div>
+    </div>`).join('');
+}
+
+function toggleImportedLayer(uid){
+  const entry=_importedLayers.find(l=>l.uid===uid);
+  if(!entry)return;
+  entry.visible=!entry.visible;
+  const vis=entry.visible?'visible':'none';
+  [`import-${uid}-fill`,`import-${uid}-line`,`import-${uid}-circle`].forEach(id=>{
+    if(map.getLayer(id))map.setLayoutProperty(id,'visibility',vis);
+  });
+  const sw=document.getElementById('ilsw-'+uid);
+  if(sw)sw.classList.toggle('on',entry.visible);
+}
+
+function removeImportedLayer(uid){
+  [`import-${uid}-fill`,`import-${uid}-line`,`import-${uid}-circle`].forEach(id=>{
+    if(map.getLayer(id))map.removeLayer(id);
+  });
+  if(map.getSource(`import-${uid}-src`))map.removeSource(`import-${uid}-src`);
+  _importedLayers=_importedLayers.filter(l=>l.uid!==uid);
+  _renderImportedLayersPanel();
 }
 
 function _parseDxfToGeoJSON(text){
