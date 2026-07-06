@@ -400,7 +400,14 @@
   #draw-area-btn.active { background:rgba(165,180,252,0.22); border-color:rgba(165,180,252,0.7); color:#c7d2fe; padding:6px 14px; }
   @keyframes drawPopupIn { from{opacity:0;transform:translateX(-6px);} to{opacity:1;transform:translateX(0);} }
   #draw-shape-popup { display:none; position:fixed; top:0; left:68px; z-index:30; background:rgba(0,0,0,0.95); backdrop-filter:var(--glass-blur); -webkit-backdrop-filter:var(--glass-blur); border:1px solid rgba(255,255,255,0.08); border-radius:var(--glass-radius); padding:3px; box-shadow:var(--glass-shadow); }
-  #draw-shape-popup.open { display:flex; flex-direction:row; gap:1px; animation:drawPopupIn 0.18s cubic-bezier(0.23,1,0.32,1); }
+  #draw-shape-popup.open { display:flex; flex-direction:column; gap:0; animation:drawPopupIn 0.18s cubic-bezier(0.23,1,0.32,1); }
+  .draw-btn-row { display:flex; flex-direction:row; gap:1px; }
+  .draw-import-sep { height:1px; background:rgba(255,255,255,0.07); margin:3px 4px; }
+  .draw-import-label { font-size:0.58rem; font-weight:600; letter-spacing:0.09em; text-transform:uppercase; color:rgba(255,255,255,0.28); padding:3px 8px 1px; }
+  .draw-import-row { display:flex; flex-direction:row; gap:1px; }
+  .draw-file-btn { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; width:56px; height:50px; background:none; border:none; border-radius:8px; cursor:pointer; padding:4px 2px; transition:background 0.15s; flex-shrink:0; color:rgba(255,255,255,0.45); font-size:0.58rem; font-weight:600; font-family:inherit; letter-spacing:0.02em; }
+  .draw-file-btn:hover { background:rgba(255,255,255,0.08); color:rgba(255,255,255,0.8); }
+  .draw-file-btn svg { width:20px; height:20px; flex-shrink:0; transition:opacity 0.15s; }
   .draw-shape-btn { display:flex; align-items:center; justify-content:center; width:46px; height:46px; background:none; border:none; border-radius:8px; cursor:pointer; padding:3px; transition:background 0.15s; flex-shrink:0; }
   .draw-shape-btn:hover { background:rgba(255,255,255,0.08); }
   .draw-shape-btn img { width:40px; height:40px; display:block; transition:opacity 0.15s; }
@@ -1299,7 +1306,7 @@ const T = {
       proAnalysisLimitTitle:"Pro limit reached",proAnalysisLimitSub:"You’ve used your 1,000 analyses. Contact us to extend your limit.",
     rateInfoTip:"Different exchange rates and bank fees may apply."
     },
-    polySelectBtn:"Draw", polySelectBtnActive:"Cancel",
+    polySelectBtn:"Draw", polySelectBtnActive:"Cancel", drawImportLabel:"Import",
     drawShapeType:"Shape", drawPolygon:"Polygon", drawRectangle:"Square", drawCircle:"Circle", drawLine:"Line",
     polyDrawHint:"Click to draw polygon — double-click to finish",
     rectDrawHint:"Click and drag to draw rectangle",
@@ -1417,7 +1424,7 @@ const T = {
     rateInfoTip:"შეიძლება განსხვავებული გაცვლითი კურსი და საბანკო საკომისიო მოქმედებდეს.",
     
     },
-    polySelectBtn:"დახატვა", polySelectBtnActive:"გაუქმება",
+    polySelectBtn:"დახატვა", polySelectBtnActive:"გაუქმება", drawImportLabel:"იმპორტი",
     drawShapeType:"ფორმა", drawPolygon:"პოლიგონი", drawRectangle:"კვადრატი", drawCircle:"წრე", drawLine:"ხაზი",
     polyDrawHint:"დააჭირე პოლიგონის დასახატავად — ორჯერ დააჭირე დასასრულებლად",
     rectDrawHint:"გადათრიეთ მართკუთხედის დასახატად",
@@ -1487,6 +1494,7 @@ function applyLang(){
   const _drect=document.getElementById("lbl-draw-rectangle");if(_drect)_drect.textContent=tr.drawRectangle||'Square';
   const _dcirc=document.getElementById("lbl-draw-circle");if(_dcirc)_dcirc.textContent=tr.drawCircle||'Circle';
   const _dline=document.getElementById("lbl-draw-line");if(_dline)_dline.textContent=tr.drawLine||'Line';
+  const _dimp=document.getElementById("lbl-draw-import");if(_dimp)_dimp.textContent=tr.drawImportLabel||'Import';
   const _lp=tr.layers;
   document.getElementById("layers-btn-text").textContent=_lp.btn;
   document.getElementById("lbl-lp-basemap").textContent=_lp.basemap;
@@ -3392,6 +3400,127 @@ function cancelDraw(){
   if(btn){btn.classList.remove('active','open');}
   document.getElementById('draw-shape-popup')?.classList.remove('open');
   const hint=document.getElementById('draw-hint');if(hint)hint.style.display='none';
+}
+
+let _drawImportType=null;
+function importDrawFile(type){
+  if(!currentUser||currentUser.plan!=='pro'){openPaywall();return;}
+  _drawImportType=type;
+  const inp=document.getElementById('draw-file-input');
+  if(type==='geojson')inp.accept='.geojson,.json';
+  else if(type==='shapefile')inp.accept='.zip';
+  else if(type==='dxf')inp.accept='.dxf,.dwg';
+  inp.value='';
+  inp.click();
+  document.getElementById('draw-shape-popup')?.classList.remove('open');
+  document.getElementById('draw-area-btn')?.classList.remove('open');
+  _drawMenuOpen=false;
+}
+
+async function handleDrawFileImport(evt){
+  const file=evt.target.files[0];
+  if(!file)return;
+  initDrawControl();
+  showToast((lang==='ka'?'ფაილი იტვირთება…':'Importing file…'),2500);
+  try{
+    let geojson=null;
+    if(_drawImportType==='geojson'){
+      const text=await file.text();
+      geojson=JSON.parse(text);
+    } else if(_drawImportType==='shapefile'){
+      if(!window.shp){
+        await new Promise((res,rej)=>{const s=document.createElement('script');s.src='https://unpkg.com/shpjs@latest/dist/shp.js';s.onload=res;s.onerror=rej;document.head.appendChild(s);});
+      }
+      const buf=await file.arrayBuffer();
+      geojson=await window.shp(buf);
+    } else if(_drawImportType==='dxf'){
+      if(!window.DxfParser){
+        await new Promise((res,rej)=>{const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/dxf-parser@1.1.2/build/dxf-parser.min.js';s.onload=res;s.onerror=rej;document.head.appendChild(s);});
+      }
+      const text=await file.text();
+      geojson=_parseDxfToGeoJSON(text);
+    }
+    if(!geojson)throw new Error('Could not parse file');
+
+    // Normalise to FeatureCollection (shpjs can return an array of FCs for multi-layer zips)
+    let fc;
+    if(Array.isArray(geojson)){
+      fc={type:'FeatureCollection',features:geojson.flatMap(g=>(g.type==='FeatureCollection'?g.features:[g]))};
+    } else if(geojson.type==='FeatureCollection'){
+      fc=geojson;
+    } else if(geojson.type==='Feature'){
+      fc={type:'FeatureCollection',features:[geojson]};
+    } else {
+      fc={type:'FeatureCollection',features:[{type:'Feature',geometry:geojson,properties:{}}]};
+    }
+
+    const validFeatures=fc.features.filter(f=>f&&f.geometry);
+    if(!validFeatures.length){showToast(lang==='ka'?'ფაილში ფიჩერი ვერ მოიძებნა':'No features found in file',3500);return;}
+
+    _draw.deleteAll();
+    const addedIds=[];
+    for(const f of validFeatures){
+      try{const ids=_draw.add(f);if(ids?.length)addedIds.push(ids[0]);}catch(_){}
+    }
+
+    // Fly map to imported extent
+    try{
+      const bbox=turf.bbox({type:'FeatureCollection',features:validFeatures});
+      if(bbox.every(isFinite)&&bbox[0]>=-180&&bbox[2]<=180&&bbox[1]>=-90&&bbox[3]<=90){
+        map.fitBounds([[bbox[0],bbox[1]],[bbox[2],bbox[3]]],{padding:60,maxZoom:18,duration:800});
+      } else {
+        showToast(lang==='ka'?'DXF კოორდინატები WGS84-ში არ ჩანს. შეამოწმეთ პროექცია.':'DXF coordinates outside WGS84 bounds — check the coordinate system.',5000);
+      }
+    }catch(_){}
+
+    if(addedIds.length){
+      _drawnFeatureId=addedIds[0];
+      showToast((lang==='ka'?`${addedIds.length} ფიჩერი დაემატა`:`${addedIds.length} feature${addedIds.length>1?'s':''} imported`),3000);
+    }
+  }catch(e){
+    console.error('[import]',e);
+    showToast((lang==='ka'?'იმპორტი ვერ მოხერხდა: ':'Import failed: ')+(e.message||'unknown error'),4500);
+  }
+}
+
+function _parseDxfToGeoJSON(text){
+  if(window.DxfParser){
+    try{
+      const dxf=new DxfParser().parseSync(text);
+      return _dxfEntitiesToGeoJSON(dxf.entities||[]);
+    }catch(e){console.warn('[dxf] parser error',e);}
+  }
+  return {type:'FeatureCollection',features:[]};
+}
+
+function _dxfEntitiesToGeoJSON(entities){
+  const features=[];
+  for(const e of entities){
+    let geom=null;
+    try{
+      if(e.type==='LINE'&&e.vertices?.length>=2){
+        geom={type:'LineString',coordinates:[[e.vertices[0].x,e.vertices[0].y],[e.vertices[1].x,e.vertices[1].y]]};
+      } else if((e.type==='LWPOLYLINE'||e.type==='POLYLINE')&&e.vertices?.length>=2){
+        const coords=e.vertices.map(v=>[v.x,v.y]);
+        if(e.shape){
+          if(coords[0][0]!==coords[coords.length-1][0]||coords[0][1]!==coords[coords.length-1][1])coords.push([...coords[0]]);
+          geom={type:'Polygon',coordinates:[coords]};
+        } else {
+          geom={type:'LineString',coordinates:coords};
+        }
+      } else if(e.type==='POINT'&&e.position){
+        geom={type:'Point',coordinates:[e.position.x,e.position.y]};
+      } else if(e.type==='CIRCLE'&&e.center){
+        const n=64,cx=e.center.x,cy=e.center.y,r=e.radius;
+        const pts=Array.from({length:n+1},(_,i)=>{const a=(i/n)*2*Math.PI;return[cx+r*Math.cos(a),cy+r*Math.sin(a)];});
+        geom={type:'Polygon',coordinates:[pts]};
+      } else if(e.type==='SPLINE'&&e.controlPoints?.length>=2){
+        geom={type:'LineString',coordinates:e.controlPoints.map(p=>[p.x,p.y])};
+      }
+    }catch(_){}
+    if(geom)features.push({type:'Feature',geometry:geom,properties:{layer:e.layer||'0',entityType:e.type}});
+  }
+  return {type:'FeatureCollection',features};
 }
 
 function _startShapeDrag(shape){
@@ -10624,10 +10753,29 @@ init();
 <div id="zaxis-footer"><p>built with &#129360; by</p><a href="https://zaxis.ge" target="_blank" rel="noopener"><img src="https://raw.githubusercontent.com/axis-Z/urbanyxv1/refs/heads/main/img/white-transparent-background.png" alt="Z.axis" width="70"></a></div>
 
 <div id="draw-shape-popup">
-  <button class="draw-shape-btn" id="draw-btn-polygon" onclick="startDraw('polygon')" title="Polygon"><img src="analysis-logos/polygon.svg"></button>
-  <button class="draw-shape-btn" id="draw-btn-rectangle" onclick="startDraw('rectangle')" title="Square"><img src="analysis-logos/square.svg"></button>
-  <button class="draw-shape-btn" id="draw-btn-circle" onclick="startDraw('circle')" title="Circle"><img src="analysis-logos/circle.svg"></button>
-  <button class="draw-shape-btn" id="draw-btn-line" onclick="startDraw('line')" title="Line"><img src="analysis-logos/line.svg"></button>
+  <div class="draw-btn-row">
+    <button class="draw-shape-btn" id="draw-btn-polygon" onclick="startDraw('polygon')" title="Polygon"><img src="analysis-logos/polygon.svg"></button>
+    <button class="draw-shape-btn" id="draw-btn-rectangle" onclick="startDraw('rectangle')" title="Square"><img src="analysis-logos/square.svg"></button>
+    <button class="draw-shape-btn" id="draw-btn-circle" onclick="startDraw('circle')" title="Circle"><img src="analysis-logos/circle.svg"></button>
+    <button class="draw-shape-btn" id="draw-btn-line" onclick="startDraw('line')" title="Line"><img src="analysis-logos/line.svg"></button>
+  </div>
+  <div class="draw-import-sep"></div>
+  <div class="draw-import-label" id="lbl-draw-import">Import</div>
+  <div class="draw-import-row">
+    <button class="draw-file-btn" onclick="importDrawFile('geojson')" title="Import GeoJSON (.geojson / .json)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><polyline points="9 15 12 18 15 15"/><line x1="12" y1="12" x2="12" y2="18"/></svg>
+      GeoJSON
+    </button>
+    <button class="draw-file-btn" onclick="importDrawFile('shapefile')" title="Import Shapefile (.zip containing .shp/.dbf)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      SHP
+    </button>
+    <button class="draw-file-btn" onclick="importDrawFile('dxf')" title="Import DXF / DWG (.dxf)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 8h3.5a2.5 2.5 0 010 5H7V8z"/><path d="M7 13v3"/><path d="M14 8l3 8"/><path d="M17 8l-3 8"/></svg>
+      DXF
+    </button>
+  </div>
+  <input type="file" id="draw-file-input" style="display:none" onchange="handleDrawFileImport(event)">
 </div>
 </body>
 </html>
