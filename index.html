@@ -1761,7 +1761,8 @@ async function onAuthSuccess(session){
   const u=session.user;
   let plan="free",isAdmin=false;
   try{
-    const{data}=await sb.from("subscriptions").select("plan,status,billing_interval,current_period_end,subscription_started_at").eq("user_id",u.id).single();
+    const{data,error:subErr}=await sb.from("subscriptions").select("plan,status,billing_interval,current_period_end,subscription_started_at").eq("user_id",u.id).single();
+    if(subErr){console.error("[sub] fetch error:",subErr.code,subErr.message);}
     if(data){
       window._subInterval=data.billing_interval||"month";
       window._subPeriodEnd=data.current_period_end||null;
@@ -1770,6 +1771,7 @@ async function onAuthSuccess(session){
       const effectiveStatus=(data.status==="canceled"&&periodInFuture)?"canceling":data.status;
       window._subStatus=effectiveStatus||"free";
       if(effectiveStatus==="active"||effectiveStatus==="trialing"||effectiveStatus==="canceling")plan=data.plan;
+      console.log("[sub] status="+effectiveStatus+" plan="+plan);
     }
   }catch(e){console.warn("Plan fetch:",e);}
   try{
@@ -10460,7 +10462,11 @@ async function init(){
     document.getElementById("center-search").classList.add("hidden");
   },{passive:true});
   const{data:{session}}=await sb.auth.getSession();
-  if(session)await onAuthSuccess(session);
+  if(session){
+    const{data:{user},error:userErr}=await sb.auth.getUser();
+    if(userErr||!user){await sb.auth.signOut();}
+    else{await onAuthSuccess(session);}
+  }
   sb.auth.onAuthStateChange(async(event,session)=>{
     if(event==="PASSWORD_RECOVERY"){
       openAuthModal("view-update-password");
