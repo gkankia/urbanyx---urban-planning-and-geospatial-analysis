@@ -83,7 +83,6 @@ async function handlePaddleEvent(event) {
 
   switch (event.event_type) {
     case "transaction.completed":
-    case "subscription.activated":
       result = await supabase.from("subscriptions").upsert({
         user_id:                userId,
         plan:                   "pro",
@@ -93,6 +92,20 @@ async function handlePaddleEvent(event) {
         current_period_end:     data.billing_period?.ends_at ?? data.next_billed_at ?? null,
         paddle_customer_id:     data.customer_id ?? null,
         updated_at:             new Date().toISOString(),
+      }, { onConflict: "user_id" });
+      break;
+
+    case "subscription.activated":
+      result = await supabase.from("subscriptions").upsert({
+        user_id:                   userId,
+        plan:                      "pro",
+        status:                    data.status || "active",
+        paddle_subscription_id:    data.id ?? null,
+        billing_interval:          data.items?.[0]?.price?.billing_cycle?.interval ?? "month",
+        current_period_end:        data.current_billing_period?.ends_at ?? null,
+        paddle_customer_id:        data.customer_id ?? null,
+        subscription_started_at:   data.started_at ?? data.created_at ?? new Date().toISOString(),
+        updated_at:                new Date().toISOString(),
       }, { onConflict: "user_id" });
       break;
 
@@ -151,7 +164,7 @@ async function handlePaddleEvent(event) {
 app.post("/api/paddle/cancel", requireAuth, async (req, res) => {
   const { data: sub, error } = await supabase
     .from("subscriptions")
-    .select("paddle_subscription_id, billing_interval, current_period_end")
+    .select("paddle_subscription_id, billing_interval, current_period_end, status, subscription_started_at")
     .eq("user_id", req.user.id)
     .in("status", ["active", "trialing"])
     .single();
@@ -160,10 +173,12 @@ app.post("/api/paddle/cancel", requireAuth, async (req, res) => {
     return res.status(404).json({ error: "No active subscription found" });
   }
 
-  const periodEnd      = sub.current_period_end ? new Date(sub.current_period_end) : null;
-  const daysUntilEnd   = periodEnd ? (periodEnd.getTime() - Date.now()) / 86_400_000 : 999;
-  const immediateRefund = sub.billing_interval === "year" && daysUntilEnd >= 335;
-  const effectiveFrom  = immediateRefund ? "immediately" : "next_billing_period";
+  const isTrialing   = sub.status === "trialing";
+  const periodEnd    = sub.current_period_end ? new Date(sub.current_period_end) : null;
+  const daysUntilEnd = periodEnd ? (periodEnd.getTime() - Date.now()) / 86_400_000 : 999;
+  // Trial: always cancel immediately (no charge). Yearly within 30 days: cancel immediately (refund eligible).
+  const immediateRefund = !isTrialing && sub.billing_interval === "year" && daysUntilEnd >= 335;
+  const effectiveFrom   = (isTrialing || immediateRefund) ? "immediately" : "next_billing_period";
 
   const paddleBase = process.env.PADDLE_SANDBOX === "true"
     ? "https://sandbox-api.paddle.com"
@@ -185,7 +200,7 @@ app.post("/api/paddle/cancel", requireAuth, async (req, res) => {
     ...(immediateRefund ? { plan: "free", paddle_subscription_id: null } : {}),
   }).eq("user_id", req.user.id);
 
-  res.json({ effective_from: effectiveFrom });
+  res.json({ effective_from: effectiveFrom, was_trial: isTrialing });
 });
 
 // ── Start ─────────────────────────────────────────────────────────────────────
