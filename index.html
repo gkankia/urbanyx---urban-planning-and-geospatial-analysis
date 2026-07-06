@@ -1741,10 +1741,13 @@ async function signUp(){
   const email=document.getElementById("su-email").value.trim();
   const password=document.getElementById("su-password").value;
   errEl.textContent="";
+  const termsChecked=document.getElementById("su-terms")?.checked;
   if(!email||!password||!sector||!role||!purpose){errEl.textContent=t().auth.errFill;return;}
   if(password.length<8){errEl.textContent=t().auth.errPassword;return;}
+  if(!termsChecked){errEl.textContent=t().auth.errTerms;return;}
+  const termsAcceptedAt=new Date().toISOString();
   btn.disabled=true;btn.innerHTML=`<span class="spinner-sm"></span>`;
-  const{data,error}=await sb.auth.signUp({email,password,options:{data:{full_name:name,sector,organisation:org,role,purpose},emailRedirectTo:location.origin+location.pathname}});
+  const{data,error}=await sb.auth.signUp({email,password,options:{data:{full_name:name,sector,organisation:org,role,purpose,terms_accepted:true,terms_accepted_at:termsAcceptedAt},emailRedirectTo:location.origin+location.pathname}});
   btn.disabled=false;btn.textContent=t().auth.suBtn;
   if(error){errEl.textContent=error.message;return;}
   if(data.session){await onAuthSuccess(data.session);closeAuthModal();}
