@@ -10464,8 +10464,12 @@ async function init(){
   const{data:{session}}=await sb.auth.getSession();
   if(session){
     const{data:{user},error:userErr}=await sb.auth.getUser();
-    if(userErr||!user){await sb.auth.signOut();}
-    else{await onAuthSuccess(session);}
+    if(userErr||!user){
+      // Clear local session only — no API call, avoids 403 on deleted/expired accounts
+      await sb.auth.signOut({scope:'local'}).catch(()=>{});
+    } else {
+      await onAuthSuccess(session);
+    }
   }
   sb.auth.onAuthStateChange(async(event,session)=>{
     if(event==="PASSWORD_RECOVERY"){
