@@ -4066,10 +4066,21 @@ function _initImportSelectionLayers(){
   });
 }
 
+function _dimImportedLayers(active){
+  _importedLayers.forEach(l=>{
+    if(!l.visible)return;
+    const fill=`import-${l.uid}-fill`,line=`import-${l.uid}-line`,circ=`import-${l.uid}-circle`;
+    if(map.getLayer(fill))map.setPaintProperty(fill,'fill-opacity',active?0.04:0.18);
+    if(map.getLayer(line))map.setPaintProperty(line,'line-opacity',active?0.18:0.9);
+    if(map.getLayer(circ)){map.setPaintProperty(circ,'circle-opacity',active?0.18:0.9);map.setPaintProperty(circ,'circle-stroke-opacity',active?0.18:1);}
+  });
+}
+
 function _selectImportedFeature(feature,uid){
   const entry=_importedLayers.find(l=>l.uid===uid);
   if(!entry)return;
   _selectedImportUid=uid;
+  _dimImportedLayers(true);
   _initImportSelectionLayers();
   map.getSource('import-sel-src')?.setData({type:'FeatureCollection',features:[feature]});
 
@@ -4125,6 +4136,7 @@ function _selectImportedFeature(feature,uid){
 }
 
 function _clearImportedSelection(){
+  _dimImportedLayers(false);
   _selectedImportUid=null;
   if(mapReady&&map.getSource('import-sel-src')){
     map.getSource('import-sel-src').setData({type:'FeatureCollection',features:[]});
