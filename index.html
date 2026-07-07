@@ -3697,12 +3697,27 @@ function _collectProjectState(){
     selected_meta:{code:getT('val-code'),area:getT('val-area'),type:getT('val-type'),addr:getT('val-addr'),owner:getT('val-owner'),centroid:parcelCentroid||null},
     imported_layers:_importedLayers.map(l=>({uid:l.uid,name:l.name,color:l.color,visible:l.visible,count:l.count,geomTypes:l.geomTypes||[],vizActive:l.vizActive||false,vizState:_vizState[l.uid]||null,fc:l.fc})),
     analysis_snapshot:(()=>{
-      const panelHtml={};
+      // Capture all result-bearing elements so they can be restored exactly as-is
+      const resultsHtml={};
+      // Main score card in side panel
+      const scEl=document.getElementById('score-card');
+      if(scEl&&scEl.style.display!=='none'&&scEl.textContent.trim())
+        resultsHtml['score-card']={html:scEl.innerHTML,display:scEl.style.display||'block'};
+      // Wind analysis card
+      const wcEl=document.getElementById('wind-card');
+      if(wcEl&&wcEl.style.display!=='none'&&wcEl.textContent.trim())
+        resultsHtml['wind-card']={html:wcEl.innerHTML,display:wcEl.style.display||'block'};
+      // Each analysis category's content panel (inside pro-analysis-card)
       ['accessibility','education','mobility','climate','morphology','energy','relief'].forEach(cat=>{
         const el=document.getElementById('pro-cat-'+cat+'-content');
-        if(el&&el.textContent.trim())panelHtml[cat]=el.innerHTML;
+        if(el&&el.textContent.trim())resultsHtml['pro-cat-'+cat+'-content']={html:el.innerHTML};
       });
-      return {parcelAreaM2:_currentParcelAreaM2||null,activeCatKey:_activeCatKey||null,panelHtml};
+      return {
+        parcelAreaM2:_currentParcelAreaM2||null,
+        activeCatKey:_activeCatKey||null,
+        resultsHtml,
+        isoData:_isoData?JSON.parse(JSON.stringify(_isoData)):null
+      };
     })()
   };
 }
@@ -3839,17 +3854,23 @@ async function _restoreProjectState(project){
       showParcelPopup(parcelCentroid);
     }
   }
-  // 6. Restore analysis panel — inject saved HTML so it won't re-fetch, then open
+  // 6. Restore analysis results
   const savedSnap=project.analysis_snapshot||{};
-  const savedCat=savedSnap.activeCatKey;
-  const savedPanelHtml=savedSnap.panelHtml||{};
-  // Pre-populate all analysis panels that had content when saved
-  Object.entries(savedPanelHtml).forEach(([cat,html])=>{
-    const el=document.getElementById('pro-cat-'+cat+'-content');
-    if(el)el.innerHTML=html;
+  // Restore isochrone polygon on the map
+  if(savedSnap.isoData&&mapReady){
+    _isoData=savedSnap.isoData;
+    map.getSource('isochrone')?.setData(_isoData);
+  }
+  // Restore all saved result containers (score-card, wind-card, pro-cat-*-content)
+  Object.entries(savedSnap.resultsHtml||{}).forEach(([id,data])=>{
+    const el=document.getElementById(id);
+    if(!el||!data?.html)return;
+    el.innerHTML=data.html;
+    if(data.display)el.style.display=data.display;
   });
-  // Open the panel that was active — content is now pre-filled so showCatInPanel
-  // won't trigger runAnalysis(), it just shows the panel
+  // Open the analysis category that was active — content is already pre-filled
+  // so showCatInPanel won't call runAnalysis(), it just reveals the panel
+  const savedCat=savedSnap.activeCatKey;
   if(savedCat){
     setTimeout(()=>{
       const catBtn=document.getElementById('cat-btn-'+savedCat);
