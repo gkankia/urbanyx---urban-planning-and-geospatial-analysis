@@ -409,7 +409,7 @@
   .draw-import-sep { height:1px; background:rgba(255,255,255,0.07); margin:3px 4px; }
   .draw-import-label { font-size:0.58rem; font-weight:600; letter-spacing:0.09em; text-transform:uppercase; color:rgba(255,255,255,0.28); padding:3px 8px 1px; }
   .draw-import-row { display:flex; flex-direction:row; gap:1px; }
-  .draw-file-btn { display:flex; align-items:center; justify-content:center; width:46px; height:46px; background:none; border:none; border-radius:8px; cursor:pointer; padding:3px; transition:background 0.15s; flex-shrink:0; }
+  .draw-file-btn { display:flex; align-items:center; justify-content:center; width:52px; height:52px; background:none; border:none; border-radius:8px; cursor:pointer; padding:3px; transition:background 0.15s; flex-shrink:0; }
   .draw-file-btn:hover { background:rgba(255,255,255,0.08); color:rgba(255,255,255,0.8); }
   .draw-file-btn img { flex-shrink:0; transition:opacity 0.15s; }
   .draw-file-btn:hover img { opacity:0.9; }
@@ -10890,6 +10890,7 @@ init();
 <div id="zaxis-footer"><p>built with &#129360; by</p><a href="https://zaxis.ge" target="_blank" rel="noopener"><img src="https://raw.githubusercontent.com/axis-Z/urbanyxv1/refs/heads/main/img/white-transparent-background.png" alt="Z.axis" width="70"></a></div>
 
 <div id="draw-shape-popup">
+  <div class="draw-import-label">Draw Shape</div>
   <div class="draw-btn-row">
     <button class="draw-shape-btn" id="draw-btn-polygon" onclick="startDraw('polygon')" title="Polygon"><img src="analysis-logos/polygon.svg"></button>
     <button class="draw-shape-btn" id="draw-btn-rectangle" onclick="startDraw('rectangle')" title="Square"><img src="analysis-logos/square.svg"></button>
@@ -10900,13 +10901,13 @@ init();
   <div class="draw-import-label" id="lbl-draw-import">Import</div>
   <div class="draw-import-row">
     <button class="draw-file-btn" onclick="importDrawFile('geojson')" title="Import GeoJSON (.geojson / .json)">
-      <img src="analysis-logos/geojson.svg" style="width:40px;height:40px">
+      <img src="analysis-logos/geojson.svg" style="width:46px;height:46px">
     </button>
     <button class="draw-file-btn" onclick="importDrawFile('shapefile')" title="Import Shapefile (.zip containing .shp/.dbf)">
-      <img src="analysis-logos/shp.svg" style="width:40px;height:40px">
+      <img src="analysis-logos/shp.svg" style="width:46px;height:46px">
     </button>
     <button class="draw-file-btn" onclick="importDrawFile('csv')" title="Import CSV with lat/lon columns (.csv)">
-      <img src="analysis-logos/csv.svg" style="width:40px;height:40px">
+      <img src="analysis-logos/csv.svg" style="width:46px;height:46px">
     </button>
   </div>
   <input type="file" id="draw-file-input" style="display:none" onchange="handleDrawFileImport(event)">
