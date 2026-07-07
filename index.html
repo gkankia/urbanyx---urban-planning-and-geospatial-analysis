@@ -321,6 +321,26 @@
   .il-del-btn { background:none; border:none; cursor:pointer; color:rgba(255,255,255,0.2); font-size:0.65rem; line-height:1; padding:2px 3px; border-radius:4px; font-family:inherit; transition:color 0.15s,background 0.15s; }
   .il-del-btn:hover { color:rgba(239,68,68,0.8); background:rgba(239,68,68,0.1); }
   .il-count { font-size:0.56rem; color:rgba(255,255,255,0.2); flex-shrink:0; }
+  .il-viz-btn { background:none; border:none; cursor:pointer; color:rgba(255,255,255,0.2); padding:2px 3px; border-radius:4px; line-height:1; transition:color 0.15s,background 0.15s; display:flex; align-items:center; }
+  .il-viz-btn:hover { color:#818cf8; background:rgba(129,140,248,0.12); }
+  .il-viz-btn.active { color:#818cf8; }
+  .il-viz-wrap { background:rgba(255,255,255,0.03); border-radius:7px; padding:8px 9px; margin-top:5px; border:1px solid rgba(255,255,255,0.06); }
+  .il-viz-sub { font-size:0.55rem; font-weight:700; letter-spacing:0.09em; text-transform:uppercase; color:rgba(255,255,255,0.25); margin-bottom:5px; margin-top:8px; }
+  .il-viz-sub:first-child { margin-top:0; }
+  .il-viz-select { width:100%; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); border-radius:6px; color:rgba(255,255,255,0.65); font-size:0.68rem; padding:4px 6px; font-family:inherit; outline:none; cursor:pointer; }
+  .il-viz-select:focus { border-color:rgba(129,140,248,0.45); }
+  .il-viz-pills { display:flex; flex-wrap:wrap; gap:4px; }
+  .il-viz-pill { font-size:0.6rem; font-weight:600; padding:3px 7px; border-radius:20px; border:1px solid rgba(255,255,255,0.1); background:none; color:rgba(255,255,255,0.38); cursor:pointer; font-family:inherit; transition:all 0.15s; white-space:nowrap; }
+  .il-viz-pill:hover { background:rgba(129,140,248,0.1); color:rgba(255,255,255,0.7); border-color:rgba(129,140,248,0.3); }
+  .il-viz-pill.on { background:rgba(129,140,248,0.18); color:#a5b4fc; border-color:rgba(129,140,248,0.45); }
+  .il-scheme-row { display:flex; gap:5px; flex-wrap:wrap; }
+  .il-scheme-opt { width:44px; height:13px; border-radius:3px; cursor:pointer; border:2px solid transparent; transition:border-color 0.15s; overflow:hidden; display:flex; }
+  .il-scheme-opt.on { border-color:#a5b4fc; }
+  .il-scheme-swatch { flex:1; height:100%; }
+  .il-viz-apply { width:100%; margin-top:9px; padding:5px; background:rgba(129,140,248,0.13); border:1px solid rgba(129,140,248,0.28); border-radius:6px; color:#a5b4fc; font-size:0.63rem; font-weight:700; font-family:inherit; cursor:pointer; letter-spacing:0.05em; text-transform:uppercase; transition:all 0.15s; }
+  .il-viz-apply:hover { background:rgba(129,140,248,0.22); border-color:rgba(129,140,248,0.5); }
+  .il-viz-reset { width:100%; margin-top:4px; padding:4px; background:none; border:1px solid rgba(255,255,255,0.07); border-radius:6px; color:rgba(255,255,255,0.28); font-size:0.6rem; font-weight:600; font-family:inherit; cursor:pointer; transition:all 0.15s; }
+  .il-viz-reset:hover { border-color:rgba(239,68,68,0.3); color:rgba(239,68,68,0.55); }
   .modal-overlay { position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.55); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; padding: 20px; opacity: 0; pointer-events: none; transition: opacity 0.22s ease; }
   .modal-overlay.open { opacity: 1; pointer-events: all; }
   .modal-box { background: #111; border: 1px solid rgba(255,255,255,0.11); border-radius: 20px; padding: 26px 24px; width: 100%; max-width: 380px; max-height: 90vh; overflow-y: auto; box-shadow: 0 32px 80px rgba(0,0,0,0.7); position: relative; transform: translateY(14px) scale(0.98); transition: transform 0.28s cubic-bezier(0.23,1,0.32,1); }
@@ -3513,7 +3533,9 @@ function _addImportedLayer(name,fc){
     paint:{'circle-color':color,'circle-radius':5,'circle-opacity':0.9,'circle-stroke-width':1.5,'circle-stroke-color':'rgba(0,0,0,0.6)'}
   },before);
 
-  _importedLayers.push({uid,name,color,visible:true,count:fc.features.length});
+  const columns=_analyzeAttributes(fc.features);
+  const geomTypes=_getImportGeomTypes(fc.features);
+  _importedLayers.push({uid,name,color,visible:true,count:fc.features.length,fc,columns,geomTypes,vizExpanded:false,vizActive:false});
   _renderImportedLayersPanel();
 }
 
@@ -3528,16 +3550,20 @@ function _renderImportedLayersPanel(){
   title.style.display=hasLayers?'':'none';
   title.textContent=isKa?'იმპორტირებული ფაილები':'Imported Files';
   list.innerHTML=_importedLayers.map(l=>`
-    <div class="lp-row il-row" id="ilrow-${l.uid}" style="align-items:center;gap:0">
-      <div style="display:flex;align-items:center;gap:7px;flex:1;min-width:0">
-        <span class="il-color-dot" style="background:${l.color}"></span>
-        <span class="lp-row-name" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1" title="${l.name}">${l.name}</span>
-        <span class="il-count">${l.count}</span>
+    <div id="ilrow-${l.uid}">
+      <div class="lp-row il-row" style="align-items:center;gap:0">
+        <div style="display:flex;align-items:center;gap:7px;flex:1;min-width:0">
+          <span class="il-color-dot" style="background:${l.color}"></span>
+          <span class="lp-row-name" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1" title="${l.name}">${l.name}</span>
+          <span class="il-count">${l.count}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:4px;flex-shrink:0;margin-left:6px">
+          <button class="il-viz-btn ${l.vizExpanded?'active':''}" onclick="event.stopPropagation();toggleLayerViz('${l.uid}')" title="${isKa?'ვიზუალიზაცია':'Visualize data'}"><svg width="11" height="10" viewBox="0 0 11 10" fill="currentColor"><rect x="0" y="5" width="2.2" height="5" rx="0.5"/><rect x="3.2" y="2.5" width="2.2" height="7.5" rx="0.5"/><rect x="6.4" y="0" width="2.2" height="10" rx="0.5"/><rect x="9.6" y="3.5" width="1.4" height="6.5" rx="0.5"/></svg></button>
+          <div class="lp-sw ${l.visible?'on':''}" id="ilsw-${l.uid}" onclick="event.stopPropagation();toggleImportedLayer('${l.uid}')"></div>
+          <button class="il-del-btn" onclick="event.stopPropagation();removeImportedLayer('${l.uid}')" title="${isKa?'წაშლა':'Remove'}">✕</button>
+        </div>
       </div>
-      <div style="display:flex;align-items:center;gap:5px;flex-shrink:0;margin-left:6px">
-        <div class="lp-sw ${l.visible?'on':''}" id="ilsw-${l.uid}" onclick="event.stopPropagation();toggleImportedLayer('${l.uid}')"></div>
-        <button class="il-del-btn" onclick="event.stopPropagation();removeImportedLayer('${l.uid}')" title="${isKa?'წაშლა':'Remove'}">✕</button>
-      </div>
+      ${l.vizExpanded?_buildVizPanel(l.uid):''}
     </div>`).join('');
 }
 
@@ -3559,7 +3585,210 @@ function removeImportedLayer(uid){
   });
   if(map.getSource(`import-${uid}-src`))map.removeSource(`import-${uid}-src`);
   _importedLayers=_importedLayers.filter(l=>l.uid!==uid);
+  delete _vizState[uid];
   _renderImportedLayersPanel();
+}
+
+// ── Attribute analysis & data visualization ───────────────────────────────────
+const _VIZ_RAMPS={
+  blues:  {label:'Blues',  stops:['#c6dbef','#9ecae1','#6baed6','#3182bd','#08519c']},
+  reds:   {label:'Reds',   stops:['#fcbba1','#fc9272','#fb6a4a','#de2d26','#a50f15']},
+  greens: {label:'Greens', stops:['#c7e9c0','#a1d99b','#74c476','#31a354','#006d2c']},
+  oranges:{label:'Oranges',stops:['#fdd0a2','#fdae6b','#fd8d3c','#e6550d','#a63603']},
+  purples:{label:'Purples',stops:['#dadaeb','#bcbddc','#9e9ac8','#756bb1','#54278f']},
+};
+const _VIZ_CAT=['#818cf8','#34d399','#fb923c','#f472b6','#38bdf8','#facc15','#a78bfa','#4ade80','#f87171','#22d3ee'];
+let _vizState={};
+
+function _analyzeAttributes(features){
+  const cols={};
+  const keys=[...new Set(features.flatMap(f=>Object.keys(f.properties||{})))];
+  for(const key of keys){
+    const vals=features.map(f=>f.properties?.[key]).filter(v=>v!=null&&v!=='');
+    if(!vals.length)continue;
+    const nums=vals.map(v=>parseFloat(v)).filter(v=>isFinite(v));
+    const unique=[...new Set(vals.map(v=>String(v)))];
+    cols[key]={
+      type:nums.length/vals.length>0.8?'numeric':unique.length<=15?'categorical':'text',
+      min:nums.length?Math.min(...nums):null,
+      max:nums.length?Math.max(...nums):null,
+      uniqueVals:unique.slice(0,20),
+      uniqueCount:unique.length,
+    };
+  }
+  return cols;
+}
+
+function _getImportGeomTypes(features){
+  const types=new Set(features.map(f=>f.geometry?.type).filter(Boolean));
+  return{
+    hasPolygon:[...types].some(t=>t.includes('Polygon')),
+    hasLine:[...types].some(t=>t.includes('Line')),
+    hasPoint:[...types].some(t=>t.includes('Point')),
+  };
+}
+
+function _getVizTypes(colType,geomTypes){
+  const v=[];
+  if(geomTypes.hasPolygon){
+    if(colType==='numeric')v.push({id:'choropleth',label:'Choropleth'});
+    if(colType==='categorical')v.push({id:'cat-fill',label:'Category Fill'});
+  }
+  if(geomTypes.hasPoint){
+    if(colType==='numeric')v.push({id:'proportional',label:'Proportional Circles'});
+    if(colType==='categorical')v.push({id:'cat-circle',label:'Category Colors'});
+  }
+  if(geomTypes.hasLine){
+    if(colType==='numeric')v.push({id:'grad-line',label:'Graduated Width'});
+    if(colType==='categorical')v.push({id:'cat-line',label:'Category Colors'});
+  }
+  return v;
+}
+
+function toggleLayerViz(uid){
+  const entry=_importedLayers.find(l=>l.uid===uid);
+  if(!entry)return;
+  entry.vizExpanded=!entry.vizExpanded;
+  if(entry.vizExpanded&&!_vizState[uid]){
+    const cols=entry.columns;
+    const numCol=Object.entries(cols).find(([,v])=>v.type==='numeric')?.[0];
+    const catCol=Object.entries(cols).find(([,v])=>v.type==='categorical')?.[0];
+    const firstCol=numCol||catCol||Object.keys(cols)[0]||null;
+    const colType=firstCol?cols[firstCol]?.type:null;
+    const vizTypes=firstCol?_getVizTypes(colType,entry.geomTypes):[];
+    _vizState[uid]={col:firstCol,vizType:vizTypes[0]?.id||null,scheme:'blues'};
+  }
+  _renderImportedLayersPanel();
+}
+
+function _buildVizPanel(uid){
+  const entry=_importedLayers.find(l=>l.uid===uid);
+  if(!entry)return'';
+  const colKeys=Object.keys(entry.columns);
+  if(!colKeys.length)return`<div class="il-viz-wrap" style="font-size:0.65rem;color:rgba(255,255,255,0.25)">${lang==='ka'?'ატრიბუტები არ მოიძებნა':'No attributes found in this layer.'}</div>`;
+  const state=_vizState[uid]||{};
+  const colType=state.col?entry.columns[state.col]?.type:null;
+  const vizTypes=colType?_getVizTypes(colType,entry.geomTypes):[];
+  const needsScheme=state.vizType&&['choropleth','proportional','grad-line'].includes(state.vizType);
+
+  const colOptions=Object.entries(entry.columns).map(([k,v])=>
+    `<option value="${k}" ${k===state.col?'selected':''}>${k} (${v.type})</option>`
+  ).join('');
+
+  const schemeHtml=Object.entries(_VIZ_RAMPS).map(([key,r])=>
+    `<div class="il-scheme-opt ${state.scheme===key?'on':''}" data-scheme="${key}" onclick="_selectVizScheme('${uid}','${key}')" title="${r.label}">${r.stops.map(c=>`<div class="il-scheme-swatch" style="background:${c}"></div>`).join('')}</div>`
+  ).join('');
+
+  const pillsHtml=vizTypes.length
+    ?vizTypes.map(v=>`<button class="il-viz-pill ${state.vizType===v.id?'on':''}" data-type="${v.id}" onclick="_selectVizType('${uid}','${v.id}')">${v.label}</button>`).join('')
+    :`<span style="font-size:0.61rem;color:rgba(255,255,255,0.22)">${lang==='ka'?'ამ სვეტისთვის ვიზ. ხელმიუწვდომელია':'No visualization for this column type'}</span>`;
+
+  return`<div class="il-viz-wrap">
+    <div class="il-viz-sub">${lang==='ka'?'სვეტი':'Column'}</div>
+    <select class="il-viz-select" id="ilviz-col-${uid}" onchange="_onVizColChange('${uid}')">${colOptions}</select>
+    <div id="ilviz-types-${uid}">
+      <div class="il-viz-sub">${lang==='ka'?'ვიზუალიზაცია':'Visualization'}</div>
+      <div class="il-viz-pills">${pillsHtml}</div>
+    </div>
+    <div id="ilviz-scheme-${uid}" ${needsScheme?'':'style="display:none"'}>
+      <div class="il-viz-sub">${lang==='ka'?'ფერის სქემა':'Color Ramp'}</div>
+      <div class="il-scheme-row">${schemeHtml}</div>
+    </div>
+    <button class="il-viz-apply" onclick="applyLayerViz('${uid}')">${lang==='ka'?'გამოყენება':'Apply'}</button>
+    <button class="il-viz-reset" onclick="resetLayerViz('${uid}')">${lang==='ka'?'გადაყენება':'Reset to default'}</button>
+  </div>`;
+}
+
+function _onVizColChange(uid){
+  const sel=document.getElementById(`ilviz-col-${uid}`);
+  if(!sel)return;
+  const entry=_importedLayers.find(l=>l.uid===uid);
+  if(!entry||!_vizState[uid])return;
+  _vizState[uid].col=sel.value;
+  const colType=entry.columns[sel.value]?.type;
+  const vizTypes=_getVizTypes(colType,entry.geomTypes);
+  _vizState[uid].vizType=vizTypes[0]?.id||null;
+  // Re-render just the types + scheme area
+  const typesEl=document.getElementById(`ilviz-types-${uid}`);
+  const schemeEl=document.getElementById(`ilviz-scheme-${uid}`);
+  if(typesEl){
+    const pillsHtml=vizTypes.length
+      ?vizTypes.map(v=>`<button class="il-viz-pill ${_vizState[uid].vizType===v.id?'on':''}" data-type="${v.id}" onclick="_selectVizType('${uid}','${v.id}')">${v.label}</button>`).join('')
+      :`<span style="font-size:0.61rem;color:rgba(255,255,255,0.22)">No visualization for this column type</span>`;
+    typesEl.innerHTML=`<div class="il-viz-sub">Visualization</div><div class="il-viz-pills">${pillsHtml}</div>`;
+  }
+  const needsScheme=_vizState[uid].vizType&&['choropleth','proportional','grad-line'].includes(_vizState[uid].vizType);
+  if(schemeEl)schemeEl.style.display=needsScheme?'':'none';
+}
+
+function _selectVizType(uid,type){
+  if(!_vizState[uid])return;
+  _vizState[uid].vizType=type;
+  document.querySelectorAll(`#ilviz-types-${uid} .il-viz-pill`).forEach(p=>p.classList.toggle('on',p.dataset.type===type));
+  const needsScheme=['choropleth','proportional','grad-line'].includes(type);
+  const schemeEl=document.getElementById(`ilviz-scheme-${uid}`);
+  if(schemeEl)schemeEl.style.display=needsScheme?'':'none';
+}
+
+function _selectVizScheme(uid,scheme){
+  if(!_vizState[uid])return;
+  _vizState[uid].scheme=scheme;
+  document.querySelectorAll(`#ilviz-scheme-${uid} .il-scheme-opt`).forEach(o=>o.classList.toggle('on',o.dataset.scheme===scheme));
+}
+
+function applyLayerViz(uid){
+  const entry=_importedLayers.find(l=>l.uid===uid);
+  const state=_vizState[uid];
+  if(!entry||!state?.col||!state?.vizType)return;
+  const col=state.col;
+  const info=entry.columns[col];
+  const ramp=(_VIZ_RAMPS[state.scheme]||_VIZ_RAMPS.blues).stops;
+  const fillId=`import-${uid}-fill`,lineId=`import-${uid}-line`,circleId=`import-${uid}-circle`;
+
+  const numExpr=(min,max)=>{
+    const step=(max-min)/4||1;
+    return['interpolate',['linear'],['to-number',['get',col]],
+      min,ramp[0], min+step,ramp[1], min+step*2,ramp[2], min+step*3,ramp[3], max,ramp[4]];
+  };
+  const catExpr=(col,fallback)=>['match',['get',col],...info.uniqueVals.flatMap((v,i)=>[v,_VIZ_CAT[i%_VIZ_CAT.length]]),fallback||'#888'];
+
+  try{
+    if(state.vizType==='choropleth'&&map.getLayer(fillId)){
+      map.setPaintProperty(fillId,'fill-color',numExpr(info.min,info.max));
+      map.setPaintProperty(fillId,'fill-opacity',0.75);
+      map.setPaintProperty(lineId,'line-color','rgba(0,0,0,0.25)');
+      map.setPaintProperty(lineId,'line-width',0.5);
+    } else if(state.vizType==='cat-fill'&&map.getLayer(fillId)){
+      map.setPaintProperty(fillId,'fill-color',catExpr(col));
+      map.setPaintProperty(fillId,'fill-opacity',0.65);
+    } else if(state.vizType==='proportional'&&map.getLayer(circleId)){
+      map.setPaintProperty(circleId,'circle-radius',['interpolate',['linear'],['to-number',['get',col]],info.min,4,info.max,22]);
+      map.setPaintProperty(circleId,'circle-color',entry.color);
+    } else if(state.vizType==='cat-circle'&&map.getLayer(circleId)){
+      map.setPaintProperty(circleId,'circle-color',catExpr(col,'#888'));
+      map.setPaintProperty(circleId,'circle-radius',6);
+    } else if(state.vizType==='grad-line'&&map.getLayer(lineId)){
+      map.setPaintProperty(lineId,'line-width',['interpolate',['linear'],['to-number',['get',col]],info.min,1,info.max,8]);
+    } else if(state.vizType==='cat-line'&&map.getLayer(lineId)){
+      map.setPaintProperty(lineId,'line-color',catExpr(col,entry.color));
+    }
+    entry.vizActive=true;
+    showToast(lang==='ka'?'ვიზუალიზაცია გამოყენებულია':'Visualization applied',2500);
+  }catch(e){
+    console.error('[viz]',e);
+    showToast('Visualization error: '+e.message,3500);
+  }
+}
+
+function resetLayerViz(uid){
+  const entry=_importedLayers.find(l=>l.uid===uid);
+  if(!entry)return;
+  const fillId=`import-${uid}-fill`,lineId=`import-${uid}-line`,circleId=`import-${uid}-circle`;
+  if(map.getLayer(fillId)){map.setPaintProperty(fillId,'fill-color',entry.color);map.setPaintProperty(fillId,'fill-opacity',0.18);}
+  if(map.getLayer(lineId)){map.setPaintProperty(lineId,'line-color',entry.color);map.setPaintProperty(lineId,'line-width',1.8);map.setPaintProperty(lineId,'line-opacity',0.9);}
+  if(map.getLayer(circleId)){map.setPaintProperty(circleId,'circle-color',entry.color);map.setPaintProperty(circleId,'circle-radius',5);}
+  entry.vizActive=false;
+  showToast(lang==='ka'?'ვიზუალიზაცია გადაყენდა':'Reset to default',2000);
 }
 
 function _parseDxfToGeoJSON(text){
