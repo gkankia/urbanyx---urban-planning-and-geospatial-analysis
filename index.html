@@ -329,11 +329,13 @@
   .lang-btn { padding: 6px 14px; font-size: 0.78rem; font-weight: 600; color: rgba(255,255,255,0.5); background: none; border: none; cursor: pointer; transition: all 0.15s; font-family: inherit; }
   .lang-btn.active { background: white; color: #0a0a0a; border-radius: 50px; }
   .mapboxgl-ctrl-bottom-right { display: none; }
-  .mapboxgl-ctrl-top-right .mapboxgl-ctrl-group:not(:has(.mapbox-gl-draw_polygon)) { background:var(--glass-bg) !important; backdrop-filter:var(--glass-blur) !important; -webkit-backdrop-filter:var(--glass-blur) !important; border:1px solid var(--glass-border) !important; border-radius:var(--glass-radius) !important; box-shadow:var(--glass-shadow) !important; overflow:hidden; }
-  .mapboxgl-ctrl-top-right .mapboxgl-ctrl-zoom-in .mapboxgl-ctrl-icon, .mapboxgl-ctrl-top-right .mapboxgl-ctrl-zoom-out .mapboxgl-ctrl-icon { filter:opacity(0.5); }
-  .mapboxgl-ctrl-top-right .mapboxgl-ctrl-zoom-in:hover .mapboxgl-ctrl-icon, .mapboxgl-ctrl-top-right .mapboxgl-ctrl-zoom-out:hover .mapboxgl-ctrl-icon { filter:opacity(0.9); }
-  .mapboxgl-ctrl-top-right .mapboxgl-ctrl-zoom-in, .mapboxgl-ctrl-top-right .mapboxgl-ctrl-zoom-out { background:transparent !important; border:none !important; border-bottom:1px solid rgba(255,255,255,0.07) !important; }
-  .mapboxgl-ctrl-top-right .mapboxgl-ctrl-zoom-out { border-bottom:none !important; }
+  .mapboxgl-ctrl-top-right .mapboxgl-ctrl-group:not(:has(.mapbox-gl-draw_polygon)) { display:none !important; }
+  /* ── Custom zoom controls ──────────────────────────────────────────────── */
+  #map-zoom-controls { position:fixed; bottom:80px; right:16px; z-index:20; display:flex; flex-direction:column; background:var(--glass-bg); backdrop-filter:var(--glass-blur); -webkit-backdrop-filter:var(--glass-blur); border:1px solid var(--glass-border); border-radius:10px; box-shadow:var(--glass-shadow); overflow:hidden; }
+  .mzc-btn { width:36px; height:36px; background:none; border:none; color:rgba(255,255,255,0.55); font-size:1.15rem; font-weight:300; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background 0.15s, color 0.15s; font-family:inherit; user-select:none; }
+  .mzc-btn:hover { background:rgba(255,255,255,0.07); color:rgba(255,255,255,0.9); }
+  .mzc-btn:active { background:rgba(255,255,255,0.13); }
+  .mzc-sep { height:1px; background:rgba(255,255,255,0.07); margin:0; }
   #top-center { position:absolute; top:16px; left:50%; transform:translateX(-50%); z-index:20; display:flex; align-items:center; }
   #zaxis-footer { position:absolute; bottom:14px; right:12px; z-index:4; opacity:0.6; transition:opacity 0.2s; pointer-events:all; line-height:0; backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); }
   #zaxis-footer p { font-family: 'JetBrains Mono', monospace; font-size: 7px; text-align: center; color: white }
@@ -570,7 +572,7 @@
   #draw-hint .hint-esc { font-size:0.62rem; color:rgba(165,180,252,0.35); border:1px solid rgba(165,180,252,0.18); border-radius:4px; padding:1px 5px; font-family:inherit; }
   /* hide the default draw toolbar Mapbox adds (keep nav controls) */
   .mapboxgl-ctrl-top-right .mapboxgl-ctrl-group:has(.mapbox-gl-draw_polygon) { display:none !important; }
-  .mapboxgl-ctrl-top-right { padding-top: 108px !important; }
+  .mapboxgl-ctrl-top-right { padding-top: 0 !important; }
   .school-stats { margin: 6px 0 10px; }
   .school-metrics-row { display: flex; gap: 6px; margin-bottom: 10px; }
   .school-metric { flex: 1; background: rgba(255,255,255,0.04); border-radius: 8px; padding: 8px 6px; text-align: center; border: 1px solid rgba(255,255,255,0.07); }
@@ -795,6 +797,12 @@
   <span id="asc-name"></span>
   <span id="asc-status"></span>
   <button id="asc-stop" onclick="_stopAutoSave()" title="Stop auto-saving">✕</button>
+</div>
+
+<div id="map-zoom-controls">
+  <button class="mzc-btn" onclick="map.zoomIn()" title="Zoom in">+</button>
+  <div class="mzc-sep"></div>
+  <button class="mzc-btn" onclick="map.zoomOut()" title="Zoom out">−</button>
 </div>
 
 <div id="layers-btn" onclick="toggleLayersPanel()">
@@ -5946,7 +5954,6 @@ function toggle3D() {
 // ── Map ───────────────────────────────────────────────────────────────────────
 mapboxgl.accessToken=MAPBOX_TOKEN;
 const map=new mapboxgl.Map({container:"map",style:"mapbox://styles/mapbox/dark-v11",center:[44.783,41.693],zoom:16,attributionControl:false,preserveDrawingBuffer:true});
-map.addControl(new mapboxgl.NavigationControl({showCompass:false}),"top-right");
 map.on("load",()=>{
   mapReady=true;
   map.setLanguage(lang==='ka'?'ka':'en');
