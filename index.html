@@ -3416,7 +3416,7 @@ function importDrawFile(type){
   const inp=document.getElementById('draw-file-input');
   if(type==='geojson')inp.accept='.geojson,.json';
   else if(type==='shapefile')inp.accept='.zip';
-  else if(type==='dxf')inp.accept='.dxf,.dwg';
+  else if(type==='csv')inp.accept='.csv,.tsv,.txt';
   inp.value='';
   inp.click();
   document.getElementById('draw-shape-popup')?.classList.remove('open');
@@ -3440,12 +3440,9 @@ async function handleDrawFileImport(evt){
       }
       const buf=await file.arrayBuffer();
       geojson=await window.shp(buf);
-    } else if(_drawImportType==='dxf'){
-      if(!window.DxfParser){
-        await new Promise((res,rej)=>{const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/dxf-parser@1.1.2/build/dxf-parser.min.js';s.onload=res;s.onerror=rej;document.head.appendChild(s);});
-      }
+    } else if(_drawImportType==='csv'){
       const text=await file.text();
-      geojson=_parseDxfToGeoJSON(text);
+      geojson=_parseCSVtoGeoJSON(text,file.name);
     }
     if(!geojson)throw new Error('Could not parse file');
 
@@ -3475,8 +3472,8 @@ async function handleDrawFileImport(evt){
         coordsOk=true;
       }
     }catch(_){}
-    if(!coordsOk&&_drawImportType==='dxf'){
-      showToast(lang==='ka'?'DXF კოორდინატები WGS84-ში არ ჩანს. შეამოწმეთ პროექცია.':'DXF coordinates outside WGS84 bounds — check the coordinate system.',5000);
+    if(!coordsOk){
+      showToast(lang==='ka'?'კოორდინატები WGS84 დიაპაზონს სცილდება. შეამოწმეთ სვეტები.':'Coordinates outside WGS84 range — check column mapping.',5000);
     }
 
     const layerName=file.name.replace(/\.[^.]+$/,'');
@@ -3601,6 +3598,64 @@ function _dxfEntitiesToGeoJSON(entities){
     }catch(_){}
     if(geom)features.push({type:'Feature',geometry:geom,properties:{layer:e.layer||'0',entityType:e.type}});
   }
+  return {type:'FeatureCollection',features};
+}
+
+function _parseCSVtoGeoJSON(text,filename){
+  // Detect delimiter: whichever of , ; \t appears most in the first line
+  const firstLine=text.slice(0,text.indexOf('\n')||500);
+  const counts={',':(firstLine.match(/,/g)||[]).length,';':(firstLine.match(/;/g)||[]).length,'\t':(firstLine.match(/\t/g)||[]).length};
+  const delim=Object.entries(counts).sort((a,b)=>b[1]-a[1])[0][0];
+
+  // Minimal RFC-4180 parser — handles quoted fields
+  function parseRow(line){
+    const fields=[];let cur='';let inQ=false;
+    for(let i=0;i<line.length;i++){
+      const c=line[i];
+      if(c==='"'){if(inQ&&line[i+1]==='"'){cur+='"';i++;}else inQ=!inQ;}
+      else if(c===delim&&!inQ){fields.push(cur.trim());cur='';}
+      else cur+=c;
+    }
+    fields.push(cur.trim());
+    return fields;
+  }
+
+  const lines=text.trim().split(/\r?\n/).filter(l=>l.trim());
+  if(lines.length<2)throw new Error('CSV must have a header row and at least one data row');
+  const headers=parseRow(lines[0]);
+
+  // Auto-detect lat and lon column indices (case-insensitive, many naming conventions)
+  const LAT_RE=/^(lat|latitude|y|lat_dd|ycoord|y_coord|northing|ylat|lat_wgs|wgs_lat|point_y|y_lat|geo_y|latitude_dd|decimallatitude)$/i;
+  const LON_RE=/^(lon|long|longitude|lng|x|lon_dd|xcoord|x_coord|easting|xlon|x_lon|lng_wgs|wgs_lon|point_x|x_lon|geo_x|longitude_dd|decimallongitude)$/i;
+  let latIdx=headers.findIndex(h=>LAT_RE.test(h.trim()));
+  let lonIdx=headers.findIndex(h=>LON_RE.test(h.trim()));
+
+  if(latIdx===-1||lonIdx===-1){
+    // Fallback: look for partial matches (e.g. "latitude_wgs84")
+    if(latIdx===-1)latIdx=headers.findIndex(h=>/lat/i.test(h));
+    if(lonIdx===-1)lonIdx=headers.findIndex(h=>/lon|lng/i.test(h));
+    // Last resort: if exactly two numeric-looking columns exist, try x/y positionally
+    if(latIdx===-1||lonIdx===-1){
+      const numCols=headers.map((h,i)=>({h,i})).filter(({h})=>/^[xy\d]/i.test(h));
+      if(numCols.length===2){lonIdx=numCols[0].i;latIdx=numCols[1].i;}
+    }
+  }
+  if(latIdx===-1||lonIdx===-1){
+    const colList=headers.join(', ');
+    throw new Error(`Could not find lat/lon columns. Found: ${colList}`);
+  }
+
+  const features=[];
+  for(let i=1;i<lines.length;i++){
+    const row=parseRow(lines[i]);
+    const lat=parseFloat(row[latIdx]);
+    const lon=parseFloat(row[lonIdx]);
+    if(!isFinite(lat)||!isFinite(lon))continue;
+    const props={};
+    headers.forEach((h,j)=>{if(j!==latIdx&&j!==lonIdx)props[h]=row[j]??'';});
+    features.push({type:'Feature',geometry:{type:'Point',coordinates:[lon,lat]},properties:props});
+  }
+  if(!features.length)throw new Error(`No valid rows with numeric lat/lon found (lat="${headers[latIdx]}", lon="${headers[lonIdx]}")`);
   return {type:'FeatureCollection',features};
 }
 
@@ -10851,9 +10906,9 @@ init();
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
       SHP
     </button>
-    <button class="draw-file-btn" onclick="importDrawFile('dxf')" title="Import DXF / DWG (.dxf)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 8h3.5a2.5 2.5 0 010 5H7V8z"/><path d="M7 13v3"/><path d="M14 8l3 8"/><path d="M17 8l-3 8"/></svg>
-      DXF
+    <button class="draw-file-btn" onclick="importDrawFile('csv')" title="Import CSV with lat/lon columns (.csv)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/><line x1="8" y1="9" x2="10" y2="9"/></svg>
+      CSV
     </button>
   </div>
   <input type="file" id="draw-file-input" style="display:none" onchange="handleDrawFileImport(event)">
