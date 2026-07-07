@@ -3968,6 +3968,9 @@ function _collectProjectState(){
       snap.accMinutes=typeof _accMinutes!=='undefined'?_accMinutes:15;
       // Action log — derived from current toggle state so restore can replay the exact analyses
       snap.actions=_buildActionLog();
+      // Flush active building's current global state (extrusionActive, height, floorOverrides)
+      // into the _buildings array before reading it — toggleExtrusion never calls _saveBldState
+      if(typeof _saveBldState==='function')_saveBldState();
       // 3D buildings drawn by the user (threeEditor is a live object — excluded)
       if(_buildings.length){
         snap.buildings=_buildings.map(b=>({
