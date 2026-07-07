@@ -3689,6 +3689,78 @@ function _captureMapThumbnail(){
     return tmp.toDataURL('image/jpeg',0.45);
   }catch(e){return null;}
 }
+// Build a replay-able action list from the current active analysis state.
+// Called at save time — we inspect DOM toggles and data vars to know what the user ran.
+function _buildActionLog(){
+  const sw=id=>document.getElementById(id)?.classList.contains('on');
+  const actions=[];
+  // Walkability (main analysis — must replay first so isochrone is ready)
+  if(_walkData)actions.push({fn:'onAnalyseClick'});
+  // Accessibility panel toggles (isochrone-dependent)
+  if(sw('acc-iso-sw'))actions.push({fn:'toggleAccIsochrone'});
+  if(_schoolsLayerActive)actions.push({fn:'toggleAccSchools'});
+  if(_kgLayerActive)actions.push({fn:'toggleAccKindergartens'});
+  if(sw('acc-mob-sw'))actions.push({fn:'toggleAccMobility'});
+  if(sw('acc-transit-sw'))actions.push({fn:'toggleAccTransit'});
+  if(sw('acc-parking-sw'))actions.push({fn:'toggleAccParking'});
+  // Climate (independent of isochrone — parcel only)
+  if(_canopyOverlayCache)actions.push({fn:'toggleAccCanopy'});
+  if(_lstOverlayCache)actions.push({fn:'toggleAccLST'});
+  // Relief (independent)
+  if(typeof _reliefActiveType!=='undefined'&&_reliefActiveType)actions.push({fn:'toggleAccRelief',args:[_reliefActiveType]});
+  // Energy (independent)
+  if(_solarOverlayCache)actions.push({fn:'runSolarAnalysis'});
+  if(_windData)actions.push({fn:'runWindAnalysis'});
+  // Morphology (independent)
+  if(sw('acc-connectivity-sw'))actions.push({fn:'toggleAccConnectivity'});
+  if(sw('acc-orientation-sw'))actions.push({fn:'toggleAccOrientation'});
+  if(typeof _osmActive!=='undefined'&&_osmActive)actions.push({fn:'toggleAccOSM'});
+  // Which panel was open (shown last after content is ready)
+  if(_activeCatKey)actions.push({fn:'showCatInPanel',args:[_activeCatKey]});
+  return actions;
+}
+
+// Replay a saved action log after project load.
+// Phase 1: await walkability (sets _isoData), then fire all others in parallel, then open panel.
+async function _replayActions(actions,savedSnap){
+  try{
+    // Restore accessibility settings so isochrone uses the right mode/time
+    if(savedSnap.accMode&&typeof _accMode!=='undefined')_accMode=savedSnap.accMode;
+    if(savedSnap.accMinutes&&typeof _accMinutes!=='undefined')_accMinutes=savedSnap.accMinutes;
+    // Init panel DOM structure
+    if(typeof setupProCard==='function')setupProCard(false);
+    // Phase 1: walkability (async — isochrone-dependent analyses need _isoData to be set first)
+    if(actions.some(a=>a.fn==='onAnalyseClick')){
+      if(typeof _setAnalysisPanel==='function')_setAnalysisPanel(true);
+      if(typeof runAnalysis==='function')await runAnalysis();
+    }else if(savedSnap.isoData){
+      // No walkability action but we have a saved isochrone (e.g. accessibility-only session)
+      _isoData=savedSnap.isoData;
+      if(mapReady)map.getSource('isochrone')?.setData(_isoData);
+    }
+    // Phase 2: fire all other analyses in parallel (schools/KG now have _isoData from phase 1)
+    const phase2=actions.filter(a=>a.fn!=='onAnalyseClick'&&a.fn!=='showCatInPanel');
+    await Promise.allSettled(phase2.map(async action=>{
+      try{
+        // showCatInPanel needs the panel button element — handled in phase 3
+        if(action.fn==='showCatInPanel')return;
+        const fn=window[action.fn];
+        if(typeof fn!=='function')return;
+        const result=fn(...(action.args||[]));
+        if(result instanceof Promise)await result;
+      }catch(e){}
+    }));
+    // Phase 3: open the category panel (content is now populated by phase 2)
+    const panelAction=actions.find(a=>a.fn==='showCatInPanel');
+    if(panelAction){
+      await new Promise(r=>setTimeout(r,400));
+      const catKey=(panelAction.args||[])[0];
+      const catBtn=document.getElementById('cat-btn-'+catKey);
+      if(catBtn&&typeof showCatInPanel==='function')showCatInPanel(catKey,catBtn);
+    }
+  }catch(e){console.error('[projects] replay:',e);}
+}
+
 function _collectProjectState(){
   const getT=id=>document.getElementById(id)?.textContent||'';
   return {
@@ -3732,6 +3804,11 @@ function _collectProjectState(){
       if(_proData)try{snap.proData=JSON.parse(JSON.stringify(_proData));}catch(e){}
       // Wind
       if(_windData)try{snap.windData=JSON.parse(JSON.stringify(_windData));}catch(e){}
+      // Accessibility mode/time settings (needed to replay the correct isochrone)
+      snap.accMode=typeof _accMode!=='undefined'?_accMode:'walking';
+      snap.accMinutes=typeof _accMinutes!=='undefined'?_accMinutes:15;
+      // Action log — derived from current toggle state so restore can replay the exact analyses
+      snap.actions=_buildActionLog();
       return snap;
     })()
   };
@@ -3869,14 +3946,16 @@ async function _restoreProjectState(project){
       showParcelPopup(parcelCentroid);
     }
   }
-  // 6. Restore all analysis results — deferred so showParcelPopup DOM side-effects settle first
+  // 6. Restore analysis — deferred so showParcelPopup DOM side-effects settle first
   const savedSnap=project.analysis_snapshot||{};
-  const _hasAnalysis=savedSnap.activeCatKey||savedSnap.walkData||savedSnap.isoData||
-    Object.keys(savedSnap.resultsHtml||{}).length>0;
-  if(_hasAnalysis){
+  const savedActions=savedSnap.actions||[];
+  if(savedActions.length>0){
+    // New format: replay the exact sequence of analyses the user ran
+    setTimeout(()=>_replayActions(savedActions,savedSnap),800);
+  }else if(Object.keys(savedSnap.resultsHtml||{}).length>0||savedSnap.walkData||savedSnap.isoData){
+    // Legacy fallback: projects saved before action log was added — restore via HTML injection
     setTimeout(()=>{
       try{
-        // a) Re-hydrate data variables so any live map interactions use the right state
         if(savedSnap.walkData)_walkData=savedSnap.walkData;
         if(savedSnap.isoData){_isoData=savedSnap.isoData;if(mapReady)map.getSource('isochrone')?.setData(_isoData);}
         if(savedSnap.climateData)_climateData=savedSnap.climateData;
@@ -3884,30 +3963,17 @@ async function _restoreProjectState(project){
         if(savedSnap.lstMean!=null)_lstMean=savedSnap.lstMean;
         if(savedSnap.proData)_proData=savedSnap.proData;
         if(savedSnap.windData)_windData=savedSnap.windData;
-        // b) Init panel toggle skeleton for all categories (required before HTML injection
-        //    so the parent .pro-cat elements and their children exist in the DOM)
         if(typeof setupProCard==='function')setupProCard(false);
-        // c) Re-render score ring from saved counts — avoids a network fetch
         if(savedSnap.walkData?.counts&&typeof renderScore==='function')renderScore(savedSnap.walkData.counts);
-        // d) Inject saved HTML into every result container.
-        //    For pro-cat-*-content: overwrites the empty toggle skeleton written by setupProCard
-        //    with the full saved state (POI lists, scores, charts, etc.).
-        //    For float-card extras (pfc-zone-row, etc.): makes them visible with saved content.
         Object.entries(savedSnap.resultsHtml||{}).forEach(([id,data])=>{
           const el=document.getElementById(id);
           if(!el||!data?.html)return;
           el.innerHTML=data.html;
           if(data.display)el.style.display=data.display;
         });
-        // e) Open the category panel that was active when saved.
-        //    Because content is already populated above, showCatInPanel will NOT call
-        //    runAnalysis() — it only positions and displays the card.
         const savedCat=savedSnap.activeCatKey;
-        if(savedCat){
-          const catBtn=document.getElementById('cat-btn-'+savedCat);
-          if(catBtn)showCatInPanel(savedCat,catBtn);
-        }
-      }catch(err){console.error('[projects] restore analysis:',err);}
+        if(savedCat){const catBtn=document.getElementById('cat-btn-'+savedCat);if(catBtn)showCatInPanel(savedCat,catBtn);}
+      }catch(err){console.error('[projects] restore:',err);}
     },700);
   }
 }
