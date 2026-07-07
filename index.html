@@ -3738,6 +3738,9 @@ async function _replayActions(actions,savedSnap){
       _isoData=savedSnap.isoData;
       if(mapReady)map.getSource('isochrone')?.setData(_isoData);
     }
+    // Wait for any camera animation from runAnalysis (fitBounds 800ms) to finish before
+    // adding raster overlays — Mapbox defers image-source renders during camera movement
+    if(mapReady&&map.isMoving())await new Promise(r=>map.once('idle',r));
     // Phase 2: fire all other analyses in parallel (schools/KG now have _isoData from phase 1)
     const phase2=actions.filter(a=>a.fn!=='onAnalyseClick'&&a.fn!=='showCatInPanel');
     await Promise.allSettled(phase2.map(async action=>{
@@ -3750,6 +3753,8 @@ async function _replayActions(actions,savedSnap){
         if(result instanceof Promise)await result;
       }catch(e){}
     }));
+    // Force Mapbox to flush all pending layer/source additions to the canvas
+    if(mapReady&&typeof map.triggerRepaint==='function')map.triggerRepaint();
     // Phase 3: open the category panel (content is now populated by phase 2)
     const panelAction=actions.find(a=>a.fn==='showCatInPanel');
     if(panelAction){
