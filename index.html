@@ -230,6 +230,16 @@
   .spm-cancel:hover { background:rgba(255,255,255,0.1); }
   .spm-confirm { background:linear-gradient(135deg,#6366f1,#8b5cf6); border:none; border-radius:7px; color:white; font-size:0.74rem; font-weight:600; padding:7px 18px; cursor:pointer; font-family:inherit; }
   .spm-confirm:disabled { opacity:0.45; cursor:not-allowed; }
+  /* ── Auto-save status chip ─────────────────────────────────────────────── */
+  #autosave-chip { position:fixed; top:12px; left:78px; z-index:50; display:none; align-items:center; gap:6px; background:rgba(10,10,16,0.88); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); border:1px solid rgba(255,255,255,0.09); border-radius:20px; padding:5px 8px 5px 9px; color:rgba(255,255,255,0.55); font-size:0.68rem; font-weight:500; white-space:nowrap; max-width:260px; }
+  #autosave-chip.asc-visible { display:flex; }
+  #asc-dot { width:6px; height:6px; border-radius:50%; background:#6366f1; flex-shrink:0; transition:background 0.2s; }
+  #asc-dot.asc-saving { background:#f59e0b; animation:asc-pulse 0.9s ease-in-out infinite; }
+  #asc-dot.asc-error { background:#ef4444; }
+  @keyframes asc-pulse { 0%,100%{opacity:1} 50%{opacity:0.25} }
+  #asc-name { color:rgba(255,255,255,0.82); font-weight:600; max-width:110px; overflow:hidden; text-overflow:ellipsis; }
+  #asc-stop { background:none; border:none; color:rgba(255,255,255,0.28); font-size:0.72rem; cursor:pointer; padding:0 0 0 4px; line-height:1; font-family:inherit; }
+  #asc-stop:hover { color:rgba(255,255,255,0.6); }
   .dash-box { background: rgba(14,14,14,0.96); border: 1px solid rgba(255,255,255,0.1); border-radius: 18px; padding: 28px; width: 440px; max-width: 92vw; max-height: 88vh; overflow-y: auto; scrollbar-width: none; position: relative; box-shadow: 0 24px 64px rgba(0,0,0,0.6); }
   .dash-box::-webkit-scrollbar { display: none; }
   .billing-history-row { display:flex; align-items:center; justify-content:space-between; padding:9px 0; border-bottom:1px solid rgba(255,255,255,0.05); }
@@ -777,6 +787,14 @@
       <span class="nav-tip" id="nav-tip-signout">Sign out</span>
     </button>
   </div>
+</div>
+
+<!-- Auto-save status chip — shown when a project is open for editing -->
+<div id="autosave-chip">
+  <span id="asc-dot"></span>
+  <span id="asc-name"></span>
+  <span id="asc-status"></span>
+  <button id="asc-stop" onclick="_stopAutoSave()" title="Stop auto-saving">✕</button>
 </div>
 
 <div id="layers-btn" onclick="toggleLayersPanel()">
@@ -3689,6 +3707,75 @@ function _captureMapThumbnail(){
     return tmp.toDataURL('image/jpeg',0.45);
   }catch(e){return null;}
 }
+
+// ── Auto-save state ──────────────────────────────────────────────────────────
+let _openedProjectId=null,_openedProjectName='',_autoSaveTimer=null,_autoSaveTickTimer=null,_lastSavedAt=null,_autoSaveBusy=false;
+
+function _startAutoSave(id,name){
+  _stopAutoSave();
+  _openedProjectId=id;
+  _openedProjectName=name||'Project';
+  _lastSavedAt=Date.now();
+  _updateAutoSaveChip('idle');
+  document.getElementById('autosave-chip')?.classList.add('asc-visible');
+  // Save every 15 seconds; tick relative time every 30s
+  _autoSaveTimer=setInterval(_autoSaveProject,15000);
+  _autoSaveTickTimer=setInterval(_tickAutoSaveTime,30000);
+}
+
+function _stopAutoSave(){
+  clearInterval(_autoSaveTimer);clearInterval(_autoSaveTickTimer);
+  _autoSaveTimer=null;_autoSaveTickTimer=null;
+  _openedProjectId=null;_lastSavedAt=null;_autoSaveBusy=false;
+  document.getElementById('autosave-chip')?.classList.remove('asc-visible');
+}
+
+function _updateAutoSaveChip(state){
+  const dot=document.getElementById('asc-dot');
+  const nameEl=document.getElementById('asc-name');
+  const statusEl=document.getElementById('asc-status');
+  if(!dot||!nameEl||!statusEl)return;
+  nameEl.textContent=_openedProjectName;
+  dot.classList.remove('asc-saving','asc-error');
+  if(state==='saving'){dot.classList.add('asc-saving');statusEl.textContent='· Saving...';}
+  else if(state==='error'){dot.classList.add('asc-error');statusEl.textContent='· Save failed';}
+  else{statusEl.textContent='· Saved just now';}
+}
+
+function _tickAutoSaveTime(){
+  if(!_openedProjectId||!_lastSavedAt||_autoSaveBusy)return;
+  const statusEl=document.getElementById('asc-status');
+  if(!statusEl)return;
+  const mins=Math.round((Date.now()-_lastSavedAt)/60000);
+  statusEl.textContent=mins<1?'· Saved just now':`· Saved ${mins}m ago`;
+}
+
+async function _autoSaveProject(){
+  if(!_openedProjectId||_autoSaveBusy||!currentUser)return;
+  _autoSaveBusy=true;
+  _updateAutoSaveChip('saving');
+  try{
+    const thumbnail=_captureMapThumbnail();
+    const state=_collectProjectState();
+    const {error}=await sb.from('projects').update({
+      thumbnail,
+      map_state:state.map_state,
+      selected_geom:state.selected_geom,
+      selected_meta:state.selected_meta,
+      imported_layers:state.imported_layers,
+      analysis_snapshot:state.analysis_snapshot
+    }).eq('id',_openedProjectId).eq('user_id',currentUser.id);
+    if(error)throw error;
+    _lastSavedAt=Date.now();
+    _updateAutoSaveChip('idle');
+  }catch(e){
+    console.warn('[projects] auto-save failed:',e);
+    _updateAutoSaveChip('error');
+  }finally{
+    _autoSaveBusy=false;
+  }
+}
+
 // Build a replay-able action list from the current active analysis state.
 // Called at save time — we inspect DOM toggles and data vars to know what the user ran.
 function _buildActionLog(){
@@ -3890,6 +3977,7 @@ async function loadProject(id){
     closeProjectsPanel();
     await _restoreProjectState(data);
     showToast(tr.loadedToast);
+    _startAutoSave(data.id,data.name);
   }catch(err){
     console.error('[projects] load:',err);
     showToast(tr.errorLoad);
