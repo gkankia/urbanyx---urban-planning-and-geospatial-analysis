@@ -3509,6 +3509,7 @@ async function handleDrawFileImport(evt){
 // ── Imported layer registry ───────────────────────────────────────────────────
 const _IMPORT_COLORS=['#818cf8','#34d399','#fb923c','#f472b6','#38bdf8','#facc15','#a78bfa'];
 let _importedLayers=[];
+let _selectedImportUid=null;
 
 function _addImportedLayer(name,fc){
   const uid='il'+(Date.now().toString(36));
@@ -3577,15 +3578,20 @@ function toggleImportedLayer(uid){
   });
   const sw=document.getElementById('ilsw-'+uid);
   if(sw)sw.classList.toggle('on',entry.visible);
+  // Clear selection if this layer is hidden or no imported layers remain visible
+  if(!entry.visible&&_selectedImportUid===uid)_clearImportedSelection();
+  if(!_importedLayers.some(l=>l.visible))_clearImportedSelection();
 }
 
 function removeImportedLayer(uid){
+  if(_selectedImportUid===uid)_clearImportedSelection();
   [`import-${uid}-fill`,`import-${uid}-line`,`import-${uid}-circle`].forEach(id=>{
     if(map.getLayer(id))map.removeLayer(id);
   });
   if(map.getSource(`import-${uid}-src`))map.removeSource(`import-${uid}-src`);
   _importedLayers=_importedLayers.filter(l=>l.uid!==uid);
   delete _vizState[uid];
+  if(!_importedLayers.some(l=>l.visible))_clearImportedSelection();
   _renderImportedLayersPanel();
 }
 
@@ -3789,6 +3795,94 @@ function resetLayerViz(uid){
   if(map.getLayer(circleId)){map.setPaintProperty(circleId,'circle-color',entry.color);map.setPaintProperty(circleId,'circle-radius',5);}
   entry.vizActive=false;
   showToast(lang==='ka'?'ვიზუალიზაცია გადაყენდა':'Reset to default',2000);
+}
+
+// ── Imported layer feature selection ─────────────────────────────────────────
+function _initImportSelectionLayers(){
+  if(!mapReady||map.getSource('import-sel-src'))return;
+  map.addSource('import-sel-src',{type:'geojson',data:{type:'FeatureCollection',features:[]}});
+  map.addLayer({id:'import-sel-fill',type:'fill',source:'import-sel-src',
+    filter:['match',['geometry-type'],['Polygon','MultiPolygon'],true,false],
+    paint:{'fill-color':'#fff','fill-opacity':0.07}
+  });
+  map.addLayer({id:'import-sel-line',type:'line',source:'import-sel-src',
+    paint:{'line-color':'#fff','line-width':2.2,'line-opacity':0.85,'line-dasharray':[4,2.5]}
+  });
+  map.addLayer({id:'import-sel-circle',type:'circle',source:'import-sel-src',
+    filter:['match',['geometry-type'],['Point','MultiPoint'],true,false],
+    paint:{'circle-radius':12,'circle-color':'rgba(255,255,255,0)','circle-stroke-width':2.5,'circle-stroke-color':'#fff'}
+  });
+}
+
+function _selectImportedFeature(feature,uid){
+  const entry=_importedLayers.find(l=>l.uid===uid);
+  if(!entry)return;
+  _selectedImportUid=uid;
+  _initImportSelectionLayers();
+  map.getSource('import-sel-src')?.setData({type:'FeatureCollection',features:[feature]});
+
+  const geom=feature.geometry;
+  const isPolygon=geom.type==='Polygon'||geom.type==='MultiPolygon';
+  const isLine=geom.type==='LineString'||geom.type==='MultiLineString';
+
+  // Set globals used by analysis
+  _currentParcelGeoJSON=isPolygon?geom:null;
+  _dbParcelGeoJSON=_currentParcelGeoJSON;
+  if(isPolygon){
+    const ring=geom.type==='Polygon'?geom.coordinates[0]:geom.coordinates[0][0];
+    _currentParcelAreaM2=ring?Math.round(computePolygonAreaM2(ring)):null;
+  } else {_currentParcelAreaM2=null;}
+  parcelCentroid=getCentroid(geom);
+
+  // Display geometry on parcel source (outline)
+  if(isPolygon||isLine){
+    map.getSource('parcel')?.setData({type:'FeatureCollection',features:[{type:'Feature',geometry:geom,properties:{}}]});
+  }
+
+  // Populate info fields (read by showParcelPopup)
+  const tr=t();
+  const props=feature.properties||{};
+  const propKeys=Object.keys(props).filter(k=>props[k]!=null&&props[k]!=='');
+  const nameKey=propKeys.find(k=>/^(name|title|id|fid|objectid|code|label|nom|nombre)$/i.test(k));
+  const featureName=nameKey?String(props[nameKey]):entry.name;
+  const geomLabel=isPolygon?(lang==='ka'?'პოლიგონი':'Polygon'):isLine?(lang==='ka'?'ხაზი':'Line'):(lang==='ka'?'წერტილი':'Point');
+  const areaDisplay=isPolygon&&_currentParcelAreaM2?Number(_currentParcelAreaM2).toLocaleString()+' '+tr.sqm:geomLabel;
+  const attrKeys=propKeys.filter(k=>k!==nameKey).slice(0,2);
+
+  document.getElementById('val-code').textContent=featureName;
+  document.getElementById('lbl-area').textContent=isPolygon?(tr.area||'Area'):(lang==='ka'?'გეომეტრია':'Geometry');
+  document.getElementById('val-area').textContent=areaDisplay;
+  document.getElementById('val-type').textContent=entry.name;
+  document.getElementById('lbl-type').textContent=lang==='ka'?'ფენა':'Layer';
+  document.getElementById('lbl-addr').textContent=attrKeys[0]||'—';
+  document.getElementById('val-addr').textContent=attrKeys[0]?String(props[attrKeys[0]]):'—';
+  document.getElementById('lbl-owner').textContent=attrKeys[1]||'—';
+  document.getElementById('val-owner').textContent=attrKeys[1]?String(props[attrKeys[1]]):'—';
+  ['val-type','val-addr','val-owner'].forEach(id=>{
+    const row=document.getElementById(id)?.closest('.info-row');if(row)row.style.display='';
+  });
+  document.getElementById('row-line-ownership')?.style&&(document.getElementById('row-line-ownership').style.display='none');
+  document.getElementById('row-line-extra')?.style&&(document.getElementById('row-line-extra').style.display='none');
+
+  // Show float card
+  transitionToSide(featureName);
+  showParcelPopup(parcelCentroid);
+  setupProCard(false);
+  _updateMapInfoBadge();
+  setStatus(lang==='ka'?`${entry.name} — არჩეულია`:`${entry.name} — selected`,'success');
+}
+
+function _clearImportedSelection(){
+  _selectedImportUid=null;
+  if(mapReady&&map.getSource('import-sel-src')){
+    map.getSource('import-sel-src').setData({type:'FeatureCollection',features:[]});
+  }
+  if(mapReady&&map.getSource('parcel')){
+    map.getSource('parcel').setData({type:'FeatureCollection',features:[]});
+  }
+  _currentParcelGeoJSON=null;_dbParcelGeoJSON=null;
+  _currentParcelAreaM2=null;parcelCentroid=null;
+  setStatus('','');
 }
 
 function _parseDxfToGeoJSON(text){
@@ -5350,6 +5444,16 @@ map.on("load",()=>{
   try{initCustomLayers();}catch(err){console.error("initCustomLayers (load) failed:",err);}
 
   // Click on map to identify parcel
+  // Pointer cursor when hovering imported layer features
+  map.on('mousemove',(e)=>{
+    if(!_importedLayers.some(l=>l.visible)){map.getCanvas().style.cursor='';return;}
+    const layerIds=_importedLayers.filter(l=>l.visible)
+      .flatMap(l=>[`import-${l.uid}-fill`,`import-${l.uid}-line`,`import-${l.uid}-circle`].filter(id=>map.getLayer(id)));
+    if(!layerIds.length){map.getCanvas().style.cursor='';return;}
+    const hits=map.queryRenderedFeatures(e.point,{layers:layerIds});
+    map.getCanvas().style.cursor=hits.length?'pointer':'';
+  });
+
   map.on("click",async(e)=>{
     if(_polyDrawing)return;
     if(_drawJustFinished)return;
@@ -5360,6 +5464,25 @@ map.on("load",()=>{
     if(_selectedFloors.size>0&&!window._threeBldHit){_selectFloor(-1);}
     window._threeBldHit=false;
     if(_isDrawnArea)return;
+
+    // Imported layer mode: intercept clicks — no gov API query
+    const _visImport=_importedLayers.filter(l=>l.visible);
+    if(_visImport.length){
+      const _impLayerIds=_visImport.flatMap(l=>
+        [`import-${l.uid}-fill`,`import-${l.uid}-line`,`import-${l.uid}-circle`].filter(id=>map.getLayer(id)));
+      if(_impLayerIds.length){
+        const _impHits=map.queryRenderedFeatures(e.point,{layers:_impLayerIds});
+        if(_impHits.length){
+          const hit=_impHits[0];
+          const hitUid=_visImport.find(l=>
+            [`import-${l.uid}-fill`,`import-${l.uid}-line`,`import-${l.uid}-circle`].includes(hit.layer.id))?.uid;
+          if(hitUid){_selectImportedFeature(hit,hitUid);return;}
+        } else {
+          _clearImportedSelection();
+        }
+      }
+      return; // imported layer is on — never fall through to gov API
+    }
     // Active bus stop: first click deselects, parcel loads on the next click
     if(_ttcActiveStop){
       _ttcSelectedStopGeo=null;
