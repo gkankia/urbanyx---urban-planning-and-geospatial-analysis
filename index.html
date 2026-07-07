@@ -4121,9 +4121,13 @@ async function _restoreProjectState(project){
     }
   }
   // 5.5 Restore drawn buildings / 3D extrusions
+  // Deferred until flyTo completes — _activateBld calls map.easeTo({pitch:55}) which
+  // would cancel the flyTo animation if run immediately, leaving the map at the wrong position.
   const savedSnap=project.analysis_snapshot||{};
   if((savedSnap.buildings||[]).length>0){
-    _restoreBuildings(savedSnap.buildings,savedSnap.activeBldId||null);
+    const doRestoreBuildings=()=>_restoreBuildings(savedSnap.buildings,savedSnap.activeBldId||null);
+    if(ms.center&&mapReady){map.once('moveend',doRestoreBuildings);}
+    else{doRestoreBuildings();}
   }
   // 6. Restore analysis — deferred so showParcelPopup DOM side-effects settle first
   const savedActions=savedSnap.actions||[];
