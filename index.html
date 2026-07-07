@@ -3697,27 +3697,42 @@ function _collectProjectState(){
     selected_meta:{code:getT('val-code'),area:getT('val-area'),type:getT('val-type'),addr:getT('val-addr'),owner:getT('val-owner'),centroid:parcelCentroid||null},
     imported_layers:_importedLayers.map(l=>({uid:l.uid,name:l.name,color:l.color,visible:l.visible,count:l.count,geomTypes:l.geomTypes||[],vizActive:l.vizActive||false,vizState:_vizState[l.uid]||null,fc:l.fc})),
     analysis_snapshot:(()=>{
-      // Capture all result-bearing elements so they can be restored exactly as-is
       const resultsHtml={};
-      // Main score card in side panel
-      const scEl=document.getElementById('score-card');
-      if(scEl&&scEl.style.display!=='none'&&scEl.textContent.trim())
-        resultsHtml['score-card']={html:scEl.innerHTML,display:scEl.style.display||'block'};
-      // Wind analysis card
-      const wcEl=document.getElementById('wind-card');
-      if(wcEl&&wcEl.style.display!=='none'&&wcEl.textContent.trim())
-        resultsHtml['wind-card']={html:wcEl.innerHTML,display:wcEl.style.display||'block'};
-      // Each analysis category's content panel (inside pro-analysis-card)
+      // Main floating cards (score ring, wind)
+      ['score-card','wind-card'].forEach(id=>{
+        const el=document.getElementById(id);
+        if(el&&el.style.display!=='none'&&el.textContent.trim())
+          resultsHtml[id]={html:el.innerHTML,display:el.style.display||'block'};
+      });
+      // All analysis category panels in the side panel
       ['accessibility','education','mobility','climate','morphology','energy','relief'].forEach(cat=>{
         const el=document.getElementById('pro-cat-'+cat+'-content');
         if(el&&el.textContent.trim())resultsHtml['pro-cat-'+cat+'-content']={html:el.innerHTML};
       });
-      return {
+      // Float card extras: zoning, K-values, building parameters
+      ['pfc-zone-row','pfc-kvals-row','pfc-build-params-row'].forEach(id=>{
+        const el=document.getElementById(id);
+        if(el&&el.style.display!=='none'&&el.textContent.trim())
+          resultsHtml[id]={html:el.innerHTML,display:el.style.display||'block'};
+      });
+      const snap={
         parcelAreaM2:_currentParcelAreaM2||null,
         activeCatKey:_activeCatKey||null,
-        resultsHtml,
-        isoData:_isoData?JSON.parse(JSON.stringify(_isoData)):null
+        resultsHtml
       };
+      // Walkability — saved explicitly so score ring can be re-rendered without a network call
+      if(_walkData)snap.walkData={score:_walkData.score,counts:{..._walkData.counts}};
+      // Isochrone polygon — GeoJSON, restored directly onto the map source
+      if(_isoData)try{snap.isoData=JSON.parse(JSON.stringify(_isoData));}catch(e){}
+      // Climate analysis data
+      if(_climateData)try{snap.climateData=JSON.parse(JSON.stringify(_climateData));}catch(e){}
+      if(_canopyPct!=null)snap.canopyPct=_canopyPct;
+      if(_lstMean!=null)snap.lstMean=_lstMean;
+      // Education (schools/kindergartens)
+      if(_proData)try{snap.proData=JSON.parse(JSON.stringify(_proData));}catch(e){}
+      // Wind
+      if(_windData)try{snap.windData=JSON.parse(JSON.stringify(_windData));}catch(e){}
+      return snap;
     })()
   };
 }
@@ -3854,28 +3869,46 @@ async function _restoreProjectState(project){
       showParcelPopup(parcelCentroid);
     }
   }
-  // 6. Restore analysis results
+  // 6. Restore all analysis results — deferred so showParcelPopup DOM side-effects settle first
   const savedSnap=project.analysis_snapshot||{};
-  // Restore isochrone polygon on the map
-  if(savedSnap.isoData&&mapReady){
-    _isoData=savedSnap.isoData;
-    map.getSource('isochrone')?.setData(_isoData);
-  }
-  // Restore all saved result containers (score-card, wind-card, pro-cat-*-content)
-  Object.entries(savedSnap.resultsHtml||{}).forEach(([id,data])=>{
-    const el=document.getElementById(id);
-    if(!el||!data?.html)return;
-    el.innerHTML=data.html;
-    if(data.display)el.style.display=data.display;
-  });
-  // Open the analysis category that was active — content is already pre-filled
-  // so showCatInPanel won't call runAnalysis(), it just reveals the panel
-  const savedCat=savedSnap.activeCatKey;
-  if(savedCat){
+  const _hasAnalysis=savedSnap.activeCatKey||savedSnap.walkData||savedSnap.isoData||
+    Object.keys(savedSnap.resultsHtml||{}).length>0;
+  if(_hasAnalysis){
     setTimeout(()=>{
-      const catBtn=document.getElementById('cat-btn-'+savedCat);
-      if(catBtn)showCatInPanel(savedCat,catBtn);
-    },300);
+      try{
+        // a) Re-hydrate data variables so any live map interactions use the right state
+        if(savedSnap.walkData)_walkData=savedSnap.walkData;
+        if(savedSnap.isoData){_isoData=savedSnap.isoData;if(mapReady)map.getSource('isochrone')?.setData(_isoData);}
+        if(savedSnap.climateData)_climateData=savedSnap.climateData;
+        if(savedSnap.canopyPct!=null)_canopyPct=savedSnap.canopyPct;
+        if(savedSnap.lstMean!=null)_lstMean=savedSnap.lstMean;
+        if(savedSnap.proData)_proData=savedSnap.proData;
+        if(savedSnap.windData)_windData=savedSnap.windData;
+        // b) Init panel toggle skeleton for all categories (required before HTML injection
+        //    so the parent .pro-cat elements and their children exist in the DOM)
+        if(typeof setupProCard==='function')setupProCard(false);
+        // c) Re-render score ring from saved counts — avoids a network fetch
+        if(savedSnap.walkData?.counts&&typeof renderScore==='function')renderScore(savedSnap.walkData.counts);
+        // d) Inject saved HTML into every result container.
+        //    For pro-cat-*-content: overwrites the empty toggle skeleton written by setupProCard
+        //    with the full saved state (POI lists, scores, charts, etc.).
+        //    For float-card extras (pfc-zone-row, etc.): makes them visible with saved content.
+        Object.entries(savedSnap.resultsHtml||{}).forEach(([id,data])=>{
+          const el=document.getElementById(id);
+          if(!el||!data?.html)return;
+          el.innerHTML=data.html;
+          if(data.display)el.style.display=data.display;
+        });
+        // e) Open the category panel that was active when saved.
+        //    Because content is already populated above, showCatInPanel will NOT call
+        //    runAnalysis() — it only positions and displays the card.
+        const savedCat=savedSnap.activeCatKey;
+        if(savedCat){
+          const catBtn=document.getElementById('cat-btn-'+savedCat);
+          if(catBtn)showCatInPanel(savedCat,catBtn);
+        }
+      }catch(err){console.error('[projects] restore analysis:',err);}
+    },700);
   }
 }
 // Show/hide the Projects nav button based on login state (called after auth state changes)
