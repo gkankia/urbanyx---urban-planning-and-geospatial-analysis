@@ -190,6 +190,46 @@
   .climate-layer-btn.active .climate-layer-dot { background:#34d399; }
   #dashboard-modal { position: fixed; inset: 0; z-index: 150; background: rgba(0,0,0,0.6); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); display: none; align-items: center; justify-content: center; }
   #dashboard-modal.open { display: flex; }
+  /* ── Projects panel ─────────────────────────────────────────────────── */
+  #projects-panel { position:fixed; inset:0; z-index:151; background:rgba(0,0,0,0.65); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); display:none; align-items:flex-start; justify-content:flex-end; }
+  #projects-panel.open { display:flex; }
+  .pp-box { background:rgba(14,14,18,0.97); border-left:1px solid rgba(255,255,255,0.07); width:360px; max-width:92vw; height:100vh; overflow-y:auto; display:flex; flex-direction:column; scrollbar-width:none; }
+  .pp-box::-webkit-scrollbar { display:none; }
+  .pp-header { display:flex; align-items:center; justify-content:space-between; padding:20px 18px 14px; border-bottom:1px solid rgba(255,255,255,0.07); flex-shrink:0; }
+  .pp-title { color:white; font-weight:700; font-size:0.88rem; }
+  .pp-close { background:none; border:none; color:rgba(255,255,255,0.4); font-size:1rem; cursor:pointer; padding:4px 6px; border-radius:5px; line-height:1; }
+  .pp-close:hover { color:white; background:rgba(255,255,255,0.08); }
+  .pp-save-btn { margin:14px 16px 2px; padding:10px 14px; background:linear-gradient(135deg,#6366f1,#8b5cf6); border:none; border-radius:9px; color:white; font-size:0.75rem; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:8px; font-family:inherit; transition:filter 0.15s; flex-shrink:0; }
+  .pp-save-btn:hover { filter:brightness(1.12); }
+  .pp-save-btn:disabled { opacity:0.4; cursor:not-allowed; filter:none; }
+  .pp-list { padding:12px 14px 20px; flex:1; }
+  .pp-empty { text-align:center; color:rgba(255,255,255,0.28); font-size:0.74rem; padding:48px 0; }
+  .pp-project-card { background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:10px; margin-bottom:10px; overflow:hidden; transition:border-color 0.15s; }
+  .pp-project-card:hover { border-color:rgba(99,102,241,0.35); }
+  .pp-thumb { width:100%; height:88px; object-fit:cover; display:block; }
+  .pp-thumb-placeholder { width:100%; height:88px; background:linear-gradient(135deg,rgba(99,102,241,0.12),rgba(139,92,246,0.08)); display:flex; align-items:center; justify-content:center; }
+  .pp-card-body { padding:9px 12px 6px; }
+  .pp-card-name { color:white; font-size:0.8rem; font-weight:600; margin-bottom:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .pp-card-meta { color:rgba(255,255,255,0.32); font-size:0.65rem; }
+  .pp-card-footer { display:flex; align-items:center; justify-content:space-between; padding:7px 12px 9px; }
+  .pp-load-btn { background:rgba(99,102,241,0.14); border:1px solid rgba(99,102,241,0.28); border-radius:6px; color:rgba(139,132,255,0.9); font-size:0.68rem; font-weight:600; padding:4px 11px; cursor:pointer; font-family:inherit; transition:background 0.15s; }
+  .pp-load-btn:hover { background:rgba(99,102,241,0.28); }
+  .pp-del-btn { background:none; border:none; color:rgba(255,255,255,0.2); font-size:0.78rem; cursor:pointer; padding:3px 6px; border-radius:4px; transition:color 0.15s; }
+  .pp-del-btn:hover { color:rgba(239,68,68,0.8); background:rgba(239,68,68,0.08); }
+  /* ── Save Project modal ─────────────────────────────────────────────── */
+  #save-project-modal { position:fixed; inset:0; z-index:202; background:rgba(0,0,0,0.72); display:none; align-items:center; justify-content:center; }
+  #save-project-modal.open { display:flex; }
+  .spm-box { background:rgba(14,14,18,0.97); border:1px solid rgba(255,255,255,0.1); border-radius:14px; padding:24px; width:320px; max-width:calc(100vw - 32px); box-shadow:0 24px 64px rgba(0,0,0,0.7); }
+  .spm-title { color:white; font-weight:700; font-size:0.88rem; margin-bottom:14px; }
+  .spm-input { width:100%; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); border-radius:8px; color:white; font-size:0.82rem; font-family:inherit; padding:9px 12px; box-sizing:border-box; outline:none; transition:border-color 0.15s; }
+  .spm-input:focus { border-color:rgba(99,102,241,0.6); }
+  .spm-input::placeholder { color:rgba(255,255,255,0.25); }
+  .spm-hint { font-size:0.64rem; color:rgba(255,255,255,0.28); margin-top:6px; line-height:1.5; }
+  .spm-actions { display:flex; gap:8px; margin-top:16px; justify-content:flex-end; }
+  .spm-cancel { background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); border-radius:7px; color:rgba(255,255,255,0.6); font-size:0.74rem; font-weight:600; padding:7px 14px; cursor:pointer; font-family:inherit; }
+  .spm-cancel:hover { background:rgba(255,255,255,0.1); }
+  .spm-confirm { background:linear-gradient(135deg,#6366f1,#8b5cf6); border:none; border-radius:7px; color:white; font-size:0.74rem; font-weight:600; padding:7px 18px; cursor:pointer; font-family:inherit; }
+  .spm-confirm:disabled { opacity:0.45; cursor:not-allowed; }
   .dash-box { background: rgba(14,14,14,0.96); border: 1px solid rgba(255,255,255,0.1); border-radius: 18px; padding: 28px; width: 440px; max-width: 92vw; max-height: 88vh; overflow-y: auto; scrollbar-width: none; position: relative; box-shadow: 0 24px 64px rgba(0,0,0,0.6); }
   .dash-box::-webkit-scrollbar { display: none; }
   .billing-history-row { display:flex; align-items:center; justify-content:space-between; padding:9px 0; border-bottom:1px solid rgba(255,255,255,0.05); }
@@ -317,7 +357,10 @@
   .lp-sw.on::after { left:14px; background:#34d399; }
   .lp-sub-item { padding-left: 8px !important; }
   .lp-sub-item .lp-row-name { font-size: 0.69rem; }
-  .il-color-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+  .il-color-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; border:none; padding:0; cursor:pointer; -webkit-appearance:none; appearance:none; background:transparent; }
+  .il-color-dot::-webkit-color-swatch-wrapper { padding:0; border-radius:50%; overflow:hidden; }
+  .il-color-dot::-webkit-color-swatch { border:none; border-radius:50%; }
+  .il-color-dot::-moz-color-swatch { border:none; border-radius:50%; }
   .il-del-btn { background:none; border:none; cursor:pointer; color:rgba(255,255,255,0.2); font-size:0.65rem; line-height:1; padding:2px 3px; border-radius:4px; font-family:inherit; transition:color 0.15s,background 0.15s; }
   .il-del-btn:hover { color:rgba(239,68,68,0.8); background:rgba(239,68,68,0.1); }
   .il-count { font-size:0.56rem; color:rgba(255,255,255,0.2); flex-shrink:0; }
@@ -721,6 +764,10 @@
   </div>
   <div class="nav-group bottom">
     <div class="nav-sep" style="width:32px;margin:0 0 6px"></div>
+    <button class="nav-btn" id="nav-projects-btn" onclick="openProjectsPanel()" style="display:none">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>
+      <span class="nav-tip" id="nav-tip-projects">Projects</span>
+    </button>
     <button class="nav-btn" id="nav-user-btn" onclick="navOpenAccount()" style="padding:7px">
       <div id="nav-u-avatar"><span class="avatar-initials"></span></div>
       <span class="nav-tip" id="nav-tip-user">Account</span>
@@ -1349,6 +1396,7 @@ const T = {
     pdfStreetImagery:"Street Imagery", pdfProAnalysis:"Pro Analysis",
     pdfNoScore:"Run analysis to generate score", pdfNoImage:"No street imagery available",
     dash:{ title:"Dashboard", usage:"Usage", usedToday:"Searches this month", remaining:"Remaining", limit:"Monthly limit", resetsAt:"Resets on", billing:"Plan & Billing", freePlan:"Free plan", proPlan:"Pro plan", freeDesc:"5 parcel views and analyses / month", proDesc:"1,000 searches / month · Full Pro analysis · GeoData export", upgrade:"Upgrade to Pro", manageBilling:"Manage billing", billingTitle:"Billing", billingSubFree:"Manage your plan", billingSubPro:"Your active subscription", billingLblPlan:"Current plan", billingLblPm:"Payment method", billingLblHistory:"Billing history", billingPeriod:"/month", billingRenewal:"Next renewal", billingTrialEnds:"Trial — first billing", billingDaysLeft:"days remaining", billingTrialNote:"Your 7-day free trial is active. If you cancel now, you keep full access until the trial ends.", billingPostTrialNote:"If you cancel, you keep Pro access until your renewal date. No further charges after that.", billingCanceling:"Cancellation scheduled — access continues until period end.", billingNoCard:"No payment method on file", billingNoHistory:"No billing history yet", billingCancel:"Cancel subscription", billingCancelConfirm:"Are you sure you want to cancel? You will keep access until the current period ends.", billingCanceledTrial:"Your subscription has been cancelled. No charge was made.", billingCanceledRefund:"Your subscription has been cancelled and a refund has been issued for the unused period.", signOut:"Sign out", activity:"Activity this month" },
+    projects:{ navTip:"My Projects", panelTitle:"My Projects", saveBtn:"Save current analysis", emptyMsg:"No saved projects yet.", openBtn:"Open", deleteConfirm:"Delete this project?", loadingMsg:"Loading…", savingMsg:"Saving…", saveModalTitle:"Save Project", saveModalHint:"Saves map view, selected features, imported layers and analysis results.", cancelBtn:"Cancel", confirmBtn:"Save", savedToast:"Project saved", deletedToast:"Project deleted", loadedToast:"Project loaded", errorSave:"Failed to save project", errorLoad:"Failed to load project", errorDelete:"Delete failed", layers:"layer", layersPlural:"layers" },
     activityLabels:{ map_click:"Clicks", free_analysis:"Free analysis", pro_analysis:"Pro analysis", relief_analysis:"Relief", pdf_export:"PDF export", geojson_export:"GeoJSON export" },
     activityIcons:{ map_click:"—", free_analysis:"○", pro_analysis:"◆", relief_analysis:"△", pdf_export:"↓", geojson_export:"⬡" },
     layers:{ btn:"Layers", basemap:"Basemap", layers:"Layers", cadastral:"Parcels", lineObjects:"Lines", forestFund:"Forest", dark:"Dark", satellite:"Satellite", day:"Day", night:"Night" },
@@ -1464,6 +1512,7 @@ const T = {
     geodataBtn:"GeoData ჩამოტვირთვა", geodataProOnly:"GeoData ექსპორტი Pro ფუნქციაა.",
     pdfTitle:"ნაკვეთის ანალიზის ანგარიში", pdfGenerated:"შექმნილია Urbanyx-ით",
     dash:{ title:"დეშბორდი", usage:"გამოყენება", usedToday:"ძიება ამ თვეში", remaining:"დარჩენილი", limit:"თვიური ლიმიტი", resetsAt:"განახლდება", billing:"გეგმა და ბილინგი", freePlan:"უფასო გეგმა", proPlan:"Pro გეგმა", freeDesc:"5 ნაკვეთის ხედვა და ანალიზი / თვეში", proDesc:"1,000 ძიება / თვეში · Pro ანალიზი · GeoData ექსპორტი", upgrade:"Pro-ზე გადასვლა", manageBilling:"ბილინგის მართვა", billingTitle:"ბილინგი", billingSubFree:"გეგმის მართვა", billingSubPro:"თქვენი გამოწერა", billingLblPlan:"მიმდინარე გეგმა", billingLblPm:"გადახდის მეთოდი", billingLblHistory:"გადახდების ისტორია", billingPeriod:"/თვეში", billingRenewal:"შემდეგი გადახდა", billingTrialEnds:"გამოცდა — პირველი გადახდა", billingDaysLeft:"დღე რჩება", billingTrialNote:"7-დღიანი უფასო პერიოდი აქტიურია. გაუქმების შემთხვევაში პრო ფუნქციები ხელმისაწვდომი იქნება გამოცდის ბოლომდე.", billingPostTrialNote:"გაუქმების შემთხვევაში Pro წვდომა შენარჩუნდება განახლების თარიღამდე. ამის შემდეგ თანხა არ ჩამოიჭრება.", billingCanceling:"გაუქმება დაგეგმილია — წვდომა გრძელდება პერიოდის ბოლომდე.", billingNoCard:"გადახდის მეთოდი არ არის", billingNoHistory:"გადახდების ისტორია ცარიელია", billingCancel:"გამოწერის გაუქმება", billingCancelConfirm:"დარწმუნებული ხარ? წვდომა შენარჩუნდება მიმდინარე პერიოდის ბოლომდე.", billingCanceledTrial:"გამოწერა გაუქმდა. თანხა არ ჩამოიჭრება.", billingCanceledRefund:"გამოწერა გაუქმდა და გამოუყენებელი პერიოდის თანხა დაბრუნდება.", signOut:"გასვლა", activity:"ამ თვის აქტივობა" },
+    projects:{ navTip:"ჩემი პროექტები", panelTitle:"ჩემი პროექტები", saveBtn:"მიმდინარე ანალიზის შენახვა", emptyMsg:"შენახული პროექტები არ არის.", openBtn:"გახსნა", deleteConfirm:"წაშალოს ეს პროექტი?", loadingMsg:"იტვირთება…", savingMsg:"ინახება…", saveModalTitle:"პროექტის შენახვა", saveModalHint:"ინახება რუკის ხედი, შერჩეული ობიექტები, შემოტანილი ფენები და ანალიზის შედეგები.", cancelBtn:"გაუქმება", confirmBtn:"შენახვა", savedToast:"პროექტი შენახულია", deletedToast:"პროექტი წაშლილია", loadedToast:"პროექტი ჩაიტვირთა", errorSave:"შენახვა ვერ მოხერხდა", errorLoad:"ჩატვირთვა ვერ მოხერხდა", errorDelete:"წაშლა ვერ მოხერხდა", layers:"ფენა", layersPlural:"ფენა" },
     activityLabels:{ map_click:"ნაკვეთები", free_analysis:"სიარული", pro_analysis:"სივრც. ანალ.", relief_analysis:"რელიეფი", pdf_export:"PDF", geojson_export:"GeoJSON" },
     activityIcons:{ map_click:"—", free_analysis:"○", pro_analysis:"◆", relief_analysis:"△", pdf_export:"↓", geojson_export:"⬡" },
     pdfWalkability:"სიარულის ანალიზი", pdfDiversityIndex:"შენონის მრავალფეროვნების ინდექსი",
@@ -1656,6 +1705,7 @@ function updateUserUI(){
     planEl.className="u-plan"+(currentUser.plan==="pro"?"":" free");
     pill.classList.add("visible");
     const _navSO=document.getElementById("nav-signout-btn");if(_navSO)_navSO.style.display="";
+    _updateProjectsNavBtn();
     if(pwFooter)pwFooter.style.display="none";
     if(authLink)authLink.style.display="none";
     if(signinBtn)signinBtn.style.display="none";
@@ -1671,6 +1721,7 @@ function updateUserUI(){
     if(drawGroup)drawGroup.style.display="none";
     const _atb=document.getElementById('analysis-tool-btn');if(_atb)_atb.style.display="none";
     const _navSO2=document.getElementById("nav-signout-btn");if(_navSO2)_navSO2.style.display="none";
+    _updateProjectsNavBtn();
     const _navAvEl2=document.getElementById("nav-u-avatar");if(_navAvEl2){const _ti=_navAvEl2.querySelector(".avatar-initials");if(_ti)_ti.textContent="";}
   }
 }
@@ -3554,7 +3605,7 @@ function _renderImportedLayersPanel(){
     <div id="ilrow-${l.uid}">
       <div class="lp-row il-row" style="align-items:center;gap:0">
         <div style="display:flex;align-items:center;gap:7px;flex:1;min-width:0">
-          <span class="il-color-dot" style="background:${l.color}"></span>
+          <input type="color" class="il-color-dot" value="${l.color}" title="${lang==='ka'?'ფერის შეცვლა':'Change color'}" onchange="event.stopPropagation();_setImportedLayerColor('${l.uid}',this.value)" onclick="event.stopPropagation()">
           <span class="lp-row-name" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1" title="${l.name}">${l.name}</span>
           <span class="il-count">${l.count}</span>
         </div>
@@ -3593,6 +3644,199 @@ function removeImportedLayer(uid){
   delete _vizState[uid];
   if(!_importedLayers.some(l=>l.visible))_clearImportedSelection();
   _renderImportedLayersPanel();
+}
+
+// ── Projects ──────────────────────────────────────────────────────────────────
+function openProjectsPanel(){
+  if(!currentUser){openAuthModal('view-signin');return;}
+  const tr=t().projects;
+  document.getElementById('lbl-pp-title').textContent=tr.panelTitle;
+  document.getElementById('lbl-pp-save-btn').textContent=tr.saveBtn;
+  document.getElementById('projects-panel').classList.add('open');
+  _loadProjectsList();
+}
+function closeProjectsPanel(){
+  document.getElementById('projects-panel').classList.remove('open');
+}
+function onProjectsPanelOverlayClick(e){
+  if(e.target.id==='projects-panel')closeProjectsPanel();
+}
+function openSaveProjectModal(){
+  if(!currentUser){openAuthModal('view-signin');return;}
+  const tr=t().projects;
+  document.getElementById('lbl-spm-title').textContent=tr.saveModalTitle;
+  document.getElementById('lbl-spm-hint').textContent=tr.saveModalHint;
+  document.getElementById('lbl-spm-cancel').textContent=tr.cancelBtn;
+  document.getElementById('spm-confirm-btn').textContent=tr.confirmBtn;
+  document.getElementById('spm-name-input').value='';
+  document.getElementById('save-project-modal').classList.add('open');
+  setTimeout(()=>document.getElementById('spm-name-input').focus(),80);
+}
+function closeSaveProjectModal(){
+  document.getElementById('save-project-modal').classList.remove('open');
+}
+function onSaveProjectModalOverlayClick(e){
+  if(e.target.id==='save-project-modal')closeSaveProjectModal();
+}
+function _captureMapThumbnail(){
+  try{
+    const src=map.getCanvas();
+    const tmp=document.createElement('canvas');
+    const scale=Math.min(320/src.width,180/src.height,1);
+    tmp.width=Math.round(src.width*scale);
+    tmp.height=Math.round(src.height*scale);
+    tmp.getContext('2d').drawImage(src,0,0,tmp.width,tmp.height);
+    return tmp.toDataURL('image/jpeg',0.45);
+  }catch(e){return null;}
+}
+function _collectProjectState(){
+  const getT=id=>document.getElementById(id)?.textContent||'';
+  return {
+    map_state:{center:map.getCenter(),zoom:map.getZoom(),bearing:map.getBearing(),pitch:map.getPitch(),basemap:_currentBasemap},
+    selected_geom:_currentParcelGeoJSON||null,
+    selected_meta:{code:getT('val-code'),area:getT('val-area'),type:getT('val-type'),addr:getT('val-addr'),owner:getT('val-owner'),centroid:parcelCentroid||null},
+    imported_layers:_importedLayers.map(l=>({uid:l.uid,name:l.name,color:l.color,visible:l.visible,count:l.count,geomTypes:l.geomTypes||[],vizActive:l.vizActive||false,vizState:_vizState[l.uid]||null,fc:l.fc})),
+    analysis_snapshot:{parcelAreaM2:_currentParcelAreaM2||null}
+  };
+}
+async function confirmSaveProject(){
+  const name=document.getElementById('spm-name-input').value.trim();
+  if(!name)return;
+  const tr=t().projects;
+  const btn=document.getElementById('spm-confirm-btn');
+  btn.disabled=true;btn.textContent=tr.savingMsg;
+  try{
+    const thumbnail=_captureMapThumbnail();
+    const state=_collectProjectState();
+    const {error}=await sb.from('projects').insert({
+      user_id:currentUser.id,name,thumbnail,
+      map_state:state.map_state,
+      selected_geom:state.selected_geom,
+      selected_meta:state.selected_meta,
+      imported_layers:state.imported_layers,
+      analysis_snapshot:state.analysis_snapshot
+    });
+    if(error)throw error;
+    closeSaveProjectModal();
+    showToast(tr.savedToast);
+    if(document.getElementById('projects-panel').classList.contains('open'))_loadProjectsList();
+  }catch(err){
+    console.error('[projects] save:',err);
+    showToast(tr.errorSave+(err.message?': '+err.message:''));
+  }finally{
+    btn.disabled=false;btn.textContent=tr.confirmBtn;
+  }
+}
+async function _loadProjectsList(){
+  const listEl=document.getElementById('pp-list');
+  const tr=t().projects;
+  listEl.innerHTML=`<div class="pp-empty" style="opacity:0.5">${tr.loadingMsg}</div>`;
+  try{
+    const {data,error}=await sb.from('projects')
+      .select('id,name,thumbnail,map_state,imported_layers,created_at')
+      .eq('user_id',currentUser.id)
+      .order('created_at',{ascending:false})
+      .limit(50);
+    if(error)throw error;
+    if(!data||!data.length){listEl.innerHTML=`<div class="pp-empty">${tr.emptyMsg}</div>`;return;}
+    listEl.innerHTML=data.map(p=>{
+      const d=new Date(p.created_at);
+      const ds=d.toLocaleDateString(lang==='ka'?'ka-GE':'en-US',{day:'numeric',month:'short',year:'numeric'});
+      const lc=(p.imported_layers||[]).length;
+      const meta=lc>0?`${lc} ${lc===1?tr.layers:tr.layersPlural}`:(p.map_state?.center?`${+(p.map_state.center.lat||0).toFixed(4)}, ${+(p.map_state.center.lng||0).toFixed(4)}`:'');
+      const thumb=p.thumbnail
+        ?`<img class="pp-thumb" src="${p.thumbnail}" alt="" loading="lazy">`
+        :`<div class="pp-thumb-placeholder"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="rgba(99,102,241,0.35)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg></div>`;
+      return `<div class="pp-project-card">${thumb}<div class="pp-card-body"><div class="pp-card-name">${p.name.replace(/&/g,'&amp;').replace(/</g,'&lt;')}</div><div class="pp-card-meta">${ds}${meta?' · '+meta:''}</div></div><div class="pp-card-footer"><button class="pp-load-btn" onclick="event.stopPropagation();loadProject('${p.id}')">${tr.openBtn}</button><button class="pp-del-btn" onclick="event.stopPropagation();deleteProject('${p.id}',this)" title="Delete">🗑</button></div></div>`;
+    }).join('');
+  }catch(err){
+    console.error('[projects] list:',err);
+    listEl.innerHTML=`<div class="pp-empty" style="color:rgba(239,68,68,0.7)">${tr.errorLoad}</div>`;
+  }
+}
+async function deleteProject(id,btn){
+  if(!confirm(t().projects.deleteConfirm))return;
+  if(btn)btn.disabled=true;
+  const {error}=await sb.from('projects').delete().eq('id',id).eq('user_id',currentUser.id);
+  if(error){showToast(t().projects.errorDelete);if(btn)btn.disabled=false;return;}
+  showToast(t().projects.deletedToast);
+  _loadProjectsList();
+}
+async function loadProject(id){
+  const tr=t().projects;
+  showToast(tr.loadingMsg);
+  try{
+    const {data,error}=await sb.from('projects').select('*').eq('id',id).eq('user_id',currentUser.id).single();
+    if(error||!data)throw error||new Error('not found');
+    closeProjectsPanel();
+    await _restoreProjectState(data);
+    showToast(tr.loadedToast);
+  }catch(err){
+    console.error('[projects] load:',err);
+    showToast(tr.errorLoad);
+  }
+}
+async function _restoreProjectState(project){
+  const ms=project.map_state||{};
+  // 1. Switch basemap if needed (wait for style load)
+  if(ms.basemap&&ms.basemap!==_currentBasemap){
+    switchBasemap(ms.basemap);
+    await new Promise(r=>setTimeout(r,700));
+  }
+  // 2. Fly to saved viewport
+  if(ms.center){
+    map.flyTo({center:[ms.center.lng,ms.center.lat],zoom:ms.zoom||14,bearing:ms.bearing||0,pitch:ms.pitch||0,duration:1000});
+  }
+  // 3. Clear existing imported layers
+  _importedLayers.slice().forEach(l=>removeImportedLayer(l.uid));
+  // 4. Re-add imported layers with saved settings
+  const savedLayers=project.imported_layers||[];
+  for(const snap of savedLayers){
+    if(!snap.fc)continue;
+    _addImportedLayer(snap.name,snap.fc);
+    const entry=_importedLayers[_importedLayers.length-1];
+    if(!entry)continue;
+    // Restore color
+    if(snap.color&&snap.color!==entry.color){
+      _setImportedLayerColor(entry.uid,snap.color);
+      entry.color=snap.color;
+    }
+    // Restore visibility
+    if(!snap.visible)toggleImportedLayer(entry.uid);
+    // Restore viz state (re-apply paint if viz was active)
+    if(snap.vizState){
+      _vizState[entry.uid]=snap.vizState;
+      if(snap.vizActive){
+        entry.vizActive=true;
+        const vs=snap.vizState;
+        try{_applyImportedViz(entry.uid,vs.type,vs.col,vs.ramp);}catch(e){}
+      }
+    }
+  }
+  // 5. Restore selected feature / float card
+  if(project.selected_geom&&project.selected_meta){
+    const meta=project.selected_meta;
+    const setT=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v||'';};
+    setT('val-code',meta.code);setT('val-area',meta.area);setT('val-type',meta.type);
+    setT('val-addr',meta.addr);setT('val-owner',meta.owner);
+    _currentParcelGeoJSON=project.selected_geom;
+    _dbParcelGeoJSON=_currentParcelGeoJSON;
+    _currentParcelAreaM2=project.analysis_snapshot?.parcelAreaM2||null;
+    parcelCentroid=meta.centroid||ms.center||null;
+    if(parcelCentroid){
+      if(!hasSearched)transitionToSide(meta.code||'—');
+      showParcelPopup(parcelCentroid);
+    }
+  }
+}
+// Show/hide the Projects nav button based on login state (called after auth state changes)
+function _updateProjectsNavBtn(){
+  const btn=document.getElementById('nav-projects-btn');
+  if(btn)btn.style.display=currentUser?'':'none';
+  if(btn&&currentUser){
+    const tip=document.getElementById('nav-tip-projects');
+    if(tip)tip.textContent=t().projects.navTip;
+  }
 }
 
 // ── Attribute analysis & data visualization ───────────────────────────────────
@@ -3883,6 +4127,19 @@ function _clearImportedSelection(){
   _currentParcelGeoJSON=null;_dbParcelGeoJSON=null;
   _currentParcelAreaM2=null;parcelCentroid=null;
   setStatus('','');
+}
+
+function _setImportedLayerColor(uid,color){
+  const entry=_importedLayers.find(l=>l.uid===uid);
+  if(!entry)return;
+  entry.color=color;
+  const fillId=`import-${uid}-fill`,lineId=`import-${uid}-line`,circleId=`import-${uid}-circle`;
+  // Only update paint if viz hasn't overridden these layers
+  if(!entry.vizActive){
+    if(map.getLayer(fillId)){map.setPaintProperty(fillId,'fill-color',color);}
+    if(map.getLayer(lineId)){map.setPaintProperty(lineId,'line-color',color);}
+    if(map.getLayer(circleId)){map.setPaintProperty(circleId,'circle-color',color);}
+  }
 }
 
 function _parseDxfToGeoJSON(text){
@@ -11263,6 +11520,35 @@ init();
     </button>
   </div>
   <input type="file" id="draw-file-input" style="display:none" onchange="handleDrawFileImport(event)">
+</div>
+
+<!-- ── Projects panel ──────────────────────────────────────────────────────── -->
+<div id="projects-panel" onclick="onProjectsPanelOverlayClick(event)">
+  <div class="pp-box">
+    <div class="pp-header">
+      <span class="pp-title" id="lbl-pp-title">My Projects</span>
+      <button class="pp-close" onclick="closeProjectsPanel()">✕</button>
+    </div>
+    <button class="pp-save-btn" id="pp-save-current-btn" onclick="openSaveProjectModal()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+      <span id="lbl-pp-save-btn">Save current analysis</span>
+    </button>
+    <div class="pp-list" id="pp-list"></div>
+  </div>
+</div>
+
+<!-- ── Save Project modal ─────────────────────────────────────────────────── -->
+<div id="save-project-modal" onclick="onSaveProjectModalOverlayClick(event)">
+  <div class="spm-box">
+    <div class="spm-title" id="lbl-spm-title">Save Project</div>
+    <input type="text" class="spm-input" id="spm-name-input" placeholder="Project name…" maxlength="80"
+      onkeydown="if(event.key==='Enter')confirmSaveProject()">
+    <div class="spm-hint" id="lbl-spm-hint">Saves map view, selected features, imported layers and analysis results.</div>
+    <div class="spm-actions">
+      <button class="spm-cancel" id="lbl-spm-cancel" onclick="closeSaveProjectModal()">Cancel</button>
+      <button class="spm-confirm" id="spm-confirm-btn" onclick="confirmSaveProject()">Save</button>
+    </div>
+  </div>
 </div>
 </body>
 </html>
