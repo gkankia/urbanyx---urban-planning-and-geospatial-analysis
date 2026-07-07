@@ -3696,7 +3696,7 @@ function _collectProjectState(){
     selected_geom:_currentParcelGeoJSON||null,
     selected_meta:{code:getT('val-code'),area:getT('val-area'),type:getT('val-type'),addr:getT('val-addr'),owner:getT('val-owner'),centroid:parcelCentroid||null},
     imported_layers:_importedLayers.map(l=>({uid:l.uid,name:l.name,color:l.color,visible:l.visible,count:l.count,geomTypes:l.geomTypes||[],vizActive:l.vizActive||false,vizState:_vizState[l.uid]||null,fc:l.fc})),
-    analysis_snapshot:{parcelAreaM2:_currentParcelAreaM2||null}
+    analysis_snapshot:{parcelAreaM2:_currentParcelAreaM2||null,activeCatKey:_activeCatKey||null}
   };
 }
 async function confirmSaveProject(){
@@ -3827,6 +3827,14 @@ async function _restoreProjectState(project){
       if(!hasSearched)transitionToSide(meta.code||'—');
       showParcelPopup(parcelCentroid);
     }
+  }
+  // 6. Re-open the analysis panel that was active when the project was saved
+  const savedCat=project.analysis_snapshot?.activeCatKey;
+  if(savedCat){
+    setTimeout(()=>{
+      const catBtn=document.getElementById('cat-btn-'+savedCat);
+      if(catBtn)showCatInPanel(savedCat,catBtn);
+    },600);
   }
 }
 // Show/hide the Projects nav button based on login state (called after auth state changes)
