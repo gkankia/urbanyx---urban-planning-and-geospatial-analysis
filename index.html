@@ -3861,6 +3861,65 @@ async function _replayActions(actions,savedSnap){
   }catch(e){console.error('[projects] replay:',e);}
 }
 
+function _restoreBuildings(savedBuildings, activeBldId){
+  if(!savedBuildings||!savedBuildings.length)return;
+  // Clean up any existing buildings without triggering camera/panel side-effects
+  _buildings.forEach(b=>{
+    if(!mapReady)return;
+    if(b.threeEditor){try{map.removeLayer(b.threeEditor.id);}catch(_){}try{b.threeEditor.dispose();}catch(_){}b.threeEditor=null;}
+    if(b._extClickHandler){try{map.off('click','bld-ext-'+b.id,b._extClickHandler);}catch(_){}b._extClickHandler=null;}
+    try{if(map.getLayer('bld-ext-'+b.id))map.removeLayer('bld-ext-'+b.id);}catch(_){}
+    try{if(map.getLayer('bld-line-'+b.id))map.removeLayer('bld-line-'+b.id);}catch(_){}
+    try{if(map.getLayer('bld-fill-'+b.id))map.removeLayer('bld-fill-'+b.id);}catch(_){}
+    try{if(map.getSource('bld-src-'+b.id))map.removeSource('bld-src-'+b.id);}catch(_){}
+  });
+  _buildings=[];_activeBldId=null;_selectedBldIds.clear();_threeEditor=null;
+  _extrusionActive=false;_extrusionHeight=12;_floorOverrides={};
+  // Reconstruct each building
+  for(const sb of savedBuildings){
+    const bld={id:sb.id,geojson:sb.geojson,ring:sb.ring,drawShape:sb.drawShape||'polygon',
+      areaM2:sb.areaM2||0,perimM:sb.perimM||0,areaStr:sb.areaStr||'',perimStr:sb.perimStr||'',
+      extrusionActive:sb.extrusionActive||false,extrusionHeight:sb.extrusionHeight||12,
+      floorOverrides:sb.floorOverrides||{},threeEditor:null};
+    _buildings.push(bld);
+    // Keep the sequence counter above any restored ids so new buildings don't collide
+    const n=parseInt(sb.id.replace('bld_',''),10);
+    if(!isNaN(n)&&n>_bldSeq)_bldSeq=n;
+    if(!mapReady)continue;
+    try{
+      map.addSource('bld-src-'+bld.id,{type:'geojson',data:{type:'FeatureCollection',features:[{type:'Feature',geometry:bld.geojson,properties:{}}]}});
+      map.addLayer({id:'bld-fill-'+bld.id,type:'fill',source:'bld-src-'+bld.id,paint:{'fill-color':'#6366f1','fill-opacity':0.35}});
+      map.addLayer({id:'bld-line-'+bld.id,type:'line',source:'bld-src-'+bld.id,layout:{'line-join':'round','line-cap':'round'},paint:{'line-color':'#a5b4fc','line-width':2}});
+      map.on('click','bld-fill-'+bld.id,e=>{e.originalEvent._bldHandled=true;_selectBuilding(bld.id,e.originalEvent.shiftKey);});
+      map.on('mouseenter','bld-fill-'+bld.id,()=>{if(map.getCanvas())map.getCanvas().style.cursor='pointer';});
+      map.on('mouseleave','bld-fill-'+bld.id,()=>{if(map.getCanvas())map.getCanvas().style.cursor='';});
+      map.on('dblclick','bld-fill-'+bld.id,e=>{e.originalEvent.stopPropagation();map.doubleClickZoom.disable();setTimeout(()=>map.doubleClickZoom.enable(),400);_enterBldEditMode(bld.id);});
+    }catch(e){console.warn('[projects] restore bld layers:',e);}
+  }
+  const targetId=activeBldId&&_bldById(activeBldId)?activeBldId:(_buildings.length?_buildings[_buildings.length-1].id:null);
+  if(!targetId)return;
+  const extrudedNonActive=_buildings.filter(b=>b.extrusionActive&&b.id!==targetId);
+  if(extrudedNonActive.length||_bldById(targetId)?.extrusionActive){
+    // Load Three.js if any building needs the 3D editor
+    _ensureThreeJs(()=>{
+      // Create frozen (non-interactive) editors for background extruded buildings
+      for(const bld of extrudedNonActive){
+        try{
+          const ed=new _BuildingEditorLayer(bld.id);
+          map.addLayer(ed);bld.threeEditor=ed;
+          ed._deactivateListeners();
+          // Hide 2D footprint since Three.js takes over visually
+          try{map.setLayoutProperty('bld-fill-'+bld.id,'visibility','none');}catch(_){}
+          try{map.setLayoutProperty('bld-line-'+bld.id,'visibility','none');}catch(_){}
+        }catch(e){console.warn('[projects] restore frozen editor:',e);}
+      }
+      _activateBld(targetId);
+    });
+  } else {
+    _activateBld(targetId);
+  }
+}
+
 function _collectProjectState(){
   const getT=id=>document.getElementById(id)?.textContent||'';
   return {
@@ -3909,6 +3968,17 @@ function _collectProjectState(){
       snap.accMinutes=typeof _accMinutes!=='undefined'?_accMinutes:15;
       // Action log — derived from current toggle state so restore can replay the exact analyses
       snap.actions=_buildActionLog();
+      // 3D buildings drawn by the user (threeEditor is a live object — excluded)
+      if(_buildings.length){
+        snap.buildings=_buildings.map(b=>({
+          id:b.id,geojson:b.geojson,ring:b.ring,drawShape:b.drawShape||'polygon',
+          areaM2:b.areaM2,perimM:b.perimM,areaStr:b.areaStr,perimStr:b.perimStr,
+          extrusionActive:b.extrusionActive||false,
+          extrusionHeight:b.extrusionHeight||12,
+          floorOverrides:b.floorOverrides||{}
+        }));
+        if(_activeBldId)snap.activeBldId=_activeBldId;
+      }
       return snap;
     })()
   };
@@ -4047,8 +4117,12 @@ async function _restoreProjectState(project){
       showParcelPopup(parcelCentroid);
     }
   }
-  // 6. Restore analysis — deferred so showParcelPopup DOM side-effects settle first
+  // 5.5 Restore drawn buildings / 3D extrusions
   const savedSnap=project.analysis_snapshot||{};
+  if((savedSnap.buildings||[]).length>0){
+    _restoreBuildings(savedSnap.buildings,savedSnap.activeBldId||null);
+  }
+  // 6. Restore analysis — deferred so showParcelPopup DOM side-effects settle first
   const savedActions=savedSnap.actions||[];
   if(savedActions.length>0){
     // New format: replay the exact sequence of analyses the user ran
