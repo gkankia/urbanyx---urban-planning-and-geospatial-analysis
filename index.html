@@ -3696,7 +3696,14 @@ function _collectProjectState(){
     selected_geom:_currentParcelGeoJSON||null,
     selected_meta:{code:getT('val-code'),area:getT('val-area'),type:getT('val-type'),addr:getT('val-addr'),owner:getT('val-owner'),centroid:parcelCentroid||null},
     imported_layers:_importedLayers.map(l=>({uid:l.uid,name:l.name,color:l.color,visible:l.visible,count:l.count,geomTypes:l.geomTypes||[],vizActive:l.vizActive||false,vizState:_vizState[l.uid]||null,fc:l.fc})),
-    analysis_snapshot:{parcelAreaM2:_currentParcelAreaM2||null,activeCatKey:_activeCatKey||null}
+    analysis_snapshot:(()=>{
+      const panelHtml={};
+      ['accessibility','education','mobility','climate','morphology','energy','relief'].forEach(cat=>{
+        const el=document.getElementById('pro-cat-'+cat+'-content');
+        if(el&&el.textContent.trim())panelHtml[cat]=el.innerHTML;
+      });
+      return {parcelAreaM2:_currentParcelAreaM2||null,activeCatKey:_activeCatKey||null,panelHtml};
+    })()
   };
 }
 async function confirmSaveProject(){
@@ -3823,18 +3830,31 @@ async function _restoreProjectState(project){
     _dbParcelGeoJSON=_currentParcelGeoJSON;
     _currentParcelAreaM2=project.analysis_snapshot?.parcelAreaM2||null;
     parcelCentroid=meta.centroid||ms.center||null;
+    // Restore parcel outline on map
+    if(mapReady&&_currentParcelGeoJSON){
+      map.getSource('parcel')?.setData({type:'FeatureCollection',features:[{type:'Feature',geometry:_currentParcelGeoJSON,properties:{}}]});
+    }
     if(parcelCentroid){
       if(!hasSearched)transitionToSide(meta.code||'—');
       showParcelPopup(parcelCentroid);
     }
   }
-  // 6. Re-open the analysis panel that was active when the project was saved
-  const savedCat=project.analysis_snapshot?.activeCatKey;
+  // 6. Restore analysis panel — inject saved HTML so it won't re-fetch, then open
+  const savedSnap=project.analysis_snapshot||{};
+  const savedCat=savedSnap.activeCatKey;
+  const savedPanelHtml=savedSnap.panelHtml||{};
+  // Pre-populate all analysis panels that had content when saved
+  Object.entries(savedPanelHtml).forEach(([cat,html])=>{
+    const el=document.getElementById('pro-cat-'+cat+'-content');
+    if(el)el.innerHTML=html;
+  });
+  // Open the panel that was active — content is now pre-filled so showCatInPanel
+  // won't trigger runAnalysis(), it just shows the panel
   if(savedCat){
     setTimeout(()=>{
       const catBtn=document.getElementById('cat-btn-'+savedCat);
       if(catBtn)showCatInPanel(savedCat,catBtn);
-    },600);
+    },300);
   }
 }
 // Show/hide the Projects nav button based on login state (called after auth state changes)
