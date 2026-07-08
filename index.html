@@ -195,16 +195,30 @@
   #projects-panel.open { display:flex; }
   .pp-box { background:rgba(14,14,18,0.97); border-left:1px solid rgba(255,255,255,0.07); width:360px; max-width:92vw; height:100vh; overflow-y:auto; display:flex; flex-direction:column; scrollbar-width:none; }
   .pp-box::-webkit-scrollbar { display:none; }
-  .pp-header { display:flex; align-items:center; justify-content:space-between; padding:20px 18px 14px; border-bottom:1px solid rgba(255,255,255,0.07); flex-shrink:0; }
+  .pp-header { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:14px 14px 0; flex-shrink:0; }
   .pp-title { color:white; font-weight:700; font-size:0.88rem; }
+  .pp-tab-row { display:flex; align-items:center; gap:2px; flex:1; border-bottom:1px solid rgba(255,255,255,0.07); padding-bottom:0; }
+  .pp-tab { background:none; border:none; border-bottom:2px solid transparent; color:rgba(255,255,255,0.35); font-size:0.75rem; font-weight:600; cursor:pointer; padding:8px 12px 10px; font-family:inherit; transition:color 0.15s; margin-bottom:-1px; }
+  .pp-tab:hover { color:rgba(255,255,255,0.7); }
+  .pp-tab.active { color:white; border-bottom-color:#6366f1; }
   .pp-close { background:none; border:none; cursor:pointer; width:32px; height:32px; border-radius:7px; display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:background 0.15s; }
   .pp-close img { width:20px; height:20px; opacity:0.4; transition:opacity 0.15s; }
   .pp-close:hover { background:rgba(255,255,255,0.08); }
   .pp-close:hover img { opacity:0.85; }
-  .pp-save-btn { margin:14px 16px 2px; padding:10px 14px; background:linear-gradient(135deg,#6366f1,#8b5cf6); border:none; border-radius:9px; color:white; font-size:0.75rem; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:8px; font-family:inherit; transition:filter 0.15s; flex-shrink:0; }
+  .pp-save-btn { margin:14px 14px 2px; padding:10px 14px; background:linear-gradient(135deg,#6366f1,#8b5cf6); border:none; border-radius:9px; color:white; font-size:0.75rem; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:8px; font-family:inherit; transition:filter 0.15s; flex-shrink:0; }
   .pp-save-btn:hover { filter:brightness(1.12); }
   .pp-save-btn:disabled { opacity:0.4; cursor:not-allowed; filter:none; }
   .pp-list { padding:12px 14px 20px; flex:1; }
+  .pp-pane { flex:1; display:flex; flex-direction:column; min-height:0; }
+  .pp-data-empty { padding:32px 16px; color:rgba(255,255,255,0.28); font-size:0.72rem; text-align:center; line-height:1.7; }
+  .pp-data-card { display:flex; align-items:center; justify-content:space-between; gap:10px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:9px; padding:10px 12px; margin-bottom:8px; transition:border-color 0.15s; }
+  .pp-data-card:hover { border-color:rgba(99,102,241,0.3); }
+  .pp-data-card-info { display:flex; align-items:center; gap:9px; min-width:0; flex:1; }
+  .pp-data-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+  .pp-data-name { color:white; font-size:0.78rem; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .pp-data-meta { color:rgba(255,255,255,0.3); font-size:0.63rem; margin-top:1px; }
+  .pp-data-open-btn { background:rgba(99,102,241,0.14); border:1px solid rgba(99,102,241,0.28); border-radius:6px; color:rgba(139,132,255,0.9); font-size:0.66rem; font-weight:600; padding:4px 10px; cursor:pointer; font-family:inherit; transition:background 0.15s; white-space:nowrap; flex-shrink:0; }
+  .pp-data-open-btn:hover { background:rgba(99,102,241,0.28); }
   .pp-empty { text-align:center; color:rgba(255,255,255,0.28); font-size:0.74rem; padding:48px 0; }
   .pp-project-card { background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:10px; margin-bottom:10px; overflow:hidden; transition:border-color 0.15s; }
   .pp-project-card:hover { border-color:rgba(99,102,241,0.35); }
@@ -348,7 +362,10 @@
   .mzc-btn.mzc-3d-btn { color:rgba(255,255,255,0.45); }
   .mzc-btn.mzc-3d-btn.active { color:#a5b4fc; background:rgba(99,102,241,0.18); }
   .mzc-btn.mzc-layers-btn { color:rgba(255,255,255,0.45); }
-  .mzc-btn.mzc-layers-btn.active { color:#a5b4fc; background:rgba(99,102,241,0.18); }
+  .mzc-btn.mzc-layers-btn img { width:22px; height:22px; opacity:0.5; transition:opacity 0.15s; }
+  .mzc-btn.mzc-layers-btn:hover img { opacity:0.85; }
+  .mzc-btn.mzc-layers-btn.active { background:rgba(99,102,241,0.18); }
+  .mzc-btn.mzc-layers-btn.active img { opacity:1; }
   .mzc-sep { height:1px; background:rgba(255,255,255,0.07); margin:0; }
   #top-center { position:absolute; top:16px; left:50%; transform:translateX(-50%); z-index:20; display:flex; align-items:center; }
   #zaxis-footer { position:absolute; bottom:14px; right:12px; z-index:4; opacity:0.6; transition:opacity 0.2s; pointer-events:all; line-height:0; backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); }
@@ -880,7 +897,7 @@
   <div class="nav-sep"></div>
   <div class="nav-group">
     <button class="nav-btn" id="nav-projects-btn" onclick="openProjectsPanel()" style="display:none">
-      <img src="analysis-logos/new project.svg" width="28" height="28" style="opacity:0.65;transition:opacity 0.15s" id="nav-projects-icon">
+      <img src="analysis-logos/my project.svg" width="39" height="39" style="opacity:0.65;transition:opacity 0.15s" id="nav-projects-icon">
       <span class="nav-tip" id="nav-tip-projects">Projects</span>
     </button>
     <button class="nav-btn" id="nav-lang-btn" onclick="navToggleLang()">
@@ -922,7 +939,7 @@
   <button class="mzc-btn" onclick="map.zoomOut()" title="Zoom out">−</button>
   <div class="mzc-sep"></div>
   <button class="mzc-btn mzc-layers-btn" id="mzc-layers-btn" onclick="toggleLayersPanel()" title="Layers">
-    <svg width="15" height="13" viewBox="0 0 15 13" fill="none"><rect x="0" y="0" width="15" height="2.4" rx="1.2" fill="currentColor" opacity="0.8"/><rect x="0" y="5.3" width="15" height="2.4" rx="1.2" fill="currentColor" opacity="0.8"/><rect x="0" y="10.6" width="15" height="2.4" rx="1.2" fill="currentColor" opacity="0.8"/></svg>
+    <img src="analysis-logos/advanced geospatial analysis.svg">
   </button>
   <div class="mzc-sep"></div>
   <button class="mzc-btn mzc-3d-btn" id="mzc-3d-btn" onclick="toggle3D()" title="Toggle 3D view">
@@ -3858,11 +3875,25 @@ function removeImportedLayer(uid){
 }
 
 // ── Projects ──────────────────────────────────────────────────────────────────
+function _ppSetTab(tab){
+  ['projects','data'].forEach(t=>{
+    document.getElementById('pp-tab-'+t)?.classList.toggle('active',t===tab);
+    const pane=document.getElementById('pp-pane-'+t);
+    if(pane)pane.style.display=t===tab?'flex':'none';
+  });
+  if(tab==='data')_renderPPDataTab();
+}
+function _renderPPDataTab(){
+  const list=document.getElementById('pp-data-list');if(!list)return;
+  if(!_importedLayers.length){
+    list.innerHTML='<div class="pp-data-empty">No imported data layers yet.<br>Use the Draw &amp; Import tool to add GeoJSON, Shapefile, CSV, or GeoTIFF.</div>';
+    return;
+  }
+  list.innerHTML=_importedLayers.map(l=>`<div class="pp-data-card"><div class="pp-data-card-info"><div class="pp-data-dot" style="background:${l.color}"></div><div><div class="pp-data-name">${l.name.replace(/</g,'&lt;')}</div><div class="pp-data-meta">${l.count.toLocaleString()} features · ${Object.keys(l.columns||{}).length} columns</div></div></div><button class="pp-data-open-btn" onclick="closeProjectsPanel();_dpTab='table';openDataPanel('${l.uid}')">Open Table</button></div>`).join('');
+}
 function openProjectsPanel(){
   if(!currentUser){openAuthModal('view-signin');return;}
-  const tr=t().projects;
-  document.getElementById('lbl-pp-title').textContent=tr.panelTitle;
-  document.getElementById('lbl-pp-save-btn').textContent=tr.saveBtn;
+  _ppSetTab('projects');
   document.getElementById('projects-panel').classList.add('open');
   _loadProjectsList();
 }
@@ -12306,14 +12337,24 @@ init();
 <div id="projects-panel" onclick="onProjectsPanelOverlayClick(event)">
   <div class="pp-box">
     <div class="pp-header">
-      <span class="pp-title" id="lbl-pp-title">My Projects</span>
+      <div class="pp-tab-row">
+        <button class="pp-tab active" id="pp-tab-projects" onclick="_ppSetTab('projects')">Projects</button>
+        <button class="pp-tab" id="pp-tab-data" onclick="_ppSetTab('data')">Data</button>
+      </div>
       <button class="pp-close" onclick="closeProjectsPanel()" title="Close"><img src="analysis-logos/close.svg"></button>
     </div>
-    <button class="pp-save-btn" id="pp-save-current-btn" onclick="openSaveProjectModal()">
-      <img src="analysis-logos/save icon.svg" style="width:16px;height:16px;opacity:0.9">
-      <span id="lbl-pp-save-btn">Save current analysis</span>
-    </button>
-    <div class="pp-list" id="pp-list"></div>
+    <!-- Projects tab -->
+    <div class="pp-pane" id="pp-pane-projects">
+      <button class="pp-save-btn" id="pp-save-current-btn" onclick="openSaveProjectModal()">
+        <img src="analysis-logos/new project.svg" style="width:16px;height:16px;opacity:0.9">
+        <span id="lbl-pp-save-btn">New Project</span>
+      </button>
+      <div class="pp-list" id="pp-list"></div>
+    </div>
+    <!-- Data tab -->
+    <div class="pp-pane" id="pp-pane-data" style="display:none">
+      <div class="pp-list" id="pp-data-list"></div>
+    </div>
   </div>
 </div>
 
