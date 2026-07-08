@@ -197,14 +197,12 @@
   .pp-box::-webkit-scrollbar { display:none; }
   .pp-header { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:14px 14px 0; flex-shrink:0; }
   .pp-title { color:white; font-weight:700; font-size:0.88rem; }
-  .pp-tab-row { display:flex; align-items:center; gap:2px; flex:1; border-bottom:1px solid rgba(255,255,255,0.07); padding-bottom:0; }
-  .pp-tab { background:none; border:none; border-bottom:2px solid transparent; color:rgba(255,255,255,0.35); font-size:0.75rem; font-weight:600; cursor:pointer; padding:8px 12px 10px; font-family:inherit; transition:color 0.15s; margin-bottom:-1px; }
+  .pp-tab-row { display:flex; align-items:stretch; flex:1; border-bottom:1px solid rgba(255,255,255,0.07); }
+  .pp-tab { flex:1; background:none; border:none; border-bottom:2px solid transparent; color:rgba(255,255,255,0.35); font-size:0.75rem; font-weight:600; cursor:pointer; padding:10px 0; font-family:inherit; transition:color 0.15s; margin-bottom:-1px; text-align:center; }
   .pp-tab:hover { color:rgba(255,255,255,0.7); }
   .pp-tab.active { color:white; border-bottom-color:#6366f1; }
-  .pp-close { background:none; border:none; cursor:pointer; width:32px; height:32px; border-radius:7px; display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:background 0.15s; }
-  .pp-close img { width:20px; height:20px; opacity:0.4; transition:opacity 0.15s; }
-  .pp-close:hover { background:rgba(255,255,255,0.08); }
-  .pp-close:hover img { opacity:0.85; }
+  .pp-close { background:none; border:none; color:rgba(255,255,255,0.4); font-size:1.1rem; cursor:pointer; padding:4px 8px; border-radius:5px; line-height:1; transition:color 0.15s, background 0.15s; }
+  .pp-close:hover { color:white; background:rgba(255,255,255,0.08); }
   .pp-save-btn { margin:14px 14px 2px; padding:10px 14px; background:linear-gradient(135deg,#6366f1,#8b5cf6); border:none; border-radius:9px; color:white; font-size:0.75rem; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:8px; font-family:inherit; transition:filter 0.15s; flex-shrink:0; }
   .pp-save-btn:hover { filter:brightness(1.12); }
   .pp-save-btn:disabled { opacity:0.4; cursor:not-allowed; filter:none; }
@@ -256,9 +254,8 @@
   #asc-dot.asc-error { background:#ef4444; }
   @keyframes asc-pulse { 0%,100%{opacity:1} 50%{opacity:0.25} }
   #asc-name { color:rgba(255,255,255,0.82); font-weight:600; max-width:110px; overflow:hidden; text-overflow:ellipsis; }
-  #asc-stop { background:none; border:none; cursor:pointer; padding:0 0 0 4px; display:flex; align-items:center; justify-content:center; }
-  #asc-stop img { width:11px; height:11px; opacity:0.3; transition:opacity 0.15s; }
-  #asc-stop:hover img { opacity:0.7; }
+  #asc-stop { background:none; border:none; color:rgba(255,255,255,0.28); font-size:0.72rem; cursor:pointer; padding:0 0 0 4px; line-height:1; font-family:inherit; transition:color 0.15s; }
+  #asc-stop:hover { color:rgba(255,255,255,0.6); }
   .dash-box { background: rgba(14,14,14,0.96); border: 1px solid rgba(255,255,255,0.1); border-radius: 18px; padding: 28px; width: 440px; max-width: 92vw; max-height: 88vh; overflow-y: auto; scrollbar-width: none; position: relative; box-shadow: 0 24px 64px rgba(0,0,0,0.6); }
   .dash-box::-webkit-scrollbar { display: none; }
   .billing-history-row { display:flex; align-items:center; justify-content:space-between; padding:9px 0; border-bottom:1px solid rgba(255,255,255,0.05); }
@@ -277,10 +274,8 @@
   .billing-cancel-btn { background:none; border:none; color:rgba(255,255,255,0.22); font-size:0.68rem; cursor:pointer; text-decoration:underline; font-family:inherit; padding:0; margin-top:4px; transition:color 0.15s; }
   .billing-cancel-btn:hover { color:rgba(255,100,100,0.7); }
   .billing-empty { text-align:center; padding:20px 0; color:rgba(255,255,255,0.2); font-size:0.78rem; }
-  .dash-close { position: absolute; top: 14px; right: 14px; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; width: 32px; height: 32px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-family: inherit; transition: background 0.15s; }
-  .dash-close img { width:20px; height:20px; opacity:0.45; transition:opacity 0.15s; }
-  .dash-close:hover { background: rgba(255,255,255,0.14); }
-  .dash-close:hover img { opacity:0.9; }
+  .dash-close { position: absolute; top: 16px; right: 16px; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.1); border-radius: 50%; color: rgba(255,255,255,0.5); width: 28px; height: 28px; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-family: inherit; transition: background 0.15s, color 0.15s; }
+  .dash-close:hover { background: rgba(255,255,255,0.14); color: white; }
   .dash-avatar { width: 46px; height: 46px; border-radius: 50%; background: rgba(99,102,241,0.25); border: 1.5px solid rgba(99,102,241,0.4); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1rem; color: #a5b4fc; flex-shrink: 0; position: relative; overflow: hidden; cursor: pointer; }
   .dash-avatar:hover .avatar-overlay { opacity: 1; }
   .avatar-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.55); border-radius: 50%; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s; font-size: 14px; pointer-events: none; }
@@ -319,10 +314,8 @@
   #mapillary-lightbox.open { opacity: 1; }
   .lightbox-inner { position: relative; display: flex; flex-direction: column; align-items: center; gap: 14px; max-width: 92vw; }
   .lightbox-img { max-width: min(860px,88vw); max-height: 68vh; width: auto; height: auto; border-radius: 12px; object-fit: contain; box-shadow: 0 24px 64px rgba(0,0,0,0.7); cursor: pointer; display: block; }
-  .lightbox-close { position: absolute; top: -44px; right: 0; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.14); border-radius: 8px; width: 32px; height: 32px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.15s; font-family: inherit; }
-  .lightbox-close img { width:20px; height:20px; opacity:0.7; transition:opacity 0.15s; }
+  .lightbox-close { position: absolute; top: -42px; right: 0; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.14); border-radius: 50%; color: white; width: 32px; height: 32px; cursor: pointer; font-size: 13px; display: flex; align-items: center; justify-content: center; transition: background 0.15s; font-family: inherit; }
   .lightbox-close:hover { background: rgba(255,255,255,0.18); }
-  .lightbox-close:hover img { opacity:1; }
   .lightbox-controls { display: flex; align-items: center; gap: 18px; }
   .lightbox-nav { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.14); border-radius: 50%; color: white; width: 38px; height: 38px; cursor: pointer; font-size: 15px; display: flex; align-items: center; justify-content: center; transition: background 0.15s; font-family: inherit; }
   .lightbox-nav:hover:not(:disabled) { background: rgba(255,255,255,0.18); }
@@ -356,13 +349,13 @@
   /* ── Custom zoom controls ──────────────────────────────────────────────── */
   #map-zoom-controls { position:fixed; bottom:80px; right:16px; z-index:20; display:flex; flex-direction:column; background:var(--glass-bg); backdrop-filter:var(--glass-blur); -webkit-backdrop-filter:var(--glass-blur); border:1px solid var(--glass-border); border-radius:10px; box-shadow:var(--glass-shadow); overflow:hidden; transition:opacity 0.4s ease, filter 0.4s ease; }
   #map-zoom-controls.mzc-loading { opacity:0.28; filter:blur(1px); pointer-events:none; }
-  .mzc-btn { width:36px; height:36px; background:none; border:none; color:rgba(255,255,255,0.55); font-size:1.15rem; font-weight:300; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background 0.15s, color 0.15s; font-family:inherit; user-select:none; }
+  .mzc-btn { width:40px; height:38px; background:none; border:none; color:rgba(255,255,255,0.55); font-size:1.15rem; font-weight:300; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background 0.15s, color 0.15s; font-family:inherit; user-select:none; }
   .mzc-btn:hover { background:rgba(255,255,255,0.07); color:rgba(255,255,255,0.9); }
   .mzc-btn:active { background:rgba(255,255,255,0.13); }
   .mzc-btn.mzc-3d-btn { color:rgba(255,255,255,0.45); }
   .mzc-btn.mzc-3d-btn.active { color:#a5b4fc; background:rgba(99,102,241,0.18); }
   .mzc-btn.mzc-layers-btn { color:rgba(255,255,255,0.45); }
-  .mzc-btn.mzc-layers-btn img { width:22px; height:22px; opacity:0.5; transition:opacity 0.15s; }
+  .mzc-btn.mzc-layers-btn img { width:28px; height:28px; opacity:0.5; transition:opacity 0.15s; }
   .mzc-btn.mzc-layers-btn:hover img { opacity:0.85; }
   .mzc-btn.mzc-layers-btn.active { background:rgba(99,102,241,0.18); }
   .mzc-btn.mzc-layers-btn.active img { opacity:1; }
@@ -435,10 +428,8 @@
   #data-panel.dp-open { opacity:1; pointer-events:all; transform:translateX(0); }
   .dp-header { display:flex; align-items:center; justify-content:space-between; padding:16px 16px 10px; border-bottom:1px solid rgba(255,255,255,0.07); flex-shrink:0; }
   .dp-title { color:white; font-weight:700; font-size:0.82rem; }
-  .dp-close { background:none; border:none; cursor:pointer; width:32px; height:32px; border-radius:7px; display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:background 0.15s; }
-  .dp-close img { width:20px; height:20px; opacity:0.4; transition:opacity 0.15s; }
-  .dp-close:hover { background:rgba(255,255,255,0.08); }
-  .dp-close:hover img { opacity:0.85; }
+  .dp-close { background:none; border:none; color:rgba(255,255,255,0.35); font-size:1rem; cursor:pointer; padding:2px 6px; border-radius:5px; font-family:inherit; transition:color 0.15s, background 0.15s; }
+  .dp-close:hover { color:rgba(255,255,255,0.8); background:rgba(255,255,255,0.06); }
   .dp-layer-row { padding:8px 16px 0; flex-shrink:0; }
   .dp-layer-sel { width:100%; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); border-radius:7px; color:white; font-size:0.73rem; font-family:inherit; padding:6px 10px; outline:none; cursor:pointer; }
   .dp-layer-name { padding:8px 16px 2px; color:rgba(255,255,255,0.75); font-size:0.73rem; font-weight:600; flex-shrink:0; }
@@ -504,14 +495,10 @@
   .dp-flt-header { display:flex; align-items:center; gap:6px; margin-bottom:9px; }
   .dp-flt-name { color:rgba(255,255,255,0.75); font-size:0.7rem; font-weight:600; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .dp-flt-type { color:rgba(255,255,255,0.2); font-size:0.6rem; background:rgba(255,255,255,0.06); border-radius:4px; padding:1px 6px; }
-  .dp-flt-clear { background:none; border:none; cursor:pointer; width:20px; height:20px; border-radius:4px; display:flex; align-items:center; justify-content:center; font-family:inherit; transition:background 0.15s; }
-  .dp-flt-clear img { width:12px; height:12px; opacity:0.3; transition:opacity 0.15s; }
-  .dp-flt-clear:hover { background:rgba(239,68,68,0.1); }
-  .dp-flt-clear:hover img { opacity:0.8; filter:sepia(1) saturate(8) hue-rotate(310deg) brightness(0.9); }
-  .inline-close-btn { background:none; border:none; cursor:pointer; width:28px; height:28px; border-radius:6px; display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:background 0.15s; }
-  .inline-close-btn img { width:16px; height:16px; opacity:0.35; transition:opacity 0.15s; }
-  .inline-close-btn:hover { background:rgba(255,255,255,0.08); }
-  .inline-close-btn:hover img { opacity:0.8; }
+  .dp-flt-clear { background:none; border:none; color:rgba(255,255,255,0.25); font-size:0.75rem; cursor:pointer; padding:0 3px; font-family:inherit; line-height:1; transition:color 0.15s; }
+  .dp-flt-clear:hover { color:rgba(239,68,68,0.7); }
+  .inline-close-btn { background:none; border:none; color:rgba(255,255,255,0.3); font-size:0.9rem; cursor:pointer; padding:2px 5px; border-radius:4px; line-height:1; transition:color 0.15s, background 0.15s; }
+  .inline-close-btn:hover { color:rgba(255,255,255,0.8); background:rgba(255,255,255,0.07); }
   .dp-range-wrap { position:relative; height:18px; margin:0 2px; }
   .dp-range { position:absolute; width:100%; height:4px; -webkit-appearance:none; appearance:none; background:rgba(255,255,255,0.12); border-radius:2px; outline:none; pointer-events:none; top:7px; }
   .dp-range-min { z-index:3; }
@@ -531,10 +518,8 @@
   .modal-overlay.open { opacity: 1; pointer-events: all; }
   .modal-box { background: #111; border: 1px solid rgba(255,255,255,0.11); border-radius: 20px; padding: 26px 24px; width: 100%; max-width: 380px; max-height: 90vh; overflow-y: auto; box-shadow: 0 32px 80px rgba(0,0,0,0.7); position: relative; transform: translateY(14px) scale(0.98); transition: transform 0.28s cubic-bezier(0.23,1,0.32,1); }
   .modal-overlay.open .modal-box { transform: translateY(0) scale(1); }
-  .modal-close { position: absolute; top: 12px; right: 12px; background: none; border: none; cursor: pointer; width:32px; height:32px; border-radius:7px; display:flex; align-items:center; justify-content:center; transition:background 0.15s; }
-  .modal-close img { width:20px; height:20px; opacity:0.35; transition:opacity 0.15s; }
-  .modal-close:hover { background:rgba(255,255,255,0.07); }
-  .modal-close:hover img { opacity:0.85; }
+  .modal-close { position: absolute; top: 14px; right: 16px; background: none; border: none; color: rgba(255,255,255,0.35); font-size: 1rem; cursor: pointer; padding: 4px; transition: color 0.15s; }
+  .modal-close:hover { color: white; }
   .modal-header { text-align: center; margin-bottom: 20px; }
   .modal-icon { font-size: 20px; margin-bottom: 6px; display:none; }
   .modal-title { color: white; font-size: 1rem; font-weight: 600; margin-bottom: 5px; }
@@ -621,6 +606,8 @@
   .draw-file-btn:hover { background:rgba(255,255,255,0.08); color:rgba(255,255,255,0.8); }
   .draw-file-btn img { width:40px; height:40px; flex-shrink:0; transition:opacity 0.15s; }
   .draw-file-btn:hover img { opacity:0.9; }
+  #import-data-popup { position:fixed; left:68px; z-index:40; background:var(--glass-bg,rgba(10,10,16,0.88)); backdrop-filter:var(--glass-blur,blur(18px)); -webkit-backdrop-filter:var(--glass-blur,blur(18px)); border:1px solid var(--glass-border,rgba(255,255,255,0.1)); border-radius:12px; box-shadow:var(--glass-shadow,0 8px 32px rgba(0,0,0,0.5)); padding:10px 8px 8px; display:none; flex-direction:column; gap:2px; }
+  #import-data-popup.open { display:flex; }
   .draw-shape-btn { display:flex; align-items:center; justify-content:center; width:46px; height:46px; background:none; border:none; border-radius:8px; cursor:pointer; padding:3px; transition:background 0.15s; flex-shrink:0; }
   .draw-shape-btn:hover { background:rgba(255,255,255,0.08); }
   .draw-shape-btn img { width:40px; height:40px; display:block; transition:opacity 0.15s; }
@@ -662,10 +649,8 @@
   #cat-popover.visible { display:block; animation:catPopoverIn 0.22s cubic-bezier(0.23,1,0.32,1); }
   #cat-popover-header { display:flex; align-items:center; justify-content:space-between; padding:12px 14px 10px; border-bottom:1px solid rgba(255,255,255,0.07); position:sticky; top:0; background:rgba(8,8,8,0.92); backdrop-filter:blur(22px); z-index:1; border-radius:16px 16px 0 0; }
   #cat-popover-title { font-size:0.62rem; font-weight:700; letter-spacing:0.09em; text-transform:uppercase; color:rgba(255,255,255,0.38); }
-  #cat-popover-close { background:none; border:none; cursor:pointer; width:30px; height:30px; border-radius:7px; display:flex; align-items:center; justify-content:center; transition:background 0.15s; }
-  #cat-popover-close img { width:18px; height:18px; opacity:0.3; transition:opacity 0.15s; }
-  #cat-popover-close:hover { background:rgba(255,255,255,0.07); }
-  #cat-popover-close:hover img { opacity:0.8; }
+  #cat-popover-close { background:none; border:none; color:rgba(255,255,255,0.28); font-size:0.85rem; cursor:pointer; padding:0 3px; line-height:1; transition:color 0.15s; }
+  #cat-popover-close:hover { color:rgba(255,255,255,0.7); }
   #cat-popover-body { padding:10px 14px 14px; }
   /* Bottom geometry reshape toolbar — placeholder */
   #geo-toolbar { position:absolute; bottom:28px; left:50%; transform:translateX(-50%); z-index:20; display:none; align-items:center; gap:3px; background:var(--glass-bg); backdrop-filter:var(--glass-blur); -webkit-backdrop-filter:var(--glass-blur); border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:5px; box-shadow:0 6px 24px rgba(0,0,0,0.45); }
@@ -836,7 +821,7 @@
       <span id="pfc-code">—</span>
       <div style="display:flex;align-items:center;gap:2px">
         <button id="pfc-min-btn" onclick="toggleParcelCardMin()" title="Minimize">−</button>
-        <button class="inline-close-btn" onclick="clearParcelSelection()" title="Close"><img src="analysis-logos/close.svg"></button>
+        <button class="inline-close-btn" onclick="clearParcelSelection()" title="Close">✕</button>
       </div>
     </div>
     <div id="pfc-body">
@@ -866,13 +851,13 @@
     </button>
   </div>
   <div class="nav-group">
-    <button class="nav-btn active" id="nav-parcel-btn" onclick="navSelect('parcel')" style="display:none">
-      <svg width="31" height="31" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
-      <span class="nav-tip" id="nav-tip-parcel">Parcel search</span>
+    <button class="nav-btn" id="nav-projects-btn" onclick="openProjectsPanel()" style="display:none">
+      <img src="analysis-logos/my project.svg" width="39" height="39" style="opacity:0.65;transition:opacity 0.15s" id="nav-projects-icon">
+      <span class="nav-tip" id="nav-tip-projects">Projects</span>
     </button>
-    <button class="nav-btn" id="nav-analysis-btn" onclick="navSelect('analysis')" style="display:none">
-      <svg width="31" height="31" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="3" y1="20" x2="21" y2="20" opacity="0.45"/></svg>
-      <span class="nav-tip" id="nav-tip-analysis">Analysis</span>
+    <button class="nav-btn" id="nav-import-btn" onclick="navToggleImport()">
+      <img src="analysis-logos/import data.svg" width="39" height="39" style="opacity:0.55;transition:opacity 0.15s" id="nav-import-icon">
+      <span class="nav-tip">Import</span>
     </button>
     <button class="nav-btn" id="nav-draw-btn" onclick="navToggleDraw()">
       <img src="analysis-logos/draw.svg" width="39" height="39" style="opacity:0.55;transition:opacity 0.15s" id="nav-draw-icon">
@@ -882,11 +867,19 @@
       <img src="analysis-logos/extrusion.svg" width="44" height="44" style="opacity:0.55;transition:opacity 0.15s" id="nav-extrusion-icon">
       <span class="nav-tip">3D Extrude</span>
     </button>
-    <button class="nav-btn" id="nav-zoning-btn" onclick="runZoningAnalysis()" title="Zoning Analysis"><img src="analysis-logos/zoning.svg" width="39" height="39" style="opacity:0.70;transition:opacity 0.15s" id="nav-zoning-icon"><span class="nav-tip">Zoning</span></button>
+    <button class="nav-btn active" id="nav-parcel-btn" onclick="navSelect('parcel')" style="display:none">
+      <svg width="31" height="31" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+      <span class="nav-tip" id="nav-tip-parcel">Parcel search</span>
+    </button>
+    <button class="nav-btn" id="nav-analysis-btn" onclick="navSelect('analysis')" style="display:none">
+      <svg width="31" height="31" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="3" y1="20" x2="21" y2="20" opacity="0.45"/></svg>
+      <span class="nav-tip" id="nav-tip-analysis">Analysis</span>
+    </button>
   </div>
   <div class="nav-sep"></div>
   <div class="nav-group" id="nav-cat-group">
     <button class="nav-btn" id="cat-btn-accessibility" onclick="showCatInPanel('accessibility',this)" title="Accessibility"><img src="analysis-logos/accessibility.svg" width="39" height="39" style="opacity:0.70;transition:opacity 0.15s"><span class="nav-tip">Accessibility</span></button>
+    <button class="nav-btn" id="nav-zoning-btn" onclick="runZoningAnalysis()" title="Zoning Analysis"><img src="analysis-logos/zoning.svg" width="39" height="39" style="opacity:0.70;transition:opacity 0.15s" id="nav-zoning-icon"><span class="nav-tip">Zoning</span></button>
     <button class="nav-btn" id="cat-btn-education" onclick="showCatInPanel('education',this)" title="Education"><img src="analysis-logos/education.svg" width="39" height="39" style="opacity:0.70;transition:opacity 0.15s"><span class="nav-tip">Education</span></button>
     <button class="nav-btn" id="cat-btn-mobility" onclick="showCatInPanel('mobility',this)" title="Mobility"><img src="analysis-logos/mobility.svg" width="39" height="39" style="opacity:0.70;transition:opacity 0.15s"><span class="nav-tip">Mobility</span></button>
     <button class="nav-btn" id="cat-btn-climate" onclick="showCatInPanel('climate',this)" title="Climate"><img src="analysis-logos/climate.svg" width="39" height="39" style="opacity:0.70;transition:opacity 0.15s"><span class="nav-tip">Climate</span></button>
@@ -896,10 +889,6 @@
   </div>
   <div class="nav-sep"></div>
   <div class="nav-group">
-    <button class="nav-btn" id="nav-projects-btn" onclick="openProjectsPanel()" style="display:none">
-      <img src="analysis-logos/my project.svg" width="39" height="39" style="opacity:0.65;transition:opacity 0.15s" id="nav-projects-icon">
-      <span class="nav-tip" id="nav-tip-projects">Projects</span>
-    </button>
     <button class="nav-btn" id="nav-lang-btn" onclick="navToggleLang()">
       <span id="nav-lang-label">EN</span>
       <span class="nav-tip">Language</span>
@@ -930,7 +919,7 @@
   <span id="asc-dot"></span>
   <span id="asc-name"></span>
   <span id="asc-status"></span>
-  <button id="asc-stop" onclick="_stopAutoSave()" title="Stop auto-saving"><img src="analysis-logos/close.svg"></button>
+  <button id="asc-stop" onclick="_stopAutoSave()" title="Stop auto-saving">✕</button>
 </div>
 
 <div id="map-zoom-controls" class="mzc-loading">
@@ -1041,7 +1030,7 @@
   <div class="card" id="info-card" style="display:none">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px">
       <div class="card-label" id="lbl-parcel-info" style="margin-bottom:0">Parcel Info</div>
-      <button class="inline-close-btn" onclick="clearParcelSelection()" title="Clear selection"><img src="analysis-logos/close.svg"></button>
+      <button class="inline-close-btn" onclick="clearParcelSelection()" title="Clear selection">✕</button>
     </div>
     <div class="info-row"><span class="info-label" id="lbl-code">Cadastral</span><span class="info-value" id="val-code">—</span></div>
     <div class="info-row"><span class="info-label" id="lbl-area">Area</span><span class="info-value" id="val-area">—</span></div>
@@ -1144,7 +1133,7 @@
 <div id="line-profile-panel">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:9px">
     <div style="font-size:0.57rem;font-weight:700;letter-spacing:0.09em;text-transform:uppercase;color:rgba(129,140,248,0.55)">Elevation Profile</div>
-    <button class="inline-close-btn" onclick="_clearLineProfile()" title="Close"><img src="analysis-logos/close.svg"></button>
+    <button class="inline-close-btn" onclick="_clearLineProfile()" title="Close">✕</button>
   </div>
   <div id="line-profile-meta" class="lp-elev-row"></div>
   <div id="line-profile-chart"></div>
@@ -1154,7 +1143,7 @@
     <div class="card-label" id="lbl-poly-title" style="margin-bottom:0"></div>
     <div style="display:flex;align-items:center;gap:6px">
       <button onclick="removeActiveBuilding()" title="Delete building" style="background:none;border:none;cursor:pointer;padding:0 2px;line-height:1;display:flex;align-items:center" onmouseover="this.querySelector('img').style.opacity='0.9';this.querySelector('img').style.filter='sepia(1) saturate(8) hue-rotate(310deg) brightness(0.9)'" onmouseout="this.querySelector('img').style.opacity='0.35';this.querySelector('img').style.filter=''"><img src="analysis-logos/delete.svg" style="width:13px;height:13px;opacity:0.35;transition:opacity 0.15s,filter 0.15s"></button>
-      <button class="inline-close-btn" onclick="_deselectBuilding()" title="Close panel"><img src="analysis-logos/close.svg"></button>
+      <button class="inline-close-btn" onclick="_deselectBuilding()" title="Close panel">✕</button>
     </div>
   </div>
   <div style="display:flex;flex-direction:column;gap:4px">
@@ -1203,7 +1192,7 @@
 <div id="cat-popover">
   <div id="cat-popover-header">
     <span id="cat-popover-title"></span>
-    <button id="cat-popover-close" onclick="closeCatPopover()" title="Close"><img src="analysis-logos/close.svg"></button>
+    <button id="cat-popover-close" onclick="closeCatPopover()">✕</button>
   </div>
   <div id="cat-popover-body"></div>
 </div>
@@ -1248,7 +1237,7 @@
 <!-- Auth modal -->
 <div class="modal-overlay" id="auth-modal" onclick="onAuthOverlayClick(event)">
   <div class="modal-box">
-    <button class="modal-close" onclick="closeAuthModal()" title="Close"><img src="analysis-logos/close.svg"></button>
+    <button class="modal-close" onclick="closeAuthModal()">✕</button>
     <div id="view-signin">
       <div class="modal-header">
                 <div class="modal-title" id="si-title"></div>
@@ -1313,7 +1302,7 @@
 <!-- Paywall modal -->
 <div class="modal-overlay" id="paywall-modal" onclick="onPaywallOverlayClick(event)">
   <div class="modal-box" style="max-width:520px">
-    <button class="modal-close" onclick="closePaywall()" title="Close"><img src="analysis-logos/close.svg"></button>
+    <button class="modal-close" onclick="closePaywall()">✕</button>
     <div class="modal-header">
             <div class="modal-title" id="pw-title"></div>
       <div class="modal-sub" id="pw-sub"></div>
@@ -4665,7 +4654,7 @@ function _renderDP(){
   if(_dpTab==='viz')body=_dpRenderViz(layer);
   else if(_dpTab==='table')body=_dpRenderTable(layer);
   else body=_dpRenderFilters(layer);
-  panel.innerHTML=`<div class="dp-header"><span class="dp-title">Data Explorer</span><button class="dp-close" onclick="closeDataPanel()" title="Close"><img src="analysis-logos/close.svg"></button></div>${layerPicker}<div class="dp-tabs">${tabs}</div><div class="dp-body">${body}</div>`;
+  panel.innerHTML=`<div class="dp-header"><span class="dp-title">Data Explorer</span><button class="dp-close" onclick="closeDataPanel()">✕</button></div>${layerPicker}<div class="dp-tabs">${tabs}</div><div class="dp-body">${body}</div>`;
 }
 
 function _dpRenderViz(layer){
@@ -4786,11 +4775,11 @@ function _dpRenderFilters(layer){
   let html='';
   cols.filter(([,c])=>c.type==='numeric').forEach(([col,c])=>{
     const f=filters[col]||{};const fMin=f.min??c.min??0;const fMax=f.max??c.max??1;const active=!!f.enabled;
-    html+=`<div class="dp-filter-col${active?' dp-flt-active':''}"><div class="dp-flt-header"><span class="dp-flt-name">${col.replace(/</g,'&lt;')}</span><span class="dp-flt-type"># numeric</span>${active?`<button class="dp-flt-clear" onclick="_dpClearFilter('${layer.uid}','${col}')" title="Clear filter"><img src="analysis-logos/close.svg"></button>`:''}</div><div class="dp-range-wrap"><input type="range" class="dp-range dp-range-min" min="${c.min}" max="${c.max}" value="${fMin}" step="${((c.max-c.min)||1)/200}" oninput="_dpRangeMin('${layer.uid}','${col}',+this.value)"><input type="range" class="dp-range dp-range-max" min="${c.min}" max="${c.max}" value="${fMax}" step="${((c.max-c.min)||1)/200}" oninput="_dpRangeMax('${layer.uid}','${col}',+this.value)"></div><div class="dp-range-labels"><span data-flt="${layer.uid}-${col}-min">${_dpFmtNum(fMin)}</span><span data-flt="${layer.uid}-${col}-max">${_dpFmtNum(fMax)}</span></div></div>`;
+    html+=`<div class="dp-filter-col${active?' dp-flt-active':''}"><div class="dp-flt-header"><span class="dp-flt-name">${col.replace(/</g,'&lt;')}</span><span class="dp-flt-type"># numeric</span>${active?`<button class="dp-flt-clear" onclick="_dpClearFilter('${layer.uid}','${col}')">✕</button>`:''}</div><div class="dp-range-wrap"><input type="range" class="dp-range dp-range-min" min="${c.min}" max="${c.max}" value="${fMin}" step="${((c.max-c.min)||1)/200}" oninput="_dpRangeMin('${layer.uid}','${col}',+this.value)"><input type="range" class="dp-range dp-range-max" min="${c.min}" max="${c.max}" value="${fMax}" step="${((c.max-c.min)||1)/200}" oninput="_dpRangeMax('${layer.uid}','${col}',+this.value)"></div><div class="dp-range-labels"><span data-flt="${layer.uid}-${col}-min">${_dpFmtNum(fMin)}</span><span data-flt="${layer.uid}-${col}-max">${_dpFmtNum(fMax)}</span></div></div>`;
   });
   cols.filter(([,c])=>c.type==='categorical').forEach(([col,c])=>{
     const f=filters[col]||{};const selVals=f.vals||(c.uniqueVals||[]).slice();const active=!!f.enabled;
-    html+=`<div class="dp-filter-col${active?' dp-flt-active':''}"><div class="dp-flt-header"><span class="dp-flt-name">${col.replace(/</g,'&lt;')}</span><span class="dp-flt-type">≡ category</span>${active?`<button class="dp-flt-clear" onclick="_dpClearFilter('${layer.uid}','${col}')" title="Clear filter"><img src="analysis-logos/close.svg"></button>`:''}</div><div class="dp-cat-checks">${(c.uniqueVals||[]).slice(0,15).map(v=>`<label class="dp-check-row"><input type="checkbox" ${selVals.includes(String(v))?'checked':''} onchange="_dpToggleCat('${layer.uid}','${col}','${String(v).replace(/\\/g,'\\\\').replace(/'/g,"\\'")}',this.checked)"><span>${String(v).replace(/</g,'&lt;').substring(0,35)}</span></label>`).join('')}${c.uniqueCount>15?`<div class="dp-cat-more">…and ${c.uniqueCount-15} more</div>`:''}</div></div>`;
+    html+=`<div class="dp-filter-col${active?' dp-flt-active':''}"><div class="dp-flt-header"><span class="dp-flt-name">${col.replace(/</g,'&lt;')}</span><span class="dp-flt-type">≡ category</span>${active?`<button class="dp-flt-clear" onclick="_dpClearFilter('${layer.uid}','${col}')">✕</button>`:''}</div><div class="dp-cat-checks">${(c.uniqueVals||[]).slice(0,15).map(v=>`<label class="dp-check-row"><input type="checkbox" ${selVals.includes(String(v))?'checked':''} onchange="_dpToggleCat('${layer.uid}','${col}','${String(v).replace(/\\/g,'\\\\').replace(/'/g,"\\'")}',this.checked)"><span>${String(v).replace(/</g,'&lt;').substring(0,35)}</span></label>`).join('')}${c.uniqueCount>15?`<div class="dp-cat-more">…and ${c.uniqueCount-15} more</div>`:''}</div></div>`;
   });
   const fc=_dpGetFilterCount(layer.uid);
   if(fc)html+=`<button class="dp-reset-all-btn" onclick="_dpResetFilters('${layer.uid}')">Reset all ${fc} filter${fc>1?'s':''}</button>`;
@@ -5989,6 +5978,11 @@ function _closeOtherNavPanels(keep){
     if(nb)nb.classList.remove('active');if(ni)ni.style.opacity='0.55';
     document.removeEventListener('click',_closeDrawMenuOutside,{capture:true});
   }
+  if(keep!=='import'){
+    document.getElementById('import-data-popup')?.classList.remove('open');
+    const ib=document.getElementById('nav-import-btn');const ii=document.getElementById('nav-import-icon');
+    if(ib)ib.classList.remove('active');if(ii)ii.style.opacity='0.55';
+  }
   if(keep!=='layers'&&_layersPanelOpen){
     _layersPanelOpen=false;
     const lp=document.getElementById('layers-panel');if(lp)lp.classList.remove('open');
@@ -6015,6 +6009,21 @@ function navToggleDraw(){
   const nb=document.getElementById("nav-draw-btn");
   if(ni)ni.style.opacity=_drawMenuOpen?"0.95":"0.55";
   if(nb)nb.classList.toggle("active",_drawMenuOpen);
+}
+function navToggleImport(){
+  _closeOtherNavPanels('import');
+  const popup=document.getElementById('import-data-popup');
+  const btn=document.getElementById('nav-import-btn');
+  const icon=document.getElementById('nav-import-icon');
+  if(!popup)return;
+  const isOpen=popup.classList.contains('open');
+  popup.classList.toggle('open',!isOpen);
+  if(btn)btn.classList.toggle('active',!isOpen);
+  if(icon)icon.style.opacity=isOpen?'0.55':'0.95';
+  if(!isOpen){
+    const r=btn.getBoundingClientRect();
+    popup.style.top=r.top+'px';
+  }
 }
 function setMapLeft(px){
   const m=document.getElementById('map');
@@ -12185,7 +12194,7 @@ init();
 <!-- Dashboard modal -->
 <div id="billing-modal" onclick="onBillingOverlayClick(event)" style="position:fixed;inset:0;z-index:210;background:rgba(0,0,0,0.55);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;pointer-events:none;transition:opacity 0.22s ease">
   <div class="dash-box" style="max-width:460px" onclick="event.stopPropagation()">
-    <button class="dash-close" onclick="closeBillingPortal()" title="Close"><img src="analysis-logos/close.svg"></button>
+    <button class="dash-close" onclick="closeBillingPortal()">✕</button>
     <!-- Header -->
     <div style="margin-bottom:22px;padding-bottom:18px;border-bottom:1px solid rgba(255,255,255,0.07)">
       <div style="font-size:1rem;font-weight:700;color:white;margin-bottom:3px" id="bill-title"></div>
@@ -12230,7 +12239,7 @@ init();
 
 <div id="dashboard-modal" onclick="onDashboardOverlayClick(event)">
   <div class="dash-box">
-    <button class="dash-close" onclick="closeDashboard()" title="Close"><img src="analysis-logos/close.svg"></button>
+    <button class="dash-close" onclick="closeDashboard()">✕</button>
     <!-- Profile -->
     <div style="display:flex;align-items:center;gap:14px;padding-bottom:20px;border-bottom:1px solid rgba(255,255,255,0.07)">
       <div class="dash-avatar" id="dash-avatar" onclick="triggerAvatarUpload()">
@@ -12296,7 +12305,7 @@ init();
 <!-- Mapillary lightbox -->
 <div id="mapillary-lightbox" onclick="mapillaryLightboxBgClick(event)">
   <div class="lightbox-inner">
-    <button class="lightbox-close" onclick="closeMapillaryLightbox()" title="Close"><img src="analysis-logos/close.svg"></button>
+    <button class="lightbox-close" onclick="closeMapillaryLightbox()">✕</button>
     <img class="lightbox-img" id="lightbox-img" src="" alt="Street view" onclick="mapillaryLightboxOpenMapillary()">
     <div class="lightbox-controls">
       <button class="lightbox-nav" id="lightbox-prev" onclick="mapillaryLightboxNav(-1)">←</button>
@@ -12316,8 +12325,11 @@ init();
     <button class="draw-shape-btn" id="draw-btn-circle" onclick="startDraw('circle')" title="Circle"><img src="analysis-logos/circle.svg"></button>
     <button class="draw-shape-btn" id="draw-btn-line" onclick="startDraw('line')" title="Line"><img src="analysis-logos/line.svg"></button>
   </div>
-  <div class="draw-import-sep"></div>
-  <div class="draw-import-label" id="lbl-draw-import">Import</div>
+  <input type="file" id="draw-file-input" style="display:none" onchange="handleDrawFileImport(event)">
+</div>
+
+<div id="import-data-popup">
+  <div class="draw-import-label">Import Data</div>
   <div class="draw-import-row">
     <button class="draw-file-btn" onclick="importDrawFile('geojson')" title="Import GeoJSON (.geojson / .json)">
       <img src="analysis-logos/geojson.svg">
@@ -12332,7 +12344,6 @@ init();
       <img src="analysis-logos/geotiff.svg">
     </button>
   </div>
-  <input type="file" id="draw-file-input" style="display:none" onchange="handleDrawFileImport(event)">
 </div>
 
 <!-- ── Projects panel ──────────────────────────────────────────────────────── -->
@@ -12343,7 +12354,7 @@ init();
         <button class="pp-tab active" id="pp-tab-projects" onclick="_ppSetTab('projects')">Projects</button>
         <button class="pp-tab" id="pp-tab-data" onclick="_ppSetTab('data')">Data</button>
       </div>
-      <button class="pp-close" onclick="closeProjectsPanel()" title="Close"><img src="analysis-logos/close.svg"></button>
+      <button class="pp-close" onclick="closeProjectsPanel()" title="Close">✕</button>
     </div>
     <!-- Projects tab -->
     <div class="pp-pane" id="pp-pane-projects">
