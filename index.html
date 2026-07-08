@@ -3812,6 +3812,7 @@ function _addImportedLayer(name,fc){
   _renderImportedLayersPanel();
   _updateDataNavBtn();
   if(!_dpUid){_dpUid=uid;}
+  if(document.getElementById('pp-pane-data')?.style.display!=='none')_renderPPDataTab();
 }
 
 function _renderImportedLayersPanel(){
@@ -3872,6 +3873,7 @@ function removeImportedLayer(uid){
   _updateDataNavBtn();
   if(_dpUid)_renderDP();
   else closeDataPanel();
+  if(document.getElementById('pp-pane-data')?.style.display!=='none')_renderPPDataTab();
 }
 
 // ── Projects ──────────────────────────────────────────────────────────────────
