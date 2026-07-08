@@ -197,8 +197,10 @@
   .pp-box::-webkit-scrollbar { display:none; }
   .pp-header { display:flex; align-items:center; justify-content:space-between; padding:20px 18px 14px; border-bottom:1px solid rgba(255,255,255,0.07); flex-shrink:0; }
   .pp-title { color:white; font-weight:700; font-size:0.88rem; }
-  .pp-close { background:none; border:none; color:rgba(255,255,255,0.4); font-size:1rem; cursor:pointer; padding:4px 6px; border-radius:5px; line-height:1; }
-  .pp-close:hover { color:white; background:rgba(255,255,255,0.08); }
+  .pp-close { background:none; border:none; color:rgba(255,255,255,0.4); font-size:1rem; cursor:pointer; padding:4px 6px; border-radius:5px; line-height:1; display:flex; align-items:center; justify-content:center; }
+  .pp-close img { width:15px; height:15px; opacity:0.45; transition:opacity 0.15s; }
+  .pp-close:hover { background:rgba(255,255,255,0.08); }
+  .pp-close:hover img { opacity:0.9; }
   .pp-save-btn { margin:14px 16px 2px; padding:10px 14px; background:linear-gradient(135deg,#6366f1,#8b5cf6); border:none; border-radius:9px; color:white; font-size:0.75rem; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:8px; font-family:inherit; transition:filter 0.15s; flex-shrink:0; }
   .pp-save-btn:hover { filter:brightness(1.12); }
   .pp-save-btn:disabled { opacity:0.4; cursor:not-allowed; filter:none; }
@@ -214,8 +216,10 @@
   .pp-card-footer { display:flex; align-items:center; justify-content:space-between; padding:7px 12px 9px; }
   .pp-load-btn { background:rgba(99,102,241,0.14); border:1px solid rgba(99,102,241,0.28); border-radius:6px; color:rgba(139,132,255,0.9); font-size:0.68rem; font-weight:600; padding:4px 11px; cursor:pointer; font-family:inherit; transition:background 0.15s; }
   .pp-load-btn:hover { background:rgba(99,102,241,0.28); }
-  .pp-del-btn { background:none; border:none; color:rgba(255,255,255,0.2); font-size:0.78rem; cursor:pointer; padding:3px 6px; border-radius:4px; transition:color 0.15s; }
-  .pp-del-btn:hover { color:rgba(239,68,68,0.8); background:rgba(239,68,68,0.08); }
+  .pp-del-btn { background:none; border:none; cursor:pointer; padding:3px 6px; border-radius:4px; display:flex; align-items:center; justify-content:center; }
+  .pp-del-btn img { width:14px; height:14px; opacity:0.25; transition:opacity 0.15s, filter 0.15s; }
+  .pp-del-btn:hover { background:rgba(239,68,68,0.08); }
+  .pp-del-btn:hover img { opacity:0.85; filter:sepia(1) saturate(8) hue-rotate(310deg) brightness(0.9); }
   /* ── Save Project modal ─────────────────────────────────────────────── */
   #save-project-modal { position:fixed; inset:0; z-index:202; background:rgba(0,0,0,0.72); display:none; align-items:center; justify-content:center; }
   #save-project-modal.open { display:flex; }
@@ -238,8 +242,9 @@
   #asc-dot.asc-error { background:#ef4444; }
   @keyframes asc-pulse { 0%,100%{opacity:1} 50%{opacity:0.25} }
   #asc-name { color:rgba(255,255,255,0.82); font-weight:600; max-width:110px; overflow:hidden; text-overflow:ellipsis; }
-  #asc-stop { background:none; border:none; color:rgba(255,255,255,0.28); font-size:0.72rem; cursor:pointer; padding:0 0 0 4px; line-height:1; font-family:inherit; }
-  #asc-stop:hover { color:rgba(255,255,255,0.6); }
+  #asc-stop { background:none; border:none; cursor:pointer; padding:0 0 0 4px; display:flex; align-items:center; justify-content:center; }
+  #asc-stop img { width:11px; height:11px; opacity:0.3; transition:opacity 0.15s; }
+  #asc-stop:hover img { opacity:0.7; }
   .dash-box { background: rgba(14,14,14,0.96); border: 1px solid rgba(255,255,255,0.1); border-radius: 18px; padding: 28px; width: 440px; max-width: 92vw; max-height: 88vh; overflow-y: auto; scrollbar-width: none; position: relative; box-shadow: 0 24px 64px rgba(0,0,0,0.6); }
   .dash-box::-webkit-scrollbar { display: none; }
   .billing-history-row { display:flex; align-items:center; justify-content:space-between; padding:9px 0; border-bottom:1px solid rgba(255,255,255,0.05); }
@@ -258,8 +263,10 @@
   .billing-cancel-btn { background:none; border:none; color:rgba(255,255,255,0.22); font-size:0.68rem; cursor:pointer; text-decoration:underline; font-family:inherit; padding:0; margin-top:4px; transition:color 0.15s; }
   .billing-cancel-btn:hover { color:rgba(255,100,100,0.7); }
   .billing-empty { text-align:center; padding:20px 0; color:rgba(255,255,255,0.2); font-size:0.78rem; }
-  .dash-close { position: absolute; top: 16px; right: 16px; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.1); border-radius: 50%; color: rgba(255,255,255,0.5); width: 28px; height: 28px; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-family: inherit; transition: background 0.15s; }
+  .dash-close { position: absolute; top: 16px; right: 16px; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.1); border-radius: 50%; width: 28px; height: 28px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-family: inherit; transition: background 0.15s; }
+  .dash-close img { width:13px; height:13px; opacity:0.5; transition:opacity 0.15s; }
   .dash-close:hover { background: rgba(255,255,255,0.14); }
+  .dash-close:hover img { opacity:0.9; }
   .dash-avatar { width: 46px; height: 46px; border-radius: 50%; background: rgba(99,102,241,0.25); border: 1.5px solid rgba(99,102,241,0.4); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1rem; color: #a5b4fc; flex-shrink: 0; position: relative; overflow: hidden; cursor: pointer; }
   .dash-avatar:hover .avatar-overlay { opacity: 1; }
   .avatar-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.55); border-radius: 50%; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s; font-size: 14px; pointer-events: none; }
@@ -298,8 +305,10 @@
   #mapillary-lightbox.open { opacity: 1; }
   .lightbox-inner { position: relative; display: flex; flex-direction: column; align-items: center; gap: 14px; max-width: 92vw; }
   .lightbox-img { max-width: min(860px,88vw); max-height: 68vh; width: auto; height: auto; border-radius: 12px; object-fit: contain; box-shadow: 0 24px 64px rgba(0,0,0,0.7); cursor: pointer; display: block; }
-  .lightbox-close { position: absolute; top: -42px; right: 0; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.14); border-radius: 50%; color: white; width: 32px; height: 32px; cursor: pointer; font-size: 13px; display: flex; align-items: center; justify-content: center; transition: background 0.15s; font-family: inherit; }
+  .lightbox-close { position: absolute; top: -42px; right: 0; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.14); border-radius: 50%; width: 32px; height: 32px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.15s; font-family: inherit; }
+  .lightbox-close img { width:14px; height:14px; opacity:0.75; transition:opacity 0.15s; }
   .lightbox-close:hover { background: rgba(255,255,255,0.18); }
+  .lightbox-close:hover img { opacity:1; }
   .lightbox-controls { display: flex; align-items: center; gap: 18px; }
   .lightbox-nav { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.14); border-radius: 50%; color: white; width: 38px; height: 38px; cursor: pointer; font-size: 15px; display: flex; align-items: center; justify-content: center; transition: background 0.15s; font-family: inherit; }
   .lightbox-nav:hover:not(:disabled) { background: rgba(255,255,255,0.18); }
@@ -376,8 +385,10 @@
   .il-color-dot::-webkit-color-swatch-wrapper { padding:0; border-radius:50%; overflow:hidden; }
   .il-color-dot::-webkit-color-swatch { border:none; border-radius:50%; }
   .il-color-dot::-moz-color-swatch { border:none; border-radius:50%; }
-  .il-del-btn { background:none; border:none; cursor:pointer; color:rgba(255,255,255,0.2); font-size:0.65rem; line-height:1; padding:2px 3px; border-radius:4px; font-family:inherit; transition:color 0.15s,background 0.15s; }
-  .il-del-btn:hover { color:rgba(239,68,68,0.8); background:rgba(239,68,68,0.1); }
+  .il-del-btn { background:none; border:none; cursor:pointer; padding:2px 3px; border-radius:4px; font-family:inherit; display:flex; align-items:center; justify-content:center; }
+  .il-del-btn img { width:13px; height:13px; opacity:0.22; transition:opacity 0.15s, filter 0.15s; }
+  .il-del-btn:hover { background:rgba(239,68,68,0.1); }
+  .il-del-btn:hover img { opacity:0.85; filter:sepia(1) saturate(8) hue-rotate(310deg) brightness(0.9); }
   .il-count { font-size:0.56rem; color:rgba(255,255,255,0.2); flex-shrink:0; }
   .il-viz-btn { background:none; border:none; cursor:pointer; color:rgba(255,255,255,0.2); padding:2px 3px; border-radius:4px; line-height:1; transition:color 0.15s,background 0.15s; display:flex; align-items:center; }
   .il-viz-btn:hover { color:#818cf8; background:rgba(129,140,248,0.12); }
@@ -493,8 +504,9 @@
   .modal-overlay.open { opacity: 1; pointer-events: all; }
   .modal-box { background: #111; border: 1px solid rgba(255,255,255,0.11); border-radius: 20px; padding: 26px 24px; width: 100%; max-width: 380px; max-height: 90vh; overflow-y: auto; box-shadow: 0 32px 80px rgba(0,0,0,0.7); position: relative; transform: translateY(14px) scale(0.98); transition: transform 0.28s cubic-bezier(0.23,1,0.32,1); }
   .modal-overlay.open .modal-box { transform: translateY(0) scale(1); }
-  .modal-close { position: absolute; top: 14px; right: 16px; background: none; border: none; color: rgba(255,255,255,0.3); font-size: 1rem; cursor: pointer; padding: 4px; transition: color 0.15s; }
-  .modal-close:hover { color: white; }
+  .modal-close { position: absolute; top: 14px; right: 16px; background: none; border: none; color: rgba(255,255,255,0.3); font-size: 1rem; cursor: pointer; padding: 4px; display:flex; align-items:center; justify-content:center; }
+  .modal-close img { width:14px; height:14px; opacity:0.35; transition:opacity 0.15s; }
+  .modal-close:hover img { opacity:0.85; }
   .modal-header { text-align: center; margin-bottom: 20px; }
   .modal-icon { font-size: 20px; margin-bottom: 6px; display:none; }
   .modal-title { color: white; font-size: 1rem; font-weight: 600; margin-bottom: 5px; }
@@ -622,8 +634,9 @@
   #cat-popover.visible { display:block; animation:catPopoverIn 0.22s cubic-bezier(0.23,1,0.32,1); }
   #cat-popover-header { display:flex; align-items:center; justify-content:space-between; padding:12px 14px 10px; border-bottom:1px solid rgba(255,255,255,0.07); position:sticky; top:0; background:rgba(8,8,8,0.92); backdrop-filter:blur(22px); z-index:1; border-radius:16px 16px 0 0; }
   #cat-popover-title { font-size:0.62rem; font-weight:700; letter-spacing:0.09em; text-transform:uppercase; color:rgba(255,255,255,0.38); }
-  #cat-popover-close { background:none; border:none; color:rgba(255,255,255,0.28); font-size:0.85rem; cursor:pointer; padding:0 3px; line-height:1; transition:color 0.15s; }
-  #cat-popover-close:hover { color:rgba(255,255,255,0.7); }
+  #cat-popover-close { background:none; border:none; cursor:pointer; padding:0 3px; display:flex; align-items:center; justify-content:center; }
+  #cat-popover-close img { width:13px; height:13px; opacity:0.3; transition:opacity 0.15s; }
+  #cat-popover-close:hover img { opacity:0.75; }
   #cat-popover-body { padding:10px 14px 14px; }
   /* Bottom geometry reshape toolbar — placeholder */
   #geo-toolbar { position:absolute; bottom:28px; left:50%; transform:translateX(-50%); z-index:20; display:none; align-items:center; gap:3px; background:var(--glass-bg); backdrop-filter:var(--glass-blur); -webkit-backdrop-filter:var(--glass-blur); border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:5px; box-shadow:0 6px 24px rgba(0,0,0,0.45); }
@@ -892,7 +905,7 @@
   <span id="asc-dot"></span>
   <span id="asc-name"></span>
   <span id="asc-status"></span>
-  <button id="asc-stop" onclick="_stopAutoSave()" title="Stop auto-saving">✕</button>
+  <button id="asc-stop" onclick="_stopAutoSave()" title="Stop auto-saving"><img src="analysis-logos/close.svg"></button>
 </div>
 
 <div id="map-zoom-controls" class="mzc-loading">
@@ -1111,7 +1124,7 @@
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
     <div class="card-label" id="lbl-poly-title" style="margin-bottom:0"></div>
     <div style="display:flex;align-items:center;gap:6px">
-      <button onclick="removeActiveBuilding()" title="Delete building" style="background:none;border:none;color:rgba(248,113,113,0.4);font-size:0.75rem;cursor:pointer;padding:0 2px;line-height:1;transition:color 0.15s" onmouseover="this.style.color='rgba(248,113,113,0.9)'" onmouseout="this.style.color='rgba(248,113,113,0.4)'">🗑</button>
+      <button onclick="removeActiveBuilding()" title="Delete building" style="background:none;border:none;cursor:pointer;padding:0 2px;line-height:1;display:flex;align-items:center" onmouseover="this.querySelector('img').style.opacity='0.9';this.querySelector('img').style.filter='sepia(1) saturate(8) hue-rotate(310deg) brightness(0.9)'" onmouseout="this.querySelector('img').style.opacity='0.35';this.querySelector('img').style.filter=''"><img src="analysis-logos/delete.svg" style="width:13px;height:13px;opacity:0.35;transition:opacity 0.15s,filter 0.15s"></button>
       <button onclick="_deselectBuilding()" title="Close panel" style="background:none;border:none;color:rgba(255,255,255,0.3);font-size:0.9rem;cursor:pointer;padding:0 2px;line-height:1;transition:color 0.15s" onmouseover="this.style.color='rgba(255,255,255,0.7)'" onmouseout="this.style.color='rgba(255,255,255,0.3)'">✕</button>
     </div>
   </div>
@@ -1161,7 +1174,7 @@
 <div id="cat-popover">
   <div id="cat-popover-header">
     <span id="cat-popover-title"></span>
-    <button id="cat-popover-close" onclick="closeCatPopover()">✕</button>
+    <button id="cat-popover-close" onclick="closeCatPopover()" title="Close"><img src="analysis-logos/close.svg"></button>
   </div>
   <div id="cat-popover-body"></div>
 </div>
@@ -1206,7 +1219,7 @@
 <!-- Auth modal -->
 <div class="modal-overlay" id="auth-modal" onclick="onAuthOverlayClick(event)">
   <div class="modal-box">
-    <button class="modal-close" onclick="closeAuthModal()">✕</button>
+    <button class="modal-close" onclick="closeAuthModal()" title="Close"><img src="analysis-logos/close.svg"></button>
     <div id="view-signin">
       <div class="modal-header">
                 <div class="modal-title" id="si-title"></div>
@@ -1271,7 +1284,7 @@
 <!-- Paywall modal -->
 <div class="modal-overlay" id="paywall-modal" onclick="onPaywallOverlayClick(event)">
   <div class="modal-box" style="max-width:520px">
-    <button class="modal-close" onclick="closePaywall()">✕</button>
+    <button class="modal-close" onclick="closePaywall()" title="Close"><img src="analysis-logos/close.svg"></button>
     <div class="modal-header">
             <div class="modal-title" id="pw-title"></div>
       <div class="modal-sub" id="pw-sub"></div>
@@ -3793,7 +3806,7 @@ function _renderImportedLayersPanel(){
         <div style="display:flex;align-items:center;gap:4px;flex-shrink:0;margin-left:6px">
           <button class="il-viz-btn ${l.vizExpanded?'active':''}" onclick="event.stopPropagation();toggleLayerViz('${l.uid}')" title="${isKa?'ვიზუალიზაცია':'Visualize data'}"><svg width="11" height="10" viewBox="0 0 11 10" fill="currentColor"><rect x="0" y="5" width="2.2" height="5" rx="0.5"/><rect x="3.2" y="2.5" width="2.2" height="7.5" rx="0.5"/><rect x="6.4" y="0" width="2.2" height="10" rx="0.5"/><rect x="9.6" y="3.5" width="1.4" height="6.5" rx="0.5"/></svg></button>
           <div class="lp-sw ${l.visible?'on':''}" id="ilsw-${l.uid}" onclick="event.stopPropagation();toggleImportedLayer('${l.uid}')"></div>
-          <button class="il-del-btn" onclick="event.stopPropagation();removeImportedLayer('${l.uid}')" title="${isKa?'წაშლა':'Remove'}">✕</button>
+          <button class="il-del-btn" onclick="event.stopPropagation();removeImportedLayer('${l.uid}')" title="${isKa?'წაშლა':'Remove'}"><img src="analysis-logos/delete.svg"></button>
         </div>
       </div>
       ${l.vizExpanded?_buildVizPanel(l.uid):''}
@@ -4194,7 +4207,7 @@ async function _loadProjectsList(){
       const thumb=p.thumbnail
         ?`<img class="pp-thumb" src="${p.thumbnail}" alt="" loading="lazy">`
         :`<div class="pp-thumb-placeholder"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="rgba(99,102,241,0.35)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg></div>`;
-      return `<div class="pp-project-card">${thumb}<div class="pp-card-body"><div class="pp-card-name">${p.name.replace(/&/g,'&amp;').replace(/</g,'&lt;')}</div><div class="pp-card-meta">${ds}${meta?' · '+meta:''}</div></div><div class="pp-card-footer"><button class="pp-load-btn" onclick="event.stopPropagation();loadProject('${p.id}')">${tr.openBtn}</button><button class="pp-del-btn" onclick="event.stopPropagation();deleteProject('${p.id}',this)" title="Delete">🗑</button></div></div>`;
+      return `<div class="pp-project-card">${thumb}<div class="pp-card-body"><div class="pp-card-name">${p.name.replace(/&/g,'&amp;').replace(/</g,'&lt;')}</div><div class="pp-card-meta">${ds}${meta?' · '+meta:''}</div></div><div class="pp-card-footer"><button class="pp-load-btn" onclick="event.stopPropagation();loadProject('${p.id}')">${tr.openBtn}</button><button class="pp-del-btn" onclick="event.stopPropagation();deleteProject('${p.id}',this)" title="Delete"><img src="analysis-logos/delete.svg"></button></div></div>`;
     }).join('');
   }catch(err){
     console.error('[projects] list:',err);
@@ -4607,7 +4620,7 @@ function _renderDP(){
   if(_dpTab==='viz')body=_dpRenderViz(layer);
   else if(_dpTab==='table')body=_dpRenderTable(layer);
   else body=_dpRenderFilters(layer);
-  panel.innerHTML=`<div class="dp-header"><span class="dp-title">Data Explorer</span><button class="dp-close" onclick="closeDataPanel()">✕</button></div>${layerPicker}<div class="dp-tabs">${tabs}</div><div class="dp-body">${body}</div>`;
+  panel.innerHTML=`<div class="dp-header"><span class="dp-title">Data Explorer</span><button class="dp-close" onclick="closeDataPanel()" title="Close"><img src="analysis-logos/close.svg" style="width:14px;height:14px;opacity:0.45;transition:opacity 0.15s"></button></div>${layerPicker}<div class="dp-tabs">${tabs}</div><div class="dp-body">${body}</div>`;
 }
 
 function _dpRenderViz(layer){
@@ -12133,7 +12146,7 @@ init();
 <!-- Dashboard modal -->
 <div id="billing-modal" onclick="onBillingOverlayClick(event)" style="position:fixed;inset:0;z-index:210;background:rgba(0,0,0,0.55);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;pointer-events:none;transition:opacity 0.22s ease">
   <div class="dash-box" style="max-width:460px" onclick="event.stopPropagation()">
-    <button class="dash-close" onclick="closeBillingPortal()">✕</button>
+    <button class="dash-close" onclick="closeBillingPortal()" title="Close"><img src="analysis-logos/close.svg"></button>
     <!-- Header -->
     <div style="margin-bottom:22px;padding-bottom:18px;border-bottom:1px solid rgba(255,255,255,0.07)">
       <div style="font-size:1rem;font-weight:700;color:white;margin-bottom:3px" id="bill-title"></div>
@@ -12178,7 +12191,7 @@ init();
 
 <div id="dashboard-modal" onclick="onDashboardOverlayClick(event)">
   <div class="dash-box">
-    <button class="dash-close" onclick="closeDashboard()">✕</button>
+    <button class="dash-close" onclick="closeDashboard()" title="Close"><img src="analysis-logos/close.svg"></button>
     <!-- Profile -->
     <div style="display:flex;align-items:center;gap:14px;padding-bottom:20px;border-bottom:1px solid rgba(255,255,255,0.07)">
       <div class="dash-avatar" id="dash-avatar" onclick="triggerAvatarUpload()">
@@ -12244,7 +12257,7 @@ init();
 <!-- Mapillary lightbox -->
 <div id="mapillary-lightbox" onclick="mapillaryLightboxBgClick(event)">
   <div class="lightbox-inner">
-    <button class="lightbox-close" onclick="closeMapillaryLightbox()">✕</button>
+    <button class="lightbox-close" onclick="closeMapillaryLightbox()" title="Close"><img src="analysis-logos/close.svg"></button>
     <img class="lightbox-img" id="lightbox-img" src="" alt="Street view" onclick="mapillaryLightboxOpenMapillary()">
     <div class="lightbox-controls">
       <button class="lightbox-nav" id="lightbox-prev" onclick="mapillaryLightboxNav(-1)">←</button>
@@ -12288,10 +12301,10 @@ init();
   <div class="pp-box">
     <div class="pp-header">
       <span class="pp-title" id="lbl-pp-title">My Projects</span>
-      <button class="pp-close" onclick="closeProjectsPanel()">✕</button>
+      <button class="pp-close" onclick="closeProjectsPanel()" title="Close"><img src="analysis-logos/close.svg"></button>
     </div>
     <button class="pp-save-btn" id="pp-save-current-btn" onclick="openSaveProjectModal()">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+      <img src="analysis-logos/new project.svg" style="width:16px;height:16px;opacity:0.9">
       <span id="lbl-pp-save-btn">Save current analysis</span>
     </button>
     <div class="pp-list" id="pp-list"></div>
@@ -12307,7 +12320,7 @@ init();
     <div class="spm-hint" id="lbl-spm-hint">Saves map view, selected features, imported layers and analysis results.</div>
     <div class="spm-actions">
       <button class="spm-cancel" id="lbl-spm-cancel" onclick="closeSaveProjectModal()">Cancel</button>
-      <button class="spm-confirm" id="spm-confirm-btn" onclick="confirmSaveProject()">Save</button>
+      <button class="spm-confirm" id="spm-confirm-btn" onclick="confirmSaveProject()" style="display:flex;align-items:center;gap:6px"><img src="analysis-logos/save icon.svg" style="width:13px;height:13px;opacity:0.9">Save</button>
     </div>
   </div>
 </div>
