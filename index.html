@@ -347,6 +347,8 @@
   .mzc-btn:active { background:rgba(255,255,255,0.13); }
   .mzc-btn.mzc-3d-btn { color:rgba(255,255,255,0.45); }
   .mzc-btn.mzc-3d-btn.active { color:#a5b4fc; background:rgba(99,102,241,0.18); }
+  .mzc-btn.mzc-layers-btn { color:rgba(255,255,255,0.45); }
+  .mzc-btn.mzc-layers-btn.active { color:#a5b4fc; background:rgba(99,102,241,0.18); }
   .mzc-sep { height:1px; background:rgba(255,255,255,0.07); margin:0; }
   #top-center { position:absolute; top:16px; left:50%; transform:translateX(-50%); z-index:20; display:flex; align-items:center; }
   #zaxis-footer { position:absolute; bottom:14px; right:12px; z-index:4; opacity:0.6; transition:opacity 0.2s; pointer-events:all; line-height:0; backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); }
@@ -357,7 +359,7 @@
   .nav-flyout { position:fixed; left:68px; z-index:28; background:var(--glass-bg); backdrop-filter:var(--glass-blur); -webkit-backdrop-filter:var(--glass-blur); border:1px solid var(--glass-border); border-radius:var(--glass-radius); box-shadow:var(--glass-shadow); padding:14px 14px 10px; width:262px; max-height:calc(100vh - 24px); overflow-y:auto; scrollbar-width:none; color:white; font-size:0.8rem; }
   .nav-flyout-title { font-size:0.6rem; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:rgba(255,255,255,0.28); margin-bottom:10px; }
   .nav-flyout-loading { display:flex; align-items:center; gap:7px; padding:10px 2px; color:rgba(255,255,255,0.38); font-size:0.72rem; }
-  #layers-panel { position:fixed; left:68px; top:80px; z-index:28; background:var(--glass-bg); backdrop-filter:var(--glass-blur); -webkit-backdrop-filter:var(--glass-blur); border:1px solid var(--glass-border); border-radius:var(--glass-radius); box-shadow:var(--glass-shadow); padding:16px 14px; width:230px; opacity:0; pointer-events:none; transform:translateX(-6px); transition:opacity 0.18s ease,transform 0.18s ease; height:auto; overflow:visible; }
+  #layers-panel { position:fixed; right:60px; bottom:70px; z-index:28; background:var(--glass-bg); backdrop-filter:var(--glass-blur); -webkit-backdrop-filter:var(--glass-blur); border:1px solid var(--glass-border); border-radius:var(--glass-radius); box-shadow:var(--glass-shadow); padding:16px 14px; width:230px; opacity:0; pointer-events:none; transform:translateX(8px); transition:opacity 0.18s ease,transform 0.18s ease; height:auto; overflow:visible; }
   #layers-panel.open { opacity:1; pointer-events:all; transform:translateX(0); }
   .lp-sec-title { font-size: 0.57rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(255,255,255,0.25); margin-bottom: 8px; }
   .bm-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
@@ -855,10 +857,6 @@
       <svg width="31" height="31" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="3" y1="20" x2="21" y2="20" opacity="0.45"/></svg>
       <span class="nav-tip" id="nav-tip-analysis">Analysis</span>
     </button>
-    <button class="nav-btn" id="nav-layers-btn" onclick="navToggleLayers()">
-      <img src="analysis-logos/advanced geospatial analysis.svg" width="39" height="39" style="opacity:0.55;transition:opacity 0.15s" id="nav-layers-icon">
-      <span class="nav-tip" id="nav-tip-layers">Layers</span>
-    </button>
     <button class="nav-btn" id="nav-draw-btn" onclick="navToggleDraw()">
       <img src="analysis-logos/draw.svg" width="39" height="39" style="opacity:0.55;transition:opacity 0.15s" id="nav-draw-icon">
       <span class="nav-tip" id="nav-tip-draw">Draw</span>
@@ -922,6 +920,10 @@
   <button class="mzc-btn" onclick="map.zoomIn()" title="Zoom in">+</button>
   <div class="mzc-sep"></div>
   <button class="mzc-btn" onclick="map.zoomOut()" title="Zoom out">−</button>
+  <div class="mzc-sep"></div>
+  <button class="mzc-btn mzc-layers-btn" id="mzc-layers-btn" onclick="toggleLayersPanel()" title="Layers">
+    <svg width="15" height="13" viewBox="0 0 15 13" fill="none"><rect x="0" y="0" width="15" height="2.4" rx="1.2" fill="currentColor" opacity="0.8"/><rect x="0" y="5.3" width="15" height="2.4" rx="1.2" fill="currentColor" opacity="0.8"/><rect x="0" y="10.6" width="15" height="2.4" rx="1.2" fill="currentColor" opacity="0.8"/></svg>
+  </button>
   <div class="mzc-sep"></div>
   <button class="mzc-btn mzc-3d-btn" id="mzc-3d-btn" onclick="toggle3D()" title="Toggle 3D view">
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96" opacity="0.45"/><line x1="12" y1="22.08" x2="12" y2="12" opacity="0.45"/></svg>
@@ -5923,19 +5925,14 @@ function initCustomLayers(){
 function toggleLayersPanel(){
   _layersPanelOpen=!_layersPanelOpen;
   const lp=document.getElementById("layers-panel");
-  if(lp&&_layersPanelOpen){
-    const nb=document.getElementById("nav-layers-btn");
-    if(nb){const r=nb.getBoundingClientRect();lp.style.top=r.top+'px';}
-  }
   if(lp)lp.classList.toggle("open",_layersPanelOpen);
-  const lb=document.getElementById("nav-layers-btn");if(lb)lb.classList.toggle("layer-active",_layersPanelOpen);
-  const li=document.getElementById("nav-layers-icon");if(li)li.style.opacity=_layersPanelOpen?"0.95":"0.55";
+  const mb=document.getElementById("mzc-layers-btn");if(mb)mb.classList.toggle("active",_layersPanelOpen);
 }
 document.addEventListener("click",function(e){
-  if(_layersPanelOpen&&!e.target.closest("#layers-panel,#layers-btn,#nav-layers-btn")){
+  if(_layersPanelOpen&&!e.target.closest("#layers-panel,#layers-btn,#map-zoom-controls")){
     _layersPanelOpen=false;
     document.getElementById("layers-panel").classList.remove("open");
-    const lb=document.getElementById("nav-layers-btn");if(lb)lb.classList.remove("layer-active");
+    const mb=document.getElementById("mzc-layers-btn");if(mb)mb.classList.remove("active");
   }
 },{passive:true});
 
@@ -5962,8 +5959,7 @@ function _closeOtherNavPanels(keep){
   if(keep!=='layers'&&_layersPanelOpen){
     _layersPanelOpen=false;
     const lp=document.getElementById('layers-panel');if(lp)lp.classList.remove('open');
-    const lb=document.getElementById('nav-layers-btn');const li=document.getElementById('nav-layers-icon');
-    if(lb)lb.classList.remove('layer-active');if(li)li.style.opacity='0.55';
+    const mb=document.getElementById('mzc-layers-btn');if(mb)mb.classList.remove('active');
   }
   if(keep!=='cat'){
     const proCard=document.getElementById('pro-analysis-card');
@@ -5973,7 +5969,7 @@ function _closeOtherNavPanels(keep){
     _activeCatKey=null;
   }
 }
-function navToggleLayers(){ _closeOtherNavPanels('layers'); toggleLayersPanel(); }
+function navToggleLayers(){ toggleLayersPanel(); }
 function navOpenAccount(){ if(typeof currentUser!=="undefined"&&currentUser) openDashboard(); else openAuthModal("view-signin"); }
 function navToggleDraw(){
   if(typeof currentUser==="undefined"||!currentUser||currentUser.plan!=="pro"){
