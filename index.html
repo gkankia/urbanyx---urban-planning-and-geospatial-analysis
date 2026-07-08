@@ -577,9 +577,9 @@
   .draw-import-sep { height:1px; background:rgba(255,255,255,0.07); margin:3px 4px; }
   .draw-import-label { font-size:0.58rem; font-weight:600; letter-spacing:0.09em; text-transform:uppercase; color:rgba(255,255,255,0.28); padding:3px 8px 1px; }
   .draw-import-row { display:flex; flex-direction:row; gap:1px; }
-  .draw-file-btn { display:flex; align-items:center; justify-content:center; width:52px; height:52px; background:none; border:none; border-radius:8px; cursor:pointer; padding:3px; transition:background 0.15s; flex-shrink:0; }
+  .draw-file-btn { display:flex; align-items:center; justify-content:center; width:46px; height:46px; background:none; border:none; border-radius:8px; cursor:pointer; padding:3px; transition:background 0.15s; flex-shrink:0; }
   .draw-file-btn:hover { background:rgba(255,255,255,0.08); color:rgba(255,255,255,0.8); }
-  .draw-file-btn img { flex-shrink:0; transition:opacity 0.15s; }
+  .draw-file-btn img { width:40px; height:40px; flex-shrink:0; transition:opacity 0.15s; }
   .draw-file-btn:hover img { opacity:0.9; }
   .draw-shape-btn { display:flex; align-items:center; justify-content:center; width:46px; height:46px; background:none; border:none; border-radius:8px; cursor:pointer; padding:3px; transition:background 0.15s; flex-shrink:0; }
   .draw-shape-btn:hover { background:rgba(255,255,255,0.08); }
@@ -3608,6 +3608,57 @@ function cancelDraw(){
 }
 
 let _drawImportType=null;
+let _rasterLayers=[];
+async function _importGeoTIFF(file){
+  showToast(lang==='ka'?'რასტერი იტვირთება…':'Loading raster…',2500);
+  try{
+    if(!window.GeoTIFF){
+      await new Promise((res,rej)=>{const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/geotiff@2/dist-browser/geotiff.js';s.onload=res;s.onerror=rej;document.head.appendChild(s);});
+    }
+    const buf=await file.arrayBuffer();
+    const tiff=await GeoTIFF.fromArrayBuffer(buf);
+    const image=await tiff.getImage();
+    const bbox=image.getBoundingBox(); // [xmin,ymin,xmax,ymax] in file CRS
+    const [xmin,ymin,xmax,ymax]=bbox;
+    // Sanity check: must look like geographic coordinates
+    if(xmin<-181||xmax>181||ymin<-91||ymax>91){
+      showToast(lang==='ka'?'GeoTIFF-ი WGS84 კოორდინატებში უნდა იყოს':'GeoTIFF must be in WGS84 (EPSG:4326)',4000);return;
+    }
+    const w=image.getWidth(),h=image.getHeight();
+    const bands=await image.readRasters();
+    const canvas=document.createElement('canvas');
+    canvas.width=w;canvas.height=h;
+    const ctx=canvas.getContext('2d');
+    const id=ctx.createImageData(w,h);
+    if(bands.length>=3){
+      // Normalize each band to 0-255 if needed (e.g. float32)
+      const norm=(band)=>{
+        let mn=Infinity,mx=-Infinity;
+        for(let i=0;i<band.length;i++){if(isFinite(band[i])){mn=Math.min(mn,band[i]);mx=Math.max(mx,band[i]);}}
+        const rng=mx-mn||1;
+        return(v)=>Math.round(((v-mn)/rng)*255);
+      };
+      const nr=norm(bands[0]),ng=norm(bands[1]),nb=norm(bands[2]);
+      for(let i=0;i<w*h;i++){id.data[i*4]=nr(bands[0][i]);id.data[i*4+1]=ng(bands[1][i]);id.data[i*4+2]=nb(bands[2][i]);id.data[i*4+3]=bands[3]?bands[3][i]:255;}
+    } else {
+      // Single band — greyscale with min-max stretch
+      let mn=Infinity,mx=-Infinity;
+      for(let i=0;i<bands[0].length;i++){const v=bands[0][i];if(isFinite(v)){mn=Math.min(mn,v);mx=Math.max(mx,v);}}
+      const rng=mx-mn||1;
+      for(let i=0;i<w*h;i++){const v=Math.round(((bands[0][i]-mn)/rng)*255);id.data[i*4]=id.data[i*4+1]=id.data[i*4+2]=v;id.data[i*4+3]=255;}
+    }
+    ctx.putImageData(id,0,0);
+    const dataUrl=canvas.toDataURL('image/png');
+    const uid='gt'+(Date.now().toString(36));
+    const srcId=`raster-${uid}`;
+    map.addSource(srcId,{type:'image',url:dataUrl,coordinates:[[xmin,ymax],[xmax,ymax],[xmax,ymin],[xmin,ymin]]});
+    map.addLayer({id:`${srcId}-layer`,type:'raster',source:srcId,paint:{'raster-opacity':0.85}});
+    _rasterLayers.push({uid,srcId,name:file.name});
+    map.fitBounds([[xmin,ymin],[xmax,ymax]],{padding:60,duration:800});
+    showToast(`${file.name} — ${w}×${h}px`);
+  }catch(e){console.error('[geotiff]',e);showToast(lang==='ka'?'GeoTIFF წაკითხვა ვერ მოხერხდა':'Failed to read GeoTIFF',4000);}
+}
+
 function importDrawFile(type){
   if(!currentUser||currentUser.plan!=='pro'){openPaywall();return;}
   _drawImportType=type;
@@ -3615,6 +3666,7 @@ function importDrawFile(type){
   if(type==='geojson')inp.accept='.geojson,.json';
   else if(type==='shapefile')inp.accept='.zip';
   else if(type==='csv')inp.accept='.csv,.tsv,.txt';
+  else if(type==='geotiff')inp.accept='.tif,.tiff,.geotiff';
   inp.value='';
   inp.click();
   document.getElementById('draw-shape-popup')?.classList.remove('open');
@@ -3625,6 +3677,7 @@ function importDrawFile(type){
 async function handleDrawFileImport(evt){
   const file=evt.target.files[0];
   if(!file)return;
+  if(_drawImportType==='geotiff'){await _importGeoTIFF(file);return;}
   initDrawControl();
   showToast((lang==='ka'?'ფაილი იტვირთება…':'Importing file…'),2500);
   try{
@@ -12215,13 +12268,16 @@ init();
   <div class="draw-import-label" id="lbl-draw-import">Import</div>
   <div class="draw-import-row">
     <button class="draw-file-btn" onclick="importDrawFile('geojson')" title="Import GeoJSON (.geojson / .json)">
-      <img src="analysis-logos/geojson.svg" style="width:46px;height:46px">
+      <img src="analysis-logos/geojson.svg">
     </button>
     <button class="draw-file-btn" onclick="importDrawFile('shapefile')" title="Import Shapefile (.zip containing .shp/.dbf)">
-      <img src="analysis-logos/shp.svg" style="width:46px;height:46px">
+      <img src="analysis-logos/shp.svg">
     </button>
     <button class="draw-file-btn" onclick="importDrawFile('csv')" title="Import CSV with lat/lon columns (.csv)">
-      <img src="analysis-logos/csv.svg" style="width:46px;height:46px">
+      <img src="analysis-logos/csv.svg">
+    </button>
+    <button class="draw-file-btn" onclick="importDrawFile('geotiff')" title="Import GeoTIFF raster (.tif / .tiff)">
+      <img src="analysis-logos/geotiff.svg">
     </button>
   </div>
   <input type="file" id="draw-file-input" style="display:none" onchange="handleDrawFileImport(event)">
