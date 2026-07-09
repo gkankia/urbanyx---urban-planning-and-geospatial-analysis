@@ -172,6 +172,8 @@
   .wind-info-icon:hover { color:rgba(147,197,253,0.85); }
   .wind-info-popup { position:fixed; z-index:9999; max-width:220px; padding:8px 11px; border-radius:9px; background:rgba(12,12,18,0.97); border:1px solid rgba(147,197,253,0.2); color:rgba(255,255,255,0.65); font-size:0.68rem; line-height:1.5; box-shadow:0 4px 24px rgba(0,0,0,0.55); display:none; pointer-events:none; }
   #wind-canvas { position:fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:5; display:none; }
+  .user-loc-dot { width:14px; height:14px; border-radius:50%; background:#3b82f6; border:2px solid #fff; box-shadow:0 0 0 0 rgba(59,130,246,0.55); animation:user-loc-pulse 2s ease-out infinite; }
+  @keyframes user-loc-pulse { 0%{box-shadow:0 0 0 0 rgba(59,130,246,0.55);} 70%{box-shadow:0 0 0 12px rgba(59,130,246,0);} 100%{box-shadow:0 0 0 0 rgba(59,130,246,0);} }
   .solar-badge { margin-top:8px; padding:6px 9px; border-radius:8px; background:rgba(251,191,36,0.07); border:1px solid rgba(251,191,36,0.18); }
   .solar-badge-header { display:flex; align-items:baseline; justify-content:space-between; }
   .solar-badge-title { font-size:0.68rem; color:rgba(251,191,36,0.8); font-weight:600; }
@@ -867,6 +869,10 @@
     <button class="nav-btn" id="nav-extrusion-btn" onclick="toggleExtrusion()" ondblclick="toggleShapeEditMode()" title="3D Extrude">
       <img src="analysis-logos/extrusion.svg" width="44" height="44" style="opacity:0.55;transition:opacity 0.15s" id="nav-extrusion-icon">
       <span class="nav-tip">3D Extrude</span>
+    </button>
+    <button class="nav-btn" id="nav-locate-btn" onclick="navLocateUser()" title="Locate me">
+      <img src="analysis-logos/locate.svg" width="39" height="39" style="opacity:0.55;transition:opacity 0.15s" id="nav-locate-icon">
+      <span class="nav-tip">Locate me</span>
     </button>
     <button class="nav-btn active" id="nav-parcel-btn" onclick="navSelect('parcel')" style="display:none">
       <svg width="31" height="31" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
@@ -12192,6 +12198,39 @@ async function init(){
   });
 }
 init();
+
+// ── User location ─────────────────────────────────────────────────────────────
+let _userLocMarker=null,_userLocWatch=null;
+function navLocateUser(){
+  const btn=document.getElementById('nav-locate-btn');
+  const icon=document.getElementById('nav-locate-icon');
+  if(!navigator.geolocation){setStatus('Geolocation is not supported by your browser','error');return;}
+  if(_userLocWatch!==null){
+    navigator.geolocation.clearWatch(_userLocWatch);_userLocWatch=null;
+    if(_userLocMarker){_userLocMarker.remove();_userLocMarker=null;}
+    btn?.classList.remove('active');if(icon)icon.style.opacity='0.55';
+    return;
+  }
+  btn?.classList.add('active');if(icon)icon.style.opacity='1';
+  const _onPos=(pos)=>{
+    const{longitude:lng,latitude:lat}=pos.coords;
+    if(!_userLocMarker){
+      const el=document.createElement('div');el.className='user-loc-dot';
+      _userLocMarker=new mapboxgl.Marker({element:el,anchor:'center'}).setLngLat([lng,lat]).addTo(map);
+      map.flyTo({center:[lng,lat],zoom:Math.max(map.getZoom(),15),duration:1200,essential:true});
+    }else{
+      _userLocMarker.setLngLat([lng,lat]);
+    }
+  };
+  const _onErr=(err)=>{
+    const msg=err.code===1?'Location access denied':'Could not get your location';
+    setStatus(msg,'error');
+    btn?.classList.remove('active');if(icon)icon.style.opacity='0.55';
+    if(_userLocWatch!==null){navigator.geolocation.clearWatch(_userLocWatch);_userLocWatch=null;}
+  };
+  navigator.geolocation.getCurrentPosition(_onPos,_onErr,{enableHighAccuracy:true,timeout:10000});
+  _userLocWatch=navigator.geolocation.watchPosition(_onPos,_onErr,{enableHighAccuracy:true,timeout:10000});
+}
 </script>
 
 <!-- Dashboard modal -->
