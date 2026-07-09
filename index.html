@@ -5199,6 +5199,7 @@ async function onDrawCreate(){
 
   // ── Register as a new building (adds its own map source + activates it) ──────
   _drawnAreaProps={};
+  document.getElementById('parcel-float-card').style.display='none';
   _registerBuilding(poly);
   _checkSetbackViolation(poly);
   _checkAreaViolation(_activeBld());
