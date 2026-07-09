@@ -347,8 +347,8 @@
   .mapboxgl-ctrl-bottom-right { display: none; }
   .mapboxgl-ctrl-top-right .mapboxgl-ctrl-group:not(:has(.mapbox-gl-draw_polygon)) { display:none !important; }
   /* ── Custom zoom controls ──────────────────────────────────────────────── */
-  #map-zoom-controls { position:fixed; top:16px; right:16px; z-index:20; display:flex; flex-direction:column; background:var(--glass-bg); backdrop-filter:var(--glass-blur); -webkit-backdrop-filter:var(--glass-blur); border:1px solid var(--glass-border); border-radius:10px; box-shadow:var(--glass-shadow); overflow:hidden; transition:opacity 0.5s ease; }
-  #map-zoom-controls.mzc-loading { opacity:0; z-index:3; pointer-events:none; }
+  #map-zoom-controls { position:fixed; top:16px; right:16px; z-index:20; display:flex; flex-direction:column; background:var(--glass-bg); backdrop-filter:var(--glass-blur); -webkit-backdrop-filter:var(--glass-blur); border:1px solid var(--glass-border); border-radius:10px; box-shadow:var(--glass-shadow); overflow:hidden; }
+  #map-zoom-controls.mzc-loading { display:none; }
   .mzc-btn { width:40px; height:38px; background:none; border:none; color:rgba(255,255,255,0.55); font-size:1.15rem; font-weight:300; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background 0.15s, color 0.15s; font-family:inherit; user-select:none; }
   .mzc-btn:hover { background:rgba(255,255,255,0.07); color:rgba(255,255,255,0.9); }
   .mzc-btn:active { background:rgba(255,255,255,0.13); }
