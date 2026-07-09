@@ -922,7 +922,7 @@
   <button id="asc-stop" onclick="_stopAutoSave()" title="Stop auto-saving">✕</button>
 </div>
 
-<div id="map-zoom-controls" class="mzc-loading">
+<div id="map-zoom-controls" class="mzc-loading" style="display:none">
   <button class="mzc-btn" onclick="map.zoomIn()" title="Zoom in">+</button>
   <div class="mzc-sep"></div>
   <button class="mzc-btn" onclick="map.zoomOut()" title="Zoom out">−</button>
@@ -6516,7 +6516,7 @@ map.on("load",()=>{
   mapReady=true;
   map.setLanguage(lang==='ka'?'ka':'en');
   const _mzc=document.getElementById('map-zoom-controls');
-  if(_mzc){_mzc.classList.remove('mzc-loading');_mzc.style.opacity='0';requestAnimationFrame(()=>{_mzc.style.transition='opacity 0.5s ease';_mzc.style.opacity='1';});}
+  if(_mzc){_mzc.classList.remove('mzc-loading');_mzc.style.display='';_mzc.style.opacity='0';requestAnimationFrame(()=>{_mzc.style.transition='opacity 0.5s ease';_mzc.style.opacity='1';});}
 
   try{initCustomLayers();}catch(err){console.error("initCustomLayers (load) failed:",err);}
 
