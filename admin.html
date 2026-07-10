@@ -413,11 +413,8 @@ async function loadUsers(){
   document.getElementById("user-tbody").innerHTML =
     `<tr class="empty-row"><td colspan="6"><span class="spinner-sm"></span></td></tr>`;
 
-  // Fetch profiles + subscriptions joined
-  const { data: profiles, error: pErr } = await sb
-    .from("profiles")
-    .select("id, email, full_name, created_at, is_admin")
-    .order("created_at", { ascending: false });
+  // Fetch all users via RPC (reads from auth.users so emails + count are accurate)
+  const { data: profiles, error: pErr } = await sb.rpc("admin_get_users");
 
   if(pErr){ showToast("Failed to load users: " + pErr.message, "error"); return; }
 
