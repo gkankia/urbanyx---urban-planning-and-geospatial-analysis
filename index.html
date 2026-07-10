@@ -545,6 +545,12 @@
   .modal-footer { text-align: center; font-size: 0.73rem; color: rgba(255,255,255,0.3); margin-top: 14px; }
   .modal-footer a { color: rgba(255,255,255,0.55); text-decoration: underline; cursor: pointer; transition: color 0.15s; }
   .modal-footer a:hover { color: white; }
+  .pw-consent-row { display:flex; align-items:flex-start; gap:9px; font-size:0.72rem; color:rgba(255,255,255,0.38); cursor:pointer; margin-bottom:14px; line-height:1.45; user-select:none; }
+  .pw-consent-cb { margin-top:2px; flex-shrink:0; accent-color:#6366f1; width:13px; height:13px; cursor:pointer; }
+  .pw-consent-row:hover { color:rgba(255,255,255,0.55); }
+  .pw-paddle-note { display:flex; align-items:flex-start; gap:6px; font-size:0.68rem; color:rgba(255,255,255,0.28); margin-top:10px; line-height:1.45; }
+  .pw-paddle-note a { color:rgba(255,255,255,0.45); text-decoration:underline; transition:color 0.15s; }
+  .pw-paddle-note a:hover { color:white; }
   .back-link { background: none; border: none; color: rgba(255,255,255,0.4); font-size: 0.72rem; cursor: pointer; font-family: inherit; padding: 0; margin-bottom: 14px; display: flex; align-items: center; gap: 4px; transition: color 0.15s; }
   .back-link:hover { color: white; }
   .pw-plans { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin-bottom: 16px; }
@@ -1344,7 +1350,15 @@
       <div class="pw-row"><span id="pw-r10"></span><span id="pw-g10"></span><span id="pw-f10"></span><span id="pw-p10"></span></div>
     </div>
     <hr class="modal-divider">
+    <label class="pw-consent-row">
+      <input type="checkbox" id="pw-marketing-cb" class="pw-consent-cb">
+      <span>I'd like to receive product updates from Urbanyx and news from Z.axis (optional).</span>
+    </label>
     <button class="btn-pro" id="pw-cta-btn" onclick="startCheckout()"></button>
+    <div class="pw-paddle-note">
+      <svg width="11" height="13" viewBox="0 0 12 14" fill="none" style="flex-shrink:0;margin-top:1px"><rect x="1" y="5.5" width="10" height="8" rx="1.5" stroke="currentColor" stroke-width="1.4"/><path d="M3.5 5.5V4a2.5 2.5 0 0 1 5 0v1.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+      We do not store your credit card details. Payment is securely handled by <a href="https://paddle.com" target="_blank" rel="noopener">Paddle</a>.
+    </div>
     <div class="modal-footer" id="pw-footer"></div>
   </div>
 </div>
@@ -5642,10 +5656,11 @@ async function startCheckout(){
   try{
     await _loadPaddleSDK();
     const mode=document.getElementById("pw-btog-monthly")?.classList.contains("active")?"monthly":"annual";
+    const _marketingConsent=document.getElementById('pw-marketing-cb')?.checked||false;
     Paddle.Checkout.open({
       items:[{priceId:mode==="annual"?PADDLE_PRICE_ANNUAL:PADDLE_PRICE_MONTHLY,quantity:1}],
       customer:{email:currentUser.email},
-      customData:{user_id:currentUser.id}
+      customData:{user_id:currentUser.id,marketing_consent:_marketingConsent}
     });
   }catch(e){console.error("Paddle:",e);}
   finally{ctaBtn.disabled=false;ctaBtn.textContent=t().pw.cta||"Get Pro";}
