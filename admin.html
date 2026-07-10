@@ -142,8 +142,20 @@
   .spinner-sm { display: inline-block; width: 11px; height: 11px; border: 1.5px solid rgba(255,255,255,0.2); border-top-color: white; border-radius: 50%; animation: spin 0.7s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
+  .badge-trial { background: rgba(251,191,36,0.15); color: #fbbf24; }
+  .badge-canceling { background: rgba(239,68,68,0.1); color: #fca5a5; }
+
+  .del-req-section { margin-top: 32px; }
+  .del-actions-cell { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .del-btn { padding: 5px 12px; border-radius: 6px; font-size: 0.72rem; font-weight: 600; font-family: inherit; cursor: pointer; transition: all 0.15s; white-space: nowrap; border: none; }
+  .del-delete-btn { background: rgba(239,68,68,0.12); color: #fca5a5; border: 1px solid rgba(239,68,68,0.25); }
+  .del-delete-btn:hover:not(:disabled) { background: rgba(239,68,68,0.22); border-color: rgba(239,68,68,0.5); }
+  .del-email-btn { background: rgba(99,102,241,0.1); color: #a5b4fc; border: 1px solid rgba(99,102,241,0.2); text-decoration: none; display: inline-block; }
+  .del-email-btn:hover { background: rgba(99,102,241,0.2); }
+  .del-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
   @media (max-width: 700px) {
-    .stats-grid { grid-template-columns: 1fr 1fr; }
+    .stats-grid { grid-template-columns: repeat(3, 1fr); }
     .topbar { padding: 0 16px; }
     .main { padding: 20px 16px; }
     th:nth-child(3), td:nth-child(3) { display: none; }
@@ -186,16 +198,21 @@
 
   <div class="main">
     <!-- Stats -->
-    <div class="stats-grid">
+    <div class="stats-grid" style="grid-template-columns:repeat(5,1fr)">
       <div class="stat-card">
         <div class="stat-label">Total users</div>
         <div class="stat-value" id="stat-total">—</div>
         <div class="stat-sub">registered accounts</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">Pro users</div>
+        <div class="stat-label">Active Pro</div>
         <div class="stat-value green" id="stat-pro">—</div>
-        <div class="stat-sub">active subscriptions</div>
+        <div class="stat-sub">paid subscriptions</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">In trial</div>
+        <div class="stat-value amber" id="stat-trial">—</div>
+        <div class="stat-sub">14-day free trial</div>
       </div>
       <div class="stat-card">
         <div class="stat-label">Free users</div>
@@ -271,6 +288,24 @@
       <div class="page-btns">
         <button class="btn-sm" id="btn-prev" onclick="changePage(-1)">← Prev</button>
         <button class="btn-sm" id="btn-next" onclick="changePage(1)">Next →</button>
+      </div>
+    </div>
+
+    <!-- Deletion requests -->
+    <div class="del-req-section">
+      <div class="section-header">
+        <div class="section-title">Pending deletion requests <span id="del-req-count" style="font-size:0.72rem;color:rgba(255,255,255,0.3);font-weight:400;margin-left:4px"></span></div>
+        <button class="btn-sm" onclick="loadDeletionRequests()">Refresh</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>Email</th><th>Reason</th><th>Submitted</th><th>Actions</th>
+          </tr></thead>
+          <tbody id="del-req-tbody">
+            <tr class="empty-row"><td colspan="4">Loading…</td></tr>
+          </tbody>
+        </table>
       </div>
     </div>
   </div>
@@ -388,7 +423,7 @@ async function loadUsers(){
 
   const { data: subs, error: sErr } = await sb
     .from("subscriptions")
-    .select("user_id, plan, status, updated_at");
+    .select("user_id, plan, status, updated_at, billing_interval, current_period_end, subscription_started_at");
 
   if(sErr){ showToast("Failed to load subscriptions: " + sErr.message, "error"); return; }
 
@@ -426,26 +461,32 @@ async function loadUsers(){
     name:        p.full_name || "",
     joined:      p.created_at,
     plan:        subMap[p.id]?.plan   || "free",
-    status:      subMap[p.id]?.status || "active",
-    updatedAt:   subMap[p.id]?.updated_at || p.created_at,
+    status:          subMap[p.id]?.status || "free",
+    updatedAt:       subMap[p.id]?.updated_at || p.created_at,
+    billingInterval: subMap[p.id]?.billing_interval || "month",
+    periodEnd:       subMap[p.id]?.current_period_end || null,
+    startedAt:       subMap[p.id]?.subscription_started_at || null,
     searchesUsed: countMap[p.id] || 0,
     isAdmin:      !!p.is_admin
   }));
 
   renderStats();
   filterUsers();
+  loadDeletionRequests();
 }
 
 // ── STATS ─────────────────────────────────────────────────────────────────────
 function renderStats(){
-  const total = allUsers.length;
-  const pro   = allUsers.filter(u => u.plan === "pro" && u.status === "active").length;
-  const free  = total - pro;
-  const conv  = total > 0 ? Math.round((pro / total) * 100) : 0;
+  const total   = allUsers.length;
+  const pro     = allUsers.filter(u => u.plan === "pro" && (u.status === "active" || u.status === "canceling")).length;
+  const trial   = allUsers.filter(u => u.status === "trialing").length;
+  const free    = total - pro - trial;
+  const conv    = total > 0 ? Math.round(((pro + trial) / total) * 100) : 0;
 
   document.getElementById("stat-total").textContent = total;
   document.getElementById("stat-pro").textContent   = pro;
-  document.getElementById("stat-free").textContent  = free;
+  document.getElementById("stat-trial").textContent = trial;
+  document.getElementById("stat-free").textContent  = Math.max(0, free);
   document.getElementById("stat-conv").textContent  = conv + "%";
 
   const sumType = type => Object.values(usageMap).reduce((s, u) => s + (u[type] || 0), 0);
@@ -481,7 +522,8 @@ function renderTable(){
   }
 
   tbody.innerHTML = page.map(u => {
-    const isPro    = u.plan === "pro" && u.status === "active";
+    const isPro     = u.plan === "pro" && (u.status === "active" || u.status === "canceling");
+    const isTrial   = u.status === "trialing";
     const joined   = formatDate(u.joined);
     const updated  = formatDate(u.updatedAt);
     const usg      = usageMap[u.id] || {};
@@ -496,10 +538,15 @@ function renderTable(){
     const display  = u.name
       ? `<div style="font-weight:500">${esc(u.name)}</div><div style="font-size:0.72rem;color:rgba(255,255,255,0.3)">${esc(u.email)}</div>${chips?`<div class="usage-chips">${chips}</div>`:""}`
       : `<div>${esc(u.email)}</div>${chips?`<div class="usage-chips">${chips}</div>`:""}`;
-    const badge    = isPro
-      ? `<span class="badge badge-pro">Pro</span>`
-      : `<span class="badge badge-free">Free</span>`;
-    const action   = isPro
+    const trialDaysLeft = isTrial && u.startedAt
+      ? Math.max(0, 14 - Math.floor((Date.now() - new Date(u.startedAt).getTime()) / 86400000))
+      : null;
+    const badge = isPro
+      ? `<span class="badge badge-pro">${u.status === "canceling" ? "Canceling" : "Pro"}</span>`
+      : isTrial
+        ? `<span class="badge badge-trial">Trial${trialDaysLeft !== null ? ` · ${trialDaysLeft}d` : ""}</span>`
+        : `<span class="badge badge-free">Free</span>`;
+    const action = (isPro || isTrial)
       ? `<button class="action-btn downgrade-btn" onclick="setPlan('${u.id}','free')">Downgrade</button>`
       : `<button class="action-btn upgrade-btn" onclick="setPlan('${u.id}','pro')">Upgrade to Pro</button>`;
     const adminBadge = u.isAdmin ? `<span class="badge" style="background:rgba(234,179,8,0.15);color:#fbbf24;border:1px solid rgba(251,191,36,0.3)">Admin</span>` : ``;
@@ -702,6 +749,101 @@ async function showUserStats(userId, name, email){
 
 function closeUserStats(){
   document.getElementById("user-stats-modal").classList.remove("open");
+}
+
+// ── DELETION REQUESTS ─────────────────────────────────────────────────────────
+let delRequests = [];
+
+const DEL_REASONS = {
+  no_longer_needed:  "No longer needs the service",
+  found_alternative: "Found a better alternative",
+  privacy:           "Privacy or data concerns",
+  too_expensive:     "Too expensive",
+  missing_features:  "Missing features",
+  no_reason:         "No reason given"
+};
+
+async function loadDeletionRequests(){
+  const tbody = document.getElementById("del-req-tbody");
+  if(!tbody) return;
+  tbody.innerHTML = `<tr class="empty-row"><td colspan="4"><span class="spinner-sm"></span></td></tr>`;
+
+  const { data, error } = await sb
+    .from("deletion_requests")
+    .select("id, user_id, email, reason, created_at, status")
+    .eq("status", "pending")
+    .order("created_at", { ascending: false });
+
+  if(error){
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="4" style="color:#fca5a5">Failed to load</td></tr>`;
+    return;
+  }
+
+  delRequests = data || [];
+  const countEl = document.getElementById("del-req-count");
+  if(countEl) countEl.textContent = delRequests.length ? `(${delRequests.length})` : "";
+  renderDeletionRequests();
+}
+
+function renderDeletionRequests(){
+  const tbody = document.getElementById("del-req-tbody");
+  if(!tbody) return;
+
+  if(!delRequests.length){
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="4">No pending requests</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = delRequests.map(r => {
+    const reason    = DEL_REASONS[r.reason] || r.reason || "—";
+    const submitted = formatDate(r.created_at);
+    const mailSub   = encodeURIComponent("Your Urbanyx account deletion confirmation");
+    const mailBody  = encodeURIComponent(
+      `Hi,\n\nWe have processed your account deletion request. Your Urbanyx account and all associated data have been permanently deleted.\n\nThank you for using Urbanyx.\n\n— The Z.axis team`
+    );
+    return `<tr id="del-row-${r.id}">
+      <td style="font-size:0.78rem;font-weight:500">${esc(r.email || "—")}</td>
+      <td style="color:rgba(255,255,255,0.4);font-size:0.75rem">${esc(reason)}</td>
+      <td style="color:rgba(255,255,255,0.35);font-size:0.75rem">${submitted}</td>
+      <td>
+        <div class="del-actions-cell">
+          <button class="del-btn del-delete-btn" id="del-del-btn-${r.id}" onclick="deleteUser('${r.user_id}','${r.id}')">Delete account</button>
+          <a href="mailto:${esc(r.email || "")}?subject=${mailSub}&body=${mailBody}" class="del-btn del-email-btn">Send email</a>
+        </div>
+      </td>
+    </tr>`;
+  }).join("");
+}
+
+async function deleteUser(userId, requestId){
+  if(!confirm("Permanently delete this account? This cannot be undone.")) return;
+  const btn = document.getElementById(`del-del-btn-${requestId}`);
+  if(btn){ btn.disabled = true; btn.innerHTML = `<span class="spinner-sm"></span>`; }
+
+  const EDGE_URL = SUPABASE_URL.replace(".supabase.co", ".supabase.co/functions/v1");
+  const { data: { session } } = await sb.auth.getSession();
+
+  const resp = await fetch(`${EDGE_URL}/delete-user`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session.access_token}` },
+    body: JSON.stringify({ target_user_id: userId, request_id: requestId })
+  });
+
+  if(!resp.ok){
+    const err = await resp.json().catch(()=>({}));
+    showToast("Failed: " + (err.error || resp.statusText), "error");
+    if(btn){ btn.disabled = false; btn.textContent = "Delete account"; }
+    return;
+  }
+
+  delRequests = delRequests.filter(r => r.id !== requestId);
+  const countEl = document.getElementById("del-req-count");
+  if(countEl) countEl.textContent = delRequests.length ? `(${delRequests.length})` : "";
+  renderDeletionRequests();
+  allUsers = allUsers.filter(u => u.id !== userId);
+  renderStats();
+  renderTable();
+  showToast("Account deleted", "success");
 }
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────
