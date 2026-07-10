@@ -311,6 +311,28 @@
   .dash-toggle-slider::before { content:''; position:absolute; width:13px; height:13px; background:white; border-radius:50%; left:3px; top:3px; transition:transform 0.2s; }
   .dash-toggle input:checked + .dash-toggle-slider { background:#6366f1; }
   .dash-toggle input:checked + .dash-toggle-slider::before { transform:translateX(15px); }
+  .dash-delete-link { background:none; border:none; color:rgba(255,255,255,0.18); font-size:0.68rem; font-family:inherit; cursor:pointer; padding:0; margin-top:14px; text-decoration:underline; transition:color 0.15s; display:block; width:100%; text-align:center; }
+  .dash-delete-link:hover { color:rgba(239,68,68,0.55); }
+  #deletion-modal { position:fixed; inset:0; z-index:1002; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.55); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); opacity:0; pointer-events:none; transition:opacity 0.2s; }
+  #deletion-modal.open { opacity:1; pointer-events:all; }
+  .del-box { background:var(--glass-bg); backdrop-filter:var(--glass-blur); -webkit-backdrop-filter:var(--glass-blur); border:1px solid rgba(239,68,68,0.2); border-radius:16px; padding:28px 24px; width:min(400px,90vw); box-shadow:var(--glass-shadow); }
+  .del-title { font-size:1rem; font-weight:700; color:white; margin-bottom:6px; }
+  .del-sub { font-size:0.74rem; color:rgba(255,255,255,0.4); margin-bottom:20px; line-height:1.55; }
+  .del-question { font-size:0.78rem; color:rgba(255,255,255,0.6); margin-bottom:10px; font-weight:600; }
+  .del-reason { display:flex; align-items:center; gap:9px; padding:7px 10px; border-radius:8px; cursor:pointer; transition:background 0.15s; margin-bottom:2px; }
+  .del-reason:hover { background:rgba(255,255,255,0.05); }
+  .del-reason input[type=radio] { accent-color:#ef4444; flex-shrink:0; width:14px; height:14px; cursor:pointer; }
+  .del-reason span { font-size:0.75rem; color:rgba(255,255,255,0.5); line-height:1.4; transition:color 0.1s; }
+  .del-reason input:checked ~ span { color:rgba(255,255,255,0.85); }
+  .del-actions { display:flex; gap:10px; margin-top:22px; }
+  .del-submit-btn { flex:1; padding:10px; border-radius:9px; background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.3); color:#fca5a5; font-size:0.8rem; font-weight:600; font-family:inherit; cursor:pointer; transition:all 0.15s; }
+  .del-submit-btn:hover:not(:disabled) { background:rgba(239,68,68,0.22); border-color:rgba(239,68,68,0.55); }
+  .del-submit-btn:disabled { opacity:0.45; cursor:default; }
+  .del-cancel-btn { padding:10px 16px; border-radius:9px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.08); color:rgba(255,255,255,0.35); font-size:0.8rem; font-weight:600; font-family:inherit; cursor:pointer; transition:background 0.15s; }
+  .del-cancel-btn:hover { background:rgba(255,255,255,0.09); }
+  .del-success { text-align:center; padding:8px 0; }
+  .del-success-icon { font-size:1.8rem; margin-bottom:14px; color:#34d399; }
+  .del-success-msg { font-size:0.78rem; color:rgba(255,255,255,0.5); line-height:1.6; margin-top:8px; }
   .btn-download { width: 100%; padding: 11px 16px; border-radius: 10px; background: rgba(99,102,241,0.1); border: 1px solid rgba(99,102,241,0.28); color: #a5b4fc; font-size: 0.82rem; font-weight: 600; font-family: inherit; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; }
   .btn-download:hover { background: rgba(99,102,241,0.18); border-color: rgba(99,102,241,0.5); }
   .legend-row { display: flex; align-items: center; gap: 8px; font-size: 0.75rem; color: rgba(255,255,255,0.45); }
@@ -2318,6 +2340,35 @@ async function toggleMarketingConsent(value){
   _marketingConsent=!!value;
   if(!currentUser)return;
   await sb.from("profiles").update({marketing_consent:_marketingConsent}).eq("id",currentUser.id);
+}
+
+function openDeletionRequest(){
+  closeDashboard();
+  document.getElementById("del-form-view").style.display="";
+  document.getElementById("del-success-view").style.display="none";
+  document.querySelectorAll('input[name="del-reason"]').forEach(r=>r.checked=r.value==="no_reason");
+  const btn=document.getElementById("del-submit-btn");
+  btn.disabled=false;btn.textContent="Submit request";
+  document.getElementById("deletion-modal").classList.add("open");
+}
+function closeDeletionRequest(){
+  document.getElementById("deletion-modal").classList.remove("open");
+}
+async function submitDeletionRequest(){
+  if(!currentUser)return;
+  const btn=document.getElementById("del-submit-btn");
+  btn.disabled=true;btn.innerHTML='<span class="spinner-sm"></span>';
+  const reason=document.querySelector('input[name="del-reason"]:checked')?.value||"no_reason";
+  try{
+    await sb.from("deletion_requests").insert({user_id:currentUser.id,email:currentUser.email,reason});
+    document.getElementById("del-confirm-email").textContent=currentUser.email;
+    document.getElementById("del-form-view").style.display="none";
+    document.getElementById("del-success-view").style.display="";
+  }catch(e){
+    console.error("Deletion request:",e);
+    btn.disabled=false;btn.textContent="Submit request";
+    setStatus("Could not submit request. Please try again.","error");
+  }
 }
 
 // ── GeoData download ──────────────────────────────────────────────────────────
@@ -12403,6 +12454,35 @@ function navLocateUser(){
     <!-- Sign out -->
     <div class="dash-section" style="padding-bottom:0">
       <button class="dash-action-btn signout" style="width:100%" onclick="closeDashboard();logout()" id="dash-signout-btn"></button>
+      <button class="dash-delete-link" onclick="openDeletionRequest()">Request account deletion</button>
+    </div>
+  </div>
+</div>
+<!-- Account deletion request modal -->
+<div id="deletion-modal" onclick="if(event.target===this)closeDeletionRequest()">
+  <div class="del-box">
+    <div id="del-form-view">
+      <div class="del-title">Request account deletion</div>
+      <div class="del-sub">Your request will be reviewed and your account deleted within 7 business days. You'll receive a confirmation at your registered email once complete.</div>
+      <div class="del-question">Why would you like to delete your account?</div>
+      <label class="del-reason"><input type="radio" name="del-reason" value="no_longer_needed"><span>I no longer need the service</span></label>
+      <label class="del-reason"><input type="radio" name="del-reason" value="found_alternative"><span>I found a better alternative</span></label>
+      <label class="del-reason"><input type="radio" name="del-reason" value="privacy"><span>Privacy or data concerns</span></label>
+      <label class="del-reason"><input type="radio" name="del-reason" value="too_expensive"><span>It's too expensive</span></label>
+      <label class="del-reason"><input type="radio" name="del-reason" value="missing_features"><span>Missing features I need</span></label>
+      <label class="del-reason"><input type="radio" name="del-reason" value="no_reason" checked><span>No reason / prefer not to say</span></label>
+      <div class="del-actions">
+        <button class="del-cancel-btn" onclick="closeDeletionRequest()">Cancel</button>
+        <button class="del-submit-btn" id="del-submit-btn" onclick="submitDeletionRequest()">Submit request</button>
+      </div>
+    </div>
+    <div id="del-success-view" style="display:none">
+      <div class="del-success">
+        <div class="del-success-icon">✓</div>
+        <div class="del-title" style="text-align:center;margin-bottom:8px">Request received</div>
+        <div class="del-success-msg">We've received your deletion request and will confirm at<br><strong id="del-confirm-email" style="color:rgba(255,255,255,0.7)"></strong></div>
+        <button class="del-cancel-btn" style="margin-top:20px;width:100%" onclick="closeDeletionRequest()">Close</button>
+      </div>
     </div>
   </div>
 </div>
