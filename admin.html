@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Urbanyx — Admin</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0d0d0d; color: white; min-height: 100vh; }
@@ -162,15 +163,18 @@
   .em-title { font-size: 0.88rem; font-weight: 600; }
   .em-close { background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.1); border-radius: 50%; color: rgba(255,255,255,0.5); width: 28px; height: 28px; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-family: inherit; flex-shrink: 0; }
   .em-body { padding: 18px 20px; display: flex; flex-direction: column; gap: 12px; }
-  .em-field label { display: block; font-size: 0.65rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(255,255,255,0.3); margin-bottom: 5px; }
-  .em-input { width: 100%; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 9px 12px; color: white; font-size: 0.82rem; font-family: inherit; outline: none; transition: border 0.2s; }
-  .em-input:focus { border-color: rgba(255,255,255,0.28); }
-  .em-textarea { resize: vertical; min-height: 160px; line-height: 1.6; }
+  .em-to-label { font-size: 0.65rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(255,255,255,0.25); display: block; margin-bottom: 5px; }
+  .em-to-value { font-size: 0.88rem; font-weight: 500; color: white; }
+  .em-preview-note { font-size: 0.75rem; color: rgba(255,255,255,0.3); line-height: 1.6; margin-top: 14px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.07); }
   .em-footer { padding: 0 20px 18px; display: flex; justify-content: flex-end; gap: 8px; }
   .em-cancel-btn { padding: 8px 16px; border-radius: 7px; border: 1px solid rgba(255,255,255,0.1); background: none; color: rgba(255,255,255,0.45); font-size: 0.78rem; font-family: inherit; cursor: pointer; transition: all 0.15s; }
   .em-cancel-btn:hover { background: rgba(255,255,255,0.07); color: white; }
-  .em-send-btn { padding: 8px 18px; border-radius: 7px; border: none; background: rgba(99,102,241,0.85); color: white; font-size: 0.78rem; font-weight: 600; font-family: inherit; cursor: pointer; transition: opacity 0.15s; }
-  .em-send-btn:hover { opacity: 0.85; }
+  .em-send-btn { padding: 8px 18px; border-radius: 7px; border: none; background: rgba(99,102,241,0.85); color: white; font-size: 0.78rem; font-weight: 600; font-family: inherit; cursor: pointer; transition: opacity 0.15s; display: flex; align-items: center; gap: 6px; }
+  .em-send-btn:hover:not(:disabled) { opacity: 0.85; }
+  .em-send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .em-success { text-align: center; padding: 8px 0 4px; }
+  .em-success-icon { font-size: 28px; margin-bottom: 8px; }
+  .em-success-msg { font-size: 0.82rem; color: rgba(255,255,255,0.45); }
 
   @media (max-width: 700px) {
     .stats-grid { grid-template-columns: repeat(3, 1fr); }
@@ -186,26 +190,22 @@
 <div id="email-modal" onclick="if(event.target===this)closeEmailModal()">
   <div class="em-box">
     <div class="em-header">
-      <span class="em-title">Compose email</span>
+      <span class="em-title">Send deletion confirmation</span>
       <button class="em-close" onclick="closeEmailModal()">✕</button>
     </div>
-    <div class="em-body">
-      <div class="em-field">
-        <label>To</label>
-        <input type="email" id="em-to" class="em-input" readonly>
-      </div>
-      <div class="em-field">
-        <label>Subject</label>
-        <input type="text" id="em-subject" class="em-input">
-      </div>
-      <div class="em-field">
-        <label>Message</label>
-        <textarea id="em-body-text" class="em-input em-textarea"></textarea>
-      </div>
+    <div class="em-body" id="em-form-view">
+      <span class="em-to-label">Sending to</span>
+      <span class="em-to-value" id="em-to"></span>
+      <p class="em-preview-note">A styled deletion confirmation email will be sent informing the user that their account and all associated data have been permanently removed.</p>
+    </div>
+    <div class="em-body em-success" id="em-success-view" style="display:none">
+      <div class="em-success-icon">✓</div>
+      <div style="font-size:0.92rem;font-weight:600;margin-bottom:6px">Email sent</div>
+      <div class="em-success-msg" id="em-success-to"></div>
     </div>
     <div class="em-footer">
-      <button class="em-cancel-btn" onclick="closeEmailModal()">Cancel</button>
-      <button class="em-send-btn" onclick="sendEmailFromModal()">Open in mail client</button>
+      <button class="em-cancel-btn" id="em-cancel-btn" onclick="closeEmailModal()">Cancel</button>
+      <button class="em-send-btn" id="em-send-btn" onclick="sendEmailFromModal()">Send email</button>
     </div>
   </div>
 </div>
@@ -887,22 +887,19 @@ async function deleteUser(userId, requestId){
 }
 
 // ── EMAIL COMPOSE MODAL ───────────────────────────────────────────────────────
-const EMAIL_TEMPLATE_SUBJECT = "Your Urbanyx account deletion request";
-const EMAIL_TEMPLATE_BODY =
-`Hi,
+emailjs.init("a4S8CQtZNMLh57ruh");
 
-We have received your account deletion request and it has been processed. Your Urbanyx account and all associated data have been permanently deleted.
-
-If you have any questions, feel free to reply to this email.
-
-Thank you for using Urbanyx.
-
-— The Z.axis team`;
+let _emailModalTo = "";
 
 function openEmailModal(toEmail){
-  document.getElementById("em-to").value          = toEmail || "";
-  document.getElementById("em-subject").value     = EMAIL_TEMPLATE_SUBJECT;
-  document.getElementById("em-body-text").value   = EMAIL_TEMPLATE_BODY;
+  _emailModalTo = toEmail || "";
+  document.getElementById("em-to").textContent = _emailModalTo;
+  document.getElementById("em-form-view").style.display  = "";
+  document.getElementById("em-success-view").style.display = "none";
+  const sendBtn = document.getElementById("em-send-btn");
+  sendBtn.disabled = false;
+  sendBtn.innerHTML = "Send email";
+  document.getElementById("em-cancel-btn").textContent = "Cancel";
   document.getElementById("email-modal").classList.add("open");
 }
 
@@ -910,11 +907,23 @@ function closeEmailModal(){
   document.getElementById("email-modal").classList.remove("open");
 }
 
-function sendEmailFromModal(){
-  const to      = document.getElementById("em-to").value.trim();
-  const subject = document.getElementById("em-subject").value.trim();
-  const body    = document.getElementById("em-body-text").value.trim();
-  window.location.href = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+async function sendEmailFromModal(){
+  const sendBtn = document.getElementById("em-send-btn");
+  sendBtn.disabled = true;
+  sendBtn.innerHTML = `<span class="spinner-sm"></span> Sending…`;
+
+  try {
+    await emailjs.send("service_1qru585", "template_somdi1m", { to_email: _emailModalTo });
+    document.getElementById("em-form-view").style.display    = "none";
+    document.getElementById("em-success-view").style.display = "";
+    document.getElementById("em-success-to").textContent     = _emailModalTo;
+    document.getElementById("em-cancel-btn").textContent     = "Close";
+    sendBtn.style.display = "none";
+  } catch(err) {
+    sendBtn.disabled = false;
+    sendBtn.innerHTML = "Send email";
+    showToast("Failed to send: " + (err?.text || "unknown error"), "error");
+  }
 }
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────
