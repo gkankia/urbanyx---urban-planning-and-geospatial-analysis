@@ -1918,15 +1918,31 @@ function updateUserUI(){
   }
 }
 
+function _getRegPeriod(registeredAt){
+  // Rolling period anchored to the user's registration day-of-month.
+  // e.g. registered Jun 15 → periods are Jun 15–Jul 14, Jul 15–Aug 14, etc.
+  const reg=new Date(registeredAt);
+  const now=new Date();
+  const regDay=reg.getDate();
+  function safeDay(y,m,d){const last=new Date(y,m+1,0).getDate();return new Date(y,m,Math.min(d,last));}
+  let y=now.getFullYear(),m=now.getMonth();
+  let start=safeDay(y,m,regDay);
+  if(start>now){m--;if(m<0){m=11;y--;}start=safeDay(y,m,regDay);}
+  if(start<reg)start=reg;
+  const rm=start.getMonth()+1,ry=start.getFullYear()+(rm>11?1:0);
+  const reset=safeDay(ry,rm%12,regDay);
+  return{since:start.toISOString(),resetDate:reset};
+}
+
 async function fetchSearchUsage(){
   // For Pro users: count from billing period start so the trial-to-paid transition
-  // doesn't reset clicks. For free users: count from start of calendar month.
+  // doesn't reset clicks. For free users: count from registration anniversary period.
   let since;
   if(currentUser.plan==='pro'&&window._subPeriodEnd){
     const cycleDays=window._subInterval==='year'?365:30;
     since=new Date(new Date(window._subPeriodEnd).getTime()-cycleDays*86400000).toISOString();
   } else {
-    since=new Date(new Date().getFullYear(),new Date().getMonth(),1).toISOString();
+    since=currentUser.registeredAt?_getRegPeriod(currentUser.registeredAt).since:new Date(new Date().getFullYear(),new Date().getMonth(),1).toISOString();
   }
   const{data,error}=await sb.rpc("get_search_count",{p_user_id:currentUser.id,since_ts:since});
   if(error){
@@ -1964,7 +1980,8 @@ async function updateSearchCounter(){
     const threshold=Math.floor(limit*0.9);
     const left=Math.max(0,limit-used);
     const _pe=window._subPeriodEnd?new Date(window._subPeriodEnd):null;
-    const resetDate=(_pe&&currentUser.plan==='pro'?_pe:new Date(_now.getFullYear(),_now.getMonth()+1,1))
+    const _freeReset=currentUser.registeredAt?_getRegPeriod(currentUser.registeredAt).resetDate:new Date(_now.getFullYear(),_now.getMonth()+1,1);
+    const resetDate=(_pe&&currentUser.plan==='pro'?_pe:_freeReset)
       .toLocaleDateString(lang==="ka"?"ka-GE":"en-GB",{month:"short",day:"numeric"});
     const warningEl=document.getElementById("limit-warning");
     const warningText=document.getElementById("limit-warning-text");
@@ -2074,7 +2091,7 @@ async function onAuthSuccess(session){
     const{data}=await sb.from("profiles").select("is_admin,marketing_consent").eq("id",u.id).single();
     if(data){isAdmin=!!data.is_admin;_marketingConsent=!!data.marketing_consent;}
   }catch(e){console.warn("Profile fetch:",e);}
-  currentUser={id:u.id,email:u.email,name:u.user_metadata?.full_name||"",plan,isAdmin,accessToken:session.access_token,avatarUrl:u.user_metadata?.avatar_url||null,_subStatus:window._subStatus||"free"};
+  currentUser={id:u.id,email:u.email,name:u.user_metadata?.full_name||"",plan,isAdmin,accessToken:session.access_token,avatarUrl:u.user_metadata?.avatar_url||null,_subStatus:window._subStatus||"free",registeredAt:u.created_at||null};
   _guestParcelCount=0;_guestAnalysisCount=0;
   localStorage.setItem("gstP","0");localStorage.setItem("gstA","0");
   if(currentUser.plan==="pro"){_loadProCounts(currentUser.id);}else{_loadFreeCounts(currentUser.id);}
@@ -2201,7 +2218,8 @@ async function loadDashboardStats(){
     const pct=Math.min(100,Math.round((used/limit)*100));
     const color=pct>=90?"#fca5a5":pct>=70?"#fbbf24":"#34d399";
     const _periodEnd=window._subPeriodEnd?new Date(window._subPeriodEnd):null;
-    const resetDate=(_periodEnd&&currentUser.plan==='pro'?_periodEnd:new Date(_now.getFullYear(),_now.getMonth()+1,1))
+    const _freeReset2=currentUser.registeredAt?_getRegPeriod(currentUser.registeredAt).resetDate:new Date(_now.getFullYear(),_now.getMonth()+1,1);
+    const resetDate=(_periodEnd&&currentUser.plan==='pro'?_periodEnd:_freeReset2)
       .toLocaleDateString(lang==="ka"?"ka-GE":"en-GB",{month:"short",day:"numeric"});
     document.getElementById("dash-used-today").textContent=used;
     document.getElementById("dash-used-today").style.color=color;
@@ -2232,7 +2250,7 @@ async function loadDashboardStats(){
   // Feature activity
   try{
     const tr2=t();
-    const since2=new Date(new Date().getFullYear(),new Date().getMonth(),1).toISOString();
+    const since2=currentUser.registeredAt?_getRegPeriod(currentUser.registeredAt).since:new Date(new Date().getFullYear(),new Date().getMonth(),1).toISOString();
     const{data:featureRows,error:feErr}=await sb.from("feature_usage").select("event_type").eq("user_id",currentUser.id).gte("created_at",since2);
     if(feErr)console.error("feature_usage select failed:",feErr.message);
     const fc={};
