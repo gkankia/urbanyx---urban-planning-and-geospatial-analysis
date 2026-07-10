@@ -154,6 +154,24 @@
   .del-email-btn:hover { background: rgba(99,102,241,0.2); }
   .del-btn:disabled { opacity: 0.35; cursor: not-allowed; }
 
+  /* ── Email compose modal ── */
+  #email-modal { position: fixed; inset: 0; z-index: 300; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; padding: 20px; }
+  #email-modal.open { display: flex; }
+  .em-box { background: #111; border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; width: 100%; max-width: 520px; display: flex; flex-direction: column; overflow: hidden; }
+  .em-header { padding: 18px 20px 14px; border-bottom: 1px solid rgba(255,255,255,0.07); display: flex; align-items: center; justify-content: space-between; }
+  .em-title { font-size: 0.88rem; font-weight: 600; }
+  .em-close { background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.1); border-radius: 50%; color: rgba(255,255,255,0.5); width: 28px; height: 28px; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-family: inherit; flex-shrink: 0; }
+  .em-body { padding: 18px 20px; display: flex; flex-direction: column; gap: 12px; }
+  .em-field label { display: block; font-size: 0.65rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(255,255,255,0.3); margin-bottom: 5px; }
+  .em-input { width: 100%; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 9px 12px; color: white; font-size: 0.82rem; font-family: inherit; outline: none; transition: border 0.2s; }
+  .em-input:focus { border-color: rgba(255,255,255,0.28); }
+  .em-textarea { resize: vertical; min-height: 160px; line-height: 1.6; }
+  .em-footer { padding: 0 20px 18px; display: flex; justify-content: flex-end; gap: 8px; }
+  .em-cancel-btn { padding: 8px 16px; border-radius: 7px; border: 1px solid rgba(255,255,255,0.1); background: none; color: rgba(255,255,255,0.45); font-size: 0.78rem; font-family: inherit; cursor: pointer; transition: all 0.15s; }
+  .em-cancel-btn:hover { background: rgba(255,255,255,0.07); color: white; }
+  .em-send-btn { padding: 8px 18px; border-radius: 7px; border: none; background: rgba(99,102,241,0.85); color: white; font-size: 0.78rem; font-weight: 600; font-family: inherit; cursor: pointer; transition: opacity 0.15s; }
+  .em-send-btn:hover { opacity: 0.85; }
+
   @media (max-width: 700px) {
     .stats-grid { grid-template-columns: repeat(3, 1fr); }
     .topbar { padding: 0 16px; }
@@ -163,6 +181,34 @@
 </style>
 </head>
 <body>
+
+<!-- Email compose modal -->
+<div id="email-modal" onclick="if(event.target===this)closeEmailModal()">
+  <div class="em-box">
+    <div class="em-header">
+      <span class="em-title">Compose email</span>
+      <button class="em-close" onclick="closeEmailModal()">✕</button>
+    </div>
+    <div class="em-body">
+      <div class="em-field">
+        <label>To</label>
+        <input type="email" id="em-to" class="em-input" readonly>
+      </div>
+      <div class="em-field">
+        <label>Subject</label>
+        <input type="text" id="em-subject" class="em-input">
+      </div>
+      <div class="em-field">
+        <label>Message</label>
+        <textarea id="em-body-text" class="em-input em-textarea"></textarea>
+      </div>
+    </div>
+    <div class="em-footer">
+      <button class="em-cancel-btn" onclick="closeEmailModal()">Cancel</button>
+      <button class="em-send-btn" onclick="sendEmailFromModal()">Open in mail client</button>
+    </div>
+  </div>
+</div>
 
 <!-- Login screen -->
 <div id="login-screen">
@@ -794,18 +840,15 @@ function renderDeletionRequests(){
   tbody.innerHTML = delRequests.map(r => {
     const reason    = DEL_REASONS[r.reason] || r.reason || "—";
     const submitted = formatDate(r.created_at);
-    const mailSub   = encodeURIComponent("Your Urbanyx account deletion confirmation");
-    const mailBody  = encodeURIComponent(
-      `Hi,\n\nWe have processed your account deletion request. Your Urbanyx account and all associated data have been permanently deleted.\n\nThank you for using Urbanyx.\n\n— The Z.axis team`
-    );
+    const safeEmail = esc(r.email || "");
     return `<tr id="del-row-${r.id}">
-      <td style="font-size:0.78rem;font-weight:500">${esc(r.email || "—")}</td>
+      <td style="font-size:0.78rem;font-weight:500">${safeEmail || "—"}</td>
       <td style="color:rgba(255,255,255,0.4);font-size:0.75rem">${esc(reason)}</td>
       <td style="color:rgba(255,255,255,0.35);font-size:0.75rem">${submitted}</td>
       <td>
         <div class="del-actions-cell">
           <button class="del-btn del-delete-btn" id="del-del-btn-${r.id}" onclick="deleteUser('${r.user_id}','${r.id}')">Delete account</button>
-          <a href="mailto:${esc(r.email || "")}?subject=${mailSub}&body=${mailBody}" class="del-btn del-email-btn">Send email</a>
+          <button class="del-btn del-email-btn" onclick="openEmailModal('${safeEmail}')">Send email</button>
         </div>
       </td>
     </tr>`;
@@ -841,6 +884,37 @@ async function deleteUser(userId, requestId){
   renderStats();
   renderTable();
   showToast("Account deleted", "success");
+}
+
+// ── EMAIL COMPOSE MODAL ───────────────────────────────────────────────────────
+const EMAIL_TEMPLATE_SUBJECT = "Your Urbanyx account deletion request";
+const EMAIL_TEMPLATE_BODY =
+`Hi,
+
+We have received your account deletion request and it has been processed. Your Urbanyx account and all associated data have been permanently deleted.
+
+If you have any questions, feel free to reply to this email.
+
+Thank you for using Urbanyx.
+
+— The Z.axis team`;
+
+function openEmailModal(toEmail){
+  document.getElementById("em-to").value          = toEmail || "";
+  document.getElementById("em-subject").value     = EMAIL_TEMPLATE_SUBJECT;
+  document.getElementById("em-body-text").value   = EMAIL_TEMPLATE_BODY;
+  document.getElementById("email-modal").classList.add("open");
+}
+
+function closeEmailModal(){
+  document.getElementById("email-modal").classList.remove("open");
+}
+
+function sendEmailFromModal(){
+  const to      = document.getElementById("em-to").value.trim();
+  const subject = document.getElementById("em-subject").value.trim();
+  const body    = document.getElementById("em-body-text").value.trim();
+  window.location.href = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 }
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────
