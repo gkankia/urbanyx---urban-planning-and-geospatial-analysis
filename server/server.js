@@ -83,13 +83,15 @@ async function handlePaddleEvent(event) {
 
   switch (event.event_type) {
     case "transaction.completed":
+      // For subscription transactions, period_end is managed by subscription.activated/updated.
+      // Only set it here for one-off (non-subscription) transactions.
       result = await supabase.from("subscriptions").upsert({
         user_id:                userId,
         plan:                   "pro",
         status:                 "active",
         paddle_subscription_id: data.subscription_id ?? data.id ?? null,
         billing_interval:       data.items?.[0]?.price?.billing_cycle?.interval ?? "month",
-        current_period_end:     data.billing_period?.ends_at ?? data.next_billed_at ?? null,
+        ...(!data.subscription_id ? { current_period_end: data.billing_period?.ends_at ?? data.next_billed_at ?? null } : {}),
         paddle_customer_id:     data.customer_id ?? null,
         updated_at:             new Date().toISOString(),
       }, { onConflict: "user_id" });
@@ -100,16 +102,22 @@ async function handlePaddleEvent(event) {
       }
       break;
 
-    case "subscription.activated":
+    case "subscription.activated": {
+      // Anchor the first period end to subscription start so the trial is included
+      // within the first billing cycle rather than added on top of it.
+      const _startedAt = data.started_at ?? data.created_at ?? new Date().toISOString();
+      const _interval  = data.items?.[0]?.price?.billing_cycle?.interval ?? "month";
+      const _intervalMs = _interval === "year" ? 365 * 86400000 : 30 * 86400000;
+      const _periodEndFromStart = new Date(new Date(_startedAt).getTime() + _intervalMs).toISOString();
       result = await supabase.from("subscriptions").upsert({
         user_id:                   userId,
         plan:                      "pro",
         status:                    data.status || "active",
         paddle_subscription_id:    data.id ?? null,
-        billing_interval:          data.items?.[0]?.price?.billing_cycle?.interval ?? "month",
-        current_period_end:        data.current_billing_period?.ends_at ?? null,
+        billing_interval:          _interval,
+        current_period_end:        _periodEndFromStart,
         paddle_customer_id:        data.customer_id ?? null,
-        subscription_started_at:   data.started_at ?? data.created_at ?? new Date().toISOString(),
+        subscription_started_at:   _startedAt,
         updated_at:                new Date().toISOString(),
       }, { onConflict: "user_id" });
       if (data.custom_data?.marketing_consent !== undefined) {
@@ -118,6 +126,7 @@ async function handlePaddleEvent(event) {
         }).eq("id", userId);
       }
       break;
+    }
 
     case "subscription.updated": {
       const periodEnd = data.current_billing_period?.ends_at ?? null;
@@ -125,9 +134,20 @@ async function handlePaddleEvent(event) {
       // Paddle emits status:"canceled" for subscriptions scheduled to cancel at period end.
       // Map that to "canceling" so the client still grants Pro access until expiry.
       const mappedStatus = (data.status === "canceled" && periodInFuture) ? "canceling" : data.status;
+
+      // Guard: don't overwrite period_end while we're still inside the first billing cycle
+      // (this fires when the trial ends and Paddle activates the paid period, which would
+      // set ends_at = trial_end + interval instead of our start + interval).
+      const { data: existingSub } = await supabase.from("subscriptions")
+        .select("subscription_started_at, billing_interval")
+        .eq("user_id", userId).single();
+      const _startMs = existingSub?.subscription_started_at ? new Date(existingSub.subscription_started_at).getTime() : null;
+      const _intMs   = (existingSub?.billing_interval === "year" ? 365 : 30) * 86400000;
+      const _inFirstPeriod = _startMs && ((_startMs + _intMs) > Date.now());
+
       result = await supabase.from("subscriptions").update({
         status:             mappedStatus,
-        current_period_end: periodEnd,
+        ...(!_inFirstPeriod ? { current_period_end: periodEnd } : {}),
         updated_at:         new Date().toISOString(),
       }).eq("user_id", userId);
       break;

@@ -600,12 +600,11 @@
   .pw-plan-price strong { color: white; font-size: 1rem; font-weight: 700; }
   .pw-features { list-style: none; }
   .pw-compare { margin-bottom: 14px; }
-  .pw-row { display: grid; grid-template-columns: 1fr 36px 36px 36px; padding: 4px 2px; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 0.68rem; align-items: center; gap: 4px; }
+  .pw-row { display: grid; grid-template-columns: 1fr 36px 36px; padding: 4px 2px; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 0.68rem; align-items: center; gap: 4px; }
   .pw-row.pw-hdr { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.06em; padding-bottom: 5px; border-bottom: 1px solid rgba(255,255,255,0.12); }
   .pw-row span:first-child { color: rgba(255,255,255,0.55); }
-  .pw-row span:nth-child(2) { color: rgba(255,255,255,0.25); text-align: center; }
-  .pw-row span:nth-child(3) { color: rgba(255,255,255,0.38); text-align: center; }
-  .pw-row span:nth-child(4) { color: #34d399; text-align: center; }
+  .pw-row span:nth-child(2) { color: rgba(255,255,255,0.38); text-align: center; }
+  .pw-row span:nth-child(3) { color: #34d399; text-align: center; }
   .pw-row.pw-hdr span { color: rgba(255,255,255,0.3) !important; }
   .pw-features li { font-size: 0.7rem; color: rgba(255,255,255,0.45); padding: 2.5px 0; display: flex; align-items: flex-start; gap: 5px; }
   .pw-features li .fi { flex-shrink: 0; margin-top: 1px; font-style: normal; }
@@ -1373,17 +1372,17 @@
       </div>
     </div>
     <div class="pw-compare">
-      <div class="pw-row pw-hdr"><span></span><span id="pw-col-guest"></span><span id="pw-col-free"></span><span id="pw-col-pro"></span></div>
-      <div class="pw-row"><span id="pw-r1"></span><span id="pw-g1"></span><span id="pw-f1"></span><span id="pw-p1"></span></div>
-      <div class="pw-row"><span id="pw-r2"></span><span id="pw-g2"></span><span id="pw-f2"></span><span id="pw-p2"></span></div>
-      <div class="pw-row"><span id="pw-r3"></span><span id="pw-g3"></span><span id="pw-f3"></span><span id="pw-p3"></span></div>
-      <div class="pw-row"><span id="pw-r4"></span><span id="pw-g4"></span><span id="pw-f4"></span><span id="pw-p4"></span></div>
-      <div class="pw-row"><span id="pw-r5"></span><span id="pw-g5"></span><span id="pw-f5"></span><span id="pw-p5"></span></div>
-      <div class="pw-row"><span id="pw-r6"></span><span id="pw-g6"></span><span id="pw-f6"></span><span id="pw-p6"></span></div>
-      <div class="pw-row"><span id="pw-r7"></span><span id="pw-g7"></span><span id="pw-f7"></span><span id="pw-p7"></span></div>
-      <div class="pw-row"><span id="pw-r8"></span><span id="pw-g8"></span><span id="pw-f8"></span><span id="pw-p8"></span></div>
-      <div class="pw-row"><span id="pw-r9"></span><span id="pw-g9"></span><span id="pw-f9"></span><span id="pw-p9"></span></div>
-      <div class="pw-row"><span id="pw-r10"></span><span id="pw-g10"></span><span id="pw-f10"></span><span id="pw-p10"></span></div>
+      <div class="pw-row pw-hdr"><span></span><span id="pw-col-free"></span><span id="pw-col-pro"></span></div>
+      <div class="pw-row"><span id="pw-r1"></span><span id="pw-f1"></span><span id="pw-p1"></span></div>
+      <div class="pw-row"><span id="pw-r2"></span><span id="pw-f2"></span><span id="pw-p2"></span></div>
+      <div class="pw-row"><span id="pw-r3"></span><span id="pw-f3"></span><span id="pw-p3"></span></div>
+      <div class="pw-row"><span id="pw-r4"></span><span id="pw-f4"></span><span id="pw-p4"></span></div>
+      <div class="pw-row"><span id="pw-r5"></span><span id="pw-f5"></span><span id="pw-p5"></span></div>
+      <div class="pw-row"><span id="pw-r6"></span><span id="pw-f6"></span><span id="pw-p6"></span></div>
+      <div class="pw-row"><span id="pw-r7"></span><span id="pw-f7"></span><span id="pw-p7"></span></div>
+      <div class="pw-row"><span id="pw-r8"></span><span id="pw-f8"></span><span id="pw-p8"></span></div>
+      <div class="pw-row"><span id="pw-r9"></span><span id="pw-f9"></span><span id="pw-p9"></span></div>
+      <div class="pw-row"><span id="pw-r10"></span><span id="pw-f10"></span><span id="pw-p10"></span></div>
     </div>
     <hr class="modal-divider">
     <button class="btn-pro" id="pw-cta-btn" onclick="startCheckout()"></button>
@@ -1563,7 +1562,7 @@ const T = {
       errFill:"Please fill in all fields.",
       errPassword:"Password must be at least 8 characters.",
       errTerms:"You must accept the Terms & Conditions to continue.",
-      suTerms:'I have read and agree to the <a href="/terms" target="_blank" style="color:#818cf8;text-decoration:underline">Terms & Conditions</a> and <a href="/privacy" target="_blank" style="color:#818cf8;text-decoration:underline">Privacy Policy</a>, including the 7-day free trial and automatic billing after the trial period.',
+      suTerms:'I have read and agree to the <a href="/terms" target="_blank" style="color:#818cf8;text-decoration:underline">Terms & Conditions</a> and <a href="/privacy" target="_blank" style="color:#818cf8;text-decoration:underline">Privacy Policy</a>, including the 14-day free trial and automatic billing after the trial period.',
       errEmail:"Please enter your email.",
       updatePwTitle:"Set new password",updatePwSub:"Enter your new password below.",
       updatePwLabel:"New password",updatePwBtn:"Update password"
@@ -1585,7 +1584,7 @@ const T = {
       r10:"Relief analysis<br><small style='opacity:.45;font-size:.9em'>Tbilisi only</small>",f10:"—",p10:"✓",
       cta:"Upgrade to Pro",notSignedIn:"No account?",createFirst:"Create a free account",
       comingSoon:"Payment coming soon! Contact us to upgrade manually.",
-      trialNote:"7-day free trial included",
+      trialNote:"14-day free trial included",
       billingComingSoon:"Billing portal coming soon.",
       guestLimitTitle:"Guest limit reached",guestLimitSub:"You’ve used your 5 free parcel views. Create a free account for 15 views and 15 analyses.",
       guestAnalysisLimitTitle:"Guest limit reached",guestAnalysisLimitSub:"You’ve used your 5 free analyses. Create a free account for 15 parcel views and 15 analyses.",
@@ -1609,7 +1608,7 @@ const T = {
     pdfWalkability:"Walkability Analysis", pdfDiversityIndex:"Shannon Diversity Index",
     pdfStreetImagery:"Street Imagery", pdfProAnalysis:"Pro Analysis",
     pdfNoScore:"Run analysis to generate score", pdfNoImage:"No street imagery available",
-    dash:{ title:"Dashboard", usage:"Usage", usedToday:"Searches this month", remaining:"Remaining", limit:"Monthly limit", resetsAt:"Resets on", billing:"Plan & Billing", freePlan:"Free plan", proPlan:"Pro plan", freeDesc:"5 parcel views and analyses / month", proDesc:"1,000 searches / month · Full Pro analysis · GeoData export", upgrade:"Upgrade to Pro", manageBilling:"Manage billing", billingTitle:"Billing", billingSubFree:"Manage your plan", billingSubPro:"Your active subscription", billingLblPlan:"Current plan", billingLblPm:"Payment method", billingLblHistory:"Billing history", billingPeriod:"/month", billingRenewal:"Next renewal", billingTrialEnds:"Trial — first billing", billingDaysLeft:"days remaining", billingTrialNote:"Your 7-day free trial is active. If you cancel now, you keep full access until the trial ends.", billingPostTrialNote:"If you cancel, you keep Pro access until your renewal date. No further charges after that.", billingCanceling:"Cancellation scheduled — access continues until period end.", billingNoCard:"No payment method on file", billingNoHistory:"No billing history yet", billingCancel:"Cancel subscription", billingCancelConfirm:"Are you sure you want to cancel? You will keep access until the current period ends.", billingCanceledTrial:"Your subscription has been cancelled. No charge was made.", billingCanceledRefund:"Your subscription has been cancelled and a refund has been issued for the unused period.", signOut:"Sign out", activity:"Activity this month" },
+    dash:{ title:"Dashboard", usage:"Usage", usedToday:"Searches this month", remaining:"Remaining", limit:"Monthly limit", resetsAt:"Resets on", billing:"Plan & Billing", freePlan:"Free plan", proPlan:"Pro plan", freeDesc:"5 parcel views and analyses / month", proDesc:"1,000 searches / month · Full Pro analysis · GeoData export", upgrade:"Upgrade to Pro", manageBilling:"Manage billing", billingTitle:"Billing", billingSubFree:"Manage your plan", billingSubPro:"Your active subscription", billingLblPlan:"Current plan", billingLblPm:"Payment method", billingLblHistory:"Billing history", billingPeriod:"/month", billingRenewal:"Next renewal", billingTrialEnds:"Trial — first billing", billingDaysLeft:"days remaining", billingTrialNote:"Your 14-day free trial is active. If you cancel now, you keep full access until the trial ends.", billingPostTrialNote:"If you cancel, you keep Pro access until your renewal date. No further charges after that.", billingCanceling:"Cancellation scheduled — access continues until period end.", billingNoCard:"No payment method on file", billingNoHistory:"No billing history yet", billingCancel:"Cancel subscription", billingCancelConfirm:"Are you sure you want to cancel? You will keep access until the current period ends.", billingCanceledTrial:"Your subscription has been cancelled. No charge was made.", billingCanceledRefund:"Your subscription has been cancelled and a refund has been issued for the unused period.", signOut:"Sign out", activity:"Activity this month" },
     projects:{ navTip:"My Projects", panelTitle:"My Projects", saveBtn:"Save current analysis", emptyMsg:"No saved projects yet.", openBtn:"Open", deleteConfirm:"Delete this project?", loadingMsg:"Loading…", savingMsg:"Saving…", saveModalTitle:"Save Project", saveModalHint:"Saves map view, selected features, imported layers and analysis results.", cancelBtn:"Cancel", confirmBtn:"Save", savedToast:"Project saved", deletedToast:"Project deleted", loadedToast:"Project loaded", errorSave:"Failed to save project", errorLoad:"Failed to load project", errorDelete:"Delete failed", layers:"layer", layersPlural:"layers" },
     activityLabels:{ map_click:"Clicks", free_analysis:"Free analysis", pro_analysis:"Pro analysis", relief_analysis:"Relief", pdf_export:"PDF export", geojson_export:"GeoJSON export" },
     activityIcons:{ map_click:"—", free_analysis:"○", pro_analysis:"◆", relief_analysis:"△", pdf_export:"↓", geojson_export:"⬡" },
@@ -1703,7 +1702,7 @@ const T = {
       r10:"რელიევის ანალიზი<br><small style='opacity:.45;font-size:.9em'>თბილისი თავ</small>",f10:"—",p10:"✓",
       cta:"Pro-ზე გადასვლა",notSignedIn:"ანგარიში არ გაქვს?",createFirst:"შექმენი უფასო ანგარიში",
       comingSoon:"გადახდა მალე! დაგვიკავშირდი Pro-ზე გადასასვლელად.",
-      trialNote:"მოიცავს 7-დღიან უფასო პერიოდს",
+      trialNote:"მოიცავს 14-დღიან უფასო პერიოდს",
       billingComingSoon:"ბილინგის პორტალი მალე.",
       guestLimitTitle:"სტუმარის ლიმიტი",guestLimitSub:"გამოიყენე 5 უფასო ნაკვეთის ხედვა. შექმენი უფასო ანგარიში 15 ხედვისა და 15 ანალიზისთვის.",
       guestAnalysisLimitTitle:"სტუმარის ლიმიტი",guestAnalysisLimitSub:"გამოიყენე 5 უფასო ანალიზი. შექმენი უფასო ანგარიში 15 ხედვისა და 15 ანალიზისთვის.",
@@ -1725,7 +1724,7 @@ const T = {
     exportBtn:"PDF ექსპორტი", exportGenerating:"მზადდება…", exportProOnly:"PDF ექსპორტი Pro ფუნქციაა.",
     geodataBtn:"GeoData ჩამოტვირთვა", geodataProOnly:"GeoData ექსპორტი Pro ფუნქციაა.",
     pdfTitle:"ნაკვეთის ანალიზის ანგარიში", pdfGenerated:"შექმნილია Urbanyx-ით",
-    dash:{ title:"დეშბორდი", usage:"გამოყენება", usedToday:"ძიება ამ თვეში", remaining:"დარჩენილი", limit:"თვიური ლიმიტი", resetsAt:"განახლდება", billing:"გეგმა და ბილინგი", freePlan:"უფასო გეგმა", proPlan:"Pro გეგმა", freeDesc:"5 ნაკვეთის ხედვა და ანალიზი / თვეში", proDesc:"1,000 ძიება / თვეში · Pro ანალიზი · GeoData ექსპორტი", upgrade:"Pro-ზე გადასვლა", manageBilling:"ბილინგის მართვა", billingTitle:"ბილინგი", billingSubFree:"გეგმის მართვა", billingSubPro:"თქვენი გამოწერა", billingLblPlan:"მიმდინარე გეგმა", billingLblPm:"გადახდის მეთოდი", billingLblHistory:"გადახდების ისტორია", billingPeriod:"/თვეში", billingRenewal:"შემდეგი გადახდა", billingTrialEnds:"გამოცდა — პირველი გადახდა", billingDaysLeft:"დღე რჩება", billingTrialNote:"7-დღიანი უფასო პერიოდი აქტიურია. გაუქმების შემთხვევაში პრო ფუნქციები ხელმისაწვდომი იქნება გამოცდის ბოლომდე.", billingPostTrialNote:"გაუქმების შემთხვევაში Pro წვდომა შენარჩუნდება განახლების თარიღამდე. ამის შემდეგ თანხა არ ჩამოიჭრება.", billingCanceling:"გაუქმება დაგეგმილია — წვდომა გრძელდება პერიოდის ბოლომდე.", billingNoCard:"გადახდის მეთოდი არ არის", billingNoHistory:"გადახდების ისტორია ცარიელია", billingCancel:"გამოწერის გაუქმება", billingCancelConfirm:"დარწმუნებული ხარ? წვდომა შენარჩუნდება მიმდინარე პერიოდის ბოლომდე.", billingCanceledTrial:"გამოწერა გაუქმდა. თანხა არ ჩამოიჭრება.", billingCanceledRefund:"გამოწერა გაუქმდა და გამოუყენებელი პერიოდის თანხა დაბრუნდება.", signOut:"გასვლა", activity:"ამ თვის აქტივობა" },
+    dash:{ title:"დეშბორდი", usage:"გამოყენება", usedToday:"ძიება ამ თვეში", remaining:"დარჩენილი", limit:"თვიური ლიმიტი", resetsAt:"განახლდება", billing:"გეგმა და ბილინგი", freePlan:"უფასო გეგმა", proPlan:"Pro გეგმა", freeDesc:"5 ნაკვეთის ხედვა და ანალიზი / თვეში", proDesc:"1,000 ძიება / თვეში · Pro ანალიზი · GeoData ექსპორტი", upgrade:"Pro-ზე გადასვლა", manageBilling:"ბილინგის მართვა", billingTitle:"ბილინგი", billingSubFree:"გეგმის მართვა", billingSubPro:"თქვენი გამოწერა", billingLblPlan:"მიმდინარე გეგმა", billingLblPm:"გადახდის მეთოდი", billingLblHistory:"გადახდების ისტორია", billingPeriod:"/თვეში", billingRenewal:"შემდეგი გადახდა", billingTrialEnds:"გამოცდა — პირველი გადახდა", billingDaysLeft:"დღე რჩება", billingTrialNote:"14-დღიანი უფასო პერიოდი აქტიურია. გაუქმების შემთხვევაში პრო ფუნქციები ხელმისაწვდომი იქნება გამოცდის ბოლომდე.", billingPostTrialNote:"გაუქმების შემთხვევაში Pro წვდომა შენარჩუნდება განახლების თარიღამდე. ამის შემდეგ თანხა არ ჩამოიჭრება.", billingCanceling:"გაუქმება დაგეგმილია — წვდომა გრძელდება პერიოდის ბოლომდე.", billingNoCard:"გადახდის მეთოდი არ არის", billingNoHistory:"გადახდების ისტორია ცარიელია", billingCancel:"გამოწერის გაუქმება", billingCancelConfirm:"დარწმუნებული ხარ? წვდომა შენარჩუნდება მიმდინარე პერიოდის ბოლომდე.", billingCanceledTrial:"გამოწერა გაუქმდა. თანხა არ ჩამოიჭრება.", billingCanceledRefund:"გამოწერა გაუქმდა და გამოუყენებელი პერიოდის თანხა დაბრუნდება.", signOut:"გასვლა", activity:"ამ თვის აქტივობა" },
     projects:{ navTip:"ჩემი პროექტები", panelTitle:"ჩემი პროექტები", saveBtn:"მიმდინარე ანალიზის შენახვა", emptyMsg:"შენახული პროექტები არ არის.", openBtn:"გახსნა", deleteConfirm:"წაშალოს ეს პროექტი?", loadingMsg:"იტვირთება…", savingMsg:"ინახება…", saveModalTitle:"პროექტის შენახვა", saveModalHint:"ინახება რუკის ხედი, შერჩეული ობიექტები, შემოტანილი ფენები და ანალიზის შედეგები.", cancelBtn:"გაუქმება", confirmBtn:"შენახვა", savedToast:"პროექტი შენახულია", deletedToast:"პროექტი წაშლილია", loadedToast:"პროექტი ჩაიტვირთა", errorSave:"შენახვა ვერ მოხერხდა", errorLoad:"ჩატვირთვა ვერ მოხერხდა", errorDelete:"წაშლა ვერ მოხერხდა", layers:"ფენა", layersPlural:"ფენა" },
     activityLabels:{ map_click:"ნაკვეთები", free_analysis:"სიარული", pro_analysis:"სივრც. ანალ.", relief_analysis:"რელიეფი", pdf_export:"PDF", geojson_export:"GeoJSON" },
     activityIcons:{ map_click:"—", free_analysis:"○", pro_analysis:"◆", relief_analysis:"△", pdf_export:"↓", geojson_export:"⬡" },
@@ -1865,12 +1864,11 @@ function applyLang(){
   const _ta=document.getElementById("pw-btog-annual");if(_ta)_ta.textContent=pw.togAnnual||"Annual";
   const _tm=document.getElementById("pw-btog-monthly");if(_tm)_tm.textContent=pw.togMonthly||"Monthly";
   setPwBilling("annual");
-  const _gc=document.getElementById("pw-col-guest");if(_gc)_gc.textContent=pw.colGuest||"";
   document.getElementById("pw-col-free").textContent=pw.colFree;
   document.getElementById("pw-col-pro").textContent=pw.colPro;
   [1,2,3,4,5,6,7,8,9,10].forEach(i=>{
-    const r=document.getElementById("pw-r"+i),g=document.getElementById("pw-g"+i),f=document.getElementById("pw-f"+i),p=document.getElementById("pw-p"+i);
-    if(r)r.innerHTML=pw["r"+i]||"";if(g)g.textContent=pw["g"+i]||"";if(f)f.textContent=pw["f"+i];if(p)p.textContent=pw["p"+i];
+    const r=document.getElementById("pw-r"+i),f=document.getElementById("pw-f"+i),p=document.getElementById("pw-p"+i);
+    if(r)r.innerHTML=pw["r"+i]||"";if(f)f.textContent=pw["f"+i];if(p)p.textContent=pw["p"+i];
   });
   document.getElementById("pw-cta-btn").textContent=pw.cta;
   const _tn=document.getElementById("pw-trial-note");if(_tn)_tn.textContent=pw.trialNote||"";
@@ -5774,7 +5772,7 @@ function openBillingPortal(){
   const isCanceling=currentUser._subStatus==='canceling';
   const periodEnd=window._subPeriodEnd?new Date(window._subPeriodEnd):null;
   const daysLeft=periodEnd?Math.max(0,Math.ceil((periodEnd.getTime()-Date.now())/86400000)):null;
-  const isInTrial=isPro&&(currentUser._subStatus==='trialing'||(daysLeft!==null&&window._subInterval==='month'&&daysLeft>=23));
+  const isInTrial=isPro&&(currentUser._subStatus==='trialing'||(daysLeft!==null&&window._subInterval==='month'&&daysLeft>=16));
 
   document.getElementById('bill-title').textContent=bd.billingTitle;
   document.getElementById('bill-subtitle').textContent=isPro?bd.billingSubPro:bd.billingSubFree;
@@ -5792,7 +5790,7 @@ function openBillingPortal(){
   if(isPro&&periodEnd){
     if(isInTrial){
       const trialEnd=window._subStartedAt
-        ?new Date(new Date(window._subStartedAt).getTime()+7*86400000)
+        ?new Date(new Date(window._subStartedAt).getTime()+14*86400000)
         :periodEnd;
       const trialFmt=trialEnd.toLocaleDateString(lang==='ka'?'ka-GE':'en-GB',{day:'numeric',month:'long',year:'numeric'});
       const trialDaysLeft=Math.max(0,Math.ceil((trialEnd.getTime()-Date.now())/86400000));
