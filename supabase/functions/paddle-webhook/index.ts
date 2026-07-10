@@ -49,6 +49,11 @@ Deno.serve(async (req: Request) => {
         current_period_end: periodEnd,
         paddle_customer_id: data.customer_id ?? null,
       }, { onConflict: 'user_id' })
+      if (data.custom_data?.marketing_consent !== undefined) {
+        await supabase.from('profiles').update({
+          marketing_consent: !!data.custom_data.marketing_consent,
+        }).eq('id', userId)
+      }
       break
     }
 

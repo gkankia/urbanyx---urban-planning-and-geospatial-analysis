@@ -93,6 +93,11 @@ async function handlePaddleEvent(event) {
         paddle_customer_id:     data.customer_id ?? null,
         updated_at:             new Date().toISOString(),
       }, { onConflict: "user_id" });
+      if (data.custom_data?.marketing_consent !== undefined) {
+        await supabase.from("profiles").update({
+          marketing_consent: !!data.custom_data.marketing_consent,
+        }).eq("id", userId);
+      }
       break;
 
     case "subscription.activated":
@@ -107,6 +112,11 @@ async function handlePaddleEvent(event) {
         subscription_started_at:   data.started_at ?? data.created_at ?? new Date().toISOString(),
         updated_at:                new Date().toISOString(),
       }, { onConflict: "user_id" });
+      if (data.custom_data?.marketing_consent !== undefined) {
+        await supabase.from("profiles").update({
+          marketing_consent: !!data.custom_data.marketing_consent,
+        }).eq("id", userId);
+      }
       break;
 
     case "subscription.updated": {
