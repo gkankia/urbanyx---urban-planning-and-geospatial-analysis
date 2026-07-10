@@ -2359,7 +2359,6 @@ async function submitDeletionRequest(){
   const reason=document.querySelector('input[name="del-reason"]:checked')?.value||"no_reason";
   try{
     await sb.from("deletion_requests").insert({user_id:currentUser.id,email:currentUser.email,reason});
-    document.getElementById("del-confirm-email").textContent=currentUser.email;
     document.getElementById("del-form-view").style.display="none";
     document.getElementById("del-success-view").style.display="";
   }catch(e){
@@ -12478,7 +12477,7 @@ function navLocateUser(){
       <div class="del-success">
         <div class="del-success-icon">✓</div>
         <div class="del-title" style="text-align:center;margin-bottom:8px">Request received</div>
-        <div class="del-success-msg">We've received your deletion request and will confirm at<br><strong id="del-confirm-email" style="color:rgba(255,255,255,0.7)"></strong></div>
+        <div class="del-success-msg">We've received your account deletion request. You will receive a confirmation within 72 hours.</div>
         <button class="del-cancel-btn" style="margin-top:20px;width:100%" onclick="closeDeletionRequest()">Close</button>
       </div>
     </div>
