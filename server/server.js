@@ -275,6 +275,9 @@ app.post("/api/paddle/cancel", strictLimiter, requireAuth, async (req, res) => {
 // ── Trial expiry cron ─────────────────────────────────────────────────────────
 require("./cron-trial-expiry");
 
+// ── Transit position collector (archives to R2; disabled without R2_* env) ────
+require("./cron-transit-collector");
+
 // ── Start ─────────────────────────────────────────────────────────────────────
 app.listen(PORT, () => console.log(`Urbanyx server running on port ${PORT}`));
 

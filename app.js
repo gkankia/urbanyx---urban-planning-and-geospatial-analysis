@@ -228,7 +228,7 @@ const T = {
     pdfWalkability:"Walkability Analysis", pdfDiversityIndex:"Shannon Diversity Index",
     pdfStreetImagery:"Street Imagery", pdfProAnalysis:"Pro Analysis",
     pdfNoScore:"Run analysis to generate score", pdfNoImage:"No street imagery available",
-    dash:{ title:"Dashboard", usage:"Usage", usedToday:"Searches this month", remaining:"Remaining", limit:"Monthly limit", resetsAt:"Resets on", billing:"Plan & Billing", freePlan:"Free plan", proPlan:"Pro plan", freeDesc:"50 parcel views and analyses / month", proDesc:"1,000 searches / month · Full Pro analysis · GeoData export", upgrade:"Upgrade to Pro", manageBilling:"Manage billing", billingTitle:"Billing", billingSubFree:"Manage your plan", billingSubPro:"Your active subscription", billingLblPlan:"Current plan", billingLblHistory:"Billing history", billingPeriod:"/month", billingRenewal:"Next renewal", billingTrialEnds:"Trial — first billing", billingDaysLeft:"days remaining", billingTrialNote:"Your 14-day free trial is active. If you cancel now, you keep full access until the trial ends.", billingPostTrialNote:"If you cancel, you keep Pro access until your renewal date. No further charges after that.", billingCanceling:"Cancellation scheduled — access continues until period end.", billingNoHistory:"No billing history yet", billingCancel:"Cancel subscription", billingCancelConfirm:"Are you sure you want to cancel? You will keep access until the current period ends.", billingCanceledTrial:"Your subscription has been cancelled. No charge was made.", billingCanceledRefund:"Your subscription has been cancelled and a refund has been issued for the unused period.", signOut:"Sign out", activity:"Activity this month" },
+    dash:{ title:"Dashboard", usage:"Usage", usedToday:"Searches this month", remaining:"Remaining", limit:"Monthly limit", resetsAt:"Resets on", billing:"Plan & Billing", freePlan:"Free plan", proPlan:"Pro plan", freeDesc:"50 parcel views and analyses / month", proDesc:"1,000 searches / month · Full Pro analysis · GeoData export", upgrade:"Upgrade to Pro", manageBilling:"Manage billing", billingTitle:"Billing", billingSubFree:"Manage your plan", billingSubPro:"Your active subscription", billingLblPlan:"Current plan", billingLblHistory:"Billing history", billingPeriod:"/month", billingRenewal:"Next payment", billingTrialEnds:"Trial ends", billingDaysLeft:"days remaining", billingTrialNote:"Your 14-day free trial is active. If you cancel now, you keep full access until the trial ends.", billingPostTrialNote:"If you cancel, you keep Pro access until your renewal date. No further charges after that.", billingCanceling:"Cancellation scheduled — access continues until period end.", billingNoHistory:"No billing history yet", billingCancel:"Cancel subscription", billingCancelConfirm:"Are you sure you want to cancel? You will keep access until the current period ends.", billingCanceledTrial:"Your subscription has been cancelled. No charge was made.", billingCanceledRefund:"Your subscription has been cancelled and a refund has been issued for the unused period.", signOut:"Sign out", activity:"Activity this month" },
     projects:{ navTip:"My Projects", panelTitle:"My Projects", saveBtn:"Save current analysis", emptyMsg:"No saved projects yet.", openBtn:"Open", deleteConfirm:"Delete this project?", loadingMsg:"Loading…", savingMsg:"Saving…", saveModalTitle:"Save Project", saveModalHint:"Saves map view, selected features, imported layers and analysis results.", cancelBtn:"Cancel", confirmBtn:"Save", savedToast:"Project saved", deletedToast:"Project deleted", loadedToast:"Project loaded", errorSave:"Failed to save project", errorLoad:"Failed to load project", errorDelete:"Delete failed", layers:"layer", layersPlural:"layers" },
     activityLabels:{ map_click:"Clicks", free_analysis:"Free analysis", pro_analysis:"Pro analysis", relief_analysis:"Relief", pdf_export:"PDF export", geojson_export:"GeoJSON export" },
     activityIcons:{ map_click:"—", free_analysis:"○", pro_analysis:"◆", relief_analysis:"△", pdf_export:"↓", geojson_export:"⬡" },
@@ -344,7 +344,7 @@ const T = {
     exportBtn:"PDF ექსპორტი", exportGenerating:"მზადდება…", exportProOnly:"PDF ექსპორტი Pro ფუნქციაა.",
     geodataBtn:"GeoData ჩამოტვირთვა", geodataProOnly:"GeoData ექსპორტი Pro ფუნქციაა.",
     pdfTitle:"ნაკვეთის ანალიზის ანგარიში", pdfGenerated:"შექმნილია Urbanyx-ით",
-    dash:{ title:"დეშბორდი", usage:"გამოყენება", usedToday:"ძიება ამ თვეში", remaining:"დარჩენილი", limit:"თვიური ლიმიტი", resetsAt:"განახლდება", billing:"გეგმა და ბილინგი", freePlan:"უფასო გეგმა", proPlan:"Pro გეგმა", freeDesc:"50 ნაკვეთის ხედვა და ანალიზი / თვეში", proDesc:"1,000 ძიება / თვეში · Pro ანალიზი · GeoData ექსპორტი", upgrade:"Pro-ზე გადასვლა", manageBilling:"ბილინგის მართვა", billingTitle:"ბილინგი", billingSubFree:"გეგმის მართვა", billingSubPro:"თქვენი გამოწერა", billingLblPlan:"მიმდინარე გეგმა", billingLblHistory:"გადახდების ისტორია", billingPeriod:"/თვეში", billingRenewal:"შემდეგი გადახდა", billingTrialEnds:"გამოცდა — პირველი გადახდა", billingDaysLeft:"დღე რჩება", billingTrialNote:"14-დღიანი უფასო პერიოდი აქტიურია. გაუქმების შემთხვევაში პრო ფუნქციები ხელმისაწვდომი იქნება გამოცდის ბოლომდე.", billingPostTrialNote:"გაუქმების შემთხვევაში Pro წვდომა შენარჩუნდება განახლების თარიღამდე. ამის შემდეგ თანხა არ ჩამოიჭრება.", billingCanceling:"გაუქმება დაგეგმილია — წვდომა გრძელდება პერიოდის ბოლომდე.", billingNoHistory:"გადახდების ისტორია ცარიელია", billingCancel:"გამოწერის გაუქმება", billingCancelConfirm:"დარწმუნებული ხარ? წვდომა შენარჩუნდება მიმდინარე პერიოდის ბოლომდე.", billingCanceledTrial:"გამოწერა გაუქმდა. თანხა არ ჩამოიჭრება.", billingCanceledRefund:"გამოწერა გაუქმდა და გამოუყენებელი პერიოდის თანხა დაბრუნდება.", signOut:"გასვლა", activity:"ამ თვის აქტივობა" },
+    dash:{ title:"დეშბორდი", usage:"გამოყენება", usedToday:"ძიება ამ თვეში", remaining:"დარჩენილი", limit:"თვიური ლიმიტი", resetsAt:"განახლდება", billing:"გეგმა და ბილინგი", freePlan:"უფასო გეგმა", proPlan:"Pro გეგმა", freeDesc:"50 ნაკვეთის ხედვა და ანალიზი / თვეში", proDesc:"1,000 ძიება / თვეში · Pro ანალიზი · GeoData ექსპორტი", upgrade:"Pro-ზე გადასვლა", manageBilling:"ბილინგის მართვა", billingTitle:"ბილინგი", billingSubFree:"გეგმის მართვა", billingSubPro:"თქვენი გამოწერა", billingLblPlan:"მიმდინარე გეგმა", billingLblHistory:"გადახდების ისტორია", billingPeriod:"/თვეში", billingRenewal:"შემდეგი გადახდა", billingTrialEnds:"საცდელი მთავრდება", billingDaysLeft:"დღე რჩება", billingTrialNote:"14-დღიანი უფასო პერიოდი აქტიურია. გაუქმების შემთხვევაში პრო ფუნქციები ხელმისაწვდომი იქნება გამოცდის ბოლომდე.", billingPostTrialNote:"გაუქმების შემთხვევაში Pro წვდომა შენარჩუნდება განახლების თარიღამდე. ამის შემდეგ თანხა არ ჩამოიჭრება.", billingCanceling:"გაუქმება დაგეგმილია — წვდომა გრძელდება პერიოდის ბოლომდე.", billingNoHistory:"გადახდების ისტორია ცარიელია", billingCancel:"გამოწერის გაუქმება", billingCancelConfirm:"დარწმუნებული ხარ? წვდომა შენარჩუნდება მიმდინარე პერიოდის ბოლომდე.", billingCanceledTrial:"გამოწერა გაუქმდა. თანხა არ ჩამოიჭრება.", billingCanceledRefund:"გამოწერა გაუქმდა და გამოუყენებელი პერიოდის თანხა დაბრუნდება.", signOut:"გასვლა", activity:"ამ თვის აქტივობა" },
     projects:{ navTip:"ჩემი პროექტები", panelTitle:"ჩემი პროექტები", saveBtn:"მიმდინარე ანალიზის შენახვა", emptyMsg:"შენახული პროექტები არ არის.", openBtn:"გახსნა", deleteConfirm:"წაშალოს ეს პროექტი?", loadingMsg:"იტვირთება…", savingMsg:"ინახება…", saveModalTitle:"პროექტის შენახვა", saveModalHint:"ინახება რუკის ხედი, შერჩეული ობიექტები, შემოტანილი ფენები და ანალიზის შედეგები.", cancelBtn:"გაუქმება", confirmBtn:"შენახვა", savedToast:"პროექტი შენახულია", deletedToast:"პროექტი წაშლილია", loadedToast:"პროექტი ჩაიტვირთა", errorSave:"შენახვა ვერ მოხერხდა", errorLoad:"ჩატვირთვა ვერ მოხერხდა", errorDelete:"წაშლა ვერ მოხერხდა", layers:"ფენა", layersPlural:"ფენა" },
     activityLabels:{ map_click:"ნაკვეთები", free_analysis:"სიარული", pro_analysis:"სივრც. ანალ.", relief_analysis:"რელიეფი", pdf_export:"PDF", geojson_export:"GeoJSON" },
     activityIcons:{ map_click:"—", free_analysis:"○", pro_analysis:"◆", relief_analysis:"△", pdf_export:"↓", geojson_export:"⬡" },
@@ -4376,6 +4376,9 @@ function _paddleEvent(data){
   if(data.name==="checkout.completed")_paddleSuccess(data);
 }
 async function _paddleSuccess(data){
+  // Recovery checkouts can complete without an app session — the webhook (which
+  // carries custom_data.user_id) is the source of truth. Guard the client upsert.
+  if(!currentUser){closePaywall();return;}
   const sid=data.data?.subscription_id||"";
   try{
     await sb.from("subscriptions").upsert({user_id:currentUser.id,plan:"pro",status:"active",paddle_subscription_id:sid},{onConflict:"user_id"});
@@ -4431,7 +4434,6 @@ function openBillingPortal(){
   document.getElementById('bill-subtitle').textContent=isPro?bd.billingSubPro:bd.billingSubFree;
 
   document.getElementById('bill-lbl-plan').textContent=bd.billingLblPlan;
-  document.getElementById('bill-plan-name').textContent=isPro?bd.proPlan:bd.freePlan;
   const badge=document.getElementById('bill-plan-badge');
   badge.textContent=isPro?bd.proPlan:bd.freePlan;
   badge.className='dash-plan-badge '+(isPro?'pro':'free');
@@ -4440,17 +4442,18 @@ function openBillingPortal(){
   document.getElementById('bill-period').textContent=isPro?(window._subInterval==='year'?'/year':bd.billingPeriod):bd.billingPeriod;
 
   const renewEl=document.getElementById('bill-next-renewal');
-  if(isPro&&periodEnd){
-    if(isInTrial){
-      const trialEnd=window._trialEndsAt?new Date(window._trialEndsAt):periodEnd;
-      const trialFmt=trialEnd.toLocaleDateString(lang==='ka'?'ka-GE':'en-GB',{day:'numeric',month:'long',year:'numeric'});
-      const trialDaysLeft=Math.max(0,Math.ceil((trialEnd.getTime()-Date.now())/86400000));
-      renewEl.textContent=`${bd.billingTrialEnds}: ${trialFmt} · ${trialDaysLeft} ${bd.billingDaysLeft}`;
-    } else {
-      const fmt=periodEnd.toLocaleDateString(lang==='ka'?'ka-GE':'en-GB',{day:'numeric',month:'long',year:'numeric'});
-      const daysStr=daysLeft!==null?` · ${daysLeft} ${bd.billingDaysLeft}`:'';
-      renewEl.textContent=(isCanceling?bd.billingCanceling:(bd.billingRenewal+': '+fmt))+daysStr;
-    }
+  if(isInTrial){
+    // Trial users have trial_ends_at but no current_period_end (no card on file);
+    // show when the trial ends — access drops to Free after this date unless they subscribe.
+    const trialEnd=window._trialEndsAt?new Date(window._trialEndsAt):periodEnd;
+    const trialFmt=trialEnd.toLocaleDateString(lang==='ka'?'ka-GE':'en-GB',{day:'numeric',month:'long',year:'numeric'});
+    const trialDaysLeft=Math.max(0,Math.ceil((trialEnd.getTime()-Date.now())/86400000));
+    renewEl.textContent=`${bd.billingTrialEnds}: ${trialFmt} · ${trialDaysLeft} ${bd.billingDaysLeft}`;
+    renewEl.style.display='';
+  } else if(isPro&&periodEnd){
+    const fmt=periodEnd.toLocaleDateString(lang==='ka'?'ka-GE':'en-GB',{day:'numeric',month:'long',year:'numeric'});
+    const daysStr=daysLeft!==null?` · ${daysLeft} ${bd.billingDaysLeft}`:'';
+    renewEl.textContent=(isCanceling?bd.billingCanceling:(bd.billingRenewal+': '+fmt))+daysStr;
     renewEl.style.display='';
   } else { renewEl.style.display='none'; }
 
@@ -10957,6 +10960,14 @@ async function init(){
     }
     else if(event==="SIGNED_OUT"){currentUser=null;updateUserUI();}
   });
+
+  // Resume an abandoned Paddle checkout opened from a recovery email (?_ptxn=txn_...)
+  const _ptxn=new URLSearchParams(location.search).get("_ptxn");
+  if(_ptxn){
+    _loadPaddleSDK()
+      .then(()=>{if(window.Paddle?.Checkout)Paddle.Checkout.open({transactionId:_ptxn});})
+      .catch(e=>console.warn("Paddle recovery checkout:",e));
+  }
 }
 init();
 
