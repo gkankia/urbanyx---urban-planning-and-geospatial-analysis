@@ -187,7 +187,7 @@ const T = {
       updatePwLabel:"New password",updatePwBtn:"Update password"
     },
     pw:{
-      title:"Upgrade to Pro",sub:"Every new account starts with a 14-day Pro trial (300 views & analyses). Free plan: 50 per month. Pro: up to 1,000.",
+      title:"Upgrade to Pro",sub:"Every new account starts with a 14-day Pro trial (300 analysis tokens).",
       freeName:"Free",proBadge:"Pro",proName:"Pro",freePeriod:"",proPeriod:"/mo",proBilling:"billed annually · €240/yr",proMonthlyPeriod:"/mo",proMonthlyBilling:"billed monthly",togAnnual:"Annual",togMonthly:"Monthly",
       colFree:"Free",colPro:"Pro",
       r1:"Parcel-level analysis",f1:"50",p1:"1000",
