@@ -189,8 +189,12 @@ async function handlePaddleEvent(event) {
     }
 
     case "subscription.canceled":
+      // Terminal event — Paddle fires this when access actually ends (at period
+      // end for scheduled cancels, immediately for immediate cancels). The grace
+      // period is handled by subscription.updated mapping to "canceling" above.
       result = await supabase.from("subscriptions").update({
-        status:             "canceling",
+        status:             "canceled",
+        plan:               "free",
         current_period_end: data.canceled_at ?? data.current_billing_period?.ends_at ?? null,
         updated_at:         new Date().toISOString(),
       }).eq("user_id", userId);

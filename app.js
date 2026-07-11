@@ -25,6 +25,10 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 let lang = "en", hasSearched = false, mapMoved = false, mapReady = false, pdfjsLib = null;
 let _toastTimer=null;function showToast(msg,dur=3000){const el=document.getElementById('app-toast');if(!el)return;el.textContent=msg;el.classList.add('show');clearTimeout(_toastTimer);_toastTimer=setTimeout(()=>el.classList.remove('show'),dur);}
+// Escape untrusted text (remote APIs, user-imported files, OSM data) before it goes into innerHTML/setHTML
+function escapeHtml(s){return String(s??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");}
+// Restrict dynamically built link targets to safe schemes (blocks javascript: URLs)
+function safeUrl(u){u=String(u??"").trim();return /^(https?:|tel:|mailto:)/i.test(u)?u:"#";}
 const GUEST_PARCEL_LIMIT = 5;
 const GUEST_ANALYSIS_LIMIT = 5;
 const FREE_PARCEL_LIMIT = 5;
@@ -710,7 +714,12 @@ async function onAuthSuccess(session){
       window._trialEndsAt=data.trial_ends_at||null;
       const periodInFuture=data.current_period_end&&new Date(data.current_period_end)>new Date();
       const trialExpired=data.status==="trialing"&&data.trial_ends_at&&new Date(data.trial_ends_at)<=new Date();
-      const effectiveStatus=(data.status==="canceled"&&periodInFuture)?"canceling":trialExpired?"expired":data.status;
+      // "canceling" only grants access while the paid period is still running;
+      // past current_period_end it is treated as ended even if the webhook
+      // that finalizes the downgrade hasn't arrived yet.
+      const effectiveStatus=(data.status==="canceled"&&periodInFuture)?"canceling"
+        :(data.status==="canceling"&&!periodInFuture)?"ended"
+        :trialExpired?"expired":data.status;
       window._subStatus=effectiveStatus||"free";
       if(effectiveStatus==="active"||effectiveStatus==="trialing"||effectiveStatus==="canceling")plan=data.plan;
       console.log("[sub] status="+effectiveStatus+" plan="+plan);
@@ -4175,7 +4184,7 @@ async function runOverpassAnalysis(){
     lg.style.display='block';
     lg.innerHTML=`<div class="lu-section-title"><span>${isKa?'ფუნქციები':'Functions'}</span><span>${features.length}</span></div>`
       +Object.entries(catCounts).sort((a,b)=>b[1]-a[1]).map(([cat,n])=>
-        `<div class="lu-row"><span style="width:8px;height:8px;border-radius:50%;background:${OSM_CATS[cat]?.color||'#999'};flex-shrink:0;display:inline-block;margin-right:2px"></span><span class="lu-name">${OSM_CATS[cat]?.label||cat}</span><span class="lu-count">${n}</span></div>`
+        `<div class="lu-row"><span style="width:8px;height:8px;border-radius:50%;background:${OSM_CATS[cat]?.color||'#999'};flex-shrink:0;display:inline-block;margin-right:2px"></span><span class="lu-name">${escapeHtml(OSM_CATS[cat]?.label||cat)}</span><span class="lu-count">${n}</span></div>`
       ).join('');
   }catch(e){
     console.error('Overpass:',e);
@@ -6387,10 +6396,10 @@ function _showKgContact(props){
   if(!el)return;
   const phones=[props.phone,props.phone_1].filter(Boolean);
   let h='<div style="margin:4px 0 2px;padding:7px 8px;background:rgba(192,38,211,0.07);border:1px solid rgba(192,38,211,0.15);border-radius:7px">';
-  h+='<div style="font-size:0.72rem;font-weight:600;color:rgba(255,255,255,0.88);margin-bottom:4px;line-height:1.35">'+props.name+'</div>';
-  if(props.type)h+='<div style="font-size:0.6rem;color:rgba(255,255,255,0.28);margin-bottom:5px">'+props.type+'</div>';
-  if(props.name_location)h+='<div style="display:flex;align-items:flex-start;gap:5px;margin-bottom:6px"><img src="analysis-logos/pin.svg" width="15" height="15" style="opacity:0.5;flex-shrink:0;margin-top:2px"><span style="font-size:0.63rem;color:rgba(255,255,255,0.45);line-height:1.4">'+props.name_location+'</span></div>';
-  const _kgIco=(name,href,target)=>'<a href="'+href+'"'+(target?' target="'+target+'" rel="noopener"':'')+' style="display:inline-flex;opacity:0.65"><img src="analysis-logos/'+name+'.svg" width="24" height="24"></a>';
+  h+='<div style="font-size:0.72rem;font-weight:600;color:rgba(255,255,255,0.88);margin-bottom:4px;line-height:1.35">'+escapeHtml(props.name)+'</div>';
+  if(props.type)h+='<div style="font-size:0.6rem;color:rgba(255,255,255,0.28);margin-bottom:5px">'+escapeHtml(props.type)+'</div>';
+  if(props.name_location)h+='<div style="display:flex;align-items:flex-start;gap:5px;margin-bottom:6px"><img src="analysis-logos/pin.svg" width="15" height="15" style="opacity:0.5;flex-shrink:0;margin-top:2px"><span style="font-size:0.63rem;color:rgba(255,255,255,0.45);line-height:1.4">'+escapeHtml(props.name_location)+'</span></div>';
+  const _kgIco=(name,href,target)=>'<a href="'+escapeHtml(safeUrl(href))+'"'+(target?' target="'+target+'" rel="noopener"':'')+' style="display:inline-flex;opacity:0.65"><img src="analysis-logos/'+name+'.svg" width="24" height="24"></a>';
   if(phones.length||props.email||props.facebook_link){
     h+='<div style="display:flex;align-items:center;gap:10px;margin-top:2px">';
     phones.forEach(function(p,i){if(i===0)h+=_kgIco('phone','tel:'+p,'');});
@@ -6410,7 +6419,7 @@ function _onKgHover(e){
   if(map.getSource('kg-hover-pt'))map.getSource('kg-hover-pt').setData({type:'FeatureCollection',features:[{type:'Feature',geometry:{type:'Point',coordinates:coords},properties:{}}]});
   _runKgPulse();
   if(!_kgHoverPopup)_kgHoverPopup=new mapboxgl.Popup({closeButton:false,closeOnClick:false,offset:14,className:'school-popup',anchor:'bottom'});
-  _kgHoverPopup.setLngLat(coords).setHTML('<div class="school-popup-name">'+props.name+'</div>').addTo(map);
+  _kgHoverPopup.setLngLat(coords).setHTML('<div class="school-popup-name">'+escapeHtml(props.name)+'</div>').addTo(map);
   _showKgContact(props);
   if(_lastRouteKg===props.name)return;
   _lastRouteKg=props.name;
@@ -6637,7 +6646,7 @@ function _onSchoolHover(e){
   if(map.getSource('school-hover-pt'))map.getSource('school-hover-pt').setData({type:'FeatureCollection',features:[{type:'Feature',geometry:{type:'Point',coordinates:coords},properties:{}}]});
   _runSchoolPulse();
   if(!_schoolHoverPopup)_schoolHoverPopup=new mapboxgl.Popup({closeButton:false,closeOnClick:false,offset:14,className:'school-popup',anchor:'bottom'});
-  _schoolHoverPopup.setLngLat(coords).setHTML(`<div class="school-popup-name">${name}</div>`).addTo(map);
+  _schoolHoverPopup.setLngLat(coords).setHTML(`<div class="school-popup-name">${escapeHtml(name)}</div>`).addTo(map);
   if(_lastRouteSchool===name)return;
   _lastRouteSchool=name;
   showSchoolRoute(coords[0],coords[1],name);
@@ -7382,13 +7391,13 @@ async function toggleAccParking(){
       map.setFilter('parking-hover',['==',['get','_pkId'],f._pkId]);
       const isPaid=f.type==='paid';
       let html='';
-      if(f.zoneCode) html+=`<div style="font-size:0.78rem;font-weight:700;color:#f8fafc;margin-bottom:5px">${f.zoneCode}</div>`;
+      if(f.zoneCode) html+=`<div style="font-size:0.78rem;font-weight:700;color:#f8fafc;margin-bottom:5px">${escapeHtml(f.zoneCode)}</div>`;
       html+=`<div style="margin-bottom:${f.name?4:6}px">${isPaid
         ?`<span style="background:rgba(249,115,22,0.2);color:#fb923c;padding:1px 6px;border-radius:3px;font-size:0.67rem;font-weight:600">${isKa?'ფასიანი · Zone A':'Paid · Zone A'}</span>`
         :`<span style="background:rgba(34,197,94,0.15);color:#4ade80;padding:1px 6px;border-radius:3px;font-size:0.67rem;font-weight:600">${isKa?'უფასო':'Free'}</span>`
       }</div>`;
       const displayName=f.name?_latinToKa(f.name):'';
-      if(displayName) html+=`<div style="color:rgba(255,255,255,0.4);font-size:0.63rem;margin-bottom:5px">${displayName}</div>`;
+      if(displayName) html+=`<div style="color:rgba(255,255,255,0.4);font-size:0.63rem;margin-bottom:5px">${escapeHtml(displayName)}</div>`;
       html+='<div style="border-top:1px solid rgba(255,255,255,0.08);padding-top:5px">';
       if(f.cars>0) html+=`<div>🚗 <b>${f.cars}</b> ${isKa?'ავტომობილი':'cars'}</div>`;
       if(f.taxi>0) html+=`<div>🚕 <b>${f.taxi}</b> ${isKa?'ტაქსი':'taxi'}</div>`;

@@ -1,7 +1,7 @@
 "use strict";
 require("dotenv").config();
 const cron    = require("node-cron");
-const fetch   = require("node-fetch");
+// Node >= 18 provides global fetch; node-fetch v3 is ESM-only and crashes require()
 const { createClient } = require("@supabase/supabase-js");
 
 const supabase = createClient(
@@ -74,6 +74,18 @@ async function runTrialMaintenance() {
 
   if (expErr) console.error("[trial-cron] expire error:", expErr.message);
   else        console.log(`[trial-cron] expired ${expired?.length ?? 0} trial(s)`);
+
+  // 1b. Finalize canceled subscriptions whose paid period has ended
+  // (backstop in case the subscription.canceled webhook was missed)
+  const { data: ended, error: endErr } = await supabase
+    .from("subscriptions")
+    .update({ plan: "free", status: "canceled" })
+    .eq("status", "canceling")
+    .lt("current_period_end", new Date().toISOString())
+    .select("user_id");
+
+  if (endErr) console.error("[trial-cron] cancel-finalize error:", endErr.message);
+  else        console.log(`[trial-cron] finalized ${ended?.length ?? 0} ended cancellation(s)`);
 
   // 2. Day-10 reminder — trial ends in ~4 days (window ±12h around 4 days out)
   const { data: d4 } = await supabase
