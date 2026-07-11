@@ -5669,7 +5669,10 @@ async function fetchOwnerIds(url){
 
 // ── Supabase writes ───────────────────────────────────────────────────────────
 async function sbFetch(path,method,sbBody,prefer){
-  return fetch(PROXY,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"supabase",path,method,sbBody,prefer})});
+  // The worker verifies this token and rejects unauthenticated writes
+  const token=(await sb.auth.getSession()).data.session?.access_token;
+  if(!token)throw new Error("sbFetch: no session");
+  return fetch(PROXY,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify({action:"supabase",path,method,sbBody,prefer})});
 }
 async function saveToSupabase(id,cadastral,attrs,shape,owners){
   try{
