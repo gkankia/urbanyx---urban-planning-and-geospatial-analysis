@@ -10,10 +10,14 @@ const supabase = createClient(
   { auth: { autoRefreshToken: false, persistSession: false } }
 );
 
-const EMAILJS_SERVICE_ID  = "service_1qru585";
-const EMAILJS_PUBLIC_KEY  = "a4S8CQtZNMLh57ruh";
-const EMAILJS_TEMPLATE_ID = "template_jix4m2h";
+const EMAILJS_SERVICE_ID  = process.env.EMAILJS_SERVICE_ID  || "service_1qru585";
+const EMAILJS_PUBLIC_KEY  = process.env.EMAILJS_PUBLIC_KEY  || "a4S8CQtZNMLh57ruh";
+const EMAILJS_TEMPLATE_ID = process.env.EMAILJS_TEMPLATE_ID || "template_jix4m2h";
 const EMAILJS_PRIVATE_KEY = process.env.EMAILJS_PRIVATE_KEY;
+
+if (!EMAILJS_PRIVATE_KEY) {
+  console.error("[trial-cron] EMAILJS_PRIVATE_KEY is not set — trial reminder emails will be skipped");
+}
 
 const EMAIL_CONTENT = {
   fourDay: {

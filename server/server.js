@@ -1,9 +1,10 @@
 "use strict";
 require("dotenv").config();
 
-const express = require("express");
-const cors    = require("cors");
-const crypto  = require("crypto");
+const express   = require("express");
+const cors      = require("cors");
+const crypto    = require("crypto");
+const rateLimit = require("express-rate-limit");
 const { createClient } = require("@supabase/supabase-js");
 
 const app  = express();
@@ -17,6 +18,34 @@ const supabase = createClient(
 
 const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN;
 if (!ALLOWED_ORIGIN) console.warn("[server] ALLOWED_ORIGIN not set — CORS will reject cross-origin requests");
+
+// ── Rate limiters ─────────────────────────────────────────────────────────────
+// General API: 120 requests per 15 minutes per IP
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 120,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many requests, please try again later." },
+});
+
+// Auth-gated actions (cancel subscription etc.): 20 per 15 minutes per IP
+const strictLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many requests, please try again later." },
+});
+
+// Webhooks: generous limit — Paddle may retry rapidly
+const webhookLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000,
+  max: 200,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many webhook requests." },
+});
 
 // Raw body must be parsed before json() for webhook signature verification
 app.use("/webhooks", express.raw({ type: "*/*", limit: "512kb" }));
@@ -40,7 +69,7 @@ async function requireAuth(req, res, next) {
 app.get("/health", (_req, res) => res.json({ ok: true }));
 
 // ── GET /api/me ───────────────────────────────────────────────────────────────
-app.get("/api/me", requireAuth, async (req, res) => {
+app.get("/api/me", apiLimiter, requireAuth, async (req, res) => {
   const [profileRes, subRes] = await Promise.all([
     supabase.from("profiles").select("full_name, avatar_url").eq("id", req.user.id).single(),
     supabase.from("subscriptions").select("plan, status, billing_interval, current_period_end").eq("user_id", req.user.id).single(),
@@ -60,7 +89,7 @@ app.get("/api/me", requireAuth, async (req, res) => {
 });
 
 // ── POST /webhooks/paddle ─────────────────────────────────────────────────────
-app.post("/webhooks/paddle", async (req, res) => {
+app.post("/webhooks/paddle", webhookLimiter, async (req, res) => {
   const secret    = process.env.PADDLE_WEBHOOK_SECRET;
   const sigHeader = req.headers["paddle-signature"];
   if (!sigHeader || !secret) return res.status(401).json({ error: "Missing signature or secret" });
@@ -197,7 +226,7 @@ async function handlePaddleEvent(event) {
 // ── POST /api/paddle/cancel ───────────────────────────────────────────────────
 // Monthly: cancels at end of current billing period.
 // Yearly within 30 days of start: cancels immediately (refund eligible).
-app.post("/api/paddle/cancel", requireAuth, async (req, res) => {
+app.post("/api/paddle/cancel", strictLimiter, requireAuth, async (req, res) => {
   const { data: sub, error } = await supabase
     .from("subscriptions")
     .select("paddle_subscription_id, billing_interval, current_period_end, status, subscription_started_at")
