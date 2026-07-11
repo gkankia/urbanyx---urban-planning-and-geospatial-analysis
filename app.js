@@ -163,7 +163,7 @@ const T = {
       siTitle:"Sign in", siEmail:"Email", siPassword:"Password",
       siBtn:"Sign in", siForgot:"Forgot password?", siCreate:"Create account",
       siFooter:'<a onclick="showView(\'view-reset\')">Forgot password?</a> · <a onclick="showView(\'view-signup\')">Create account</a>',
-      suTitle:"Create account", suSub:"Includes a free 14-day Pro trial — no credit card needed",
+      suTitle:"Create account", suSub:"Includes a free 14-day Pro trial — no payment needed",
       suName:"Full name",
       suSector:"Sector", suSectorPh:"Select your sector",
       suSectors:["Architecture / Urban Design","Engineering","Real Estate / Development","Government / Public Sector","Academic / Research","Urban Planning","Construction","Finance / Investment","Legal","Other"],
