@@ -175,7 +175,7 @@ const T = {
       updatePwLabel:"New password",updatePwBtn:"Update password"
     },
     pw:{
-      title:"Upgrade to Pro",sub:"Create a free account for 15 parcel views and 15 analyses. Pro gives you up to 1,000 views and analyses.",
+      title:"Upgrade to Pro",sub:"Create a free account for 5 parcel views and 5 analyses per month. Pro gives you up to 1,000 views and analyses.",
       guestName:"Guest",freeName:"Free",proBadge:"Pro",proName:"Pro",freePeriod:"",proPeriod:"/mo",proBilling:"billed annually · €240/yr",proMonthlyPeriod:"/mo",proMonthlyBilling:"billed monthly",togAnnual:"Annual",togMonthly:"Monthly",
       colGuest:"Guest",colFree:"Free",colPro:"Pro",
       g1:"5",g2:"5",g3:"—",g4:"✓",g5:"—",g6:"✓",g7:"✓",g8:"—",g9:"—",g10:"—",
@@ -185,7 +185,7 @@ const T = {
       r4:"Street imagery",f4:"✓",p4:"✓",
       r5:"Urban mobility analysis<br><small style='opacity:.45;font-size:.9em'>Tbilisi only</small>",f5:"—",p5:"✓",
       r6:"Space syntax analysis",f6:"✓",p6:"✓",
-      r7:"Urban diversity score",f7:"✓",p7:"✓",
+      r7:"Urban diversity score",f7:"—",p7:"✓",
       r8:"Climate analysis",f8:"—",p8:"✓",
       r9:"Energy efficiency",f9:"—",p9:"✓",
       r10:"Relief analysis<br><small style='opacity:.45;font-size:.9em'>Tbilisi only</small>",f10:"—",p10:"✓",
@@ -195,8 +195,8 @@ const T = {
       trialTitle:"Upgrade to keep your Pro access",
       trialSub:"Your trial ends in X days. Subscribe now to keep climate analysis, GeoData export, and extended isochrone.",
       billingComingSoon:"Billing portal coming soon.",
-      guestLimitTitle:"Guest limit reached",guestLimitSub:"You’ve used your 5 free parcel views. Create a free account for 15 views and 15 analyses.",
-      guestAnalysisLimitTitle:"Guest limit reached",guestAnalysisLimitSub:"You’ve used your 5 free analyses. Create a free account for 15 parcel views and 15 analyses.",
+      guestLimitTitle:"Guest limit reached",guestLimitSub:"You’ve used your 5 free parcel views. Create a free account for 5 views and 5 analyses every month.",
+      guestAnalysisLimitTitle:"Guest limit reached",guestAnalysisLimitSub:"You’ve used your 5 free analyses. Create a free account for 5 parcel views and 5 analyses every month.",
       freeLimitTitle:"Free limit reached",freeLimitSub:"You’ve used your 5 parcel views. Upgrade to Pro for up to 1,000.",
       freeAnalysisLimitTitle:"Free limit reached",freeAnalysisLimitSub:"You’ve used your 5 analyses. Upgrade to Pro for up to 1,000.",
       proLimitTitle:"Pro limit reached",proLimitSub:"You’ve used your 1,000 parcel views. Contact us to extend your limit.",
@@ -305,7 +305,7 @@ const T = {
       r4:"ქუჩის გამოსახულება",f4:"✓",p4:"✓",
       r5:"ურბანული მობილობა<br><small style='opacity:.45;font-size:.9em'>თბილისი თავ</small>",f5:"—",p5:"✓",
       r6:"სივრცული სინტაქსი",f6:"✓",p6:"✓",
-      r7:"ურბანული მრავალპეროვნება",f7:"✓",p7:"✓",
+      r7:"ურბანული მრავალპეროვნება",f7:"—",p7:"✓",
       r8:"კლიმატის ანალიზი",f8:"—",p8:"✓",
       r9:"ენერგოეფურობა",f9:"—",p9:"✓",
       r10:"რელიევის ანალიზი<br><small style='opacity:.45;font-size:.9em'>თბილისი თავ</small>",f10:"—",p10:"✓",
@@ -315,8 +315,8 @@ const T = {
       trialTitle:"განაახლე Pro წვდომის შესანარჩუნებლად",
       trialSub:"საცდელი პერიოდი სრულდება X დღეში. გამოიწერე ახლა კლიმატის ანალიზის, GeoData ექსპორტის და გაფართოებული იზოქრონის შესანარჩუნებლად.",
       billingComingSoon:"ბილინგის პორტალი მალე.",
-      guestLimitTitle:"სტუმარის ლიმიტი",guestLimitSub:"გამოიყენე 5 უფასო ნაკვეთის ხედვა. შექმენი უფასო ანგარიში 15 ხედვისა და 15 ანალიზისთვის.",
-      guestAnalysisLimitTitle:"სტუმარის ლიმიტი",guestAnalysisLimitSub:"გამოიყენე 5 უფასო ანალიზი. შექმენი უფასო ანგარიში 15 ხედვისა და 15 ანალიზისთვის.",
+      guestLimitTitle:"სტუმარის ლიმიტი",guestLimitSub:"გამოიყენე 5 უფასო ნაკვეთის ხედვა. შექმენი უფასო ანგარიში ყოველთვიური 5 ხედვისა და 5 ანალიზისთვის.",
+      guestAnalysisLimitTitle:"სტუმარის ლიმიტი",guestAnalysisLimitSub:"გამოიყენე 5 უფასო ანალიზი. შექმენი უფასო ანგარიში ყოველთვიური 5 ხედვისა და 5 ანალიზისთვის.",
       freeLimitTitle:"ლიმიტი ამოიწურა",freeLimitSub:"გამოიყენე 5 ნაკვეთის ხედვა. Pro-ზე გადაიხადეთ 1,000-მდე მეტი.",
       freeAnalysisLimitTitle:"ლიმიტი ამოიწურა",freeAnalysisLimitSub:"გამოიყენე 5 ანალიზი. Pro-ზე გადაიხადეთ 1,000-მდე მეტი.",
       proLimitTitle:"პრო ლიმიტი ამოიწურა",proLimitSub:"გამოიყენე 1,000 ნაკვეთის ხედვა. დაგვიკავშირდეთ.",
@@ -2750,8 +2750,8 @@ async function _autoSaveProject(){
 function _buildActionLog(){
   const sw=id=>document.getElementById(id)?.classList.contains('on');
   const actions=[];
-  // Walkability (main analysis — must replay first so isochrone is ready)
-  if(_walkData)actions.push({fn:'onAnalyseClick'});
+  // Walkability (free analysis) feature removed — no longer recorded at save time;
+  // the isochrone itself is persisted via savedSnap.isoData.
   // Accessibility panel toggles (isochrone-dependent)
   if(sw('acc-iso-sw'))actions.push({fn:'toggleAccIsochrone'});
   if(_schoolsLayerActive)actions.push({fn:'toggleAccSchools'});
@@ -2785,12 +2785,10 @@ async function _replayActions(actions,savedSnap){
     if(savedSnap.accMinutes&&typeof _accMinutes!=='undefined')_accMinutes=savedSnap.accMinutes;
     // Init panel DOM structure
     if(typeof setupProCard==='function')setupProCard(false);
-    // Phase 1: walkability (async — isochrone-dependent analyses need _isoData to be set first)
-    if(actions.some(a=>a.fn==='onAnalyseClick')){
-      if(typeof _setAnalysisPanel==='function')_setAnalysisPanel(true);
-      if(typeof runAnalysis==='function')await runAnalysis();
-    }else if(savedSnap.isoData){
-      // No walkability action but we have a saved isochrone (e.g. accessibility-only session)
+    // Walkability (free analysis) feature removed — old projects may still carry
+    // an onAnalyseClick action; restore the saved isochrone directly instead of
+    // re-running the analysis (accessibility analyses only need _isoData).
+    if(savedSnap.isoData){
       _isoData=savedSnap.isoData;
       if(mapReady)map.getSource('isochrone')?.setData(_isoData);
     }
@@ -3965,7 +3963,7 @@ async function onDrawCreate(){
   document.getElementById("info-card").style.display="none";
   document.getElementById("owner-results-card").style.display="none";
   logFeatureUse("map_click").catch(()=>{});
-  if(currentUser&&currentUser.plan!=="pro")document.getElementById("analyse-btn").style.display="flex";
+  // Walkability (free analysis) feature removed — #analyse-btn stays hidden
   setupProCard();
   // OSM analysis moved to Urban Functions accordion
 
@@ -5212,7 +5210,9 @@ function clearParcelSelection(){
   _updateMapInfoBadge();
   if(mapReady)map.getSource("parcel")?.setData({type:"FeatureCollection",features:[]});
 }
-function onAnalyseClick(){setupProCard(false);_setAnalysisPanel(true);runAnalysis();}
+// Walkability (free analysis) feature removed. Kept as a no-op because old
+// saved projects and the hidden #analyse-btn onclick still reference it.
+function onAnalyseClick(){}
 
 let is3D = false;
 function toggle3D() {
@@ -5983,7 +5983,6 @@ function showCatInPanel(catKey,btnEl){
   if(_contentEl&&!_contentEl.textContent.trim()){
     _contentEl.innerHTML='<div class="nav-flyout-loading"><span class="spinner-sm"></span><span>'+(t().analyzing||'Analyzing…')+'</span></div>';
     if(typeof setupProCard==='function')setupProCard(false);
-    if(typeof runAnalysis==='function')runAnalysis();
   }
 }
 
@@ -10329,7 +10328,7 @@ async function loadParcel(lbl, code){
   document.getElementById("val-extra").textContent=isLine?(attrs.extraFeatures||"—"):"—";
   document.getElementById("row-line-extra").style.display=(isLine&&!!attrs.extraFeatures)?"flex":"none";
   document.getElementById("info-card").style.display="none";
-  document.getElementById("analyse-btn").style.display=(isLine||!currentUser||currentUser.plan==="pro")?"none":"flex";
+  document.getElementById("analyse-btn").style.display="none"; // walkability (free analysis) removed
   _updateMapInfoBadge();
   if(!isLine){
     setupProCard();
@@ -10449,7 +10448,7 @@ function zoomToOwnerParcel(idx){
   document.getElementById("val-addr").textContent=p.address||"—";
   document.getElementById("val-owner").textContent="—";
   document.getElementById("info-card").style.display="none";
-  document.getElementById("analyse-btn").style.display=(isLine||!currentUser||currentUser.plan==="pro")?"none":"flex";
+  document.getElementById("analyse-btn").style.display="none"; // walkability (free analysis) removed
   _updateMapInfoBadge();
   showParcelPopup(parcelCentroid);
 }
@@ -10485,7 +10484,7 @@ async function loadParcelFromDB(cadastral){
   document.getElementById("row-line-extra").style.display="none";
   document.getElementById("info-card").style.display="none";
   document.getElementById("owner-results-card").style.display="none";
-  document.getElementById("analyse-btn").style.display=(isLine||!currentUser||currentUser.plan==="pro")?"none":"flex";
+  document.getElementById("analyse-btn").style.display="none"; // walkability (free analysis) removed
   _updateMapInfoBadge();
   if(!isLine){
     setupProCard();
