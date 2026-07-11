@@ -29,18 +29,31 @@ let _toastTimer=null;function showToast(msg,dur=3000){const el=document.getEleme
 function escapeHtml(s){return String(s??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");}
 // Restrict dynamically built link targets to safe schemes (blocks javascript: URLs)
 function safeUrl(u){u=String(u??"").trim();return /^(https?:|tel:|mailto:)/i.test(u)?u:"#";}
-const GUEST_PARCEL_LIMIT = 5;
-// Guest analysis allowance removed — guests must sign up before any analysis
-const FREE_PARCEL_LIMIT = 5;
-const FREE_ANALYSIS_LIMIT = 5;
+// Guest functionality removed — the platform requires sign-in for parcel views and analyses.
+// Tiers: free 50/mo · 14-day trial 300 · paid pro 1,000/mo
+const FREE_PARCEL_LIMIT = 50;
+const FREE_ANALYSIS_LIMIT = 50;
+const TRIAL_PARCEL_LIMIT = 300;
+const TRIAL_ANALYSIS_LIMIT = 300;
 const PRO_PARCEL_LIMIT = 1000;
 const PRO_ANALYSIS_LIMIT = 1000;
-let _guestParcelCount = parseInt(localStorage.getItem("gstP")||"0",10);
 let _freeParcelCount = 0;
 let _freeAnalysisCount = 0;
 let _proParcelCount = 0;
 let _proAnalysisCount = 0;
+function _isTrialing(){return currentUser?._subStatus==="trialing";}
+function _parcelLimit(){return currentUser?.plan==="pro"?(_isTrialing()?TRIAL_PARCEL_LIMIT:PRO_PARCEL_LIMIT):FREE_PARCEL_LIMIT;}
+function _analysisLimit(){return currentUser?.plan==="pro"?(_isTrialing()?TRIAL_ANALYSIS_LIMIT:PRO_ANALYSIS_LIMIT):FREE_ANALYSIS_LIMIT;}
+function _ymNow(){const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");}
+// Counters reset at the start of each calendar month (month stamp per user)
+function _resetIfNewMonth(uid,stampKey,keys){
+  if(localStorage.getItem(stampKey+uid)!==_ymNow()){
+    localStorage.setItem(stampKey+uid,_ymNow());
+    keys.forEach(k=>localStorage.setItem(k+uid,"0"));
+  }
+}
 function _loadFreeCounts(uid){
+  _resetIfNewMonth(uid,"frM_",["frP_","frA_"]);
   _freeParcelCount=parseInt(localStorage.getItem("frP_"+uid)||"0",10);
   _freeAnalysisCount=parseInt(localStorage.getItem("frA_"+uid)||"0",10);
 }
@@ -49,6 +62,7 @@ function _saveFreeCounts(uid){
   localStorage.setItem("frA_"+uid,String(_freeAnalysisCount));
 }
 function _loadProCounts(uid){
+  _resetIfNewMonth(uid,"prM_",["prP_","prA_"]);
   _proParcelCount=parseInt(localStorage.getItem("prP_"+uid)||"0",10);
   _proAnalysisCount=parseInt(localStorage.getItem("prA_"+uid)||"0",10);
 }
@@ -129,7 +143,6 @@ const T = {
     planFree:"Free plan", planPro:"Pro plan",
     upgrade:"Upgrade", billing:"Billing", signOut:"Sign out",
     centerSignIn:"Sign in", centerSignUp:"Create account", orClick:"click or draw on the map",
-    guestLimitTitle:"Free limit reached", guestLimitSub:"You've used your 5 free searches. Create a free account to continue.",
     cats:{ food:{label:"Food & drink",icon:"🍽"}, health:{label:"Health",icon:"🏥"}, parks:{label:"Parks & nature",icon:"🌿"}, retail:{label:"Retail",icon:"🛒"}, culture:{label:"Culture & leisure",icon:"🎭"} },
     proCats:{ schools:{label:"Schools",icon:"🏫"}, kindergartens:{label:"Kindergartens",icon:"🧒"}, crashes:{label:"Road incidents",icon:"⚠️"} },
     proCategories:{ climate:"Climate", education:"Education", mobility:"Mobility", morphology:"Urban Morphology", energy:"Clean Energy", relief:"Relief Analysis" },
@@ -150,7 +163,7 @@ const T = {
       siTitle:"Sign in", siEmail:"Email", siPassword:"Password",
       siBtn:"Sign in", siForgot:"Forgot password?", siCreate:"Create account",
       siFooter:'<a onclick="showView(\'view-reset\')">Forgot password?</a> · <a onclick="showView(\'view-signup\')">Create account</a>',
-      suTitle:"Create account", suSub:"Free to start — no credit card needed",
+      suTitle:"Create account", suSub:"Includes a free 14-day Pro trial — no credit card needed",
       suName:"Full name",
       suSector:"Sector", suSectorPh:"Select your sector",
       suSectors:["Architecture / Urban Design","Engineering","Real Estate / Development","Government / Public Sector","Academic / Research","Urban Planning","Construction","Finance / Investment","Legal","Other"],
@@ -174,12 +187,11 @@ const T = {
       updatePwLabel:"New password",updatePwBtn:"Update password"
     },
     pw:{
-      title:"Upgrade to Pro",sub:"Create a free account for 5 parcel views and 5 analyses per month. Pro gives you up to 1,000 views and analyses.",
-      guestName:"Guest",freeName:"Free",proBadge:"Pro",proName:"Pro",freePeriod:"",proPeriod:"/mo",proBilling:"billed annually · €240/yr",proMonthlyPeriod:"/mo",proMonthlyBilling:"billed monthly",togAnnual:"Annual",togMonthly:"Monthly",
-      colGuest:"Guest",colFree:"Free",colPro:"Pro",
-      g1:"—",g2:"—",g3:"—",g4:"✓",g5:"—",g6:"—",g7:"—",g8:"—",g9:"—",g10:"—",
-      r1:"Parcel-level analysis",f1:"5",p1:"1000",
-      r2:"Zoning analysis<br><small style='opacity:.45;font-size:.9em'>Tbilisi only</small>",f2:"5",p2:"1000",
+      title:"Upgrade to Pro",sub:"Every new account starts with a 14-day Pro trial (300 views & analyses). Free plan: 50 per month. Pro: up to 1,000.",
+      freeName:"Free",proBadge:"Pro",proName:"Pro",freePeriod:"",proPeriod:"/mo",proBilling:"billed annually · €240/yr",proMonthlyPeriod:"/mo",proMonthlyBilling:"billed monthly",togAnnual:"Annual",togMonthly:"Monthly",
+      colFree:"Free",colPro:"Pro",
+      r1:"Parcel-level analysis",f1:"50",p1:"1000",
+      r2:"Zoning analysis<br><small style='opacity:.45;font-size:.9em'>Tbilisi only</small>",f2:"50",p2:"1000",
       r3:"Plan on your own",f3:"—",p3:"✓",
       r4:"Street imagery",f4:"✓",p4:"✓",
       r5:"Urban mobility analysis<br><small style='opacity:.45;font-size:.9em'>Tbilisi only</small>",f5:"—",p5:"✓",
@@ -194,9 +206,10 @@ const T = {
       trialTitle:"Upgrade to keep your Pro access",
       trialSub:"Your trial ends in X days. Subscribe now to keep climate analysis, GeoData export, and extended isochrone.",
       billingComingSoon:"Billing portal coming soon.",
-      guestLimitTitle:"Guest limit reached",guestLimitSub:"You’ve used your 5 free parcel views. Create a free account for 5 views and 5 analyses every month.",
-      freeLimitTitle:"Free limit reached",freeLimitSub:"You’ve used your 5 parcel views. Upgrade to Pro for up to 1,000.",
-      freeAnalysisLimitTitle:"Free limit reached",freeAnalysisLimitSub:"You’ve used your 5 analyses. Upgrade to Pro for up to 1,000.",
+      freeLimitTitle:"Free limit reached",freeLimitSub:"You’ve used your 50 parcel views this month. Upgrade to Pro for up to 1,000.",
+      freeAnalysisLimitTitle:"Free limit reached",freeAnalysisLimitSub:"You’ve used your 50 analyses this month. Upgrade to Pro for up to 1,000.",
+      trialLimitTitle:"Trial limit reached",trialLimitSub:"You’ve used your 300 trial parcel views. Subscribe to Pro for up to 1,000 every month.",
+      trialAnalysisLimitTitle:"Trial limit reached",trialAnalysisLimitSub:"You’ve used your 300 trial analyses. Subscribe to Pro for up to 1,000 every month.",
       proLimitTitle:"Pro limit reached",proLimitSub:"You’ve used your 1,000 parcel views. Contact us to extend your limit.",
       proAnalysisLimitTitle:"Pro limit reached",proAnalysisLimitSub:"You’ve used your 1,000 analyses. Contact us to extend your limit.",
     rateInfoTip:"Different exchange rates and bank fees may apply."
@@ -215,7 +228,7 @@ const T = {
     pdfWalkability:"Walkability Analysis", pdfDiversityIndex:"Shannon Diversity Index",
     pdfStreetImagery:"Street Imagery", pdfProAnalysis:"Pro Analysis",
     pdfNoScore:"Run analysis to generate score", pdfNoImage:"No street imagery available",
-    dash:{ title:"Dashboard", usage:"Usage", usedToday:"Searches this month", remaining:"Remaining", limit:"Monthly limit", resetsAt:"Resets on", billing:"Plan & Billing", freePlan:"Free plan", proPlan:"Pro plan", freeDesc:"5 parcel views and analyses / month", proDesc:"1,000 searches / month · Full Pro analysis · GeoData export", upgrade:"Upgrade to Pro", manageBilling:"Manage billing", billingTitle:"Billing", billingSubFree:"Manage your plan", billingSubPro:"Your active subscription", billingLblPlan:"Current plan", billingLblPm:"Payment method", billingLblHistory:"Billing history", billingPeriod:"/month", billingRenewal:"Next renewal", billingTrialEnds:"Trial — first billing", billingDaysLeft:"days remaining", billingTrialNote:"Your 14-day free trial is active. If you cancel now, you keep full access until the trial ends.", billingPostTrialNote:"If you cancel, you keep Pro access until your renewal date. No further charges after that.", billingCanceling:"Cancellation scheduled — access continues until period end.", billingNoCard:"No payment method on file", billingNoHistory:"No billing history yet", billingCancel:"Cancel subscription", billingCancelConfirm:"Are you sure you want to cancel? You will keep access until the current period ends.", billingCanceledTrial:"Your subscription has been cancelled. No charge was made.", billingCanceledRefund:"Your subscription has been cancelled and a refund has been issued for the unused period.", signOut:"Sign out", activity:"Activity this month" },
+    dash:{ title:"Dashboard", usage:"Usage", usedToday:"Searches this month", remaining:"Remaining", limit:"Monthly limit", resetsAt:"Resets on", billing:"Plan & Billing", freePlan:"Free plan", proPlan:"Pro plan", freeDesc:"50 parcel views and analyses / month", proDesc:"1,000 searches / month · Full Pro analysis · GeoData export", upgrade:"Upgrade to Pro", manageBilling:"Manage billing", billingTitle:"Billing", billingSubFree:"Manage your plan", billingSubPro:"Your active subscription", billingLblPlan:"Current plan", billingLblPm:"Payment method", billingLblHistory:"Billing history", billingPeriod:"/month", billingRenewal:"Next renewal", billingTrialEnds:"Trial — first billing", billingDaysLeft:"days remaining", billingTrialNote:"Your 14-day free trial is active. If you cancel now, you keep full access until the trial ends.", billingPostTrialNote:"If you cancel, you keep Pro access until your renewal date. No further charges after that.", billingCanceling:"Cancellation scheduled — access continues until period end.", billingNoCard:"No payment method on file", billingNoHistory:"No billing history yet", billingCancel:"Cancel subscription", billingCancelConfirm:"Are you sure you want to cancel? You will keep access until the current period ends.", billingCanceledTrial:"Your subscription has been cancelled. No charge was made.", billingCanceledRefund:"Your subscription has been cancelled and a refund has been issued for the unused period.", signOut:"Sign out", activity:"Activity this month" },
     projects:{ navTip:"My Projects", panelTitle:"My Projects", saveBtn:"Save current analysis", emptyMsg:"No saved projects yet.", openBtn:"Open", deleteConfirm:"Delete this project?", loadingMsg:"Loading…", savingMsg:"Saving…", saveModalTitle:"Save Project", saveModalHint:"Saves map view, selected features, imported layers and analysis results.", cancelBtn:"Cancel", confirmBtn:"Save", savedToast:"Project saved", deletedToast:"Project deleted", loadedToast:"Project loaded", errorSave:"Failed to save project", errorLoad:"Failed to load project", errorDelete:"Delete failed", layers:"layer", layersPlural:"layers" },
     activityLabels:{ map_click:"Clicks", free_analysis:"Free analysis", pro_analysis:"Pro analysis", relief_analysis:"Relief", pdf_export:"PDF export", geojson_export:"GeoJSON export" },
     activityIcons:{ map_click:"—", free_analysis:"○", pro_analysis:"◆", relief_analysis:"△", pdf_export:"↓", geojson_export:"⬡" },
@@ -248,7 +261,6 @@ const T = {
     planFree:"უფასო გეგმა", planPro:"Pro გეგმა",
     upgrade:"განახლება", billing:"ბილინგი", signOut:"გასვლა",
     centerSignIn:"შესვლა", centerSignUp:"ანგარიშის შექმნა", orClick:"დააჭირეთ ან დახატეთ რუკაზე",
-    guestLimitTitle:"უფასო ლიმიტი ამოიწურა", guestLimitSub:"გამოიყენე 5 უფასო ძიება. გასაგრძელებლად შექმენი უფასო ანგარიში.",
     cats:{ food:{label:"საკვები და სასმელი",icon:"🍽"}, health:{label:"ჯანდაცვა",icon:"🏥"}, parks:{label:"პარკები",icon:"🌿"}, retail:{label:"სავაჭრო",icon:"🛒"}, culture:{label:"კულტურა",icon:"🎭"} },
     proCats:{ schools:{label:"სკოლები",icon:"🏫"}, kindergartens:{label:"საბავშვო ბაღები",icon:"🧒"}, crashes:{label:"საგზაო ინციდენტები",icon:"⚠️"} },
     proCategories:{ climate:"კლიმატი", education:"განათლება", mobility:"მობილობა", morphology:"ურბანული მორფოლოგია", energy:"სუფთა ენერგია", relief:"რელიეფის ანალიზი" },
@@ -269,7 +281,7 @@ const T = {
       siTitle:"შესვლა", siEmail:"ელ-ფოსტა", siPassword:"პაროლი",
       siBtn:"შესვლა",
       siFooter:'<a onclick="showView(\'view-reset\')">პაროლი დაგავიწყდა?</a> · <a onclick="showView(\'view-signup\')">ანგარიშის შექმნა</a>',
-      suTitle:"ანგარიშის შექმნა", suSub:"უფასოა — ბარათი არ სჭირდება",
+      suTitle:"ანგარიშის შექმნა", suSub:"მოიცავს უფასო 14-დღიან Pro პერიოდს — ბარათი არ სჭირდება",
       suName:"სახელი",
       suSector:"სექტორი", suSectorPh:"აირჩიე სექტორი",
       suSectors:["არქიტექტურა / ურბანული დიზაინი","ინჟინერია","უძრავი ქონება / დეველოპმენტი","მთავრობა / საჯარო სექტორი","აკადემია / კვლევა","ურბანული დაგეგმარება","მშენებლობა","ფინანსები / ინვესტიცია","იურიდიული","სხვა"],
@@ -287,18 +299,17 @@ const T = {
       errFill:"შეავსე ყველა ველი.",
       errPassword:"პაროლი უნდა იყოს მინიმუმ 8 სიმბოლო.",
       errTerms:"გასაგრძელებლად საჭიროა წესებსა და პირობებზე თანხმობა.",
-      suTerms:'წავიკითხე და ვეთანხმები <a href="/terms" target="_blank" style="color:#818cf8;text-decoration:underline">წესებსა და პირობებს</a> და <a href="/privacy" target="_blank" style="color:#818cf8;text-decoration:underline">კონფიდენციალურობის პოლიტიკას</a>, 7-დღიანი საცდელი პერიოდის ჩათვლით, და ავტომატური ბილინგის ციკლს.',
+      suTerms:'წავიკითხე და ვეთანხმები <a href="/terms" target="_blank" style="color:#818cf8;text-decoration:underline">წესებსა და პირობებს</a> და <a href="/privacy" target="_blank" style="color:#818cf8;text-decoration:underline">კონფიდენციალურობის პოლიტიკას</a>, 14-დღიანი საცდელი პერიოდის ჩათვლით, და ავტომატური ბილინგის ციკლს.',
       errEmail:"შეიყვანე ელ-ფოსტა.",
       updatePwTitle:"ახალი პაროლის დაყენება",updatePwSub:"შეიყვანე ახალი პაროლი.",
       updatePwLabel:"ახალი პაროლი",updatePwBtn:"პაროლის განახლება"
     },
     pw:{
       title:"Pro-ზე გადასვლა",sub:"შექმენი უფასო ანგარიში 50 ნაკვეთის ხედვისა და 50 ანალიზისთვის. Pro აძლევს ულიმიტო წვდომასა და პრემიუმ ფუნქციებს.",
-      guestName:"სტუმარი",freeName:"უფასო",proBadge:"Pro",proName:"Pro",freePeriod:"",proPeriod:"/თვე",proBilling:"წლიურად · €240/წელ",proMonthlyPeriod:"/თვე",proMonthlyBilling:"ყოველთვიურად",togAnnual:"წლიური",togMonthly:"თვიური",
-      colGuest:"სტუმარი",colFree:"უფასო",colPro:"Pro",
-      g1:"—",g2:"—",g3:"—",g4:"✓",g5:"—",g6:"—",g7:"—",g8:"—",g9:"—",g10:"—",
-      r1:"ნაკვეთის ანალიზი",f1:"5",p1:"1000",
-      r2:"ზონირების ანალიზი<br><small style='opacity:.45;font-size:.9em'>თბილისი თავ</small>",f2:"5",p2:"1000",
+      freeName:"უფასო",proBadge:"Pro",proName:"Pro",freePeriod:"",proPeriod:"/თვე",proBilling:"წლიურად · €240/წელ",proMonthlyPeriod:"/თვე",proMonthlyBilling:"ყოველთვიურად",togAnnual:"წლიური",togMonthly:"თვიური",
+      colFree:"უფასო",colPro:"Pro",
+      r1:"ნაკვეთის ანალიზი",f1:"50",p1:"1000",
+      r2:"ზონირების ანალიზი<br><small style='opacity:.45;font-size:.9em'>თბილისი თავ</small>",f2:"50",p2:"1000",
       r3:"საკუთარი გეგმის შედგენა",f3:"—",p3:"✓",
       r4:"ქუჩის გამოსახულება",f4:"✓",p4:"✓",
       r5:"ურბანული მობილობა<br><small style='opacity:.45;font-size:.9em'>თბილისი თავ</small>",f5:"—",p5:"✓",
@@ -313,9 +324,10 @@ const T = {
       trialTitle:"განაახლე Pro წვდომის შესანარჩუნებლად",
       trialSub:"საცდელი პერიოდი სრულდება X დღეში. გამოიწერე ახლა კლიმატის ანალიზის, GeoData ექსპორტის და გაფართოებული იზოქრონის შესანარჩუნებლად.",
       billingComingSoon:"ბილინგის პორტალი მალე.",
-      guestLimitTitle:"სტუმარის ლიმიტი",guestLimitSub:"გამოიყენე 5 უფასო ნაკვეთის ხედვა. შექმენი უფასო ანგარიში ყოველთვიური 5 ხედვისა და 5 ანალიზისთვის.",
-      freeLimitTitle:"ლიმიტი ამოიწურა",freeLimitSub:"გამოიყენე 5 ნაკვეთის ხედვა. Pro-ზე გადაიხადეთ 1,000-მდე მეტი.",
-      freeAnalysisLimitTitle:"ლიმიტი ამოიწურა",freeAnalysisLimitSub:"გამოიყენე 5 ანალიზი. Pro-ზე გადაიხადეთ 1,000-მდე მეტი.",
+      freeLimitTitle:"ლიმიტი ამოიწურა",freeLimitSub:"გამოიყენე ამ თვის 50 ნაკვეთის ხედვა. Pro გაძლევს 1,000-მდე ყოველთვიურად.",
+      freeAnalysisLimitTitle:"ლიმიტი ამოიწურა",freeAnalysisLimitSub:"გამოიყენე ამ თვის 50 ანალიზი. Pro გაძლევს 1,000-მდე ყოველთვიურად.",
+      trialLimitTitle:"საცდელი ლიმიტი ამოიწურა",trialLimitSub:"გამოიყენე საცდელი პერიოდის 300 ნაკვეთის ხედვა. გამოიწერე Pro 1,000-მდე ყოველთვიური ხედვისთვის.",
+      trialAnalysisLimitTitle:"საცდელი ლიმიტი ამოიწურა",trialAnalysisLimitSub:"გამოიყენე საცდელი პერიოდის 300 ანალიზი. გამოიწერე Pro 1,000-მდე ყოველთვიური ანალიზისთვის.",
       proLimitTitle:"პრო ლიმიტი ამოიწურა",proLimitSub:"გამოიყენე 1,000 ნაკვეთის ხედვა. დაგვიკავშირდეთ.",
       proAnalysisLimitTitle:"პრო ლიმიტი ამოიწურა",proAnalysisLimitSub:"გამოიყენე 1,000 ანალიზი. დაგვიკავშირდეთ.",
     rateInfoTip:"შეიძლება განსხვავებული გაცვლითი კურსი და საბანკო საკომისიო მოქმედებდეს.",
@@ -332,7 +344,7 @@ const T = {
     exportBtn:"PDF ექსპორტი", exportGenerating:"მზადდება…", exportProOnly:"PDF ექსპორტი Pro ფუნქციაა.",
     geodataBtn:"GeoData ჩამოტვირთვა", geodataProOnly:"GeoData ექსპორტი Pro ფუნქციაა.",
     pdfTitle:"ნაკვეთის ანალიზის ანგარიში", pdfGenerated:"შექმნილია Urbanyx-ით",
-    dash:{ title:"დეშბორდი", usage:"გამოყენება", usedToday:"ძიება ამ თვეში", remaining:"დარჩენილი", limit:"თვიური ლიმიტი", resetsAt:"განახლდება", billing:"გეგმა და ბილინგი", freePlan:"უფასო გეგმა", proPlan:"Pro გეგმა", freeDesc:"5 ნაკვეთის ხედვა და ანალიზი / თვეში", proDesc:"1,000 ძიება / თვეში · Pro ანალიზი · GeoData ექსპორტი", upgrade:"Pro-ზე გადასვლა", manageBilling:"ბილინგის მართვა", billingTitle:"ბილინგი", billingSubFree:"გეგმის მართვა", billingSubPro:"თქვენი გამოწერა", billingLblPlan:"მიმდინარე გეგმა", billingLblPm:"გადახდის მეთოდი", billingLblHistory:"გადახდების ისტორია", billingPeriod:"/თვეში", billingRenewal:"შემდეგი გადახდა", billingTrialEnds:"გამოცდა — პირველი გადახდა", billingDaysLeft:"დღე რჩება", billingTrialNote:"14-დღიანი უფასო პერიოდი აქტიურია. გაუქმების შემთხვევაში პრო ფუნქციები ხელმისაწვდომი იქნება გამოცდის ბოლომდე.", billingPostTrialNote:"გაუქმების შემთხვევაში Pro წვდომა შენარჩუნდება განახლების თარიღამდე. ამის შემდეგ თანხა არ ჩამოიჭრება.", billingCanceling:"გაუქმება დაგეგმილია — წვდომა გრძელდება პერიოდის ბოლომდე.", billingNoCard:"გადახდის მეთოდი არ არის", billingNoHistory:"გადახდების ისტორია ცარიელია", billingCancel:"გამოწერის გაუქმება", billingCancelConfirm:"დარწმუნებული ხარ? წვდომა შენარჩუნდება მიმდინარე პერიოდის ბოლომდე.", billingCanceledTrial:"გამოწერა გაუქმდა. თანხა არ ჩამოიჭრება.", billingCanceledRefund:"გამოწერა გაუქმდა და გამოუყენებელი პერიოდის თანხა დაბრუნდება.", signOut:"გასვლა", activity:"ამ თვის აქტივობა" },
+    dash:{ title:"დეშბორდი", usage:"გამოყენება", usedToday:"ძიება ამ თვეში", remaining:"დარჩენილი", limit:"თვიური ლიმიტი", resetsAt:"განახლდება", billing:"გეგმა და ბილინგი", freePlan:"უფასო გეგმა", proPlan:"Pro გეგმა", freeDesc:"50 ნაკვეთის ხედვა და ანალიზი / თვეში", proDesc:"1,000 ძიება / თვეში · Pro ანალიზი · GeoData ექსპორტი", upgrade:"Pro-ზე გადასვლა", manageBilling:"ბილინგის მართვა", billingTitle:"ბილინგი", billingSubFree:"გეგმის მართვა", billingSubPro:"თქვენი გამოწერა", billingLblPlan:"მიმდინარე გეგმა", billingLblPm:"გადახდის მეთოდი", billingLblHistory:"გადახდების ისტორია", billingPeriod:"/თვეში", billingRenewal:"შემდეგი გადახდა", billingTrialEnds:"გამოცდა — პირველი გადახდა", billingDaysLeft:"დღე რჩება", billingTrialNote:"14-დღიანი უფასო პერიოდი აქტიურია. გაუქმების შემთხვევაში პრო ფუნქციები ხელმისაწვდომი იქნება გამოცდის ბოლომდე.", billingPostTrialNote:"გაუქმების შემთხვევაში Pro წვდომა შენარჩუნდება განახლების თარიღამდე. ამის შემდეგ თანხა არ ჩამოიჭრება.", billingCanceling:"გაუქმება დაგეგმილია — წვდომა გრძელდება პერიოდის ბოლომდე.", billingNoCard:"გადახდის მეთოდი არ არის", billingNoHistory:"გადახდების ისტორია ცარიელია", billingCancel:"გამოწერის გაუქმება", billingCancelConfirm:"დარწმუნებული ხარ? წვდომა შენარჩუნდება მიმდინარე პერიოდის ბოლომდე.", billingCanceledTrial:"გამოწერა გაუქმდა. თანხა არ ჩამოიჭრება.", billingCanceledRefund:"გამოწერა გაუქმდა და გამოუყენებელი პერიოდის თანხა დაბრუნდება.", signOut:"გასვლა", activity:"ამ თვის აქტივობა" },
     projects:{ navTip:"ჩემი პროექტები", panelTitle:"ჩემი პროექტები", saveBtn:"მიმდინარე ანალიზის შენახვა", emptyMsg:"შენახული პროექტები არ არის.", openBtn:"გახსნა", deleteConfirm:"წაშალოს ეს პროექტი?", loadingMsg:"იტვირთება…", savingMsg:"ინახება…", saveModalTitle:"პროექტის შენახვა", saveModalHint:"ინახება რუკის ხედი, შერჩეული ობიექტები, შემოტანილი ფენები და ანალიზის შედეგები.", cancelBtn:"გაუქმება", confirmBtn:"შენახვა", savedToast:"პროექტი შენახულია", deletedToast:"პროექტი წაშლილია", loadedToast:"პროექტი ჩაიტვირთა", errorSave:"შენახვა ვერ მოხერხდა", errorLoad:"ჩატვირთვა ვერ მოხერხდა", errorDelete:"წაშლა ვერ მოხერხდა", layers:"ფენა", layersPlural:"ფენა" },
     activityLabels:{ map_click:"ნაკვეთები", free_analysis:"სიარული", pro_analysis:"სივრც. ანალ.", relief_analysis:"რელიეფი", pdf_export:"PDF", geojson_export:"GeoJSON" },
     activityIcons:{ map_click:"—", free_analysis:"○", pro_analysis:"◆", relief_analysis:"△", pdf_export:"↓", geojson_export:"⬡" },
@@ -464,7 +476,6 @@ function applyLang(){
   // Paywall
   document.getElementById("pw-title").textContent=pw.title;
   document.getElementById("pw-sub").textContent=pw.sub;
-  const _gn=document.getElementById("pw-guest-name");if(_gn)_gn.textContent=pw.guestName||"";
   document.getElementById("pw-free-name").textContent=pw.freeName;
   document.getElementById("pw-free-period").textContent=pw.freePeriod;
   document.getElementById("pw-pro-badge").textContent=pw.proBadge;
@@ -592,7 +603,7 @@ async function fetchSearchUsage(){
 }
 
 async function fetchUserMonthlyLimit(){
-  const planLimit=currentUser.plan==="pro"?1000:5;
+  const planLimit=currentUser.plan==="pro"?(_isTrialing()?TRIAL_PARCEL_LIMIT:PRO_PARCEL_LIMIT):FREE_PARCEL_LIMIT;
   const now=new Date();
   const ym=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}`;
   const {data}=await sb.from("search_overrides").select("custom_limit").eq("user_id",currentUser.id).eq("year_month",ym).maybeSingle();
@@ -727,8 +738,7 @@ async function onAuthSuccess(session){
     if(data){isAdmin=!!data.is_admin;_marketingConsent=!!data.marketing_consent;}
   }catch(e){console.warn("Profile fetch:",e);}
   currentUser={id:u.id,email:u.email,name:u.user_metadata?.full_name||"",plan,isAdmin,accessToken:session.access_token,avatarUrl:u.user_metadata?.avatar_url||null,_subStatus:window._subStatus||"free",registeredAt:u.created_at||null};
-  _guestParcelCount=0;
-  localStorage.setItem("gstP","0");localStorage.removeItem("gstA");
+  localStorage.removeItem("gstP");localStorage.removeItem("gstA"); // clean up legacy guest counters
   if(currentUser.plan==="pro"){_loadProCounts(currentUser.id);}else{_loadFreeCounts(currentUser.id);}
   updateUserUI();
   flushPendingLogs().then(()=>updateSearchCounter());
@@ -757,8 +767,8 @@ async function logout(){
 // ── Paywall ───────────────────────────────────────────────────────────────────
 function _openPaywallLimit(ctx){
   const pw=t().pw;
-  const titles={guest_parcel:pw.guestLimitTitle,free_parcel:pw.freeLimitTitle,free_analysis:pw.freeAnalysisLimitTitle,pro_parcel:pw.proLimitTitle,pro_analysis:pw.proAnalysisLimitTitle};
-  const subs={guest_parcel:pw.guestLimitSub,free_parcel:pw.freeLimitSub,free_analysis:pw.freeAnalysisLimitSub,pro_parcel:pw.proLimitSub,pro_analysis:pw.proAnalysisLimitSub};
+  const titles={free_parcel:pw.freeLimitTitle,free_analysis:pw.freeAnalysisLimitTitle,trial_parcel:pw.trialLimitTitle,trial_analysis:pw.trialAnalysisLimitTitle,pro_parcel:pw.proLimitTitle,pro_analysis:pw.proAnalysisLimitTitle};
+  const subs={free_parcel:pw.freeLimitSub,free_analysis:pw.freeAnalysisLimitSub,trial_parcel:pw.trialLimitSub,trial_analysis:pw.trialAnalysisLimitSub,pro_parcel:pw.proLimitSub,pro_analysis:pw.proAnalysisLimitSub};
   const titleEl=document.getElementById("pw-title");const subEl=document.getElementById("pw-sub");
   if(titleEl)titleEl.textContent=titles[ctx]||pw.title;
   if(subEl)subEl.textContent=subs[ctx]||pw.sub;
@@ -5147,10 +5157,10 @@ function runZoningAnalysis(){
   // Usage limit for analysis
   if(!currentUser){openAuthModal("view-signup");return;}
   if(currentUser.plan==='pro'){
-    if(_proAnalysisCount>=PRO_ANALYSIS_LIMIT){_openPaywallLimit('pro_analysis');return;}
+    if(_proAnalysisCount>=_analysisLimit()){_openPaywallLimit(_isTrialing()?'trial_analysis':'pro_analysis');return;}
     _proAnalysisCount++;_saveProCounts(currentUser.id);
   } else {
-    if(_freeAnalysisCount>=FREE_ANALYSIS_LIMIT){_openPaywallLimit('free_analysis');return;}
+    if(_freeAnalysisCount>=_analysisLimit()){_openPaywallLimit('free_analysis');return;}
     _freeAnalysisCount++;_saveFreeCounts(currentUser.id);
   }
   btn?.classList.add('active');
@@ -10281,10 +10291,10 @@ async function loadParcel(lbl, code){
   // Usage limits
   if(!currentUser){setStatus("","");openAuthModal("view-signup");return;}
   if(currentUser.plan==="pro"){
-    if(_proParcelCount>=PRO_PARCEL_LIMIT){setStatus("","");_openPaywallLimit("pro_parcel");return;}
+    if(_proParcelCount>=_parcelLimit()){setStatus("","");_openPaywallLimit(_isTrialing()?"trial_parcel":"pro_parcel");return;}
     _proParcelCount++;_saveProCounts(currentUser.id);
   } else {
-    if(_freeParcelCount>=FREE_PARCEL_LIMIT){setStatus("","");_openPaywallLimit("free_parcel");return;}
+    if(_freeParcelCount>=_parcelLimit()){setStatus("","");_openPaywallLimit("free_parcel");return;}
     _freeParcelCount++;_saveFreeCounts(currentUser.id);
   }
   const tr=t();

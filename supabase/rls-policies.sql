@@ -235,21 +235,27 @@ DROP POLICY IF EXISTS "Users can read own subscription" ON subscriptions;
 -- ─────────────────────────────────────────────────────────────
 
 -- ── parcels ──────────────────────────────────────────────────
-DROP POLICY IF EXISTS "anon_all"             ON parcels;
-DROP POLICY IF EXISTS "parcels: public read" ON parcels;
+-- Read requires sign-in: protects the crowd-sourced enrichment dataset
+-- from anonymous bulk scraping (the platform requires sign-in anyway).
+DROP POLICY IF EXISTS "anon_all"                    ON parcels;
+DROP POLICY IF EXISTS "parcels: public read"        ON parcels;
+DROP POLICY IF EXISTS "parcels: authenticated read" ON parcels;
 -- "parcels: admin read all" already created in 1F
 
-CREATE POLICY "parcels: public read"
+CREATE POLICY "parcels: authenticated read"
   ON parcels FOR SELECT
+  TO authenticated
   USING (true);
 
 
 -- ── owner_ids ─────────────────────────────────────────────────
-DROP POLICY IF EXISTS "anon_all"               ON owner_ids;
-DROP POLICY IF EXISTS "owner_ids: public read" ON owner_ids;
+DROP POLICY IF EXISTS "anon_all"                      ON owner_ids;
+DROP POLICY IF EXISTS "owner_ids: public read"        ON owner_ids;
+DROP POLICY IF EXISTS "owner_ids: authenticated read" ON owner_ids;
 
-CREATE POLICY "owner_ids: public read"
+CREATE POLICY "owner_ids: authenticated read"
   ON owner_ids FOR SELECT
+  TO authenticated
   USING (true);
 
 
