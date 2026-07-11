@@ -177,7 +177,7 @@
   .em-success-msg { font-size: 0.82rem; color: rgba(255,255,255,0.45); }
 
   @media (max-width: 700px) {
-    .stats-grid { grid-template-columns: repeat(3, 1fr); }
+    .stats-grid { grid-template-columns: repeat(2, 1fr) !important; }
     .topbar { padding: 0 16px; }
     .main { padding: 20px 16px; }
     th:nth-child(3), td:nth-child(3) { display: none; }
@@ -323,6 +323,7 @@
             <th>Updated</th>
             <th>Monthly limit override</th>
             <th>Action</th>
+            <th>Admin</th>
           </tr>
         </thead>
         <tbody id="user-tbody"></tbody>
@@ -378,22 +379,13 @@
 </div>
 
 <script>
-(async () => {
-  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
-  const { data: { session } } = await sb.auth.getSession()
-  if (!session) { location.href = '/'; return }
-  const { data } = await sb.from('profiles')
-    .select('is_admin').eq('id', session.user.id).single()
-  if (!data?.is_admin) { location.href = '/'; return }
-  // safe — initialize rest of admin page
-})()
 // ── CONFIG ────────────────────────────────────────────────────────────────────
 const SUPABASE_URL      = "https://yikkligsbpzhznhkibow.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_Y0DUnurQBvQtZCUOQ-NAjg_Fux7jx_6";
 
-// !! Add your admin email(s) here — anyone not in this list gets rejected
+// Client-side UX gate only — real authorization enforced by is_admin column via RLS
 const ADMIN_EMAILS = [
-  "giorgi@zaxis.ge" // ← replace with your actual admin email
+  "giorgi@zaxis.ge"
 ];
 
 // ── SUPABASE ──────────────────────────────────────────────────────────────────
@@ -457,7 +449,7 @@ function showDashboard(user){
 // ── LOAD USERS ────────────────────────────────────────────────────────────────
 async function loadUsers(){
   document.getElementById("user-tbody").innerHTML =
-    `<tr class="empty-row"><td colspan="6"><span class="spinner-sm"></span></td></tr>`;
+    `<tr class="empty-row"><td colspan="7"><span class="spinner-sm"></span></td></tr>`;
 
   // Fetch all users via RPC (reads from auth.users so emails + count are accurate)
   const { data: profiles, error: pErr } = await sb.rpc("admin_get_users");
@@ -590,12 +582,12 @@ function renderTable(){
         ? `<span class="badge badge-trial">Trial${trialDaysLeft !== null ? ` · ${trialDaysLeft}d` : ""}</span>`
         : `<span class="badge badge-free">Free</span>`;
     const action = (isPro || isTrial)
-      ? `<button class="action-btn downgrade-btn" onclick="setPlan('${u.id}','free')">Downgrade</button>`
-      : `<button class="action-btn upgrade-btn" onclick="setPlan('${u.id}','pro')">Upgrade to Pro</button>`;
+      ? `<button class="action-btn downgrade-btn" onclick="setPlan(this,'${u.id}','free')">Downgrade</button>`
+      : `<button class="action-btn upgrade-btn" onclick="setPlan(this,'${u.id}','pro')">Upgrade to Pro</button>`;
     const adminBadge = u.isAdmin ? `<span class="badge" style="background:rgba(234,179,8,0.15);color:#fbbf24;border:1px solid rgba(251,191,36,0.3)">Admin</span>` : ``;
     const adminBtn   = u.isAdmin
-      ? `<button class="action-btn downgrade-btn" onclick="setAdmin('${u.id}',false)">Remove Admin</button>`
-      : `<button class="action-btn" style="background:rgba(251,191,36,0.08);color:#fbbf24;border:1px solid rgba(251,191,36,0.2)" onclick="setAdmin('${u.id}',true)">Make Admin</button>`;
+      ? `<button class="action-btn downgrade-btn" onclick="setAdmin(this,'${u.id}',false)">Remove Admin</button>`
+      : `<button class="action-btn" style="background:rgba(251,191,36,0.08);color:#fbbf24;border:1px solid rgba(251,191,36,0.2)" onclick="setAdmin(this,'${u.id}',true)">Make Admin</button>`;
     const planLimit = isPro ? 1000 : 100;
     const effectiveLimit = overrideMap[u.id] ?? planLimit;
     const used = u.searchesUsed;
@@ -636,12 +628,9 @@ function changePage(dir){
 }
 
 // ── SET PLAN ──────────────────────────────────────────────────────────────────
-async function setPlan(userId, plan){
-  // Optimistically update UI
+async function setPlan(btn, userId, plan){
   const user = allUsers.find(u => u.id === userId);
   if(!user) return;
-
-  const btn = event.target;
   btn.disabled = true;
   btn.innerHTML = `<span class="spinner-sm"></span>`;
 
@@ -670,11 +659,9 @@ async function setPlan(userId, plan){
 }
 
 // ── SET ADMIN ─────────────────────────────────────────────────────────────────
-async function setAdmin(userId, makeAdmin){
+async function setAdmin(btn, userId, makeAdmin){
   const user = allUsers.find(u => u.id === userId);
   if(!user) return;
-
-  const btn = event.target;
   btn.disabled = true;
   btn.innerHTML = `<span class="spinner-sm"></span>`;
 
@@ -952,9 +939,12 @@ function showToast(msg, type="success"){
 // ── INIT ──────────────────────────────────────────────────────────────────────
 async function init(){
   const { data: { session } } = await sb.auth.getSession();
-  if(session && ADMIN_EMAILS.includes(session.user.email)){
-    showDashboard(session.user);
-  }
+  if(!session) return;
+  // Client-side email list is a UX hint only; real authz is the is_admin DB column via RLS.
+  if(!ADMIN_EMAILS.includes(session.user.email)) return;
+  const { data: profile } = await sb.from("profiles").select("is_admin").eq("id", session.user.id).single();
+  if(!profile?.is_admin) return;
+  showDashboard(session.user);
 }
 
 init();

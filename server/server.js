@@ -15,10 +15,16 @@ const supabase = createClient(
   { auth: { autoRefreshToken: false, persistSession: false } }
 );
 
+const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN;
+if (!ALLOWED_ORIGIN) console.warn("[server] ALLOWED_ORIGIN not set — CORS will reject cross-origin requests");
+
 // Raw body must be parsed before json() for webhook signature verification
-app.use("/webhooks", express.raw({ type: "*/*" }));
-app.use(express.json());
-app.use(cors({ origin: process.env.ALLOWED_ORIGIN || "*", credentials: true }));
+app.use("/webhooks", express.raw({ type: "*/*", limit: "512kb" }));
+app.use(express.json({ limit: "256kb" }));
+app.use(cors({
+  origin: ALLOWED_ORIGIN || false,
+  credentials: true,
+}));
 
 // ── Auth middleware ───────────────────────────────────────────────────────────
 async function requireAuth(req, res, next) {
@@ -232,6 +238,9 @@ app.post("/api/paddle/cancel", requireAuth, async (req, res) => {
 
   res.json({ effective_from: effectiveFrom, was_trial: isTrialing });
 });
+
+// ── Trial expiry cron ─────────────────────────────────────────────────────────
+require("./cron-trial-expiry");
 
 // ── Start ─────────────────────────────────────────────────────────────────────
 app.listen(PORT, () => console.log(`Urbanyx server running on port ${PORT}`));

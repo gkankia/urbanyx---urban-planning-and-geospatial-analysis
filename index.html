@@ -3,14 +3,21 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Urbanyx</title>
+<title>Urbanyx — Urban Planning & Geospatial Analysis</title>
+<meta name="description" content="Urbanyx is an urban planning and geospatial analysis platform for walkability, accessibility, morphology, climate, and parcel data.">
 <!-- Open Graph (Facebook, LinkedIn) -->
-<meta property="og:title" content="planning and geospatial analysis platform">
-<meta property="og:description" content="planning and geospatial analysis platform">
+<meta property="og:site_name" content="Urbanyx">
+<meta property="og:title" content="Urbanyx — Urban Planning & Geospatial Analysis">
+<meta property="og:description" content="Urban planning and geospatial analysis platform for walkability, accessibility, morphology, climate, and parcel data.">
 <meta property="og:image" content="https://static.wixstatic.com/media/9c6bfd_7ed45f6184af45c29d0e05571bbec790~mv2.png">
-<meta property="og:url" content="https://urbanyx.zaxis.ge?lat=...&lng=...&z=...&bearing=...&pitch=..." />
+<meta property="og:url" content="https://urbanyx.zaxis.ge" />
 <meta property="og:type" content="website">
-<link rel="icon" href="data:,">
+<!-- Twitter card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Urbanyx — Urban Planning & Geospatial Analysis">
+<meta name="twitter:description" content="Urban planning and geospatial analysis platform for walkability, accessibility, morphology, climate, and parcel data.">
+<meta name="twitter:image" content="https://static.wixstatic.com/media/9c6bfd_7ed45f6184af45c29d0e05571bbec790~mv2.png">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗺</text></svg>">
 <link href="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.css" rel="stylesheet">
 <script src="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.js"></script>
 <link href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-draw/v1.4.3/mapbox-gl-draw.css" rel="stylesheet">
@@ -298,6 +305,10 @@
   .dash-plan-badge { font-size: 0.62rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 3px 8px; border-radius: 5px; }
   .dash-plan-badge.free { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.4); }
   .dash-plan-badge.pro { background: rgba(52,211,153,0.18); color: #34d399; }
+  .trial-banner { margin-top: 10px; border-radius: 8px; padding: 9px 12px; cursor: pointer; font-size: 0.75rem; font-weight: 500; line-height: 1.4; display: flex; align-items: center; justify-content: space-between; gap: 8px; transition: opacity 0.15s; text-decoration: none; }
+  .trial-banner:hover { opacity: 0.82; }
+  .trial-banner.green { background: rgba(52,211,153,0.1); border: 1px solid rgba(52,211,153,0.2); color: #34d399; }
+  .trial-banner.amber { background: rgba(251,191,36,0.1); border: 1px solid rgba(251,191,36,0.2); color: #fbbf24; }
   .dash-action-btn { padding: 9px 16px; border-radius: 9px; font-size: 0.8rem; font-weight: 600; font-family: inherit; cursor: pointer; border: none; transition: opacity 0.15s; white-space: nowrap; }
   .dash-action-btn.upgrade { background: #34d399; color: #042c1e; }
   .dash-action-btn.billing { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); color: rgba(255,255,255,0.7); }
@@ -1585,6 +1596,8 @@ const T = {
       cta:"Upgrade to Pro",notSignedIn:"No account?",createFirst:"Create a free account",
       comingSoon:"Payment coming soon! Contact us to upgrade manually.",
       trialNote:"14-day free trial included",
+      trialTitle:"Upgrade to keep your Pro access",
+      trialSub:"Your trial ends in X days. Subscribe now to keep climate analysis, GeoData export, and extended isochrone.",
       billingComingSoon:"Billing portal coming soon.",
       guestLimitTitle:"Guest limit reached",guestLimitSub:"You’ve used your 5 free parcel views. Create a free account for 15 views and 15 analyses.",
       guestAnalysisLimitTitle:"Guest limit reached",guestAnalysisLimitSub:"You’ve used your 5 free analyses. Create a free account for 15 parcel views and 15 analyses.",
@@ -1703,6 +1716,8 @@ const T = {
       cta:"Pro-ზე გადასვლა",notSignedIn:"ანგარიში არ გაქვს?",createFirst:"შექმენი უფასო ანგარიში",
       comingSoon:"გადახდა მალე! დაგვიკავშირდი Pro-ზე გადასასვლელად.",
       trialNote:"მოიცავს 14-დღიან უფასო პერიოდს",
+      trialTitle:"განაახლე Pro წვდომის შესანარჩუნებლად",
+      trialSub:"საცდელი პერიოდი სრულდება X დღეში. გამოიწერე ახლა კლიმატის ანალიზის, GeoData ექსპორტის და გაფართოებული იზოქრონის შესანარჩუნებლად.",
       billingComingSoon:"ბილინგის პორტალი მალე.",
       guestLimitTitle:"სტუმარის ლიმიტი",guestLimitSub:"გამოიყენე 5 უფასო ნაკვეთის ხედვა. შექმენი უფასო ანგარიში 15 ხედვისა და 15 ანალიზისთვის.",
       guestAnalysisLimitTitle:"სტუმარის ლიმიტი",guestAnalysisLimitSub:"გამოიყენე 5 უფასო ანალიზი. შექმენი უფასო ანგარიში 15 ხედვისა და 15 ანალიზისთვის.",
@@ -2094,14 +2109,16 @@ async function onAuthSuccess(session){
   const u=session.user;
   let plan="free",isAdmin=false;
   try{
-    const{data,error:subErr}=await sb.from("subscriptions").select("plan,status,billing_interval,current_period_end,subscription_started_at").eq("user_id",u.id).single();
+    const{data,error:subErr}=await sb.from("subscriptions").select("plan,status,billing_interval,current_period_end,subscription_started_at,trial_ends_at,trial_active").eq("user_id",u.id).single();
     if(subErr){console.error("[sub] fetch error:",subErr.code,subErr.message);}
     if(data){
       window._subInterval=data.billing_interval||"month";
       window._subPeriodEnd=data.current_period_end||null;
       window._subStartedAt=data.subscription_started_at||null;
+      window._trialEndsAt=data.trial_ends_at||null;
       const periodInFuture=data.current_period_end&&new Date(data.current_period_end)>new Date();
-      const effectiveStatus=(data.status==="canceled"&&periodInFuture)?"canceling":data.status;
+      const trialExpired=data.status==="trialing"&&data.trial_ends_at&&new Date(data.trial_ends_at)<=new Date();
+      const effectiveStatus=(data.status==="canceled"&&periodInFuture)?"canceling":trialExpired?"expired":data.status;
       window._subStatus=effectiveStatus||"free";
       if(effectiveStatus==="active"||effectiveStatus==="trialing"||effectiveStatus==="canceling")plan=data.plan;
       console.log("[sub] status="+effectiveStatus+" plan="+plan);
@@ -2149,7 +2166,7 @@ function _openPaywallLimit(ctx){
   if(subEl)subEl.textContent=subs[ctx]||pw.sub;
   const footer=document.getElementById("pw-footer");
   if(footer)footer.innerHTML=currentUser?"":`${pw.notSignedIn} <a onclick="openAuthForUpgrade()">${pw.createFirst}</a>`;
-  openPaywall();
+  openPaywall(true);
 }
 function _getRateTooltip(){
   let tt=document.getElementById("pw-rate-tooltip");
@@ -2188,7 +2205,21 @@ function setPwBilling(mode){
     if(billing)billing.textContent=pw.proMonthlyBilling||"";
   }
 }
-function openPaywall(){document.getElementById("paywall-modal").classList.add("open");}
+function openPaywall(_skipTitleReset){
+  if(!_skipTitleReset){
+    const pw=t().pw;
+    const titleEl=document.getElementById("pw-title");
+    const subEl=document.getElementById("pw-sub");
+    if(currentUser&&currentUser._subStatus==="trialing"&&window._trialEndsAt){
+      const daysLeft=Math.max(0,Math.ceil((new Date(window._trialEndsAt)-new Date())/86400000));
+      if(daysLeft>0){
+        if(titleEl)titleEl.textContent=pw.trialTitle||"Upgrade to keep your Pro access";
+        if(subEl)subEl.textContent=(pw.trialSub||"Your trial ends in X days.").replace("X",daysLeft);
+      }else{if(titleEl)titleEl.textContent=pw.title;if(subEl)subEl.textContent=pw.sub;}
+    }else{if(titleEl)titleEl.textContent=pw.title;if(subEl)subEl.textContent=pw.sub;}
+  }
+  document.getElementById("paywall-modal").classList.add("open");
+}
 
 // ── Dashboard ─────────────────────────────────────────────────────────────────
 function openDashboard(){
@@ -2203,6 +2234,18 @@ function openDashboard(){
   const badge=document.getElementById("dash-plan-badge");
   badge.textContent=currentUser.plan==="pro"?dash.proPlan:dash.freePlan;
   badge.className="dash-plan-badge "+(currentUser.plan==="pro"?"pro":"free");
+  // Trial banner
+  const _tb=document.getElementById("dash-trial-banner");
+  const _tt=document.getElementById("dash-trial-text");
+  if(_tb&&currentUser._subStatus==="trialing"&&window._trialEndsAt){
+    const _dl=Math.max(0,Math.ceil((new Date(window._trialEndsAt)-new Date())/86400000));
+    if(_dl>0){
+      const _urg=_dl<=5;
+      _tt.textContent=_urg?`Your trial ends in ${_dl} day${_dl!==1?"s":""} — upgrade to keep access`:`Your Pro trial ends in ${_dl} day${_dl!==1?"s":""}`;
+      _tb.className="trial-banner "+(_urg?"amber":"green");
+      _tb.style.display="";
+    }else{_tb.style.display="none";}
+  }else if(_tb){_tb.style.display="none";}
   // Labels
   document.getElementById("lbl-dash-usage").textContent=dash.usage;
   document.getElementById("lbl-dash-used-today").textContent=dash.usedToday;
@@ -5771,7 +5814,7 @@ function openBillingPortal(){
   const isCanceling=currentUser._subStatus==='canceling';
   const periodEnd=window._subPeriodEnd?new Date(window._subPeriodEnd):null;
   const daysLeft=periodEnd?Math.max(0,Math.ceil((periodEnd.getTime()-Date.now())/86400000)):null;
-  const isInTrial=isPro&&(currentUser._subStatus==='trialing'||(daysLeft!==null&&window._subInterval==='month'&&daysLeft>=16));
+  const isInTrial=isPro&&currentUser._subStatus==='trialing'&&window._trialEndsAt&&new Date(window._trialEndsAt)>new Date();
 
   document.getElementById('bill-title').textContent=bd.billingTitle;
   document.getElementById('bill-subtitle').textContent=isPro?bd.billingSubPro:bd.billingSubFree;
@@ -5788,9 +5831,7 @@ function openBillingPortal(){
   const renewEl=document.getElementById('bill-next-renewal');
   if(isPro&&periodEnd){
     if(isInTrial){
-      const trialEnd=window._subStartedAt
-        ?new Date(new Date(window._subStartedAt).getTime()+14*86400000)
-        :periodEnd;
+      const trialEnd=window._trialEndsAt?new Date(window._trialEndsAt):periodEnd;
       const trialFmt=trialEnd.toLocaleDateString(lang==='ka'?'ka-GE':'en-GB',{day:'numeric',month:'long',year:'numeric'});
       const trialDaysLeft=Math.max(0,Math.ceil((trialEnd.getTime()-Date.now())/86400000));
       renewEl.textContent=`${bd.billingTrialEnds}: ${trialFmt} · ${trialDaysLeft} ${bd.billingDaysLeft}`;
@@ -12397,6 +12438,10 @@ function navLocateUser(){
         <div style="color:rgba(255,255,255,0.35);font-size:0.72rem;margin-bottom:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" id="dash-email"></div>
         <span class="dash-plan-badge" id="dash-plan-badge"></span>
       </div>
+    </div>
+    <div id="dash-trial-banner" class="trial-banner" style="display:none" onclick="closeDashboard();openPaywall()">
+      <span id="dash-trial-text"></span>
+      <span style="font-size:0.7rem;opacity:0.6">→</span>
     </div>
     <!-- Usage -->
     <div class="dash-section" id="dash-usage-section">
