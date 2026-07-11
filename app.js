@@ -184,7 +184,7 @@ const T = {
       suTerms:'I have read and agree to the <a href="/terms" target="_blank" style="color:#818cf8;text-decoration:underline">Terms & Conditions</a> and <a href="/privacy" target="_blank" style="color:#818cf8;text-decoration:underline">Privacy Policy</a>, including the 14-day free trial and automatic billing after the trial period.',
       errEmail:"Please enter your email.",
       updatePwTitle:"Set new password",updatePwSub:"Enter your new password below.",
-      updatePwLabel:"New password",updatePwBtn:"Update password"
+      updatePwLabel:"New password",updatePwBtn:"Update password",pwUpdated:"Password updated — you're signed in"
     },
     pw:{
       title:"Upgrade to Pro",sub:"Every new account starts with a 14-day Pro trial (300 analysis tokens).",
@@ -302,7 +302,7 @@ const T = {
       suTerms:'წავიკითხე და ვეთანხმები <a href="/terms" target="_blank" style="color:#818cf8;text-decoration:underline">წესებსა და პირობებს</a> და <a href="/privacy" target="_blank" style="color:#818cf8;text-decoration:underline">კონფიდენციალურობის პოლიტიკას</a>, 14-დღიანი საცდელი პერიოდის ჩათვლით, და ავტომატური ბილინგის ციკლს.',
       errEmail:"შეიყვანე ელ-ფოსტა.",
       updatePwTitle:"ახალი პაროლის დაყენება",updatePwSub:"შეიყვანე ახალი პაროლი.",
-      updatePwLabel:"ახალი პაროლი",updatePwBtn:"პაროლის განახლება"
+      updatePwLabel:"ახალი პაროლი",updatePwBtn:"პაროლის განახლება",pwUpdated:"პაროლი განახლდა — შესული ხართ"
     },
     pw:{
       title:"Pro-ზე გადასვლა",sub:"შექმენი უფასო ანგარიში 50 ნაკვეთის ხედვისა და 50 ანალიზისთვის. Pro აძლევს ულიმიტო წვდომასა და პრემიუმ ფუნქციებს.",
@@ -4410,7 +4410,12 @@ async function updatePassword(){
   const{error}=await sb.auth.updateUser({password:pw});
   btn.disabled=false;btn.textContent=t().auth.updatePwBtn;
   if(error){errEl.textContent=error.message;return;}
+  // Password changed — leave recovery mode and sign in with the refreshed session
+  window._recoveryMode=false;
+  const{data:{session}}=await sb.auth.getSession();
   closeAuthModal();
+  if(typeof showToast==="function")showToast(t().auth.pwUpdated||"Password updated");
+  if(session)await onAuthSuccess(session);
 }
 
 function openBillingPortal(){
@@ -10930,8 +10935,13 @@ async function init(){
     document.getElementById("center-search").classList.add("compact");
     document.getElementById("center-search").classList.add("hidden");
   },{passive:true});
+  // Password-recovery links land here with a recovery session in the URL. Do NOT
+  // sign the user in — show the "set new password" view instead.
+  window._recoveryMode=/type=recovery/.test(location.hash)||/type=recovery/.test(location.search);
   const{data:{session}}=await sb.auth.getSession();
-  if(session){
+  if(window._recoveryMode){
+    openAuthModal("view-update-password");
+  } else if(session){
     const{data:{user},error:userErr}=await sb.auth.getUser();
     if(userErr||!user){
       // Clear local session only — no API call, avoids 403 on deleted/expired accounts
@@ -10942,10 +10952,12 @@ async function init(){
   }
   sb.auth.onAuthStateChange(async(event,session)=>{
     if(event==="PASSWORD_RECOVERY"){
+      window._recoveryMode=true;
       openAuthModal("view-update-password");
       if(location.hash.includes("access_token"))history.replaceState(null,"",location.pathname);
     }
     else if(event==="SIGNED_IN"&&session){
+      if(window._recoveryMode)return; // recovery session must not auto-sign-in
       await onAuthSuccess(session);
       if(location.hash.includes("access_token"))history.replaceState(null,"",location.pathname);
     }
