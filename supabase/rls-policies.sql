@@ -8,11 +8,32 @@
 --   is harmless if the policy already doesn't exist.
 --
 -- SECTIONS:
+--   0. Helper function (must run first)
 --   1. Critical security fixes
 --   2. Missing policies
 --   3. Deduplication / cleanup
 --   4. Crowd-sourced enrichment tables (parcels, owner_ids)
 -- ============================================================
+
+
+-- ============================================================
+-- SECTION 0 — HELPER FUNCTION
+-- ============================================================
+--
+-- is_admin() reads the profiles table with SECURITY DEFINER,
+-- meaning it bypasses RLS. This breaks the infinite recursion
+-- that occurs when a policy ON profiles tries to SELECT FROM
+-- profiles to check is_admin — and every other table's admin
+-- policy that queries profiles avoids the same chain.
+-- ============================================================
+
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS boolean AS $$
+  SELECT COALESCE(
+    (SELECT is_admin FROM public.profiles WHERE id = auth.uid()),
+    false
+  );
+$$ LANGUAGE sql STABLE SECURITY DEFINER;
 
 
 -- ============================================================
@@ -41,18 +62,12 @@ CREATE POLICY "Users can update own profile"
 -- delete every other user's monthly limit override.
 -- ─────────────────────────────────────────────────────────────
 DROP POLICY IF EXISTS "authenticated_write" ON search_overrides;
+DROP POLICY IF EXISTS "search_overrides: admin all" ON search_overrides;
 
--- Admin-only write (admin.html sets overrides via anon key + RLS)
 CREATE POLICY "search_overrides: admin all"
   ON search_overrides FOR ALL
-  USING (
-    EXISTS (SELECT 1 FROM profiles p
-            WHERE p.id = auth.uid() AND p.is_admin = true)
-  )
-  WITH CHECK (
-    EXISTS (SELECT 1 FROM profiles p
-            WHERE p.id = auth.uid() AND p.is_admin = true)
-  );
+  USING     (is_admin())
+  WITH CHECK (is_admin());
 
 -- "users_read_own" (SELECT, auth.uid() = user_id) already exists — keep it.
 
@@ -67,7 +82,7 @@ CREATE POLICY "search_overrides: admin all"
 -- The correct policies (users_insert_own_logs, users_read_own_logs)
 -- already exist — just drop the two bad ones.
 -- ─────────────────────────────────────────────────────────────
-DROP POLICY IF EXISTS "anon_all"             ON search_logs;
+DROP POLICY IF EXISTS "anon_all"              ON search_logs;
 DROP POLICY IF EXISTS "Anyone can insert logs" ON search_logs;
 
 
@@ -76,73 +91,59 @@ DROP POLICY IF EXISTS "Anyone can insert logs" ON search_logs;
 --
 -- BUG: admin policies check auth.jwt() ->> 'email' = 'giorgi@zaxis.ge'.
 -- If the admin email changes these silently break.
--- Replace with is_admin column check.
+-- Replace with is_admin() helper.
 -- ─────────────────────────────────────────────────────────────
 DROP POLICY IF EXISTS "Admin can read all subscriptions" ON subscriptions;
 DROP POLICY IF EXISTS "Admin can update subscriptions"   ON subscriptions;
 DROP POLICY IF EXISTS "Users can read own subscription"  ON subscriptions;
+DROP POLICY IF EXISTS "subscriptions: own read"       ON subscriptions;
+DROP POLICY IF EXISTS "subscriptions: admin read all" ON subscriptions;
+DROP POLICY IF EXISTS "subscriptions: admin update"   ON subscriptions;
 
--- User reads their own subscription
 CREATE POLICY "subscriptions: own read"
   ON subscriptions FOR SELECT
   USING (auth.uid() = user_id);
 
--- Admin reads all subscriptions (dashboard stats)
 CREATE POLICY "subscriptions: admin read all"
   ON subscriptions FOR SELECT
-  USING (
-    EXISTS (SELECT 1 FROM profiles p
-            WHERE p.id = auth.uid() AND p.is_admin = true)
-  );
+  USING (is_admin());
 
--- Admin updates subscriptions (manual plan overrides from admin.html)
 CREATE POLICY "subscriptions: admin update"
   ON subscriptions FOR UPDATE
-  USING (
-    EXISTS (SELECT 1 FROM profiles p
-            WHERE p.id = auth.uid() AND p.is_admin = true)
-  )
-  WITH CHECK (
-    EXISTS (SELECT 1 FROM profiles p
-            WHERE p.id = auth.uid() AND p.is_admin = true)
-  );
+  USING     (is_admin())
+  WITH CHECK (is_admin());
 
--- No INSERT/DELETE policy for authenticated role:
--- all subscription writes go through server.js (service key) or
--- Paddle webhooks — both use the service role and bypass RLS.
+-- No INSERT/DELETE for authenticated role: all subscription writes
+-- go through server.js (service key) or Paddle webhooks.
 
 
 -- ─────────────────────────────────────────────────────────────
--- 1E  profiles — admin read policy uses placeholder email
+-- 1E  profiles — admin read policy causes infinite recursion
 --
--- BUG: "Admin can read all profiles" checks
---   auth.jwt() ->> 'email' = ANY (ARRAY['your@email.com'])
--- The placeholder means no admin can actually read all profiles.
+-- BUG: "Admin can read all profiles" used a subquery on profiles
+-- inside a policy ON profiles → RLS evaluates itself forever.
+-- Fixed by using is_admin() (SECURITY DEFINER, bypasses RLS).
 -- ─────────────────────────────────────────────────────────────
 DROP POLICY IF EXISTS "Admin can read all profiles" ON profiles;
+DROP POLICY IF EXISTS "profiles: admin read all"    ON profiles;
 
 CREATE POLICY "profiles: admin read all"
   ON profiles FOR SELECT
-  USING (
-    EXISTS (SELECT 1 FROM profiles p
-            WHERE p.id = auth.uid() AND p.is_admin = true)
-  );
+  USING (is_admin());
 
 
 -- ─────────────────────────────────────────────────────────────
 -- 1F  parcels — admin read policy uses placeholder email
 --
--- BUG: same 'your@email.com' placeholder.
+-- BUG: checks auth.jwt() ->> 'email' = 'your@email.com'.
 -- (Full parcels policy also in Section 4.)
 -- ─────────────────────────────────────────────────────────────
 DROP POLICY IF EXISTS "Admin can read all parcels" ON parcels;
+DROP POLICY IF EXISTS "parcels: admin read all"    ON parcels;
 
 CREATE POLICY "parcels: admin read all"
   ON parcels FOR SELECT
-  USING (
-    EXISTS (SELECT 1 FROM profiles p
-            WHERE p.id = auth.uid() AND p.is_admin = true)
-  );
+  USING (is_admin());
 
 
 -- ============================================================
@@ -152,50 +153,46 @@ CREATE POLICY "parcels: admin read all"
 -- ─────────────────────────────────────────────────────────────
 -- 2A  feature_usage — no SELECT policy exists
 --
--- The app reads feature_usage in the user dashboard
--- (loadDashboardStats → sb.from("feature_usage").select(...)).
+-- The app reads feature_usage in the user dashboard.
 -- Without a SELECT policy the query returns 0 rows silently,
 -- so the activity section always shows empty.
 -- ─────────────────────────────────────────────────────────────
+DROP POLICY IF EXISTS "feature_usage: own read"       ON feature_usage;
+DROP POLICY IF EXISTS "feature_usage: admin read all" ON feature_usage;
+
 CREATE POLICY "feature_usage: own read"
   ON feature_usage FOR SELECT
   USING (auth.uid() = user_id);
 
--- Admin read all (admin dashboard feature usage counts via RPC)
 CREATE POLICY "feature_usage: admin read all"
   ON feature_usage FOR SELECT
-  USING (
-    EXISTS (SELECT 1 FROM profiles p
-            WHERE p.id = auth.uid() AND p.is_admin = true)
-  );
+  USING (is_admin());
 
 
 -- ─────────────────────────────────────────────────────────────
 -- 2B  deletion_requests — user cannot read own request;
 --     admin cannot mark requests as processed (no UPDATE)
 -- ─────────────────────────────────────────────────────────────
+DROP POLICY IF EXISTS "deletion_requests: own read"     ON deletion_requests;
+DROP POLICY IF EXISTS "deletion_requests: admin update" ON deletion_requests;
+
 CREATE POLICY "deletion_requests: own read"
   ON deletion_requests FOR SELECT
   USING (auth.uid() = user_id);
 
--- Admin can update (e.g. set status = 'processed' after deleting account)
 CREATE POLICY "deletion_requests: admin update"
   ON deletion_requests FOR UPDATE
-  USING (
-    EXISTS (SELECT 1 FROM profiles p
-            WHERE p.id = auth.uid() AND p.is_admin = true)
-  );
+  USING (is_admin());
 
 
 -- ─────────────────────────────────────────────────────────────
 -- 2C  analysis_results — trial and canceling users locked out
 --
 -- Existing policy only grants SELECT when status = 'active'.
--- Users on a trial (status='trialing') or in a grace period
--- (status='canceling') also have paid Pro access — they should
--- be able to read their analysis results.
+-- Users on a trial or in a grace period also have Pro access.
 -- ─────────────────────────────────────────────────────────────
 DROP POLICY IF EXISTS "Pro users can read analysis results" ON analysis_results;
+DROP POLICY IF EXISTS "analysis_results: pro read"          ON analysis_results;
 
 CREATE POLICY "analysis_results: pro read"
   ON analysis_results FOR SELECT
@@ -213,30 +210,13 @@ CREATE POLICY "analysis_results: pro read"
 -- SECTION 3 — DEDUPLICATION / CLEANUP
 -- ============================================================
 
--- ─────────────────────────────────────────────────────────────
--- 3A  profiles — duplicate SELECT policies
---
--- "Users can read own profile" and "read_own_profile" are identical.
--- Drop the older snake_case one.
--- ─────────────────────────────────────────────────────────────
+-- profiles: "Users can read own profile" and "read_own_profile" identical
 DROP POLICY IF EXISTS "read_own_profile" ON profiles;
 
-
--- ─────────────────────────────────────────────────────────────
--- 3B  search_logs — duplicate SELECT policies
---
--- "Users can read own logs" === "users_read_own_logs" (same qual).
--- Keep the snake_case version (consistent with insert counterpart).
--- ─────────────────────────────────────────────────────────────
+-- search_logs: "Users can read own logs" === "users_read_own_logs"
 DROP POLICY IF EXISTS "Users can read own logs" ON search_logs;
 
-
--- ─────────────────────────────────────────────────────────────
--- 3C  subscriptions — "Users can read own subscription" leftover
---
--- Already dropped in Section 1D. IF EXISTS makes this a no-op
--- if it was already removed.
--- ─────────────────────────────────────────────────────────────
+-- subscriptions: already dropped in 1D (IF EXISTS = no-op if gone)
 DROP POLICY IF EXISTS "Users can read own subscription" ON subscriptions;
 
 
@@ -244,48 +224,37 @@ DROP POLICY IF EXISTS "Users can read own subscription" ON subscriptions;
 -- SECTION 4 — CROWD-SOURCED ENRICHMENT TABLES
 -- ============================================================
 --
--- How writes work:
---   app.js → sbFetch(PROXY) → Cloudflare Worker → Supabase REST
---   The Worker uses the service role key → bypasses RLS for writes.
+-- Writes go through the Cloudflare Worker proxy (service role key)
+-- → bypass RLS entirely. No write policies needed.
 --
--- How reads work:
---   app.js → fetch(SUPABASE_URL/rest/v1/..., {apikey: SUPABASE_ANON_KEY})
---   RLS applies → needs a permissive SELECT policy.
+-- Reads come directly from the client with the anon key
+-- → need a permissive SELECT policy.
 --
--- Result: public SELECT is correct; no write policies needed at the
--- RLS level (service role already gates all writes through the proxy).
--- Dropping "anon_all" prevents unauthenticated users from writing
--- directly to Supabase while bypassing the proxy.
+-- Dropping "anon_all" blocks unauthenticated users from writing
+-- directly to Supabase, bypassing the proxy.
 -- ─────────────────────────────────────────────────────────────
 
 -- ── parcels ──────────────────────────────────────────────────
-DROP POLICY IF EXISTS "anon_all"                ON parcels;
--- "parcels: admin read all" was already created in Section 1F
+DROP POLICY IF EXISTS "anon_all"             ON parcels;
+DROP POLICY IF EXISTS "parcels: public read" ON parcels;
+-- "parcels: admin read all" already created in 1F
 
--- Public read (map clicks, search by owner, geometry lookups)
 CREATE POLICY "parcels: public read"
   ON parcels FOR SELECT
   USING (true);
 
--- No INSERT / UPDATE / DELETE policies for the authenticated role.
--- All enrichment writes go through the Cloudflare proxy (service role).
-
 
 -- ── owner_ids ─────────────────────────────────────────────────
-DROP POLICY IF EXISTS "anon_all" ON owner_ids;
+DROP POLICY IF EXISTS "anon_all"               ON owner_ids;
+DROP POLICY IF EXISTS "owner_ids: public read" ON owner_ids;
 
--- Public read (owner lookups from the parcel float card)
 CREATE POLICY "owner_ids: public read"
   ON owner_ids FOR SELECT
   USING (true);
 
--- No INSERT / DELETE policies for the authenticated role.
--- The proxy does: DELETE WHERE cadastral = X, then bulk INSERT —
--- both operations use the service role and bypass RLS.
-
 
 -- ============================================================
--- VERIFY (run this after applying the script)
+-- VERIFY (uncomment and run separately after applying)
 -- ============================================================
 -- SELECT tablename, policyname, cmd, qual, with_check
 -- FROM pg_policies
