@@ -11,7 +11,7 @@ const supabase = createClient(
 );
 
 const EMAILJS_SERVICE_ID  = process.env.EMAILJS_SERVICE_ID  || "service_1qru585";
-const EMAILJS_PUBLIC_KEY  = process.env.EMAILJS_PUBLIC_KEY  || "a4S8CQtZNMLh57ruh";
+const EMAILJS_PUBLIC_KEY  = process.env.EMAILJS_PUBLIC_KEY  || "X1K85rgpA1Dy8xLFO";
 const EMAILJS_TEMPLATE_ID = process.env.EMAILJS_TEMPLATE_ID || "template_jix4m2h";
 const EMAILJS_PRIVATE_KEY = process.env.EMAILJS_PRIVATE_KEY;
 

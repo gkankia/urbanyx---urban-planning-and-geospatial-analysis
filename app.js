@@ -30,13 +30,12 @@ function escapeHtml(s){return String(s??"").replace(/&/g,"&amp;").replace(/</g,"
 // Restrict dynamically built link targets to safe schemes (blocks javascript: URLs)
 function safeUrl(u){u=String(u??"").trim();return /^(https?:|tel:|mailto:)/i.test(u)?u:"#";}
 const GUEST_PARCEL_LIMIT = 5;
-const GUEST_ANALYSIS_LIMIT = 5;
+// Guest analysis allowance removed — guests must sign up before any analysis
 const FREE_PARCEL_LIMIT = 5;
 const FREE_ANALYSIS_LIMIT = 5;
 const PRO_PARCEL_LIMIT = 1000;
 const PRO_ANALYSIS_LIMIT = 1000;
 let _guestParcelCount = parseInt(localStorage.getItem("gstP")||"0",10);
-let _guestAnalysisCount = parseInt(localStorage.getItem("gstA")||"0",10);
 let _freeParcelCount = 0;
 let _freeAnalysisCount = 0;
 let _proParcelCount = 0;
@@ -178,7 +177,7 @@ const T = {
       title:"Upgrade to Pro",sub:"Create a free account for 5 parcel views and 5 analyses per month. Pro gives you up to 1,000 views and analyses.",
       guestName:"Guest",freeName:"Free",proBadge:"Pro",proName:"Pro",freePeriod:"",proPeriod:"/mo",proBilling:"billed annually · €240/yr",proMonthlyPeriod:"/mo",proMonthlyBilling:"billed monthly",togAnnual:"Annual",togMonthly:"Monthly",
       colGuest:"Guest",colFree:"Free",colPro:"Pro",
-      g1:"5",g2:"5",g3:"—",g4:"✓",g5:"—",g6:"✓",g7:"✓",g8:"—",g9:"—",g10:"—",
+      g1:"—",g2:"—",g3:"—",g4:"✓",g5:"—",g6:"—",g7:"—",g8:"—",g9:"—",g10:"—",
       r1:"Parcel-level analysis",f1:"5",p1:"1000",
       r2:"Zoning analysis<br><small style='opacity:.45;font-size:.9em'>Tbilisi only</small>",f2:"5",p2:"1000",
       r3:"Plan on your own",f3:"—",p3:"✓",
@@ -196,7 +195,6 @@ const T = {
       trialSub:"Your trial ends in X days. Subscribe now to keep climate analysis, GeoData export, and extended isochrone.",
       billingComingSoon:"Billing portal coming soon.",
       guestLimitTitle:"Guest limit reached",guestLimitSub:"You’ve used your 5 free parcel views. Create a free account for 5 views and 5 analyses every month.",
-      guestAnalysisLimitTitle:"Guest limit reached",guestAnalysisLimitSub:"You’ve used your 5 free analyses. Create a free account for 5 parcel views and 5 analyses every month.",
       freeLimitTitle:"Free limit reached",freeLimitSub:"You’ve used your 5 parcel views. Upgrade to Pro for up to 1,000.",
       freeAnalysisLimitTitle:"Free limit reached",freeAnalysisLimitSub:"You’ve used your 5 analyses. Upgrade to Pro for up to 1,000.",
       proLimitTitle:"Pro limit reached",proLimitSub:"You’ve used your 1,000 parcel views. Contact us to extend your limit.",
@@ -298,7 +296,7 @@ const T = {
       title:"Pro-ზე გადასვლა",sub:"შექმენი უფასო ანგარიში 50 ნაკვეთის ხედვისა და 50 ანალიზისთვის. Pro აძლევს ულიმიტო წვდომასა და პრემიუმ ფუნქციებს.",
       guestName:"სტუმარი",freeName:"უფასო",proBadge:"Pro",proName:"Pro",freePeriod:"",proPeriod:"/თვე",proBilling:"წლიურად · €240/წელ",proMonthlyPeriod:"/თვე",proMonthlyBilling:"ყოველთვიურად",togAnnual:"წლიური",togMonthly:"თვიური",
       colGuest:"სტუმარი",colFree:"უფასო",colPro:"Pro",
-      g1:"5",g2:"5",g3:"—",g4:"✓",g5:"—",g6:"✓",g7:"✓",g8:"—",g9:"—",g10:"—",
+      g1:"—",g2:"—",g3:"—",g4:"✓",g5:"—",g6:"—",g7:"—",g8:"—",g9:"—",g10:"—",
       r1:"ნაკვეთის ანალიზი",f1:"5",p1:"1000",
       r2:"ზონირების ანალიზი<br><small style='opacity:.45;font-size:.9em'>თბილისი თავ</small>",f2:"5",p2:"1000",
       r3:"საკუთარი გეგმის შედგენა",f3:"—",p3:"✓",
@@ -316,7 +314,6 @@ const T = {
       trialSub:"საცდელი პერიოდი სრულდება X დღეში. გამოიწერე ახლა კლიმატის ანალიზის, GeoData ექსპორტის და გაფართოებული იზოქრონის შესანარჩუნებლად.",
       billingComingSoon:"ბილინგის პორტალი მალე.",
       guestLimitTitle:"სტუმარის ლიმიტი",guestLimitSub:"გამოიყენე 5 უფასო ნაკვეთის ხედვა. შექმენი უფასო ანგარიში ყოველთვიური 5 ხედვისა და 5 ანალიზისთვის.",
-      guestAnalysisLimitTitle:"სტუმარის ლიმიტი",guestAnalysisLimitSub:"გამოიყენე 5 უფასო ანალიზი. შექმენი უფასო ანგარიში ყოველთვიური 5 ხედვისა და 5 ანალიზისთვის.",
       freeLimitTitle:"ლიმიტი ამოიწურა",freeLimitSub:"გამოიყენე 5 ნაკვეთის ხედვა. Pro-ზე გადაიხადეთ 1,000-მდე მეტი.",
       freeAnalysisLimitTitle:"ლიმიტი ამოიწურა",freeAnalysisLimitSub:"გამოიყენე 5 ანალიზი. Pro-ზე გადაიხადეთ 1,000-მდე მეტი.",
       proLimitTitle:"პრო ლიმიტი ამოიწურა",proLimitSub:"გამოიყენე 1,000 ნაკვეთის ხედვა. დაგვიკავშირდეთ.",
@@ -730,8 +727,8 @@ async function onAuthSuccess(session){
     if(data){isAdmin=!!data.is_admin;_marketingConsent=!!data.marketing_consent;}
   }catch(e){console.warn("Profile fetch:",e);}
   currentUser={id:u.id,email:u.email,name:u.user_metadata?.full_name||"",plan,isAdmin,accessToken:session.access_token,avatarUrl:u.user_metadata?.avatar_url||null,_subStatus:window._subStatus||"free",registeredAt:u.created_at||null};
-  _guestParcelCount=0;_guestAnalysisCount=0;
-  localStorage.setItem("gstP","0");localStorage.setItem("gstA","0");
+  _guestParcelCount=0;
+  localStorage.setItem("gstP","0");localStorage.removeItem("gstA");
   if(currentUser.plan==="pro"){_loadProCounts(currentUser.id);}else{_loadFreeCounts(currentUser.id);}
   updateUserUI();
   flushPendingLogs().then(()=>updateSearchCounter());
@@ -760,8 +757,8 @@ async function logout(){
 // ── Paywall ───────────────────────────────────────────────────────────────────
 function _openPaywallLimit(ctx){
   const pw=t().pw;
-  const titles={guest_parcel:pw.guestLimitTitle,guest_analysis:pw.guestAnalysisLimitTitle,free_parcel:pw.freeLimitTitle,free_analysis:pw.freeAnalysisLimitTitle,pro_parcel:pw.proLimitTitle,pro_analysis:pw.proAnalysisLimitTitle};
-  const subs={guest_parcel:pw.guestLimitSub,guest_analysis:pw.guestAnalysisLimitSub,free_parcel:pw.freeLimitSub,free_analysis:pw.freeAnalysisLimitSub,pro_parcel:pw.proLimitSub,pro_analysis:pw.proAnalysisLimitSub};
+  const titles={guest_parcel:pw.guestLimitTitle,free_parcel:pw.freeLimitTitle,free_analysis:pw.freeAnalysisLimitTitle,pro_parcel:pw.proLimitTitle,pro_analysis:pw.proAnalysisLimitTitle};
+  const subs={guest_parcel:pw.guestLimitSub,free_parcel:pw.freeLimitSub,free_analysis:pw.freeAnalysisLimitSub,pro_parcel:pw.proLimitSub,pro_analysis:pw.proAnalysisLimitSub};
   const titleEl=document.getElementById("pw-title");const subEl=document.getElementById("pw-sub");
   if(titleEl)titleEl.textContent=titles[ctx]||pw.title;
   if(subEl)subEl.textContent=subs[ctx]||pw.sub;
