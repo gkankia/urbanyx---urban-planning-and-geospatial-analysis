@@ -188,7 +188,7 @@ const T = {
     },
     pw:{
       title:"Upgrade to Pro",sub:"Every new account starts with a 14-day Pro trial (300 analysis tokens).",
-      freeName:"Free",proBadge:"Pro",proName:"Pro",freePeriod:"",proPeriod:"/mo",proBilling:"billed annually · €240/yr",proMonthlyPeriod:"/mo",proMonthlyBilling:"billed monthly",togAnnual:"Annual",togMonthly:"Monthly",
+      freeName:"Free",proBadge:"Pro",proName:"Pro",freePeriod:"",proPeriod:"/mo",proBilling:"billed annually · €150/yr",proMonthlyPeriod:"/mo",proMonthlyBilling:"billed monthly",togAnnual:"Annual",togMonthly:"Monthly",
       colFree:"Free",colPro:"Pro",
       r1:"Parcel-level analysis",f1:"50",p1:"1000",
       r2:"Zoning analysis<br><small style='opacity:.45;font-size:.9em'>Tbilisi only</small>",f2:"50",p2:"1000",
@@ -306,7 +306,7 @@ const T = {
     },
     pw:{
       title:"Pro-ზე გადასვლა",sub:"შექმენი უფასო ანგარიში 50 ნაკვეთის ხედვისა და 50 ანალიზისთვის. Pro აძლევს ულიმიტო წვდომასა და პრემიუმ ფუნქციებს.",
-      freeName:"უფასო",proBadge:"Pro",proName:"Pro",freePeriod:"",proPeriod:"/თვე",proBilling:"წლიურად · €240/წელ",proMonthlyPeriod:"/თვე",proMonthlyBilling:"ყოველთვიურად",togAnnual:"წლიური",togMonthly:"თვიური",
+      freeName:"უფასო",proBadge:"Pro",proName:"Pro",freePeriod:"",proPeriod:"/თვე",proBilling:"წლიურად · €150/წელ",proMonthlyPeriod:"/თვე",proMonthlyBilling:"ყოველთვიურად",togAnnual:"წლიური",togMonthly:"თვიური",
       colFree:"უფასო",colPro:"Pro",
       r1:"ნაკვეთის ანალიზი",f1:"50",p1:"1000",
       r2:"ზონირების ანალიზი<br><small style='opacity:.45;font-size:.9em'>თბილისი თავ</small>",f2:"50",p2:"1000",
@@ -804,11 +804,11 @@ function setPwBilling(mode){
   const period=document.getElementById("pw-pro-period");
   const billing=document.getElementById("pw-pro-billing");
   if(mode==="annual"){
-    if(price)price.textContent="€20";
+    if(price)price.textContent="€12.50";
     if(period)period.textContent=pw.proPeriod||"/mo";
     if(billing)billing.textContent=pw.proBilling||"";
   } else {
-    if(price)price.textContent="€25";
+    if(price)price.textContent="€15";
     if(period)period.textContent=pw.proMonthlyPeriod||"/mo";
     if(billing)billing.textContent=pw.proMonthlyBilling||"";
   }
@@ -4431,7 +4431,7 @@ function openBillingPortal(){
   badge.textContent=isPro?bd.proPlan:bd.freePlan;
   badge.className='dash-plan-badge '+(isPro?'pro':'free');
   document.getElementById('bill-plan-desc').textContent=isPro?bd.proDesc:bd.freeDesc;
-  document.getElementById('bill-price').textContent=isPro?(window._subInterval==='year'?'€240':'€25'):'€0';
+  document.getElementById('bill-price').textContent=isPro?(window._subInterval==='year'?'€150':'€15'):'€0';
   document.getElementById('bill-period').textContent=isPro?(window._subInterval==='year'?'/year':bd.billingPeriod):bd.billingPeriod;
 
   const renewEl=document.getElementById('bill-next-renewal');
