@@ -340,6 +340,28 @@ async function deriveDay(dateStr) {
     });
   }
 
+  // ── Aggregate: per stop × route × direction × hour (Tbilisi local) ────────
+  const byStopHour = new Map();
+  for (const ar of arrivals) {
+    const hour = (new Date(ar.ts).getUTCHours() + TBILISI_OFFSET_H) % 24;
+    const kk = `${ar.stop}|${ar.route}|${ar.dir}|${hour}`;
+    if (!byStopHour.has(kk)) byStopHour.set(kk, []);
+    byStopHour.get(kk).push(ar);
+  }
+  const hourRows = [];
+  for (const [kk, list] of byStopHour) {
+    const [stop_id, route_id, dirS, hourS] = kk.split("|");
+    const delays = list.filter(x => x.delay != null).map(x => x.delay);
+    hourRows.push({
+      date: dateStr, stop_id, route_id, direction: Number(dirS), hour: Number(hourS),
+      n_obs: list.length, n_matched: delays.length,
+      on_time: delays.filter(d => d >= ON_TIME_MIN_S && d <= ON_TIME_MAX_S).length,
+      late:  delays.filter(d => d > ON_TIME_MAX_S).length,
+      early: delays.filter(d => d < ON_TIME_MIN_S).length,
+      delay_med_s: delays.length ? Math.round(median(delays)) : null,
+    });
+  }
+
   const segRows = [];
   for (const [kk, speeds] of segAgg) {
     if (speeds.length < 3) continue;
@@ -357,6 +379,10 @@ async function deriveDay(dateStr) {
     const { error } = await sb.from("transit_stop_daily").upsert(stopRows.slice(i, i + 500));
     if (error) throw new Error("transit_stop_daily upsert: " + error.message);
   }
+  for (let i = 0; i < hourRows.length; i += 500) {
+    const { error } = await sb.from("transit_stop_hourly").upsert(hourRows.slice(i, i + 500));
+    if (error) throw new Error("transit_stop_hourly upsert: " + error.message);
+  }
   // segment weekly rows: merge with existing week by re-upserting day-summed…
   // v1 keeps it simple: rows are recomputed per run from this day only, so for
   // mid-week reruns the week reflects the latest derived day per (key). Full
@@ -373,8 +399,8 @@ async function deriveDay(dateStr) {
   });
   if (logErr) throw new Error("transit_derive_log upsert: " + logErr.message);
 
-  console.log(`[derive] ✓ ${dateStr}: ${stopRows.length} stop-day rows, ${segRows.length} segment rows`);
-  return { stopRows: stopRows.length, segRows: segRows.length, arrivals: arrivals.length };
+  console.log(`[derive] ✓ ${dateStr}: ${stopRows.length} stop-day rows, ${hourRows.length} stop-hour rows, ${segRows.length} segment rows`);
+  return { stopRows: stopRows.length, hourRows: hourRows.length, segRows: segRows.length, arrivals: arrivals.length };
 }
 
 // ── Backfill: derive every archived day not yet in the ledger ────────────────

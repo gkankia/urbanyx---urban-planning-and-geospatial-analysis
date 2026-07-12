@@ -232,7 +232,16 @@ const T = {
       onTime:"On-time", onTimeSub:"−1…+5 min", medDelay:"Median delay", p90:"90th-pct delay", ewt:"Excess wait",
       worst:"Least reliable stops in area", noData:"No history for this area yet — data collection began 12 Jul 2026.",
       insufficient:"insufficient data", late:"late", traceHint:"Click a route chip below to paint its speed along the route",
-      dirToggle:"⇄ direction", clearTrace:"Clear trace", loading:"Crunching history…" },
+      dirToggle:"⇄ direction", clearTrace:"Clear trace", loading:"Crunching history…",
+      days:{all:"All days",weekday:"Weekdays",sat:"Sat",sun:"Sun"},
+      bands:{all:"All day",am_peak:"AM peak",midday:"Midday",pm_peak:"PM peak",evening:"Evening"},
+      chartTitle:"Median delay by hour", chartUnit:"min", obs:"obs",
+      infoOnTime:"Share of observed arrivals within −60s…+300s of the scheduled time (industry standard window). Sample size shown in the tooltip; stops with fewer than 30 matched observations are excluded from coloring.",
+      infoMed:"Median of the daily median signed delays across the area's stops. Positive = late, negative = early. Derived from vehicle positions sampled every 2 minutes; individual arrivals are interpolated, giving roughly ±1 minute precision.",
+      infoP90:"90th percentile of delay — the worst-case a rider should plan for. One in ten arrivals is later than this.",
+      infoEwt:"Excess Wait Time: how much longer riders actually wait versus the scheduled headway (E[h²]/2E[h]). Only computed for the All-day view, since headways need the full day's arrivals.",
+      infoBandEwt:"EWT and headway metrics are available in the All-day view only.",
+      exportPdf:"PDF · TIA", exportCsv:"CSV", exportGeo:"GeoJSON" },
     dash:{ title:"Dashboard", usage:"Usage", usedToday:"Searches this month", remaining:"Remaining", limit:"Monthly limit", resetsAt:"Resets on", billing:"Plan & Billing", freePlan:"Free plan", proPlan:"Pro plan", freeDesc:"50 parcel views and analyses / month", proDesc:"1,000 searches / month · Full Pro analysis · GeoData export", upgrade:"Upgrade to Pro", manageBilling:"Manage billing", billingTitle:"Billing", billingSubFree:"Manage your plan", billingSubPro:"Your active subscription", billingLblPlan:"Current plan", billingLblHistory:"Billing history", billingPeriod:"/month", billingRenewal:"Next payment", billingTrialEnds:"Trial ends", billingDaysLeft:"days remaining", billingTrialNote:"Your 14-day free trial is active. If you cancel now, you keep full access until the trial ends.", billingPostTrialNote:"If you cancel, you keep Pro access until your renewal date. No further charges after that.", billingCanceling:"Cancellation scheduled — access continues until period end.", billingNoHistory:"No billing history yet", billingCancel:"Cancel subscription", billingCancelConfirm:"Are you sure you want to cancel? You will keep access until the current period ends.", billingCanceledTrial:"Your subscription has been cancelled. No charge was made.", billingCanceledRefund:"Your subscription has been cancelled and a refund has been issued for the unused period.", signOut:"Sign out", activity:"Activity this month" },
     projects:{ navTip:"My Projects", panelTitle:"My Projects", saveBtn:"Save current analysis", emptyMsg:"No saved projects yet.", openBtn:"Open", deleteConfirm:"Delete this project?", loadingMsg:"Loading…", savingMsg:"Saving…", saveModalTitle:"Save Project", saveModalHint:"Saves map view, selected features, imported layers and analysis results.", cancelBtn:"Cancel", confirmBtn:"Save", savedToast:"Project saved", deletedToast:"Project deleted", loadedToast:"Project loaded", errorSave:"Failed to save project", errorLoad:"Failed to load project", errorDelete:"Delete failed", layers:"layer", layersPlural:"layers" },
     activityLabels:{ map_click:"Clicks", free_analysis:"Free analysis", pro_analysis:"Pro analysis", relief_analysis:"Relief", pdf_export:"PDF export", geojson_export:"GeoJSON export" },
@@ -353,7 +362,16 @@ const T = {
       onTime:"დროულად", onTimeSub:"−1…+5 წთ", medDelay:"მედიანური დაგვ.", p90:"90-ე პროც. დაგვ.", ewt:"ზედმეტი ლოდინი",
       worst:"ყველაზე არასანდო გაჩერებები", noData:"ამ არეალზე ისტორია ჯერ არ არის — შეგროვება დაიწყო 12 ივლ 2026.",
       insufficient:"არასაკმარისი მონაცემი", late:"გვიან", traceHint:"დააჭირე მარშრუტის ნომერს სიჩქარის კვალის სანახავად",
-      dirToggle:"⇄ მიმართულება", clearTrace:"კვალის წაშლა", loading:"ისტორია იტვირთება…" },
+      dirToggle:"⇄ მიმართულება", clearTrace:"კვალის წაშლა", loading:"ისტორია იტვირთება…",
+      days:{all:"ყველა დღე",weekday:"სამუშაო",sat:"შაბ",sun:"კვ"},
+      bands:{all:"მთელი დღე",am_peak:"დილის პიკი",midday:"შუადღე",pm_peak:"საღამოს პიკი",evening:"საღამო"},
+      chartTitle:"მედიანური დაგვიანება საათობრივად", chartUnit:"წთ", obs:"დაკვ.",
+      infoOnTime:"დაკვირვებული მოსვლების წილი გეგმიურ დროსთან −60წმ…+300წმ ფარგლებში (ინდუსტრიული სტანდარტი). 30-ზე ნაკლები დაკვირვების გაჩერებები შეფასებიდან გამორიცხულია.",
+      infoMed:"დღიური მედიანური დაგვიანებების მედიანა არეალის გაჩერებებზე. დადებითი = გვიან, უარყოფითი = ადრე. სიზუსტე დაახლ. ±1 წუთი (პოზიციები იზომება ყოველ 2 წუთში).",
+      infoP90:"დაგვიანების 90-ე პროცენტილი — ყველაზე ცუდი შემთხვევა, რასაც მგზავრი უნდა ელოდოს. ათიდან ერთი მოსვლა ამაზე გვიანია.",
+      infoEwt:"ზედმეტი ლოდინის დრო: რამდენად მეტს ელოდება მგზავრი რეალურად გეგმიურ ინტერვალთან შედარებით. მხოლოდ მთელი დღის ხედშია ხელმისაწვდომი.",
+      infoBandEwt:"EWT და ინტერვალის მეტრიკები მხოლოდ მთელი დღის ხედშია.",
+      exportPdf:"PDF · TIA", exportCsv:"CSV", exportGeo:"GeoJSON" },
     dash:{ title:"დეშბორდი", usage:"გამოყენება", usedToday:"ძიება ამ თვეში", remaining:"დარჩენილი", limit:"თვიური ლიმიტი", resetsAt:"განახლდება", billing:"გეგმა და ბილინგი", freePlan:"უფასო გეგმა", proPlan:"Pro გეგმა", freeDesc:"50 ნაკვეთის ხედვა და ანალიზი / თვეში", proDesc:"1,000 ძიება / თვეში · Pro ანალიზი · GeoData ექსპორტი", upgrade:"Pro-ზე გადასვლა", manageBilling:"ბილინგის მართვა", billingTitle:"ბილინგი", billingSubFree:"გეგმის მართვა", billingSubPro:"თქვენი გამოწერა", billingLblPlan:"მიმდინარე გეგმა", billingLblHistory:"გადახდების ისტორია", billingPeriod:"/თვეში", billingRenewal:"შემდეგი გადახდა", billingTrialEnds:"საცდელი მთავრდება", billingDaysLeft:"დღე რჩება", billingTrialNote:"14-დღიანი უფასო პერიოდი აქტიურია. გაუქმების შემთხვევაში პრო ფუნქციები ხელმისაწვდომი იქნება გამოცდის ბოლომდე.", billingPostTrialNote:"გაუქმების შემთხვევაში Pro წვდომა შენარჩუნდება განახლების თარიღამდე. ამის შემდეგ თანხა არ ჩამოიჭრება.", billingCanceling:"გაუქმება დაგეგმილია — წვდომა გრძელდება პერიოდის ბოლომდე.", billingNoHistory:"გადახდების ისტორია ცარიელია", billingCancel:"გამოწერის გაუქმება", billingCancelConfirm:"დარწმუნებული ხარ? წვდომა შენარჩუნდება მიმდინარე პერიოდის ბოლომდე.", billingCanceledTrial:"გამოწერა გაუქმდა. თანხა არ ჩამოიჭრება.", billingCanceledRefund:"გამოწერა გაუქმდა და გამოუყენებელი პერიოდის თანხა დაბრუნდება.", signOut:"გასვლა", activity:"ამ თვის აქტივობა" },
     projects:{ navTip:"ჩემი პროექტები", panelTitle:"ჩემი პროექტები", saveBtn:"მიმდინარე ანალიზის შენახვა", emptyMsg:"შენახული პროექტები არ არის.", openBtn:"გახსნა", deleteConfirm:"წაშალოს ეს პროექტი?", loadingMsg:"იტვირთება…", savingMsg:"ინახება…", saveModalTitle:"პროექტის შენახვა", saveModalHint:"ინახება რუკის ხედი, შერჩეული ობიექტები, შემოტანილი ფენები და ანალიზის შედეგები.", cancelBtn:"გაუქმება", confirmBtn:"შენახვა", savedToast:"პროექტი შენახულია", deletedToast:"პროექტი წაშლილია", loadedToast:"პროექტი ჩაიტვირთა", errorSave:"შენახვა ვერ მოხერხდა", errorLoad:"ჩატვირთვა ვერ მოხერხდა", errorDelete:"წაშლა ვერ მოხერხდა", layers:"ფენა", layersPlural:"ფენა" },
     activityLabels:{ map_click:"ნაკვეთები", free_analysis:"სიარული", pro_analysis:"სივრც. ანალ.", relief_analysis:"რელიეფი", pdf_export:"PDF", geojson_export:"GeoJSON" },
@@ -2775,6 +2793,8 @@ function _buildActionLog(){
   if(_kgLayerActive)actions.push({fn:'toggleAccKindergartens'});
   if(sw('acc-mob-sw'))actions.push({fn:'toggleAccMobility'});
   if(sw('acc-transit-sw'))actions.push({fn:'toggleAccTransit'});
+  // History mode state (restored after transit re-opens on replay)
+  if(sw('acc-transit-sw')&&_ttcMode==='history')actions.push({fn:'_histRestore',args:[_histDays,_histBand,_histDaytype]});
   if(sw('acc-parking-sw'))actions.push({fn:'toggleAccParking'});
   // Climate (independent of isochrone — parcel only)
   if(_canopyOverlayCache)actions.push({fn:'toggleAccCanopy'});
@@ -11018,7 +11038,8 @@ function navLocateUser(){
 // supabase RPC) derived from the R2 position archive. Live stays free;
 // History is Pro. See supabase/transit-history-rpc.sql.
 let _ttcMode='live';
-let _histCoverage=null, _histDays=7, _histStats=null, _histTraceState=null;
+let _histCoverage=null, _histDays=7, _histStats=null, _histHourly=null, _histTraceState=null;
+let _histBand='all', _histDaytype='all', _histRange=null, _histTraceBand=null;
 const _HIST_OK='#34d399',_HIST_WARN='#fbbf24',_HIST_BAD='#f87171',_HIST_GREY='rgba(255,255,255,0.35)';
 
 function _ttcRenderPanel(){
@@ -11055,13 +11076,22 @@ function _ttcSetMode(m){
 }
 
 function _histSetDays(d){_histDays=d;_histRender();}
+function _histSetBand(b){_histBand=b;_histRender();}
+function _histSetDaytype(d){_histDaytype=d;_histRender();}
+
+function _histChip(label,on,onclick){
+  return `<button onclick="${onclick}" style="font-family:ui-monospace,monospace;font-size:0.56rem;border:1px solid ${on?'rgba(129,140,248,0.4)':'rgba(255,255,255,0.09)'};background:${on?'rgba(129,140,248,0.14)':'none'};color:${on?'#818cf8':'rgba(255,255,255,0.35)'};border-radius:6px;padding:3px 7px;cursor:pointer;white-space:nowrap">${label}</button>`;
+}
 
 async function _histRender(){
   const body=document.getElementById('ttc-panel-body');
   if(!body||!_ttcRenderedStops)return;
   const h=t().hist,isKa=lang==='ka';
-  const chip=(d)=>`<button onclick="_histSetDays(${d})" style="font-family:ui-monospace,monospace;font-size:0.58rem;border:1px solid ${_histDays===d?'rgba(129,140,248,0.4)':'rgba(255,255,255,0.09)'};background:${_histDays===d?'rgba(129,140,248,0.14)':'none'};color:${_histDays===d?'#818cf8':'rgba(255,255,255,0.35)'};border-radius:6px;padding:3px 9px;cursor:pointer">${d} d</button>`;
-  body.innerHTML=`<div style="display:flex;gap:5px;margin-bottom:7px">${chip(7)}${chip(30)}</div>
+  const periodChips=[7,30].map(d=>_histChip(d+' d',_histDays===d,`_histSetDays(${d})`)).join('');
+  const dayChips=['all','weekday','sat','sun'].map(d=>_histChip(h.days[d],_histDaytype===d,`_histSetDaytype('${d}')`)).join('');
+  const bandChips=['all','am_peak','midday','pm_peak','evening'].map(b=>_histChip(h.bands[b],_histBand===b,`_histSetBand('${b}')`)).join('');
+  body.innerHTML=`<div style="display:flex;gap:4px;margin-bottom:5px;flex-wrap:wrap">${periodChips}${dayChips}</div>
+    <div style="display:flex;gap:4px;margin-bottom:7px;flex-wrap:wrap">${bandChips}</div>
     <div id="hist-coverage" style="font-size:0.6rem;color:rgba(255,255,255,0.3);margin-bottom:8px"></div>
     <div id="hist-content"><div style="font-size:0.66rem;color:rgba(255,255,255,0.3);padding:6px 0"><span class="spinner-sm" style="width:9px;height:9px;border-width:1.5px;display:inline-block;vertical-align:middle;margin-right:6px"></span>${h.loading}</div></div>`;
   try{
@@ -11076,11 +11106,16 @@ async function _histRender(){
     const to=cov.last_date;
     const fromD=new Date(Math.max(new Date(cov.first_date),new Date(new Date(to).getTime()-(_histDays-1)*86400000)));
     const from=fromD.toISOString().slice(0,10);
+    _histRange={from,to};
     if(covEl)covEl.innerHTML=`<span style="display:inline-block;width:5px;height:5px;border-radius:50%;background:#34d399;margin-right:5px;vertical-align:1px"></span>${h.coverage(new Date(cov.first_date).toLocaleDateString(isKa?'ka-GE':'en-GB',{day:'numeric',month:'short',year:'numeric'}),cov.days)}`;
     const ids=_ttcRenderedStops.map(s=>s.id);
-    const{data:rows,error}=await sb.rpc('transit_history_stats',{p_stop_ids:ids,p_from:from,p_to:to});
-    if(error)throw error;
-    _histStats=rows||[];
+    const[statsRes,hourlyRes]=await Promise.all([
+      sb.rpc('transit_history_stats',{p_stop_ids:ids,p_from:from,p_to:to,p_daytype:_histDaytype,p_band:_histBand}),
+      sb.rpc('transit_history_hourly',{p_stop_ids:ids,p_from:from,p_to:to,p_daytype:_histDaytype}),
+    ]);
+    if(statsRes.error)throw statsRes.error;
+    _histStats=statsRes.data||[];
+    _histHourly=hourlyRes.error?null:(hourlyRes.data||[]);
     _histRenderContent();
     _histApplyStopColors();
   }catch(e){
@@ -11112,11 +11147,12 @@ function _histRenderContent(){
   const tile=(v,unit,label,color)=>`<div style="border:1px solid rgba(255,255,255,0.09);border-radius:8px;padding:8px 9px;background:rgba(255,255,255,0.02)"><div style="font-family:ui-monospace,monospace;font-variant-numeric:tabular-nums;font-size:0.98rem;font-weight:600;${color?`color:${color}`:''}">${v}<span style="font-size:0.56rem;font-weight:500;color:rgba(255,255,255,0.35)"> ${unit}</span></div><div style="font-size:0.54rem;color:rgba(255,255,255,0.32);margin-top:1px">${label}</div></div>`;
   const otPct=tot.m?Math.round(100*tot.ot/tot.m):null;
   let html=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:9px">`
-    +tile(otPct==null?'—':otPct,'%',`${h.onTime} · ${h.onTimeSub}`,otPct==null?null:otPct>=80?_HIST_OK:otPct>=60?_HIST_WARN:_HIST_BAD)
-    +tile(fmtM(med(meds)),'min',h.medDelay)
-    +tile(fmtM(med(p90s)),'min',h.p90)
-    +tile(ewt==null?'—':'+'+(ewt/60).toFixed(1),'min',h.ewt)
+    +tile(otPct==null?'—':otPct,'%',`${h.onTime} · ${h.onTimeSub} ${_histInfoBtn('infoOnTime')}`,otPct==null?null:otPct>=80?_HIST_OK:otPct>=60?_HIST_WARN:_HIST_BAD)
+    +tile(fmtM(med(meds)),'min',`${h.medDelay} ${_histInfoBtn('infoMed')}`)
+    +tile(fmtM(med(p90s)),'min',`${h.p90} ${_histInfoBtn('infoP90')}`)
+    +tile(ewt==null?'—':'+'+(ewt/60).toFixed(1),'min',`${h.ewt} ${_histInfoBtn(_histBand==='all'?'infoEwt':'infoBandEwt')}`)
     +`</div>`;
+  html+=_histChartHtml();
   // least reliable stops (by late share, needs sample)
   const byStop=new Map(rows.map(r=>[r.stop_id,r]));
   const ranked=rows.filter(r=>Number(r.n_matched)>=30&&Number(r.late)>0)
@@ -11140,7 +11176,13 @@ function _histRenderContent(){
     html+=`<div style="font-size:0.56rem;color:rgba(255,255,255,0.25);margin-top:4px">${h.traceHint}</div>`;
   }
   html+=`<div id="hist-trace-bar"></div>`;
+  html+=`<div style="display:flex;gap:5px;margin-top:9px">
+    <button onclick="_histExportPDF()" style="flex:1.4;font-family:inherit;font-size:0.6rem;font-weight:600;padding:7px 0;border-radius:8px;border:1px solid rgba(52,211,153,0.3);background:rgba(52,211,153,0.12);color:#34d399;cursor:pointer">${h.exportPdf}</button>
+    <button onclick="_histExportCSV()" style="flex:1;font-family:inherit;font-size:0.6rem;font-weight:600;padding:7px 0;border-radius:8px;border:1px solid rgba(255,255,255,0.09);background:rgba(255,255,255,0.03);color:rgba(255,255,255,0.55);cursor:pointer">${h.exportCsv}</button>
+    <button onclick="_histExportGeoJSON()" style="flex:1;font-family:inherit;font-size:0.6rem;font-weight:600;padding:7px 0;border-radius:8px;border:1px solid rgba(255,255,255,0.09);background:rgba(255,255,255,0.03);color:rgba(255,255,255,0.55);cursor:pointer">${h.exportGeo}</button>
+  </div>`;
   c.innerHTML=html;
+  _histChartBind();
 }
 
 // Color the stop icons by reliability class (circle layer under the symbols)
@@ -11196,12 +11238,13 @@ async function _histTrace(routeId,shortName){
     const wk=rows.filter(r=>r.iso_week===week);
     const nByDir=[0,1].map(d=>wk.filter(r=>r.direction===d).reduce((a,r)=>a+r.n,0));
     const dir=_histTraceState?.routeId===routeId&&_histTraceState?.flip?(1-_histTraceState.dir):(nByDir[1]>=nByDir[0]?1:0);
-    // merge bands per bin, weighted by n
+    // merge bands per bin, weighted by n (or a single selected band)
     const bins=new Map();
-    for(const r of wk.filter(r=>r.direction===dir)){
+    for(const r of wk.filter(r=>r.direction===dir&&(!_histTraceBand||r.band===_histTraceBand))){
       const b=bins.get(r.bin_idx)||{w:0,s:0};
       b.w+=r.n;b.s+=r.speed_med_kmh*r.n;bins.set(r.bin_idx,b);
     }
+    if(!bins.size){showToast(h.insufficient);return;}
     // polyline for this direction (direction 1 ↔ forward=true per derive convention)
     const res=await fetch(`${PROXY}/ttc/routes/${encodeURIComponent(routeId)}/polyline?forward=${dir===1?'true':'false'}`);
     if(!res.ok)throw new Error('polyline '+res.status);
@@ -11229,11 +11272,19 @@ async function _histTrace(routeId,shortName){
       map.getLayer('ttc-stops-hist')?'ttc-stops-hist':undefined);
     _histTraceState={routeId,shortName,dir,flip:false};
     const bar=document.getElementById('hist-trace-bar');
-    if(bar)bar.innerHTML=`<div style="display:flex;align-items:center;gap:6px;margin-top:7px;border:1px solid rgba(129,140,248,0.25);background:rgba(129,140,248,0.08);border-radius:8px;padding:6px 8px">
-      <span style="font-family:ui-monospace,monospace;font-size:0.6rem;color:#818cf8;font-weight:700">${escapeHtml(shortName||'')}</span>
-      <span style="font-size:0.56rem;color:rgba(255,255,255,0.4);flex:1">${week} · dir ${dir}</span>
-      <button onclick="_histTraceState.flip=true;_histTrace('${routeId}','${escapeHtml(shortName||'')}')" style="font-family:inherit;font-size:0.56rem;border:0;background:none;color:#818cf8;cursor:pointer">${h.dirToggle}</button>
-      <button onclick="_histClearTrace()" style="font-family:inherit;font-size:0.56rem;border:0;background:none;color:rgba(255,255,255,0.4);cursor:pointer">✕ ${h.clearTrace}</button>
+    const bandChips=['',...['am_peak','midday','pm_peak','evening']].map(b=>{
+      const on=(_histTraceBand||'')===b;
+      const lbl=b?h.bands[b]:h.bands.all;
+      return `<button onclick="_histTraceBand='${b}'||null;_histTraceBand=_histTraceBand||null;_histTrace('${routeId}','${escapeHtml(shortName||'')}')" style="font-family:ui-monospace,monospace;font-size:0.52rem;border:1px solid ${on?'rgba(129,140,248,0.4)':'rgba(255,255,255,0.09)'};background:${on?'rgba(129,140,248,0.14)':'none'};color:${on?'#818cf8':'rgba(255,255,255,0.35)'};border-radius:5px;padding:2px 6px;cursor:pointer">${lbl}</button>`;
+    }).join('');
+    if(bar)bar.innerHTML=`<div style="margin-top:7px;border:1px solid rgba(129,140,248,0.25);background:rgba(129,140,248,0.08);border-radius:8px;padding:6px 8px">
+      <div style="display:flex;align-items:center;gap:6px">
+        <span style="font-family:ui-monospace,monospace;font-size:0.6rem;color:#818cf8;font-weight:700">${escapeHtml(shortName||'')}</span>
+        <span style="font-size:0.56rem;color:rgba(255,255,255,0.4);flex:1">${week} · dir ${dir}</span>
+        <button onclick="_histTraceState.flip=true;_histTrace('${routeId}','${escapeHtml(shortName||'')}')" style="font-family:inherit;font-size:0.56rem;border:0;background:none;color:#818cf8;cursor:pointer">${h.dirToggle}</button>
+        <button onclick="_histClearTrace()" style="font-family:inherit;font-size:0.56rem;border:0;background:none;color:rgba(255,255,255,0.4);cursor:pointer">✕</button>
+      </div>
+      <div style="display:flex;gap:3px;margin-top:5px;flex-wrap:wrap">${bandChips}</div>
     </div>`;
   }catch(e){console.warn('trace:',e);showToast((lang==='ka'?'კვალი ვერ ჩაიტვირთა':'Trace failed')+': '+(e.message||''));}
 }
@@ -11243,7 +11294,7 @@ function _histClearTrace(){
     if(map.getLayer('hist-trace'))map.removeLayer('hist-trace');
     if(map.getSource('hist-trace'))map.removeSource('hist-trace');
   }
-  _histTraceState=null;
+  _histTraceState=null;_histTraceBand=null;
   const bar=document.getElementById('hist-trace-bar');
   if(bar)bar.innerHTML='';
 }
@@ -11252,4 +11303,157 @@ function _histCleanup(){
   _histClearTrace();
   if(mapReady&&map.getLayer('ttc-stops-hist'))map.removeLayer('ttc-stops-hist');
   _histStats=null;
+}
+
+// ── History: delay-by-hour chart ─────────────────────────────────────────────
+function _histChartHtml(){
+  const h=t().hist;
+  if(!_histHourly||!_histHourly.length)return '';
+  return `<div style="border:1px solid rgba(255,255,255,0.09);border-radius:8px;padding:8px 9px 6px;background:rgba(255,255,255,0.02);margin-bottom:9px">
+    <div style="display:flex;justify-content:space-between;font-size:0.56rem;color:rgba(255,255,255,0.45);font-weight:600;margin-bottom:6px"><span>${h.chartTitle}</span><span style="color:rgba(255,255,255,0.28);font-weight:400">${h.days[_histDaytype]} · ${h.chartUnit}</span></div>
+    <div id="hist-chart" style="display:flex;align-items:stretch;gap:1.5px;height:56px;position:relative"></div>
+    <div style="display:flex;justify-content:space-between;font-family:ui-monospace,monospace;font-size:0.46rem;color:rgba(255,255,255,0.28);margin-top:3px"><span>06</span><span>10</span><span>14</span><span>18</span><span>22</span><span>01</span></div>
+  </div>`;
+}
+
+function _histChartBind(){
+  const el=document.getElementById('hist-chart');
+  if(!el||!_histHourly)return;
+  const h=t().hist;
+  // service-hour order: 06:00 → 00:59
+  const order=[...Array(19).keys()].map(i=>(i+6)%24);
+  const byHour=new Map(_histHourly.map(r=>[Number(r.hour),r]));
+  const vals=order.map(hr=>{const r=byHour.get(hr);return r&&r.delay_med_s!=null?Number(r.delay_med_s)/60:null;});
+  const maxAbs=Math.max(1,...vals.filter(v=>v!=null).map(v=>Math.abs(v)));
+  el.innerHTML=order.map((hr,i)=>{
+    const r=byHour.get(hr);const v=vals[i];
+    if(v==null)return `<div style="flex:1"></div>`;
+    const hPct=Math.max(4,Math.abs(v)/maxAbs*46);
+    const up=v>=0;
+    const col=up?'#fbbf24':'#818cf8';
+    return `<div class="hist-bar" data-h="${hr}" data-v="${v.toFixed(1)}" data-n="${r?r.n_matched:0}" tabindex="0" style="flex:1;position:relative;cursor:pointer">
+      <div style="position:absolute;left:0;right:0;${up?`bottom:50%`:`top:50%`};height:${hPct}%;background:${col};opacity:0.85;border-radius:2px"></div>
+      <div style="position:absolute;left:0;right:0;top:50%;height:1px;background:rgba(255,255,255,0.12)"></div>
+    </div>`;
+  }).join('');
+  let tip=document.getElementById('hist-tip');
+  if(!tip){
+    tip=document.createElement('div');tip.id='hist-tip';
+    tip.style.cssText='position:fixed;pointer-events:none;display:none;background:rgba(4,4,6,0.95);border:1px solid rgba(255,255,255,0.09);border-radius:7px;padding:6px 9px;font-size:0.6rem;z-index:9999;box-shadow:0 6px 20px rgba(0,0,0,0.5);line-height:1.5;color:rgba(255,255,255,0.85)';
+    document.body.appendChild(tip);
+  }
+  el.addEventListener('mousemove',e=>{
+    const b=e.target.closest('.hist-bar');
+    if(!b){tip.style.display='none';return;}
+    const hr=Number(b.dataset.h),v=Number(b.dataset.v);
+    tip.innerHTML=`${String(hr).padStart(2,'0')}:00–${String((hr+1)%24).padStart(2,'0')}:00<br><b style="font-family:ui-monospace,monospace">${v>=0?'+':''}${v.toFixed(1)} ${t().hist.chartUnit}</b> · <span style="color:rgba(255,255,255,0.4)">${b.dataset.n} ${t().hist.obs}</span>`;
+    tip.style.display='block';
+    tip.style.left=Math.min(e.clientX+12,window.innerWidth-150)+'px';
+    tip.style.top=(e.clientY-12)+'px';
+  });
+  el.addEventListener('mouseleave',()=>{tip.style.display='none';});
+}
+
+// ── History: methodology popovers ────────────────────────────────────────────
+function _histInfoBtn(key){
+  return `<span onclick="event.stopPropagation();_histInfo('${key}',this)" style="display:inline-block;width:11px;height:11px;line-height:11px;text-align:center;border-radius:50%;border:1px solid rgba(255,255,255,0.25);color:rgba(255,255,255,0.4);font-size:0.48rem;cursor:pointer;vertical-align:1px">i</span>`;
+}
+function _histInfo(key,anchor){
+  const txt=t().hist[key];if(!txt)return;
+  let pop=document.getElementById('hist-info-pop');
+  if(pop&&pop.dataset.key===key){pop.remove();return;}
+  if(pop)pop.remove();
+  pop=document.createElement('div');pop.id='hist-info-pop';pop.dataset.key=key;
+  pop.style.cssText='position:fixed;max-width:230px;background:rgba(4,4,6,0.96);border:1px solid rgba(129,140,248,0.3);border-radius:8px;padding:9px 11px;font-size:0.6rem;line-height:1.5;color:rgba(255,255,255,0.75);z-index:9999;box-shadow:0 8px 24px rgba(0,0,0,0.5)';
+  pop.textContent=txt;
+  document.body.appendChild(pop);
+  const r=anchor.getBoundingClientRect();
+  pop.style.left=Math.min(r.left,window.innerWidth-245)+'px';
+  pop.style.top=Math.min(r.bottom+6,window.innerHeight-pop.offsetHeight-10)+'px';
+  setTimeout(()=>document.addEventListener('click',function _c(e){if(!pop.contains(e.target)){pop.remove();document.removeEventListener('click',_c);}}),0);
+}
+
+// ── History: exports ─────────────────────────────────────────────────────────
+function _histExportCSV(){
+  if(!_histStats?.length)return;
+  const head='stop_id,stop_name,n_obs,n_matched,on_time,late,early,on_time_share,delay_med_s,delay_p90_s,ewt_s,headway_med_s';
+  const rows=_histStats.map(r=>{
+    const s=_ttcRenderedStops?.find(x=>x.id===r.stop_id);
+    const share=Number(r.n_matched)?(Number(r.on_time)/Number(r.n_matched)).toFixed(3):'';
+    return [r.stop_id,'"'+String(s?.name||'').replace(/"/g,'""')+'"',r.n_obs,r.n_matched,r.on_time,r.late,r.early,share,r.delay_med_s??'',r.delay_p90_s??'',r.ewt_s!=null?Math.round(r.ewt_s):'',r.headway_med_s!=null?Math.round(r.headway_med_s):''].join(',');
+  });
+  const meta=`# Urbanyx transit history · ${_histRange?.from} → ${_histRange?.to} · days=${_histDaytype} band=${_histBand}`;
+  const blob=new Blob([meta+'\n'+head+'\n'+rows.join('\n')],{type:'text/csv'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`transit_history_${_histRange?.from}_${_histRange?.to}.csv`;a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+
+function _histExportGeoJSON(){
+  if(!_histStats?.length||!_ttcRenderedStops)return;
+  const features=_histStats.map(r=>{
+    const s=_ttcRenderedStops.find(x=>x.id===r.stop_id);
+    if(!s)return null;
+    const share=Number(r.n_matched)?Number(r.on_time)/Number(r.n_matched):null;
+    return {type:'Feature',geometry:{type:'Point',coordinates:[s.lon,s.lat]},properties:{
+      stop_id:r.stop_id,name:s.name,n_obs:Number(r.n_obs),n_matched:Number(r.n_matched),
+      on_time_share:share!=null?Math.round(share*1000)/1000:null,
+      delay_med_s:r.delay_med_s!=null?Number(r.delay_med_s):null,
+      delay_p90_s:r.delay_p90_s!=null?Number(r.delay_p90_s):null,
+      ewt_s:r.ewt_s!=null?Math.round(r.ewt_s):null,
+      period:`${_histRange?.from}/${_histRange?.to}`,daytype:_histDaytype,band:_histBand,
+    }};
+  }).filter(Boolean);
+  _dlGeoJSON(`transit_history_${_histRange?.from}_${_histRange?.to}.geojson`,{type:'FeatureCollection',features});
+}
+
+async function _histExportPDF(){
+  if(!_histStats?.length)return;
+  try{
+    const{jsPDF}=window.jspdf||window;
+    const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+    const M=16;let y=M;
+    doc.setFontSize(15);doc.setTextColor(20);doc.text('Transit Service Reliability — Historical Assessment',M,y);y+=7;
+    doc.setFontSize(8.5);doc.setTextColor(110);
+    doc.text(`Period: ${_histRange?.from} to ${_histRange?.to}   ·   Days: ${_histDaytype}   ·   Time band: ${_histBand}   ·   Generated by Urbanyx`,M,y);y+=4;
+    const cov=_histCoverage;
+    doc.text(`Archive coverage: since ${cov?.first_date} (${cov?.days} service days). Source: vehicle positions sampled every 2 min, arrivals interpolated (±1 min).`,M,y);y+=8;
+    // headline metrics
+    const tot=_histStats.reduce((a,r)=>({m:a.m+Number(r.n_matched),ot:a.ot+Number(r.on_time),l:a.l+Number(r.late)}),{m:0,ot:0,l:0});
+    const meds=_histStats.map(r=>r.delay_med_s).filter(v=>v!=null).map(Number).sort((a,b)=>a-b);
+    const med=meds.length?meds[meds.length>>1]:null;
+    doc.setFontSize(11);doc.setTextColor(20);
+    doc.text(`On-time performance: ${tot.m?Math.round(100*tot.ot/tot.m):'—'}%   ·   Late: ${tot.m?Math.round(100*tot.l/tot.m):'—'}%   ·   Median delay: ${med!=null?(med>=0?'+':'')+(med/60).toFixed(1)+' min':'—'}`,M,y);y+=5;
+    doc.setFontSize(8);doc.setTextColor(110);
+    doc.text(`${tot.m.toLocaleString()} schedule-matched arrival observations across ${_histStats.length} stop-route pairs within the study area.`,M,y);y+=8;
+    // worst stops table
+    doc.setFontSize(10);doc.setTextColor(20);doc.text('Least reliable stops',M,y);y+=5;
+    doc.setFontSize(7.5);
+    const ranked=_histStats.filter(r=>Number(r.n_matched)>=30).sort((a,b)=>Number(b.late)/Number(b.n_matched)-Number(a.late)/Number(a.n_matched)).slice(0,12);
+    doc.setTextColor(110);doc.text('Stop',M,y);doc.text('Obs',110,y);doc.text('Late %',130,y);doc.text('Median delay',152,y);y+=1.5;
+    doc.setDrawColor(200);doc.line(M,y,194,y);y+=4;
+    doc.setTextColor(30);
+    for(const r of ranked){
+      const s=_ttcRenderedStops?.find(x=>x.id===r.stop_id);
+      doc.text(String(s?.name||r.stop_id).slice(0,52),M,y);
+      doc.text(String(r.n_matched),110,y);
+      doc.text(Math.round(100*Number(r.late)/Number(r.n_matched))+'%',130,y);
+      doc.text(r.delay_med_s!=null?((r.delay_med_s>=0?'+':'')+(r.delay_med_s/60).toFixed(1)+' min'):'—',152,y);
+      y+=4.6;if(y>270)break;
+    }
+    y+=6;
+    doc.setFontSize(7);doc.setTextColor(130);
+    const note='Methodology: on-time = arrival within -60s to +300s of schedule. Delays derived from TTC real-time vehicle positions archived at 2-minute cadence; stop arrivals interpolated between consecutive fixes along the route, matched to the service-day timetable (nearest departure within 20 min). Stops with fewer than 30 matched observations are excluded from rankings. Figures are estimates suitable for planning-level assessment.';
+    doc.text(doc.splitTextToSize(note,178),M,y);
+    doc.save(`transit_history_${_histRange?.from}_${_histRange?.to}.pdf`);
+  }catch(e){console.warn('hist pdf:',e);showToast('PDF failed: '+(e.message||''));}
+}
+
+// ── History: saved-project restore hook ──────────────────────────────────────
+// _buildActionLog records this when a project is saved in History mode.
+function _histRestore(days,band,daytype){
+  _histDays=days||7;_histBand=band||'all';_histDaytype=daytype||'all';
+  if(!currentUser||currentUser.plan!=='pro')return;
+  _ttcClearPoll();_clearBusStopRoute();
+  _ttcMode='history';
+  _ttcRenderPanel();
 }
