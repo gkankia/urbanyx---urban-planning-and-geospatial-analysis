@@ -278,6 +278,9 @@ require("./cron-trial-expiry");
 // ── Transit position collector (archives to R2; disabled without R2_* env) ────
 require("./cron-transit-collector");
 
+// ── Transit nightly derivation (R2 archive → Supabase aggregates) ─────────────
+require("./cron-transit-derive");
+
 // ── Start ─────────────────────────────────────────────────────────────────────
 const httpServer = app.listen(PORT, () => console.log(`Urbanyx server running on port ${PORT}`));
 

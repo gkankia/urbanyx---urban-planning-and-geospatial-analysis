@@ -156,12 +156,15 @@ async function snapshotNetwork() {
 
     const routes = await getRoutes();
     const full = await mapPool(routes, async (r) => {
-      const [detail, polyline, schedule] = await Promise.all([
+      // Schedule and polyline are direction-dependent (?forward=true|false)
+      const [detail, polylineFwd, polylineRev, scheduleFwd, scheduleRev] = await Promise.all([
         ttcFetch(`/v3/routes/${encodeURIComponent(r.id)}?locale=ka`),
-        ttcFetch(`/v2/routes/${encodeURIComponent(r.id)}/polyline`).catch(() => null),
-        ttcFetch(`/v2/routes/${encodeURIComponent(r.id)}/schedule`).catch(() => null),
+        ttcFetch(`/v2/routes/${encodeURIComponent(r.id)}/polyline?forward=true`).catch(() => null),
+        ttcFetch(`/v2/routes/${encodeURIComponent(r.id)}/polyline?forward=false`).catch(() => null),
+        ttcFetch(`/v2/routes/${encodeURIComponent(r.id)}/schedule?forward=true`).catch(() => null),
+        ttcFetch(`/v2/routes/${encodeURIComponent(r.id)}/schedule?forward=false`).catch(() => null),
       ]);
-      return { id: r.id, detail, polyline, schedule };
+      return { id: r.id, detail, polyline: { fwd: polylineFwd, rev: polylineRev }, schedule: { fwd: scheduleFwd, rev: scheduleRev } };
     }, CONCURRENCY);
     await putGz(`gtfs-snapshots/${day}/routes.json.gz`, JSON.stringify(full.filter(Boolean)));
     console.log(`[transit-collector] network snapshot saved for ${day} (${routes.length} routes)`);
