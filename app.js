@@ -11046,7 +11046,11 @@ function _ttcRenderPanel(){
   const el=document.getElementById('acc-transit-result');
   if(!el||!_ttcRenderedStops)return;
   const h=t().hist,isKa=lang==='ka';
-  const seg=(m,label)=>`<button onclick="_ttcSetMode('${m}')" style="flex:1;border:0;font-family:inherit;font-size:0.66rem;font-weight:600;padding:5px 0;border-radius:6px;cursor:pointer;background:${_ttcMode===m?(m==='history'?'rgba(129,140,248,0.16)':'rgba(52,211,153,0.14)'):'none'};color:${_ttcMode===m?(m==='history'?'#818cf8':'#34d399'):'rgba(255,255,255,0.35)'}">${label}</button>`;
+  const isPro=currentUser?.plan==='pro';
+  const seg=(m,label)=>{
+    const locked=m==='history'&&!isPro; // greyed out; click opens the upgrade paywall
+    return `<button onclick="_ttcSetMode('${m}')" style="flex:1;border:0;font-family:inherit;font-size:0.66rem;font-weight:600;padding:5px 0;border-radius:6px;cursor:pointer;${locked?'opacity:0.45;':''}background:${_ttcMode===m?(m==='history'?'rgba(129,140,248,0.16)':'rgba(52,211,153,0.14)'):'none'};color:${_ttcMode===m?(m==='history'?'#818cf8':'#34d399'):'rgba(255,255,255,0.35)'}">${label}</button>`;
+  };
   const proTag=currentUser?.plan==='pro'?'':` <span style="font-size:0.5rem;letter-spacing:0.08em;background:rgba(129,140,248,0.14);color:#818cf8;border:1px solid rgba(129,140,248,0.3);border-radius:3px;padding:1px 4px;vertical-align:1px">PRO</span>`;
   el.innerHTML=`<div style="display:flex;gap:2px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.09);border-radius:8px;padding:2px;margin:2px 0 8px">${seg('live',h.live)}${seg('history',h.history+proTag)}</div><div id="ttc-panel-body"></div>`;
   if(_ttcMode==='history')_histRender();else _ttcRenderLiveBody();
@@ -11068,11 +11072,20 @@ function _ttcSetMode(m){
     if(currentUser.plan!=='pro'){openPaywall(true);return;}
     _ttcClearPoll();_clearBusStopRoute();
     _ttcMode='history';
+    _ttcSetIconsVisible(false); // reliability circles replace the bus icons
   }else{
     _histCleanup();
     _ttcMode='live';
+    _ttcSetIconsVisible(true);
   }
   _ttcRenderPanel();
+}
+
+function _ttcSetIconsVisible(v){
+  if(!mapReady)return;
+  ['ttc-stops','ttc-stops-hl'].forEach(id=>{
+    if(map.getLayer(id))map.setLayoutProperty(id,'visibility',v?'visible':'none');
+  });
 }
 
 function _histSetDays(d){_histDays=d;_histRender();}
@@ -11302,6 +11315,7 @@ function _histClearTrace(){
 function _histCleanup(){
   _histClearTrace();
   if(mapReady&&map.getLayer('ttc-stops-hist'))map.removeLayer('ttc-stops-hist');
+  _ttcSetIconsVisible(true);
   _histStats=null;
 }
 
@@ -11356,7 +11370,8 @@ function _histChartBind(){
 
 // ── History: methodology popovers ────────────────────────────────────────────
 function _histInfoBtn(key){
-  return `<span onclick="event.stopPropagation();_histInfo('${key}',this)" style="display:inline-block;width:11px;height:11px;line-height:11px;text-align:center;border-radius:50%;border:1px solid rgba(255,255,255,0.25);color:rgba(255,255,255,0.4);font-size:0.48rem;cursor:pointer;vertical-align:1px">i</span>`;
+  // Same ⓘ treatment as the wind/zoning cards for design consistency
+  return `<span class="wind-info-icon" onclick="event.stopPropagation();_histInfo('${key}',this)">ⓘ</span>`;
 }
 function _histInfo(key,anchor){
   const txt=t().hist[key];if(!txt)return;
