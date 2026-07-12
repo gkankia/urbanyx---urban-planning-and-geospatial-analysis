@@ -279,6 +279,14 @@ require("./cron-trial-expiry");
 require("./cron-transit-collector");
 
 // ── Start ─────────────────────────────────────────────────────────────────────
-app.listen(PORT, () => console.log(`Urbanyx server running on port ${PORT}`));
+const httpServer = app.listen(PORT, () => console.log(`Urbanyx server running on port ${PORT}`));
+
+// Graceful shutdown — Railway sends SIGTERM on every redeploy; exit 0 so the
+// old container's shutdown doesn't surface as an npm error in the logs.
+process.on("SIGTERM", () => {
+  console.log("[server] SIGTERM received — shutting down gracefully");
+  httpServer.close(() => process.exit(0));
+  setTimeout(() => process.exit(0), 8000).unref(); // fallback if connections hang
+});
 
 module.exports = app;
