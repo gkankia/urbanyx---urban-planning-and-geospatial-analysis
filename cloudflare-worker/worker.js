@@ -134,11 +134,13 @@ export default {
         cacheSeconds = 0;
       } else if (parts.length === 4 && parts[1] === "routes" && parts[3] === "schedule") {
         const routeId = decodeURIComponent(parts[2]);
-        ttcUrl = `${TTC_API}/routes/${encodeURIComponent(routeId)}/schedule`;
+        const fwd = url.searchParams.get("forward"); // direction-dependent
+        ttcUrl = `${TTC_API}/routes/${encodeURIComponent(routeId)}/schedule${fwd !== null ? `?forward=${encodeURIComponent(fwd)}` : ""}`;
         cacheSeconds = 3600;
       } else if (parts.length === 4 && parts[1] === "routes" && parts[3] === "polyline") {
         const routeId = decodeURIComponent(parts[2]);
-        ttcUrl = `${TTC_API}/routes/${encodeURIComponent(routeId)}/polyline`;
+        const fwd = url.searchParams.get("forward"); // direction-dependent
+        ttcUrl = `${TTC_API}/routes/${encodeURIComponent(routeId)}/polyline${fwd !== null ? `?forward=${encodeURIComponent(fwd)}` : ""}`;
         cacheSeconds = 3600;
       } else if (parts.length === 3 && parts[1] === "v3" && parts[2] === "routes") {
         const modes = url.searchParams.get("modes") || "BUS,SUBWAY,GONDOLA";

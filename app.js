@@ -228,6 +228,11 @@ const T = {
     pdfWalkability:"Walkability Analysis", pdfDiversityIndex:"Shannon Diversity Index",
     pdfStreetImagery:"Street Imagery", pdfProAnalysis:"Pro Analysis",
     pdfNoScore:"Run analysis to generate score", pdfNoImage:"No street imagery available",
+    hist:{ live:"Live", history:"History", coverage:(f,n)=>`Archive since ${f} · ${n} day${n==1?'':'s'} of data`,
+      onTime:"On-time", onTimeSub:"−1…+5 min", medDelay:"Median delay", p90:"90th-pct delay", ewt:"Excess wait",
+      worst:"Least reliable stops in area", noData:"No history for this area yet — data collection began 12 Jul 2026.",
+      insufficient:"insufficient data", late:"late", traceHint:"Click a route chip below to paint its speed along the route",
+      dirToggle:"⇄ direction", clearTrace:"Clear trace", loading:"Crunching history…" },
     dash:{ title:"Dashboard", usage:"Usage", usedToday:"Searches this month", remaining:"Remaining", limit:"Monthly limit", resetsAt:"Resets on", billing:"Plan & Billing", freePlan:"Free plan", proPlan:"Pro plan", freeDesc:"50 parcel views and analyses / month", proDesc:"1,000 searches / month · Full Pro analysis · GeoData export", upgrade:"Upgrade to Pro", manageBilling:"Manage billing", billingTitle:"Billing", billingSubFree:"Manage your plan", billingSubPro:"Your active subscription", billingLblPlan:"Current plan", billingLblHistory:"Billing history", billingPeriod:"/month", billingRenewal:"Next payment", billingTrialEnds:"Trial ends", billingDaysLeft:"days remaining", billingTrialNote:"Your 14-day free trial is active. If you cancel now, you keep full access until the trial ends.", billingPostTrialNote:"If you cancel, you keep Pro access until your renewal date. No further charges after that.", billingCanceling:"Cancellation scheduled — access continues until period end.", billingNoHistory:"No billing history yet", billingCancel:"Cancel subscription", billingCancelConfirm:"Are you sure you want to cancel? You will keep access until the current period ends.", billingCanceledTrial:"Your subscription has been cancelled. No charge was made.", billingCanceledRefund:"Your subscription has been cancelled and a refund has been issued for the unused period.", signOut:"Sign out", activity:"Activity this month" },
     projects:{ navTip:"My Projects", panelTitle:"My Projects", saveBtn:"Save current analysis", emptyMsg:"No saved projects yet.", openBtn:"Open", deleteConfirm:"Delete this project?", loadingMsg:"Loading…", savingMsg:"Saving…", saveModalTitle:"Save Project", saveModalHint:"Saves map view, selected features, imported layers and analysis results.", cancelBtn:"Cancel", confirmBtn:"Save", savedToast:"Project saved", deletedToast:"Project deleted", loadedToast:"Project loaded", errorSave:"Failed to save project", errorLoad:"Failed to load project", errorDelete:"Delete failed", layers:"layer", layersPlural:"layers" },
     activityLabels:{ map_click:"Clicks", free_analysis:"Free analysis", pro_analysis:"Pro analysis", relief_analysis:"Relief", pdf_export:"PDF export", geojson_export:"GeoJSON export" },
@@ -344,6 +349,11 @@ const T = {
     exportBtn:"PDF ექსპორტი", exportGenerating:"მზადდება…", exportProOnly:"PDF ექსპორტი Pro ფუნქციაა.",
     geodataBtn:"GeoData ჩამოტვირთვა", geodataProOnly:"GeoData ექსპორტი Pro ფუნქციაა.",
     pdfTitle:"ნაკვეთის ანალიზის ანგარიში", pdfGenerated:"შექმნილია Urbanyx-ით",
+    hist:{ live:"ლაივი", history:"ისტორია", coverage:(f,n)=>`არქივი ${f}-დან · ${n} დღის მონაცემი`,
+      onTime:"დროულად", onTimeSub:"−1…+5 წთ", medDelay:"მედიანური დაგვ.", p90:"90-ე პროც. დაგვ.", ewt:"ზედმეტი ლოდინი",
+      worst:"ყველაზე არასანდო გაჩერებები", noData:"ამ არეალზე ისტორია ჯერ არ არის — შეგროვება დაიწყო 12 ივლ 2026.",
+      insufficient:"არასაკმარისი მონაცემი", late:"გვიან", traceHint:"დააჭირე მარშრუტის ნომერს სიჩქარის კვალის სანახავად",
+      dirToggle:"⇄ მიმართულება", clearTrace:"კვალის წაშლა", loading:"ისტორია იტვირთება…" },
     dash:{ title:"დეშბორდი", usage:"გამოყენება", usedToday:"ძიება ამ თვეში", remaining:"დარჩენილი", limit:"თვიური ლიმიტი", resetsAt:"განახლდება", billing:"გეგმა და ბილინგი", freePlan:"უფასო გეგმა", proPlan:"Pro გეგმა", freeDesc:"50 ნაკვეთის ხედვა და ანალიზი / თვეში", proDesc:"1,000 ძიება / თვეში · Pro ანალიზი · GeoData ექსპორტი", upgrade:"Pro-ზე გადასვლა", manageBilling:"ბილინგის მართვა", billingTitle:"ბილინგი", billingSubFree:"გეგმის მართვა", billingSubPro:"თქვენი გამოწერა", billingLblPlan:"მიმდინარე გეგმა", billingLblHistory:"გადახდების ისტორია", billingPeriod:"/თვეში", billingRenewal:"შემდეგი გადახდა", billingTrialEnds:"საცდელი მთავრდება", billingDaysLeft:"დღე რჩება", billingTrialNote:"14-დღიანი უფასო პერიოდი აქტიურია. გაუქმების შემთხვევაში პრო ფუნქციები ხელმისაწვდომი იქნება გამოცდის ბოლომდე.", billingPostTrialNote:"გაუქმების შემთხვევაში Pro წვდომა შენარჩუნდება განახლების თარიღამდე. ამის შემდეგ თანხა არ ჩამოიჭრება.", billingCanceling:"გაუქმება დაგეგმილია — წვდომა გრძელდება პერიოდის ბოლომდე.", billingNoHistory:"გადახდების ისტორია ცარიელია", billingCancel:"გამოწერის გაუქმება", billingCancelConfirm:"დარწმუნებული ხარ? წვდომა შენარჩუნდება მიმდინარე პერიოდის ბოლომდე.", billingCanceledTrial:"გამოწერა გაუქმდა. თანხა არ ჩამოიჭრება.", billingCanceledRefund:"გამოწერა გაუქმდა და გამოუყენებელი პერიოდის თანხა დაბრუნდება.", signOut:"გასვლა", activity:"ამ თვის აქტივობა" },
     projects:{ navTip:"ჩემი პროექტები", panelTitle:"ჩემი პროექტები", saveBtn:"მიმდინარე ანალიზის შენახვა", emptyMsg:"შენახული პროექტები არ არის.", openBtn:"გახსნა", deleteConfirm:"წაშალოს ეს პროექტი?", loadingMsg:"იტვირთება…", savingMsg:"ინახება…", saveModalTitle:"პროექტის შენახვა", saveModalHint:"ინახება რუკის ხედი, შერჩეული ობიექტები, შემოტანილი ფენები და ანალიზის შედეგები.", cancelBtn:"გაუქმება", confirmBtn:"შენახვა", savedToast:"პროექტი შენახულია", deletedToast:"პროექტი წაშლილია", loadedToast:"პროექტი ჩაიტვირთა", errorSave:"შენახვა ვერ მოხერხდა", errorLoad:"ჩატვირთვა ვერ მოხერხდა", errorDelete:"წაშლა ვერ მოხერხდა", layers:"ფენა", layersPlural:"ფენა" },
     activityLabels:{ map_click:"ნაკვეთები", free_analysis:"სიარული", pro_analysis:"სივრც. ანალ.", relief_analysis:"რელიეფი", pdf_export:"PDF", geojson_export:"GeoJSON" },
@@ -8961,7 +8971,8 @@ async function toggleAccTransit(){
   const isKa=lang==='ka'; const tr=t();
   if(sw.classList.contains('on')){
     _clearBusStopRoute();
-    sw.classList.remove('on'); el.innerHTML=''; _ttcClearPoll(); _ttcRemoveFromMap(); _ttcRenderedStops=null; return;
+    _histCleanup();
+    sw.classList.remove('on'); el.innerHTML=''; _ttcClearPoll(); _ttcRemoveFromMap(); _ttcRenderedStops=null; _ttcMode='live'; return;
   }
   const isoFeat=_isoData?.features?.[0];
   if(!isoFeat){
@@ -8984,14 +8995,12 @@ async function toggleAccTransit(){
         return{...s,routes:r.ok?await r.json():[]};
       }catch{return{...s,routes:[]};}
     }));
-    el.innerHTML=stopsWithRoutes.map(s=>_ttcRenderStopCard(s,isKa)).join('');
     _ttcRenderedStops=stopsWithRoutes;
     // Plot stops on map
     _ttcShowOnMap(stopsWithRoutes);
-    // Background: populate wait-time badges for all stop cards
-    _ttcLoadAllWaitTimes(stopsWithRoutes);
-    // Auto-open first stop
-    if(stopsWithRoutes.length){const _s0=stopsWithRoutes[0];_ttcSelectStop(_s0.id,_s0.code,_s0.lon,_s0.lat,_s0.name);}
+    // Render panel in current mode (Live | History)
+    _ttcMode='live';
+    _ttcRenderPanel();
   }catch(e){
     sw.classList.remove('on');
     el.innerHTML=`<div style="font-size:0.69rem;color:rgba(255,80,80,0.45);padding:4px 0">${isKa?'შეცდომა — დარწმუნდით proxy-ის განახლებაში':'Error — make sure the Worker is deployed'}</div>`;
@@ -9406,8 +9415,8 @@ function _ttcRemoveFromMap(){
   _ttcSelectedStopGeo=null;
   if(_ttcMapClickDeselect){map.off('click',_ttcMapClickDeselect);_ttcMapClickDeselect=null;}
   _ttcClearRouteShape();
-  ['ttc-stops','ttc-stops-hl','ttc-route-shape','ttc-route-shape-halo','ttc-vehicles-dot','ttc-vehicles-pulse'].forEach(id=>{try{if(map.getLayer(id))map.removeLayer(id);}catch(_){}});
-  ['ttc-stops','ttc-stops-hl','ttc-route-shape','ttc-vehicles'].forEach(id=>{try{if(map.getSource(id))map.removeSource(id);}catch(_){}});
+  ['ttc-stops-hist','hist-trace','ttc-stops','ttc-stops-hl','ttc-route-shape','ttc-route-shape-halo','ttc-vehicles-dot','ttc-vehicles-pulse'].forEach(id=>{try{if(map.getLayer(id))map.removeLayer(id);}catch(_){}});
+  ['hist-trace','ttc-stops','ttc-stops-hl','ttc-route-shape','ttc-vehicles'].forEach(id=>{try{if(map.getSource(id))map.removeSource(id);}catch(_){}});
 }
 
 // ── Route polyline display ──────────────────────────────────────────
@@ -11002,4 +11011,245 @@ function navLocateUser(){
   };
   navigator.geolocation.getCurrentPosition(_onPos,_onErr,{enableHighAccuracy:true,timeout:10000});
   _userLocWatch=navigator.geolocation.watchPosition(_onPos,_onErr,{enableHighAccuracy:true,timeout:10000});
+}
+
+// ── Transit History mode ──────────────────────────────────────────────────────
+// Reads nightly aggregates (transit_stop_daily / transit_segment_weekly via
+// supabase RPC) derived from the R2 position archive. Live stays free;
+// History is Pro. See supabase/transit-history-rpc.sql.
+let _ttcMode='live';
+let _histCoverage=null, _histDays=7, _histStats=null, _histTraceState=null;
+const _HIST_OK='#34d399',_HIST_WARN='#fbbf24',_HIST_BAD='#f87171',_HIST_GREY='rgba(255,255,255,0.35)';
+
+function _ttcRenderPanel(){
+  const el=document.getElementById('acc-transit-result');
+  if(!el||!_ttcRenderedStops)return;
+  const h=t().hist,isKa=lang==='ka';
+  const seg=(m,label)=>`<button onclick="_ttcSetMode('${m}')" style="flex:1;border:0;font-family:inherit;font-size:0.66rem;font-weight:600;padding:5px 0;border-radius:6px;cursor:pointer;background:${_ttcMode===m?(m==='history'?'rgba(129,140,248,0.16)':'rgba(52,211,153,0.14)'):'none'};color:${_ttcMode===m?(m==='history'?'#818cf8':'#34d399'):'rgba(255,255,255,0.35)'}">${label}</button>`;
+  const proTag=currentUser?.plan==='pro'?'':` <span style="font-size:0.5rem;letter-spacing:0.08em;background:rgba(129,140,248,0.14);color:#818cf8;border:1px solid rgba(129,140,248,0.3);border-radius:3px;padding:1px 4px;vertical-align:1px">PRO</span>`;
+  el.innerHTML=`<div style="display:flex;gap:2px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.09);border-radius:8px;padding:2px;margin:2px 0 8px">${seg('live',h.live)}${seg('history',h.history+proTag)}</div><div id="ttc-panel-body"></div>`;
+  if(_ttcMode==='history')_histRender();else _ttcRenderLiveBody();
+}
+
+function _ttcRenderLiveBody(){
+  const body=document.getElementById('ttc-panel-body');
+  if(!body||!_ttcRenderedStops)return;
+  const isKa=lang==='ka';
+  body.innerHTML=_ttcRenderedStops.map(s=>_ttcRenderStopCard(s,isKa)).join('');
+  _ttcLoadAllWaitTimes(_ttcRenderedStops);
+  if(_ttcRenderedStops.length){const s0=_ttcRenderedStops[0];_ttcSelectStop(s0.id,s0.code,s0.lon,s0.lat,s0.name);}
+}
+
+function _ttcSetMode(m){
+  if(m===_ttcMode)return;
+  if(m==='history'){
+    if(!currentUser){openAuthModal('view-signup');return;}
+    if(currentUser.plan!=='pro'){openPaywall(true);return;}
+    _ttcClearPoll();_clearBusStopRoute();
+    _ttcMode='history';
+  }else{
+    _histCleanup();
+    _ttcMode='live';
+  }
+  _ttcRenderPanel();
+}
+
+function _histSetDays(d){_histDays=d;_histRender();}
+
+async function _histRender(){
+  const body=document.getElementById('ttc-panel-body');
+  if(!body||!_ttcRenderedStops)return;
+  const h=t().hist,isKa=lang==='ka';
+  const chip=(d)=>`<button onclick="_histSetDays(${d})" style="font-family:ui-monospace,monospace;font-size:0.58rem;border:1px solid ${_histDays===d?'rgba(129,140,248,0.4)':'rgba(255,255,255,0.09)'};background:${_histDays===d?'rgba(129,140,248,0.14)':'none'};color:${_histDays===d?'#818cf8':'rgba(255,255,255,0.35)'};border-radius:6px;padding:3px 9px;cursor:pointer">${d} d</button>`;
+  body.innerHTML=`<div style="display:flex;gap:5px;margin-bottom:7px">${chip(7)}${chip(30)}</div>
+    <div id="hist-coverage" style="font-size:0.6rem;color:rgba(255,255,255,0.3);margin-bottom:8px"></div>
+    <div id="hist-content"><div style="font-size:0.66rem;color:rgba(255,255,255,0.3);padding:6px 0"><span class="spinner-sm" style="width:9px;height:9px;border-width:1.5px;display:inline-block;vertical-align:middle;margin-right:6px"></span>${h.loading}</div></div>`;
+  try{
+    if(!_histCoverage){
+      const{data,error}=await sb.rpc('transit_history_coverage');
+      if(error)throw error;
+      _histCoverage=Array.isArray(data)?data[0]:data;
+    }
+    const cov=_histCoverage;
+    const covEl=document.getElementById('hist-coverage');
+    if(!cov?.first_date){if(covEl)covEl.textContent='';document.getElementById('hist-content').innerHTML=`<div style="font-size:0.66rem;color:rgba(255,255,255,0.3)">${h.noData}</div>`;return;}
+    const to=cov.last_date;
+    const fromD=new Date(Math.max(new Date(cov.first_date),new Date(new Date(to).getTime()-(_histDays-1)*86400000)));
+    const from=fromD.toISOString().slice(0,10);
+    if(covEl)covEl.innerHTML=`<span style="display:inline-block;width:5px;height:5px;border-radius:50%;background:#34d399;margin-right:5px;vertical-align:1px"></span>${h.coverage(new Date(cov.first_date).toLocaleDateString(isKa?'ka-GE':'en-GB',{day:'numeric',month:'short',year:'numeric'}),cov.days)}`;
+    const ids=_ttcRenderedStops.map(s=>s.id);
+    const{data:rows,error}=await sb.rpc('transit_history_stats',{p_stop_ids:ids,p_from:from,p_to:to});
+    if(error)throw error;
+    _histStats=rows||[];
+    _histRenderContent();
+    _histApplyStopColors();
+  }catch(e){
+    console.warn('hist:',e);
+    const c=document.getElementById('hist-content');
+    if(c)c.innerHTML=`<div style="font-size:0.66rem;color:rgba(248,113,113,0.6)">${isKa?'ისტორიის ჩატვირთვა ვერ მოხერხდა':'Could not load history'} — ${(e.message||'').slice(0,80)}</div>`;
+  }
+}
+
+function _histClassOf(r){ // reliability class per stop-aggregate row
+  if(!r||Number(r.n_matched)<30)return null; // insufficient
+  const share=Number(r.on_time)/Number(r.n_matched);
+  return share>=0.8?'ok':share>=0.6?'warn':'bad';
+}
+
+function _histRenderContent(){
+  const c=document.getElementById('hist-content');
+  if(!c)return;
+  const h=t().hist,isKa=lang==='ka';
+  const rows=_histStats;
+  if(!rows.length){c.innerHTML=`<div style="font-size:0.66rem;color:rgba(255,255,255,0.3)">${h.noData}</div>`;return;}
+  const tot=rows.reduce((a,r)=>({m:a.m+Number(r.n_matched),ot:a.ot+Number(r.on_time),l:a.l+Number(r.late),n:a.n+Number(r.n_obs)}),{m:0,ot:0,l:0,n:0});
+  const meds=rows.map(r=>r.delay_med_s).filter(v=>v!=null).map(Number).sort((a,b)=>a-b);
+  const p90s=rows.map(r=>r.delay_p90_s).filter(v=>v!=null).map(Number).sort((a,b)=>a-b);
+  const med=a=>a.length?a[a.length>>1]:null;
+  const ewtW=rows.filter(r=>r.ewt_s!=null);
+  const ewt=ewtW.length?ewtW.reduce((a,r)=>a+Number(r.ewt_s)*Number(r.n_obs),0)/ewtW.reduce((a,r)=>a+Number(r.n_obs),0):null;
+  const fmtM=s=>s==null?'—':(s>=0?'+':'−')+(Math.abs(s)/60).toFixed(1);
+  const tile=(v,unit,label,color)=>`<div style="border:1px solid rgba(255,255,255,0.09);border-radius:8px;padding:8px 9px;background:rgba(255,255,255,0.02)"><div style="font-family:ui-monospace,monospace;font-variant-numeric:tabular-nums;font-size:0.98rem;font-weight:600;${color?`color:${color}`:''}">${v}<span style="font-size:0.56rem;font-weight:500;color:rgba(255,255,255,0.35)"> ${unit}</span></div><div style="font-size:0.54rem;color:rgba(255,255,255,0.32);margin-top:1px">${label}</div></div>`;
+  const otPct=tot.m?Math.round(100*tot.ot/tot.m):null;
+  let html=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:9px">`
+    +tile(otPct==null?'—':otPct,'%',`${h.onTime} · ${h.onTimeSub}`,otPct==null?null:otPct>=80?_HIST_OK:otPct>=60?_HIST_WARN:_HIST_BAD)
+    +tile(fmtM(med(meds)),'min',h.medDelay)
+    +tile(fmtM(med(p90s)),'min',h.p90)
+    +tile(ewt==null?'—':'+'+(ewt/60).toFixed(1),'min',h.ewt)
+    +`</div>`;
+  // least reliable stops (by late share, needs sample)
+  const byStop=new Map(rows.map(r=>[r.stop_id,r]));
+  const ranked=rows.filter(r=>Number(r.n_matched)>=30&&Number(r.late)>0)
+    .sort((a,b)=>Number(b.late)/Number(b.n_matched)-Number(a.late)/Number(a.n_matched)).slice(0,5);
+  if(ranked.length){
+    html+=`<div style="font-family:ui-monospace,monospace;font-size:0.52rem;letter-spacing:0.14em;text-transform:uppercase;color:rgba(255,255,255,0.3);margin:2px 0 5px">${h.worst}</div>`;
+    html+=ranked.map(r=>{
+      const s=_ttcRenderedStops.find(x=>x.id===r.stop_id);
+      const cls=_histClassOf(r);
+      const col=cls==='bad'?_HIST_BAD:cls==='warn'?_HIST_WARN:_HIST_OK;
+      const latePct=Math.round(100*Number(r.late)/Number(r.n_matched));
+      const chips=(s?.routes||[]).slice(0,4).map(rt=>`<span onclick="event.stopPropagation();_histTrace('${rt.id||''}','${(rt.shortName||'').replace(/'/g,'')}')" style="display:inline-block;background:rgba(129,140,248,0.14);color:#818cf8;border:1px solid rgba(129,140,248,0.3);border-radius:4px;padding:0 4px;height:14px;line-height:14px;font-size:0.54rem;font-weight:700;margin-right:3px;cursor:pointer">${rt.shortName||''}</span>`).join('');
+      return `<div style="border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:6px 8px;margin-bottom:5px;background:rgba(255,255,255,0.02)">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:6px">
+          <span style="font-size:0.63rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${s?escapeHtml(s.name):r.stop_id}</span>
+          <span style="font-family:ui-monospace,monospace;font-size:0.58rem;color:${col};flex-shrink:0"><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:${col};margin-right:4px;vertical-align:1px"></span>${latePct}% ${h.late}</span>
+        </div>
+        ${chips?`<div style="margin-top:3px">${chips}</div>`:''}
+      </div>`;
+    }).join('');
+    html+=`<div style="font-size:0.56rem;color:rgba(255,255,255,0.25);margin-top:4px">${h.traceHint}</div>`;
+  }
+  html+=`<div id="hist-trace-bar"></div>`;
+  c.innerHTML=html;
+}
+
+// Color the stop icons by reliability class (circle layer under the symbols)
+function _histApplyStopColors(){
+  if(!mapReady||!_histStats)return;
+  const expr=['match',['get','id']];
+  let any=false;
+  for(const r of _histStats){
+    const cls=_histClassOf(r);
+    expr.push(r.stop_id,cls==='ok'?_HIST_OK:cls==='warn'?_HIST_WARN:cls==='bad'?_HIST_BAD:_HIST_GREY);
+    any=true;
+  }
+  expr.push(_HIST_GREY);
+  if(!any)return;
+  const src=map.getSource('ttc-stops');
+  if(!src)return;
+  if(!map.getLayer('ttc-stops-hist')){
+    map.addLayer({id:'ttc-stops-hist',type:'circle',source:'ttc-stops',paint:{
+      'circle-radius':10,'circle-color':expr,'circle-opacity':0.85,
+      'circle-stroke-width':2,'circle-stroke-color':'rgba(6,6,8,0.9)'
+    }},'ttc-stops');
+  }else{
+    map.setPaintProperty('ttc-stops-hist','circle-color',expr);
+  }
+}
+
+// ── Route speed trace (Mapbox line-gradient over archived speeds) ────────────
+function _histDecodePolyline(str){
+  const pts=[];let lat=0,lon=0,i=0;
+  while(i<str.length){
+    for(const w of[0,1]){
+      let shift=0,res=0,b;
+      do{b=str.charCodeAt(i++)-63;res|=(b&0x1f)<<shift;shift+=5;}while(b>=0x20);
+      const d=(res&1)?~(res>>1):(res>>1);
+      if(w===0)lat+=d;else lon+=d;
+    }
+    pts.push([lon/1e5,lat/1e5]); // GeoJSON order
+  }
+  return pts;
+}
+
+async function _histTrace(routeId,shortName){
+  if(!routeId||!mapReady)return;
+  const h=t().hist;
+  try{
+    // all segment rows for this route (both directions, all recent weeks)
+    const{data:rows,error}=await sb.from('transit_segment_weekly')
+      .select('iso_week,direction,bin_idx,band,n,speed_med_kmh')
+      .eq('route_id',routeId).order('iso_week',{ascending:false}).limit(1000);
+    if(error)throw error;
+    if(!rows?.length){showToast(h.insufficient);return;}
+    const week=rows[0].iso_week;
+    const wk=rows.filter(r=>r.iso_week===week);
+    const nByDir=[0,1].map(d=>wk.filter(r=>r.direction===d).reduce((a,r)=>a+r.n,0));
+    const dir=_histTraceState?.routeId===routeId&&_histTraceState?.flip?(1-_histTraceState.dir):(nByDir[1]>=nByDir[0]?1:0);
+    // merge bands per bin, weighted by n
+    const bins=new Map();
+    for(const r of wk.filter(r=>r.direction===dir)){
+      const b=bins.get(r.bin_idx)||{w:0,s:0};
+      b.w+=r.n;b.s+=r.speed_med_kmh*r.n;bins.set(r.bin_idx,b);
+    }
+    // polyline for this direction (direction 1 ↔ forward=true per derive convention)
+    const res=await fetch(`${PROXY}/ttc/routes/${encodeURIComponent(routeId)}/polyline?forward=${dir===1?'true':'false'}`);
+    if(!res.ok)throw new Error('polyline '+res.status);
+    const poly=await res.json();
+    const pts=_histDecodePolyline(poly.encodedValue||'');
+    if(pts.length<2)throw new Error('empty polyline');
+    let total=0;const cum=[0];
+    for(let i=1;i<pts.length;i++){total+=_haversineM(pts[i-1][0],pts[i-1][1],pts[i][0],pts[i][1]);cum.push(total);}
+    // build step gradient by 150 m bins
+    const grad=['step',['line-progress']];
+    const colorOf=v=>v==null?'rgba(255,255,255,0.28)':v<8?_HIST_BAD:v<12?_HIST_WARN:_HIST_OK;
+    const nBins=Math.max(1,Math.ceil(total/150));
+    const b0=bins.get(0);grad.push(colorOf(b0?b0.s/b0.w:null));
+    for(let i=1;i<nBins;i++){
+      const b=bins.get(i);
+      grad.push(Math.min(0.9999,(i*150)/total),colorOf(b?b.s/b.w:null));
+    }
+    const gj={type:'Feature',geometry:{type:'LineString',coordinates:pts},properties:{}};
+    if(map.getLayer('hist-trace'))map.removeLayer('hist-trace');
+    if(map.getSource('hist-trace'))map.removeSource('hist-trace');
+    map.addSource('hist-trace',{type:'geojson',data:gj,lineMetrics:true});
+    map.addLayer({id:'hist-trace',type:'line',source:'hist-trace',
+      layout:{'line-cap':'round','line-join':'round'},
+      paint:{'line-width':5,'line-opacity':0.95,'line-gradient':grad}},
+      map.getLayer('ttc-stops-hist')?'ttc-stops-hist':undefined);
+    _histTraceState={routeId,shortName,dir,flip:false};
+    const bar=document.getElementById('hist-trace-bar');
+    if(bar)bar.innerHTML=`<div style="display:flex;align-items:center;gap:6px;margin-top:7px;border:1px solid rgba(129,140,248,0.25);background:rgba(129,140,248,0.08);border-radius:8px;padding:6px 8px">
+      <span style="font-family:ui-monospace,monospace;font-size:0.6rem;color:#818cf8;font-weight:700">${escapeHtml(shortName||'')}</span>
+      <span style="font-size:0.56rem;color:rgba(255,255,255,0.4);flex:1">${week} · dir ${dir}</span>
+      <button onclick="_histTraceState.flip=true;_histTrace('${routeId}','${escapeHtml(shortName||'')}')" style="font-family:inherit;font-size:0.56rem;border:0;background:none;color:#818cf8;cursor:pointer">${h.dirToggle}</button>
+      <button onclick="_histClearTrace()" style="font-family:inherit;font-size:0.56rem;border:0;background:none;color:rgba(255,255,255,0.4);cursor:pointer">✕ ${h.clearTrace}</button>
+    </div>`;
+  }catch(e){console.warn('trace:',e);showToast((lang==='ka'?'კვალი ვერ ჩაიტვირთა':'Trace failed')+': '+(e.message||''));}
+}
+
+function _histClearTrace(){
+  if(mapReady){
+    if(map.getLayer('hist-trace'))map.removeLayer('hist-trace');
+    if(map.getSource('hist-trace'))map.removeSource('hist-trace');
+  }
+  _histTraceState=null;
+  const bar=document.getElementById('hist-trace-bar');
+  if(bar)bar.innerHTML='';
+}
+
+function _histCleanup(){
+  _histClearTrace();
+  if(mapReady&&map.getLayer('ttc-stops-hist'))map.removeLayer('ttc-stops-hist');
+  _histStats=null;
 }
