@@ -11317,6 +11317,26 @@ function _histApplyStopColors(){
 // ── stop hover: glow + tooltip card (name, routes, OTP, delay, worst route) ──
 let _histHoverBound=false,_histHoverId=null;
 const _histStopRouteCache=new Map();
+// Global route index (id → public short name): resolves internal ids like
+// "1:R216088" to the rider-facing number ("101"). Fetched once, cached.
+let _histRoutesIndexP=null;
+function _histLoadRoutesIndex(){
+  if(!_histRoutesIndexP)_histRoutesIndexP=(async()=>{
+    const idx=new Map();
+    try{
+      const res=await fetch(`${PROXY}/ttc/v3/routes?modes=BUS,SUBWAY,GONDOLA`);
+      if(res.ok)for(const r of await res.json())idx.set(r.id,{shortName:r.shortName||'',color:r.color||'',mode:r.mode||'BUS'});
+    }catch(_){}
+    return idx;
+  })();
+  return _histRoutesIndexP;
+}
+function _histRouteName(idx,rid){
+  const hit=idx?.get(rid);
+  if(hit?.shortName)return hit.shortName;
+  const s=_ttcRenderedStops?.flatMap(x=>x.routes||[]).find(x=>x.id===rid);
+  return s?.shortName||rid.split(':').pop().replace(/^R/,'#'); // last-resort: mark as internal id
+}
 function _histBindStopHover(){
   if(_histHoverBound||!mapReady)return;
   _histHoverBound=true;
@@ -11368,11 +11388,11 @@ function _histStopTipHtml(p,extra){
   const h=t().hist;
   const r=_histStats?.find(x=>x.stop_id===p.id);
   const s=_ttcRenderedStops?.find(x=>x.id===p.id);
-  const routes=(s?.routes||[]).map(x=>x.shortName).filter(Boolean).slice(0,6).join(' · ');
+  const routes=(s?.routes||[]).map(x=>x.shortName).filter(Boolean).join(' · ');
   const rowStyle='display:flex;justify-content:space-between;font-size:0.62rem;color:rgba(255,255,255,0.7);padding:2.5px 0';
   const monoB='font-family:ui-monospace,monospace;font-variant-numeric:tabular-nums;font-weight:600';
   let html=`<div style="font-size:0.7rem;font-weight:650;color:#fff">${escapeHtml(p.name||'')}</div>
-    <div style="font-family:ui-monospace,monospace;font-size:0.54rem;color:rgba(255,255,255,0.35);margin-bottom:7px">#${escapeHtml(p.code||'')}${routes?' · '+escapeHtml(routes):''}</div>`;
+    <div style="font-family:ui-monospace,monospace;font-size:0.54rem;color:rgba(255,255,255,0.35);margin-bottom:7px;line-height:1.6">#${escapeHtml(p.code||'')} · <span id="hist-tip-routes">${escapeHtml(routes)}</span></div>`;
   if(r&&Number(r.n_matched)>0){
     const otShare=Number(r.on_time)/Number(r.n_matched);
     const otCol=otShare>=0.8?_HIST_OK:otShare>=0.6?_HIST_WARN:_HIST_BAD;
@@ -11389,39 +11409,47 @@ function _histStopTipHtml(p,extra){
   }
   return html;
 }
-// Lazy per-stop route breakdown for the "worst route" tooltip row
+// Lazy per-stop route breakdown: the "worst route" row + the full list of
+// routes actually OBSERVED at this stop in the period (the live per-stop
+// route list only covers currently scheduled service and can be incomplete).
 async function _histFetchStopRoutes(stopId){
   const key=stopId+'|'+(_histRange?.from||'')+'|'+(_histRange?.to||'');
   const h=t().hist;
-  const render=(worst)=>{
-    if(_histHoverId!==stopId)return;
+  const render=(res)=>{
+    if(_histHoverId!==stopId||!res)return;
     const slot=document.getElementById('hist-tip-worst');
-    if(slot&&worst)slot.innerHTML=`<div style="display:flex;justify-content:space-between;font-size:0.62rem;color:rgba(255,255,255,0.7);padding:2.5px 0"><span>${h.worstRoute}</span><b style="font-family:ui-monospace,monospace;font-weight:600">${escapeHtml(worst.name)} · +${(worst.med/60).toFixed(1)} ${h.chartUnit}</b></div>`;
+    if(slot&&res.worst)slot.innerHTML=`<div style="display:flex;justify-content:space-between;font-size:0.62rem;color:rgba(255,255,255,0.7);padding:2.5px 0"><span>${h.worstRoute}</span><b style="font-family:ui-monospace,monospace;font-weight:600">${escapeHtml(res.worst.name)} · +${(res.worst.med/60).toFixed(1)} ${h.chartUnit}</b></div>`;
+    const rl=document.getElementById('hist-tip-routes');
+    if(rl&&res.routes?.length)rl.textContent=res.routes.join(' · ');
   };
   if(_histStopRouteCache.has(key)){render(_histStopRouteCache.get(key));return;}
   try{
-    const{data}=await sb.from('transit_stop_daily')
-      .select('route_id,n_matched,delay_med_s')
-      .eq('stop_id',stopId).gte('date',_histRange?.from).lte('date',_histRange?.to).limit(1000);
+    const[idx,{data}]=await Promise.all([
+      _histLoadRoutesIndex(),
+      sb.from('transit_stop_daily')
+        .select('route_id,n_matched,delay_med_s')
+        .eq('stop_id',stopId).gte('date',_histRange?.from).lte('date',_histRange?.to).limit(1000),
+    ]);
     const byRoute=new Map();
     for(const row of data||[]){
-      if(row.delay_med_s==null)continue;
-      const b=byRoute.get(row.route_id)||{n:0,s:0};
-      b.n+=row.n_matched;b.s+=row.delay_med_s*row.n_matched;byRoute.set(row.route_id,b);
+      const b=byRoute.get(row.route_id)||{n:0,s:0,nAll:0};
+      b.nAll+=row.n_matched;
+      if(row.delay_med_s!=null){b.n+=row.n_matched;b.s+=row.delay_med_s*row.n_matched;}
+      byRoute.set(row.route_id,b);
     }
     let worst=null;
     for(const[rid,b]of byRoute){
       if(b.n<10)continue;
       const med=b.s/b.n;
-      if(!worst||med>worst.med){
-        const s=_ttcRenderedStops?.find(x=>x.id===stopId);
-        const rt=(s?.routes||[]).find(x=>x.id===rid);
-        worst={name:rt?.shortName||rid.replace(/^.*R/,''),med};
-      }
+      if(!worst||med>worst.med)worst={name:_histRouteName(idx,rid),med};
     }
     if(worst&&worst.med<=60)worst=null; // only surface genuinely late routes
-    _histStopRouteCache.set(key,worst);
-    render(worst);
+    // full observed route list, busiest first, resolved to public numbers
+    const routes=[...byRoute.entries()].sort((a,b)=>b[1].nAll-a[1].nAll)
+      .map(([rid])=>_histRouteName(idx,rid)).filter(Boolean);
+    const res={worst,routes:[...new Set(routes)]};
+    _histStopRouteCache.set(key,res);
+    render(res);
   }catch(_){}
 }
 
@@ -11633,6 +11661,32 @@ function _histExportGeoJSON(){
 // image so the exported map is fully self-describing.
 async function _histCaptureMapImage(){
   if(!mapReady)return null;
+  // Frame the study area (isochrone, or the selected/uploaded AOI) so every
+  // export is consistently zoomed to the analysis extent, in plan view
+  // (bearing/pitch zeroed). The user's camera is restored after capture.
+  const prev={center:map.getCenter(),zoom:map.getZoom(),bearing:map.getBearing(),pitch:map.getPitch()};
+  let framed=false;
+  try{
+    const geom=_isoData?.features?.[0]?.geometry||_currentParcelGeoJSON;
+    if(geom?.coordinates){
+      const lng=[],lat=[];
+      (function walk(c){if(typeof c[0]==='number'){lng.push(c[0]);lat.push(c[1]);}else c.forEach(walk);})(geom.coordinates);
+      if(lng.length){
+        map.fitBounds([[Math.min(...lng),Math.min(...lat)],[Math.max(...lng),Math.max(...lat)]],
+          {padding:{top:60,left:90,right:130,bottom:130},bearing:0,pitch:0,duration:0});
+        framed=true;
+        await Promise.race([new Promise(r=>map.once('idle',r)),new Promise(r=>setTimeout(r,4000))]);
+      }
+    }
+  }catch(_){}
+  try{
+    return await _histComposeCapture();
+  }finally{
+    if(framed)map.jumpTo(prev);
+  }
+}
+
+async function _histComposeCapture(){
   map.triggerRepaint();
   await new Promise(r=>setTimeout(r,300));
   const src=map.getCanvas();
