@@ -83,6 +83,20 @@ function decodePolyline(str) {
   return pts;
 }
 
+// Upsert with retry — Supabase writes can transiently fail on large batches
+async function upsertRetry(table, rows, tries = 3) {
+  for (let a = 1; a <= tries; a++) {
+    try {
+      const { error } = await sb.from(table).upsert(rows);
+      if (!error) return;
+      if (a === tries) throw new Error(`${table} upsert: ${error.message}`);
+    } catch (e) {
+      if (a === tries) throw new Error(`${table} upsert: ${e.message}`);
+      await new Promise(r => setTimeout(r, 1500 * a));
+    }
+  }
+}
+
 // ── R2 helpers ────────────────────────────────────────────────────────────────
 async function r2Get(key) {
   const r = await s3.send(new GetObjectCommand({ Bucket: R2_BUCKET, Key: key }));
@@ -121,6 +135,21 @@ async function loadNetwork(dateStr) {
     src = `snapshot ${usable}`;
     stopsRaw  = JSON.parse(gunzip(await r2Get(`gtfs-snapshots/${usable}/stops.json.gz`)));
     routesRaw = JSON.parse(gunzip(await r2Get(`gtfs-snapshots/${usable}/routes.json.gz`)));
+    // Legacy snapshots (pre both-direction collector) carry only the forward
+    // schedule/polyline — supplement the reverse direction from the live API,
+    // otherwise direction-0 vehicles get matched against the wrong stop order.
+    const missing = routesRaw.filter(r => r && !r.schedule?.rev);
+    if (missing.length) {
+      console.warn(`[derive] snapshot lacks reverse direction for ${missing.length} routes — fetching live`);
+      for (let i = 0; i < missing.length; i += 8) {
+        await Promise.all(missing.slice(i, i + 8).map(async (r) => {
+          const schedFwd = r.schedule?.fwd ?? (r.schedule?.weekdaySchedules ? r.schedule : null);
+          const polyFwd  = r.polyline?.fwd ?? (r.polyline?.encodedValue ? r.polyline : null);
+          r.schedule = { fwd: schedFwd, rev: await ttcFetch(`/v2/routes/${encodeURIComponent(r.id)}/schedule?forward=false`).catch(() => null) };
+          r.polyline = { fwd: polyFwd,  rev: await ttcFetch(`/v2/routes/${encodeURIComponent(r.id)}/polyline?forward=false`).catch(() => null) };
+        }));
+      }
+    }
   } else {
     src = "LIVE API (no snapshot ≤ date — schedules may not match the service day)";
     console.warn(`[derive] ${src}`);
@@ -175,13 +204,16 @@ async function loadNetwork(dateStr) {
     const fwd = dirModel(schedFwd, polyFwd);
     const rev = dirModel(schedRev, polyRev);
 
-    // Map each patternSuffix to fwd/rev by matching the pattern's firstStop
+    // Map each patternSuffix to fwd/rev by matching the pattern's firstStop.
+    // A pattern that matches neither model is skipped — mapping a vehicle to
+    // the wrong direction's stop order produces garbage arrivals.
     const bySuffix = new Map();
     for (const p of (r.detail.patterns || [])) {
       let dir = null;
       if (fwd && p.firstStop?.id === fwd.seq[0]) dir = { m: fwd, d: 1 };
       else if (rev && p.firstStop?.id === rev.seq[0]) dir = { m: rev, d: 0 };
-      else if (fwd && !rev) dir = { m: fwd, d: p.directionId ?? 1 }; // legacy snapshot fallback
+      else if (fwd && p.lastStop?.id === fwd.seq[fwd.seq.length - 1]) dir = { m: fwd, d: 1 };
+      else if (rev && p.lastStop?.id === rev.seq[rev.seq.length - 1]) dir = { m: rev, d: 0 };
       if (dir) bySuffix.set(p.patternSuffix, { model: dir.m, direction: dir.d });
     }
     if (bySuffix.size) routes.set(r.id, bySuffix);
@@ -375,22 +407,13 @@ async function deriveDay(dateStr) {
   }
 
   // ── Persist ────────────────────────────────────────────────────────────────
-  for (let i = 0; i < stopRows.length; i += 500) {
-    const { error } = await sb.from("transit_stop_daily").upsert(stopRows.slice(i, i + 500));
-    if (error) throw new Error("transit_stop_daily upsert: " + error.message);
-  }
-  for (let i = 0; i < hourRows.length; i += 500) {
-    const { error } = await sb.from("transit_stop_hourly").upsert(hourRows.slice(i, i + 500));
-    if (error) throw new Error("transit_stop_hourly upsert: " + error.message);
-  }
+  for (let i = 0; i < stopRows.length; i += 500) await upsertRetry("transit_stop_daily", stopRows.slice(i, i + 500));
+  for (let i = 0; i < hourRows.length; i += 500) await upsertRetry("transit_stop_hourly", hourRows.slice(i, i + 500));
   // segment weekly rows: merge with existing week by re-upserting day-summed…
   // v1 keeps it simple: rows are recomputed per run from this day only, so for
   // mid-week reruns the week reflects the latest derived day per (key). Full
   // multi-day weekly merge happens in the weekly rollup (future work).
-  for (let i = 0; i < segRows.length; i += 500) {
-    const { error } = await sb.from("transit_segment_weekly").upsert(segRows.slice(i, i + 500));
-    if (error) throw new Error("transit_segment_weekly upsert: " + error.message);
-  }
+  for (let i = 0; i < segRows.length; i += 500) await upsertRetry("transit_segment_weekly", segRows.slice(i, i + 500));
   await r2PutGz(`derived/arrivals/${dateStr}.ndjson.gz`,
     arrivals.map(a => JSON.stringify({ ...a, ts: new Date(a.ts).toISOString() })).join("\n"));
   const { error: logErr } = await sb.from("transit_derive_log").upsert({
