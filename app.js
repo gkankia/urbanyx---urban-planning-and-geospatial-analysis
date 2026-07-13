@@ -236,6 +236,8 @@ const T = {
       days:{all:"All days",weekday:"Weekdays",sat:"Sat",sun:"Sun"},
       bands:{all:"All day",am_peak:"AM peak",midday:"Midday",pm_peak:"PM peak",evening:"Evening"},
       chartTitle:"Median delay by hour", chartUnit:"min", obs:"obs",
+      scoreLabel:"Area reliability", worstRoute:"Worst route", schedHeadway:"Sched. headway", perDay:"/day avg",
+      infoScore:"Weighted share of on-time arrivals across all observed stops in this isochrone (each stop weighted by its observation count). Grades: A ≥85%, B ≥75%, C ≥65%, D ≥55%, F below.",
       infoOnTime:"Share of observed arrivals within −60s…+300s of the scheduled time (industry standard window). Sample size shown in the tooltip; stops with fewer than 30 matched observations are excluded from coloring.",
       infoMed:"Median of the daily median signed delays across the area's stops. Positive = late, negative = early. Derived from vehicle positions sampled every 2 minutes; individual arrivals are interpolated, giving roughly ±1 minute precision.",
       infoP90:"90th percentile of delay — the worst-case a rider should plan for. One in ten arrivals is later than this.",
@@ -366,6 +368,8 @@ const T = {
       days:{all:"ყველა დღე",weekday:"სამუშაო",sat:"შაბ",sun:"კვ"},
       bands:{all:"მთელი დღე",am_peak:"დილის პიკი",midday:"შუადღე",pm_peak:"საღამოს პიკი",evening:"საღამო"},
       chartTitle:"მედიანური დაგვიანება საათობრივად", chartUnit:"წთ", obs:"დაკვ.",
+      scoreLabel:"არეალის სანდოობა", worstRoute:"ყველაზე ცუდი მარშ.", schedHeadway:"გეგმ. ინტერვალი", perDay:"/დღეში",
+      infoScore:"დროული მოსვლების შეწონილი წილი იზოქრონის ყველა გაჩერებაზე (თითო გაჩერება იწონება დაკვირვებების რაოდენობით). შეფასება: A ≥85%, B ≥75%, C ≥65%, D ≥55%, F ქვემოთ.",
       infoOnTime:"დაკვირვებული მოსვლების წილი გეგმიურ დროსთან −60წმ…+300წმ ფარგლებში (ინდუსტრიული სტანდარტი). 30-ზე ნაკლები დაკვირვების გაჩერებები შეფასებიდან გამორიცხულია.",
       infoMed:"დღიური მედიანური დაგვიანებების მედიანა არეალის გაჩერებებზე. დადებითი = გვიან, უარყოფითი = ადრე. სიზუსტე დაახლ. ±1 წუთი (პოზიციები იზომება ყოველ 2 წუთში).",
       infoP90:"დაგვიანების 90-ე პროცენტილი — ყველაზე ცუდი შემთხვევა, რასაც მგზავრი უნდა ელოდოს. ათიდან ერთი მოსვლა ამაზე გვიანია.",
@@ -9435,7 +9439,7 @@ function _ttcRemoveFromMap(){
   _ttcSelectedStopGeo=null;
   if(_ttcMapClickDeselect){map.off('click',_ttcMapClickDeselect);_ttcMapClickDeselect=null;}
   _ttcClearRouteShape();
-  ['ttc-stops-hist','hist-trace','ttc-stops','ttc-stops-hl','ttc-route-shape','ttc-route-shape-halo','ttc-vehicles-dot','ttc-vehicles-pulse'].forEach(id=>{try{if(map.getLayer(id))map.removeLayer(id);}catch(_){}});
+  ['ttc-stops-hist','ttc-stops-hist-glow','hist-trace','ttc-stops','ttc-stops-hl','ttc-route-shape','ttc-route-shape-halo','ttc-vehicles-dot','ttc-vehicles-pulse'].forEach(id=>{try{if(map.getLayer(id))map.removeLayer(id);}catch(_){}});
   ['hist-trace','ttc-stops','ttc-stops-hl','ttc-route-shape','ttc-vehicles'].forEach(id=>{try{if(map.getSource(id))map.removeSource(id);}catch(_){}});
 }
 
@@ -11159,7 +11163,18 @@ function _histRenderContent(){
   const fmtM=s=>s==null?'—':(s>=0?'+':'−')+(Math.abs(s)/60).toFixed(1);
   const tile=(v,unit,label,color)=>`<div style="border:1px solid rgba(255,255,255,0.09);border-radius:8px;padding:8px 9px;background:rgba(255,255,255,0.02)"><div style="font-family:ui-monospace,monospace;font-variant-numeric:tabular-nums;font-size:0.98rem;font-weight:600;${color?`color:${color}`:''}">${v}<span style="font-size:0.56rem;font-weight:500;color:rgba(255,255,255,0.35)"> ${unit}</span></div><div style="font-size:0.54rem;color:rgba(255,255,255,0.32);margin-top:1px">${label}</div></div>`;
   const otPct=tot.m?Math.round(100*tot.ot/tot.m):null;
-  let html=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:9px">`
+  // Area reliability grade — weighted on-time share across the isochrone's stops
+  let html='';
+  if(otPct!=null){
+    const grade=otPct>=85?'A':otPct>=75?'B':otPct>=65?'C':otPct>=55?'D':'F';
+    const gCol=otPct>=75?_HIST_OK:otPct>=55?_HIST_WARN:_HIST_BAD;
+    html+=`<div style="display:flex;align-items:center;gap:8px;border:1px solid rgba(255,255,255,0.09);border-radius:8px;padding:8px 10px;background:rgba(255,255,255,0.02);margin-bottom:7px">
+      <span style="width:26px;height:26px;border-radius:7px;background:${gCol}1f;border:1px solid ${gCol}55;color:${gCol};font-family:ui-monospace,monospace;font-size:0.9rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">${grade}</span>
+      <span style="flex:1;font-size:0.62rem;color:rgba(255,255,255,0.55)">${h.scoreLabel} ${_histInfoBtn('infoScore')}</span>
+      <span style="font-family:ui-monospace,monospace;font-variant-numeric:tabular-nums;font-size:0.72rem;font-weight:600;color:${gCol}">${otPct}%</span>
+    </div>`;
+  }
+  html+=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:9px">`
     +tile(otPct==null?'—':otPct,'%',`${h.onTime} · ${h.onTimeSub} ${_histInfoBtn('infoOnTime')}`,otPct==null?null:otPct>=80?_HIST_OK:otPct>=60?_HIST_WARN:_HIST_BAD)
     +tile(fmtM(med(meds)),'min',`${h.medDelay} ${_histInfoBtn('infoMed')}`)
     +tile(fmtM(med(p90s)),'min',`${h.p90} ${_histInfoBtn('infoP90')}`)
@@ -11198,7 +11213,8 @@ function _histRenderContent(){
   _histChartBind();
 }
 
-// Color the stop icons by reliability class (circle layer under the symbols)
+// Color the stops by reliability class — styled per the design mockup:
+// compact dots with a dark ring, a soft glow halo on hover, and a tooltip.
 function _histApplyStopColors(){
   if(!mapReady||!_histStats)return;
   const expr=['match',['get','id']];
@@ -11210,16 +11226,122 @@ function _histApplyStopColors(){
   }
   expr.push(_HIST_GREY);
   if(!any)return;
-  const src=map.getSource('ttc-stops');
-  if(!src)return;
+  if(!map.getSource('ttc-stops'))return;
+  // hover glow halo (hidden until a stop is hovered)
+  if(!map.getLayer('ttc-stops-hist-glow')){
+    map.addLayer({id:'ttc-stops-hist-glow',type:'circle',source:'ttc-stops',
+      filter:['==',['get','id'],''],
+      paint:{'circle-radius':13,'circle-color':expr,'circle-opacity':0.22,'circle-blur':0.4}},'ttc-stops');
+  }else{
+    map.setPaintProperty('ttc-stops-hist-glow','circle-color',expr);
+  }
   if(!map.getLayer('ttc-stops-hist')){
     map.addLayer({id:'ttc-stops-hist',type:'circle',source:'ttc-stops',paint:{
-      'circle-radius':10,'circle-color':expr,'circle-opacity':0.85,
+      'circle-radius':6,'circle-color':expr,'circle-opacity':0.95,
       'circle-stroke-width':2,'circle-stroke-color':'rgba(6,6,8,0.9)'
     }},'ttc-stops');
   }else{
     map.setPaintProperty('ttc-stops-hist','circle-color',expr);
   }
+  _histBindStopHover();
+}
+
+// ── stop hover: glow + tooltip card (name, routes, OTP, delay, worst route) ──
+let _histHoverBound=false,_histHoverId=null;
+const _histStopRouteCache=new Map();
+function _histBindStopHover(){
+  if(_histHoverBound||!mapReady)return;
+  _histHoverBound=true;
+  map.on('mousemove','ttc-stops-hist',_histStopMove);
+  map.on('mouseleave','ttc-stops-hist',_histStopLeave);
+}
+function _histStopTipEl(){
+  let el=document.getElementById('hist-stop-tip');
+  if(!el){
+    el=document.createElement('div');el.id='hist-stop-tip';
+    el.style.cssText='position:fixed;pointer-events:none;display:none;width:216px;background:rgba(6,6,8,0.94);border:1px solid rgba(255,255,255,0.09);border-radius:9px;padding:10px 12px;z-index:9999;box-shadow:0 10px 30px rgba(0,0,0,0.55);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);color:rgba(255,255,255,0.85)';
+    document.body.appendChild(el);
+  }
+  return el;
+}
+function _histStopMove(e){
+  if(_ttcMode!=='history'||!e.features?.length)return;
+  map.getCanvas().style.cursor='pointer';
+  const p=e.features[0].properties;
+  map.setFilter('ttc-stops-hist-glow',['==',['get','id'],p.id]);
+  const el=_histStopTipEl();
+  if(_histHoverId!==p.id){_histHoverId=p.id;el.innerHTML=_histStopTipHtml(p);_histFetchStopRoutes(p.id);}
+  el.style.display='block';
+  const x=Math.min(e.originalEvent.clientX+14,window.innerWidth-232);
+  const y=Math.max(10,Math.min(e.originalEvent.clientY-10,window.innerHeight-(el.offsetHeight||150)-10));
+  el.style.left=x+'px';el.style.top=y+'px';
+}
+function _histStopLeave(){
+  map.getCanvas().style.cursor='';
+  if(map.getLayer('ttc-stops-hist-glow'))map.setFilter('ttc-stops-hist-glow',['==',['get','id'],'']);
+  _histHoverId=null;
+  const el=document.getElementById('hist-stop-tip');
+  if(el)el.style.display='none';
+}
+function _histStopTipHtml(p,extra){
+  const h=t().hist;
+  const r=_histStats?.find(x=>x.stop_id===p.id);
+  const s=_ttcRenderedStops?.find(x=>x.id===p.id);
+  const routes=(s?.routes||[]).map(x=>x.shortName).filter(Boolean).slice(0,6).join(' · ');
+  const rowStyle='display:flex;justify-content:space-between;font-size:0.62rem;color:rgba(255,255,255,0.7);padding:2.5px 0';
+  const monoB='font-family:ui-monospace,monospace;font-variant-numeric:tabular-nums;font-weight:600';
+  let html=`<div style="font-size:0.7rem;font-weight:650;color:#fff">${escapeHtml(p.name||'')}</div>
+    <div style="font-family:ui-monospace,monospace;font-size:0.54rem;color:rgba(255,255,255,0.35);margin-bottom:7px">#${escapeHtml(p.code||'')}${routes?' · '+escapeHtml(routes):''}</div>`;
+  if(r&&Number(r.n_matched)>0){
+    const otShare=Number(r.on_time)/Number(r.n_matched);
+    const otCol=otShare>=0.8?_HIST_OK:otShare>=0.6?_HIST_WARN:_HIST_BAD;
+    const insufficient=Number(r.n_matched)<30;
+    html+=`<div style="${rowStyle}"><span>${h.onTime}</span><b style="${monoB};color:${insufficient?_HIST_GREY:otCol}">${Math.round(otShare*100)}%${insufficient?' *':''}</b></div>`;
+    html+=`<div style="${rowStyle}"><span>${h.late} · >5 ${h.chartUnit}</span><b style="${monoB}">${Math.round(100*Number(r.late)/Number(r.n_matched))}%</b></div>`;
+    if(r.delay_med_s!=null)html+=`<div style="${rowStyle}"><span>${h.medDelay}</span><b style="${monoB}">${(r.delay_med_s>=0?'+':'')}${(Number(r.delay_med_s)/60).toFixed(1)} ${h.chartUnit}</b></div>`;
+    if(r.headway_med_s!=null)html+=`<div style="${rowStyle}"><span>${h.schedHeadway}</span><b style="${monoB}">${Math.round(Number(r.headway_med_s)/60)} ${h.chartUnit}</b></div>`;
+    html+=`<div id="hist-tip-worst">${extra||''}</div>`;
+    const days=Math.max(1,_histCoverage?.days||1);
+    html+=`<div style="font-size:0.54rem;color:rgba(255,255,255,0.35);border-top:1px solid rgba(255,255,255,0.09);margin-top:6px;padding-top:6px">${Number(r.n_obs).toLocaleString()} ${h.obs}${insufficient?' — '+h.insufficient:' · '+Math.round(Number(r.n_obs)/days)+h.perDay}</div>`;
+  }else{
+    html+=`<div style="font-size:0.6rem;color:rgba(255,255,255,0.35)">${h.insufficient}</div>`;
+  }
+  return html;
+}
+// Lazy per-stop route breakdown for the "worst route" tooltip row
+async function _histFetchStopRoutes(stopId){
+  const key=stopId+'|'+(_histRange?.from||'')+'|'+(_histRange?.to||'');
+  const h=t().hist;
+  const render=(worst)=>{
+    if(_histHoverId!==stopId)return;
+    const slot=document.getElementById('hist-tip-worst');
+    if(slot&&worst)slot.innerHTML=`<div style="display:flex;justify-content:space-between;font-size:0.62rem;color:rgba(255,255,255,0.7);padding:2.5px 0"><span>${h.worstRoute}</span><b style="font-family:ui-monospace,monospace;font-weight:600">${escapeHtml(worst.name)} · +${(worst.med/60).toFixed(1)} ${h.chartUnit}</b></div>`;
+  };
+  if(_histStopRouteCache.has(key)){render(_histStopRouteCache.get(key));return;}
+  try{
+    const{data}=await sb.from('transit_stop_daily')
+      .select('route_id,n_matched,delay_med_s')
+      .eq('stop_id',stopId).gte('date',_histRange?.from).lte('date',_histRange?.to).limit(1000);
+    const byRoute=new Map();
+    for(const row of data||[]){
+      if(row.delay_med_s==null)continue;
+      const b=byRoute.get(row.route_id)||{n:0,s:0};
+      b.n+=row.n_matched;b.s+=row.delay_med_s*row.n_matched;byRoute.set(row.route_id,b);
+    }
+    let worst=null;
+    for(const[rid,b]of byRoute){
+      if(b.n<10)continue;
+      const med=b.s/b.n;
+      if(!worst||med>worst.med){
+        const s=_ttcRenderedStops?.find(x=>x.id===stopId);
+        const rt=(s?.routes||[]).find(x=>x.id===rid);
+        worst={name:rt?.shortName||rid.replace(/^.*R/,''),med};
+      }
+    }
+    if(worst&&worst.med<=60)worst=null; // only surface genuinely late routes
+    _histStopRouteCache.set(key,worst);
+    render(worst);
+  }catch(_){}
 }
 
 // ── Route speed trace (Mapbox line-gradient over archived speeds) ────────────
@@ -11314,7 +11436,14 @@ function _histClearTrace(){
 
 function _histCleanup(){
   _histClearTrace();
-  if(mapReady&&map.getLayer('ttc-stops-hist'))map.removeLayer('ttc-stops-hist');
+  if(mapReady){
+    if(map.getLayer('ttc-stops-hist'))map.removeLayer('ttc-stops-hist');
+    if(map.getLayer('ttc-stops-hist-glow'))map.removeLayer('ttc-stops-hist-glow');
+    if(_histHoverBound){map.off('mousemove','ttc-stops-hist',_histStopMove);map.off('mouseleave','ttc-stops-hist',_histStopLeave);_histHoverBound=false;}
+  }
+  const tip=document.getElementById('hist-stop-tip');
+  if(tip)tip.style.display='none';
+  _histHoverId=null;_histStopRouteCache.clear();
   _ttcSetIconsVisible(true);
   _histStats=null;
 }
