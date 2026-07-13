@@ -237,7 +237,8 @@ const T = {
       bands:{all:"All day",am_peak:"AM peak",midday:"Midday",pm_peak:"PM peak",evening:"Evening"},
       chartTitle:"Median delay by hour", chartUnit:"min", obs:"obs",
       scoreLabel:"Area reliability", worstRoute:"Worst route", schedHeadway:"Sched. headway", perDay:"/day avg",
-      infoScore:"Weighted share of on-time arrivals across all observed stops in this isochrone (each stop weighted by its observation count). Grades: A ≥85%, B ≥75%, C ≥65%, D ≥55%, F below.",
+      infoScore:"Weighted share of arrivals within +5 min of schedule across all observed stops in this isochrone (each stop weighted by its observation count). Grades: A ≥80%, B ≥70%, C ≥60%, D ≥50%, E ≥40%, F below 40%.",
+      colorBy:"Color stops by", varOntime:"On-time", varLate:"Late >5 min", varDelay:"Median delay", varHeadway:"Headway",
       infoOnTime:"Share of observed arrivals within −60s…+300s of the scheduled time (industry standard window). Sample size shown in the tooltip; stops with fewer than 30 matched observations are excluded from coloring.",
       infoMed:"Median of the daily median signed delays across the area's stops. Positive = late, negative = early. Derived from vehicle positions sampled every 2 minutes; individual arrivals are interpolated, giving roughly ±1 minute precision.",
       infoP90:"90th percentile of delay — the worst-case a rider should plan for. One in ten arrivals is later than this.",
@@ -369,7 +370,8 @@ const T = {
       bands:{all:"მთელი დღე",am_peak:"დილის პიკი",midday:"შუადღე",pm_peak:"საღამოს პიკი",evening:"საღამო"},
       chartTitle:"მედიანური დაგვიანება საათობრივად", chartUnit:"წთ", obs:"დაკვ.",
       scoreLabel:"არეალის სანდოობა", worstRoute:"ყველაზე ცუდი მარშ.", schedHeadway:"გეგმ. ინტერვალი", perDay:"/დღეში",
-      infoScore:"დროული მოსვლების შეწონილი წილი იზოქრონის ყველა გაჩერებაზე (თითო გაჩერება იწონება დაკვირვებების რაოდენობით). შეფასება: A ≥85%, B ≥75%, C ≥65%, D ≥55%, F ქვემოთ.",
+      infoScore:"გეგმიდან +5 წუთამდე მოსული ავტობუსების შეწონილი წილი იზოქრონის ყველა გაჩერებაზე (თითო გაჩერება იწონება დაკვირვებების რაოდენობით). შეფასება: A ≥80%, B ≥70%, C ≥60%, D ≥50%, E ≥40%, F 40%-ზე ქვემოთ.",
+      colorBy:"გაჩერებების შეფერვა", varOntime:"დროულობა", varLate:"დაგვ. >5 წთ", varDelay:"მედ. დაგვიანება", varHeadway:"ინტერვალი",
       infoOnTime:"დაკვირვებული მოსვლების წილი გეგმიურ დროსთან −60წმ…+300წმ ფარგლებში (ინდუსტრიული სტანდარტი). 30-ზე ნაკლები დაკვირვების გაჩერებები შეფასებიდან გამორიცხულია.",
       infoMed:"დღიური მედიანური დაგვიანებების მედიანა არეალის გაჩერებებზე. დადებითი = გვიან, უარყოფითი = ადრე. სიზუსტე დაახლ. ±1 წუთი (პოზიციები იზომება ყოველ 2 წუთში).",
       infoP90:"დაგვიანების 90-ე პროცენტილი — ყველაზე ცუდი შემთხვევა, რასაც მგზავრი უნდა ელოდოს. ათიდან ერთი მოსვლა ამაზე გვიანია.",
@@ -11103,6 +11105,7 @@ function _histChip(label,on,onclick){
 async function _histRender(){
   const body=document.getElementById('ttc-panel-body');
   if(!body||!_ttcRenderedStops)return;
+  if(_histBand!=='all'&&_histColorBy==='headway')_histColorBy='ontime'; // headway data is all-day only
   const h=t().hist,isKa=lang==='ka';
   const periodChips=[7,30].map(d=>_histChip(d+' d',_histDays===d,`_histSetDays(${d})`)).join('');
   const dayChips=['all','weekday','sat','sun'].map(d=>_histChip(h.days[d],_histDaytype===d,`_histSetDaytype('${d}')`)).join('');
@@ -11149,10 +11152,35 @@ async function _histRender(){
   }
 }
 
-function _histClassOf(r){ // reliability class per stop-aggregate row
-  if(!r||Number(r.n_matched)<30)return null; // insufficient
-  const share=Number(r.on_time)/Number(r.n_matched);
+// Classify a stop-aggregate row by the selected map variable.
+// Thresholds (shown in the panel legend): ontime ≥80/≥60% · late ≤10/≤25% ·
+// |median delay| ≤1.5/≤4 min · scheduled headway ≤10/≤20 min.
+function _histClassBy(r,v){
+  if(!r)return null;
+  if(v==='headway'){
+    const hw=r.headway_med_s!=null?Number(r.headway_med_s):null;
+    if(hw==null)return null;
+    return hw<=600?'ok':hw<=1200?'warn':'bad';
+  }
+  if(Number(r.n_matched)<30)return null; // insufficient sample
+  if(v==='late'){
+    const share=Number(r.late)/Number(r.n_matched);
+    return share<=0.10?'ok':share<=0.25?'warn':'bad';
+  }
+  if(v==='delay'){
+    if(r.delay_med_s==null)return null;
+    const a=Math.abs(Number(r.delay_med_s));
+    return a<=90?'ok':a<=240?'warn':'bad';
+  }
+  const share=Number(r.on_time)/Number(r.n_matched); // default: ontime
   return share>=0.8?'ok':share>=0.6?'warn':'bad';
+}
+function _histClassOf(r){return _histClassBy(r,'ontime');} // worst-list & tooltip stay OTP-based
+let _histColorBy='ontime';
+function _histSetColorBy(v){
+  _histColorBy=v;
+  _histRenderContent(); // refresh chip highlight + legend
+  _histApplyStopColors();
 }
 
 function _histRenderContent(){
@@ -11173,8 +11201,8 @@ function _histRenderContent(){
   // Area reliability grade — weighted on-time share across the isochrone's stops
   let html='';
   if(otPct!=null){
-    const grade=otPct>=85?'A':otPct>=75?'B':otPct>=65?'C':otPct>=55?'D':'F';
-    const gCol=otPct>=75?_HIST_OK:otPct>=55?_HIST_WARN:_HIST_BAD;
+    const grade=otPct>=80?'A':otPct>=70?'B':otPct>=60?'C':otPct>=50?'D':otPct>=40?'E':'F';
+    const gCol=otPct>=70?_HIST_OK:otPct>=50?_HIST_WARN:_HIST_BAD;
     html+=`<div style="display:flex;align-items:center;gap:8px;border:1px solid rgba(255,255,255,0.09);border-radius:8px;padding:8px 10px;background:rgba(255,255,255,0.02);margin-bottom:7px">
       <span style="width:26px;height:26px;border-radius:7px;background:${gCol}1f;border:1px solid ${gCol}55;color:${gCol};font-family:ui-monospace,monospace;font-size:0.9rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">${grade}</span>
       <span style="flex:1;font-size:0.62rem;color:rgba(255,255,255,0.55)">${h.scoreLabel} ${_histInfoBtn('infoScore')}</span>
@@ -11187,6 +11215,29 @@ function _histRenderContent(){
     +tile(fmtM(med(p90s)),'min',`${h.p90} ${_histInfoBtn('infoP90')}`)
     +tile(ewt==null?'—':'+'+(ewt/60).toFixed(1),'min',`${h.ewt} ${_histInfoBtn(_histBand==='all'?'infoEwt':'infoBandEwt')}`)
     +`</div>`;
+  // Map color-by selector + threshold legend
+  {
+    const mn=h.chartUnit;
+    const VARS=[
+      {k:'ontime', l:h.varOntime, leg:['≥80%','60–80%','<60%']},
+      {k:'late',   l:h.varLate,   leg:['≤10%','10–25%','>25%']},
+      {k:'delay',  l:h.varDelay,  leg:['≤1.5 '+mn,'1.5–4 '+mn,'>4 '+mn]},
+      {k:'headway',l:h.varHeadway,leg:['≤10 '+mn,'10–20 '+mn,'>20 '+mn]},
+    ];
+    const headwayOff=_histBand!=='all'; // headway only exists in the all-day aggregates
+    const chips=VARS.map(v=>{
+      const dis=v.k==='headway'&&headwayOff;
+      const on=_histColorBy===v.k;
+      return `<button ${dis?'disabled':''} onclick="_histSetColorBy('${v.k}')" style="font-family:ui-monospace,monospace;font-size:0.54rem;border:1px solid ${on?'rgba(129,140,248,0.4)':'rgba(255,255,255,0.09)'};background:${on?'rgba(129,140,248,0.14)':'none'};color:${on?'#818cf8':'rgba(255,255,255,0.35)'};border-radius:5px;padding:2px 7px;cursor:${dis?'default':'pointer'};opacity:${dis?0.3:1}">${v.l}</button>`;
+    }).join('');
+    const cur=VARS.find(v=>v.k===_histColorBy)||VARS[0];
+    const dot=c=>`<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${c};margin:0 3px 0 8px;vertical-align:0"></span>`;
+    html+=`<div style="border:1px solid rgba(255,255,255,0.09);border-radius:8px;padding:7px 9px;background:rgba(255,255,255,0.02);margin-bottom:9px">
+      <div style="font-family:ui-monospace,monospace;font-size:0.5rem;letter-spacing:0.14em;text-transform:uppercase;color:rgba(255,255,255,0.3);margin-bottom:5px">${h.colorBy}</div>
+      <div style="display:flex;gap:3px;flex-wrap:wrap">${chips}</div>
+      <div style="font-size:0.54rem;color:rgba(255,255,255,0.4);margin-top:5px">${dot(_HIST_OK)}${cur.leg[0]}${dot(_HIST_WARN)}${cur.leg[1]}${dot(_HIST_BAD)}${cur.leg[2]}</div>
+    </div>`;
+  }
   html+=_histChartHtml();
   // least reliable stops (by late share, needs sample)
   const byStop=new Map(rows.map(r=>[r.stop_id,r]));
@@ -11227,7 +11278,7 @@ function _histApplyStopColors(){
   const expr=['match',['get','id']];
   let any=false;
   for(const r of _histStats){
-    const cls=_histClassOf(r);
+    const cls=_histClassBy(r,_histColorBy);
     expr.push(r.stop_id,cls==='ok'?_HIST_OK:cls==='warn'?_HIST_WARN:cls==='bad'?_HIST_BAD:_HIST_GREY);
     any=true;
   }
@@ -11277,13 +11328,25 @@ function _histStopTipEl(){
   }
   return el;
 }
+let _histPulseGen=0;
+function _histRunPulse(){ // same 80-frame eased pulse as the kg/school hovers
+  const gen=++_histPulseGen;
+  let fr=0;
+  (function pulse(){
+    if(_ttcMode!=='history'||_histPulseGen!==gen||!mapReady||!map.getLayer('ttc-stops-hist-hover'))return;
+    fr=(fr+1)%80;const tt=fr/80;const ev=tt<0.5?2*tt*tt:-1+(4-2*tt)*tt;
+    map.setPaintProperty('ttc-stops-hist-hover','circle-radius',7+ev*16);
+    map.setPaintProperty('ttc-stops-hist-hover','circle-opacity',0.5*(1-ev));
+    requestAnimationFrame(pulse);
+  })();
+}
 function _histStopMove(e){
   if(_ttcMode!=='history'||!e.features?.length)return;
   map.getCanvas().style.cursor='pointer';
   const p=e.features[0].properties;
   if(map.getLayer('ttc-stops-hist-hover'))map.setFilter('ttc-stops-hist-hover',['==',['get','id'],p.id]);
   const el=_histStopTipEl();
-  if(_histHoverId!==p.id){_histHoverId=p.id;el.innerHTML=_histStopTipHtml(p);_histFetchStopRoutes(p.id);}
+  if(_histHoverId!==p.id){_histHoverId=p.id;el.innerHTML=_histStopTipHtml(p);_histFetchStopRoutes(p.id);_histRunPulse();}
   el.style.display='block';
   const x=Math.min(e.originalEvent.clientX+14,window.innerWidth-232);
   const y=Math.max(10,Math.min(e.originalEvent.clientY-10,window.innerHeight-(el.offsetHeight||150)-10));
@@ -11291,6 +11354,7 @@ function _histStopMove(e){
 }
 function _histStopLeave(){
   map.getCanvas().style.cursor='';
+  _histPulseGen++; // stop the pulse loop
   if(map.getLayer('ttc-stops-hist-hover'))map.setFilter('ttc-stops-hist-hover',['==',['get','id'],'']);
   _histHoverId=null;
   const el=document.getElementById('hist-stop-tip');
