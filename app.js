@@ -9439,7 +9439,7 @@ function _ttcRemoveFromMap(){
   _ttcSelectedStopGeo=null;
   if(_ttcMapClickDeselect){map.off('click',_ttcMapClickDeselect);_ttcMapClickDeselect=null;}
   _ttcClearRouteShape();
-  ['ttc-stops-hist','ttc-stops-hist-glow','hist-trace','ttc-stops','ttc-stops-hl','ttc-route-shape','ttc-route-shape-halo','ttc-vehicles-dot','ttc-vehicles-pulse'].forEach(id=>{try{if(map.getLayer(id))map.removeLayer(id);}catch(_){}});
+  ['ttc-stops-hist','ttc-stops-hist-ring','ttc-stops-hist-hover','hist-trace','ttc-stops','ttc-stops-hl','ttc-route-shape','ttc-route-shape-halo','ttc-vehicles-dot','ttc-vehicles-pulse'].forEach(id=>{try{if(map.getLayer(id))map.removeLayer(id);}catch(_){}});
   ['hist-trace','ttc-stops','ttc-stops-hl','ttc-route-shape','ttc-vehicles'].forEach(id=>{try{if(map.getSource(id))map.removeSource(id);}catch(_){}});
 }
 
@@ -11126,12 +11126,19 @@ async function _histRender(){
     _histRange={from,to};
     if(covEl)covEl.innerHTML=`<span style="display:inline-block;width:5px;height:5px;border-radius:50%;background:#34d399;margin-right:5px;vertical-align:1px"></span>${h.coverage(new Date(cov.first_date).toLocaleDateString(isKa?'ka-GE':'en-GB',{day:'numeric',month:'short',year:'numeric'}),cov.days)}`;
     const ids=_ttcRenderedStops.map(s=>s.id);
-    const[statsRes,hourlyRes]=await Promise.all([
-      sb.rpc('transit_history_stats',{p_stop_ids:ids,p_from:from,p_to:to,p_daytype:_histDaytype,p_band:_histBand}),
+    // Supabase caps any response at 1000 rows — the stats RPC returns one row
+    // per stop, so chunk the stop set to avoid silent truncation on large
+    // isochrones (>1000 stops). The hourly RPC groups to ≤24 rows, so it's safe.
+    const CH=800;
+    const statsChunks=[];
+    for(let i=0;i<ids.length;i+=CH)statsChunks.push(ids.slice(i,i+CH));
+    const[statsArr,hourlyRes]=await Promise.all([
+      Promise.all(statsChunks.map(c=>sb.rpc('transit_history_stats',{p_stop_ids:c,p_from:from,p_to:to,p_daytype:_histDaytype,p_band:_histBand}))),
       sb.rpc('transit_history_hourly',{p_stop_ids:ids,p_from:from,p_to:to,p_daytype:_histDaytype}),
     ]);
-    if(statsRes.error)throw statsRes.error;
-    _histStats=statsRes.data||[];
+    const bad=statsArr.find(r=>r.error);
+    if(bad)throw bad.error;
+    _histStats=statsArr.flatMap(r=>r.data||[]);
     _histHourly=hourlyRes.error?null:(hourlyRes.data||[]);
     _histRenderContent();
     _histApplyStopColors();
@@ -11227,18 +11234,24 @@ function _histApplyStopColors(){
   expr.push(_HIST_GREY);
   if(!any)return;
   if(!map.getSource('ttc-stops'))return;
-  // hover glow halo (hidden until a stop is hovered)
-  if(!map.getLayer('ttc-stops-hist-glow')){
-    map.addLayer({id:'ttc-stops-hist-glow',type:'circle',source:'ttc-stops',
-      filter:['==',['get','id'],''],
-      paint:{'circle-radius':13,'circle-color':expr,'circle-opacity':0.22,'circle-blur':0.4}},'ttc-stops');
+  // Always-on translucent ring (the "opaque ring" look), a hover-only emphasis
+  // ring on top, and the solid core dot — no dark outline.
+  if(!map.getLayer('ttc-stops-hist-ring')){
+    map.addLayer({id:'ttc-stops-hist-ring',type:'circle',source:'ttc-stops',
+      paint:{'circle-radius':11,'circle-color':expr,'circle-opacity':0.3,'circle-blur':0.25}},'ttc-stops');
   }else{
-    map.setPaintProperty('ttc-stops-hist-glow','circle-color',expr);
+    map.setPaintProperty('ttc-stops-hist-ring','circle-color',expr);
+  }
+  if(!map.getLayer('ttc-stops-hist-hover')){
+    map.addLayer({id:'ttc-stops-hist-hover',type:'circle',source:'ttc-stops',
+      filter:['==',['get','id'],''],
+      paint:{'circle-radius':15,'circle-color':expr,'circle-opacity':0.45,'circle-blur':0.4}},'ttc-stops');
+  }else{
+    map.setPaintProperty('ttc-stops-hist-hover','circle-color',expr);
   }
   if(!map.getLayer('ttc-stops-hist')){
     map.addLayer({id:'ttc-stops-hist',type:'circle',source:'ttc-stops',paint:{
-      'circle-radius':6,'circle-color':expr,'circle-opacity':0.95,
-      'circle-stroke-width':2,'circle-stroke-color':'rgba(6,6,8,0.9)'
+      'circle-radius':5.5,'circle-color':expr,'circle-opacity':1
     }},'ttc-stops');
   }else{
     map.setPaintProperty('ttc-stops-hist','circle-color',expr);
@@ -11268,7 +11281,7 @@ function _histStopMove(e){
   if(_ttcMode!=='history'||!e.features?.length)return;
   map.getCanvas().style.cursor='pointer';
   const p=e.features[0].properties;
-  map.setFilter('ttc-stops-hist-glow',['==',['get','id'],p.id]);
+  if(map.getLayer('ttc-stops-hist-hover'))map.setFilter('ttc-stops-hist-hover',['==',['get','id'],p.id]);
   const el=_histStopTipEl();
   if(_histHoverId!==p.id){_histHoverId=p.id;el.innerHTML=_histStopTipHtml(p);_histFetchStopRoutes(p.id);}
   el.style.display='block';
@@ -11278,7 +11291,7 @@ function _histStopMove(e){
 }
 function _histStopLeave(){
   map.getCanvas().style.cursor='';
-  if(map.getLayer('ttc-stops-hist-glow'))map.setFilter('ttc-stops-hist-glow',['==',['get','id'],'']);
+  if(map.getLayer('ttc-stops-hist-hover'))map.setFilter('ttc-stops-hist-hover',['==',['get','id'],'']);
   _histHoverId=null;
   const el=document.getElementById('hist-stop-tip');
   if(el)el.style.display='none';
@@ -11437,10 +11450,10 @@ function _histClearTrace(){
 function _histCleanup(){
   _histClearTrace();
   if(mapReady){
-    if(map.getLayer('ttc-stops-hist'))map.removeLayer('ttc-stops-hist');
-    if(map.getLayer('ttc-stops-hist-glow'))map.removeLayer('ttc-stops-hist-glow');
+    ['ttc-stops-hist','ttc-stops-hist-ring','ttc-stops-hist-hover'].forEach(id=>{if(map.getLayer(id))map.removeLayer(id);});
     if(_histHoverBound){map.off('mousemove','ttc-stops-hist',_histStopMove);map.off('mouseleave','ttc-stops-hist',_histStopLeave);_histHoverBound=false;}
   }
+  _histInfoHide();
   const tip=document.getElementById('hist-stop-tip');
   if(tip)tip.style.display='none';
   _histHoverId=null;_histStopRouteCache.clear();
@@ -11497,24 +11510,22 @@ function _histChartBind(){
   el.addEventListener('mouseleave',()=>{tip.style.display='none';});
 }
 
-// ── History: methodology popovers ────────────────────────────────────────────
+// ── History: methodology popovers (show on hover; tap also works on touch) ────
 function _histInfoBtn(key){
   // Same ⓘ treatment as the wind/zoning cards for design consistency
-  return `<span class="wind-info-icon" onclick="event.stopPropagation();_histInfo('${key}',this)">ⓘ</span>`;
+  return `<span class="wind-info-icon" onmouseenter="_histInfoShow('${key}',this)" onmouseleave="_histInfoHide()" onclick="event.stopPropagation();_histInfoShow('${key}',this)">ⓘ</span>`;
 }
-function _histInfo(key,anchor){
+function _histInfoHide(){const p=document.getElementById('hist-info-pop');if(p)p.remove();}
+function _histInfoShow(key,anchor){
   const txt=t().hist[key];if(!txt)return;
-  let pop=document.getElementById('hist-info-pop');
-  if(pop&&pop.dataset.key===key){pop.remove();return;}
-  if(pop)pop.remove();
-  pop=document.createElement('div');pop.id='hist-info-pop';pop.dataset.key=key;
-  pop.style.cssText='position:fixed;max-width:230px;background:rgba(4,4,6,0.96);border:1px solid rgba(129,140,248,0.3);border-radius:8px;padding:9px 11px;font-size:0.6rem;line-height:1.5;color:rgba(255,255,255,0.75);z-index:9999;box-shadow:0 8px 24px rgba(0,0,0,0.5)';
+  _histInfoHide();
+  const pop=document.createElement('div');pop.id='hist-info-pop';pop.dataset.key=key;
+  pop.style.cssText='position:fixed;max-width:230px;background:rgba(4,4,6,0.96);border:1px solid rgba(129,140,248,0.3);border-radius:8px;padding:9px 11px;font-size:0.6rem;line-height:1.5;color:rgba(255,255,255,0.75);z-index:9999;box-shadow:0 8px 24px rgba(0,0,0,0.5);pointer-events:none';
   pop.textContent=txt;
   document.body.appendChild(pop);
   const r=anchor.getBoundingClientRect();
   pop.style.left=Math.min(r.left,window.innerWidth-245)+'px';
   pop.style.top=Math.min(r.bottom+6,window.innerHeight-pop.offsetHeight-10)+'px';
-  setTimeout(()=>document.addEventListener('click',function _c(e){if(!pop.contains(e.target)){pop.remove();document.removeEventListener('click',_c);}}),0);
 }
 
 // ── History: exports ─────────────────────────────────────────────────────────
