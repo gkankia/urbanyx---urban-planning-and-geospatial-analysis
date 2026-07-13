@@ -146,7 +146,7 @@ const T = {
     cats:{ food:{label:"Food & drink",icon:"🍽"}, health:{label:"Health",icon:"🏥"}, parks:{label:"Parks & nature",icon:"🌿"}, retail:{label:"Retail",icon:"🛒"}, culture:{label:"Culture & leisure",icon:"🎭"} },
     proCats:{ schools:{label:"Schools",icon:"🏫"}, kindergartens:{label:"Kindergartens",icon:"🧒"}, crashes:{label:"Road incidents",icon:"⚠️"} },
     proCategories:{ climate:"Climate", education:"Education", mobility:"Mobility", morphology:"Urban Morphology", energy:"Clean Energy", relief:"Relief Analysis" },
-    accessibilityTitle:"Accessibility Analysis", accModeLabel:"Transport mode", accTimeLabel:"Travel time", accGenerate:"Generate Isochrone", accModes:{walking:"Walking",cycling:"Cycling",driving:"Driving"}, accNoIso:"Generate an isochrone first", ttcTitle:"Transit", ttcNearby:"Public Transport", ttcNoStops:"No stops in isochrone", ttcNoArrivals:"No upcoming arrivals", ttcOnTime:"on time", ttcLoading:"Loading...",
+    accessibilityTitle:"Accessibility Analysis", accModeLabel:"Transport mode", accTimeLabel:"Travel time", accGenerate:"Generate Isochrone", accModes:{walking:"Walking",cycling:"Cycling",driving:"Driving"}, accNoIso:"Generate an isochrone first", ttcAreaSmall:"Area under 5,000 m² — generate an isochrone first", ttcAoiLabel:"Study area", ttcTitle:"Transit", ttcNearby:"Public Transport", ttcNoStops:"No stops in isochrone", ttcNoArrivals:"No upcoming arrivals", ttcOnTime:"on time", ttcLoading:"Loading...",
     reliefTypes:{ height:"Height", slope:"Slope", aspect:"Aspect" },
     reliefLoading:"Loading DTM…", reliefMin:"Min", reliefMax:"Max", reliefMean:"Mean",
     reliefUnits:{ height:"m a.s.l.", slope:"°", aspect:"°" },
@@ -281,7 +281,7 @@ const T = {
     cats:{ food:{label:"საკვები და სასმელი",icon:"🍽"}, health:{label:"ჯანდაცვა",icon:"🏥"}, parks:{label:"პარკები",icon:"🌿"}, retail:{label:"სავაჭრო",icon:"🛒"}, culture:{label:"კულტურა",icon:"🎭"} },
     proCats:{ schools:{label:"სკოლები",icon:"🏫"}, kindergartens:{label:"საბავშვო ბაღები",icon:"🧒"}, crashes:{label:"საგზაო ინციდენტები",icon:"⚠️"} },
     proCategories:{ climate:"კლიმატი", education:"განათლება", mobility:"მობილობა", morphology:"ურბანული მორფოლოგია", energy:"სუფთა ენერგია", relief:"რელიეფის ანალიზი" },
-    accessibilityTitle:"ხელმისაწვდომობის ანალიზი", accModeLabel:"სატრანსპორტო საშუალება", accTimeLabel:"გადაადგილების დრო", accGenerate:"იზოქრონის გენერაცია", accModes:{walking:"სიარული",cycling:"ველოსიპედი",driving:"ავტომობილი"}, accNoIso:"ჯერ გენერირეთ იზოქრონი", ttcTitle:"ტრანსპორტი", ttcNearby:"საჯარო ტრანსპორტი", ttcNoStops:"იზოქრონში გაჩერება არ არის", ttcNoArrivals:"მომდევნო ჩამოსვლა არ არის", ttcOnTime:"დროულად", ttcLoading:"იტვირთება...",
+    accessibilityTitle:"ხელმისაწვდომობის ანალიზი", accModeLabel:"სატრანსპორტო საშუალება", accTimeLabel:"გადაადგილების დრო", accGenerate:"იზოქრონის გენერაცია", accModes:{walking:"სიარული",cycling:"ველოსიპედი",driving:"ავტომობილი"}, accNoIso:"ჯერ გენერირეთ იზოქრონი", ttcAreaSmall:"არეალი 5,000 კვ.მ-ზე ნაკლებია — ჯერ გენერირეთ იზოქრონი", ttcAoiLabel:"საკვლევი არეალი", ttcTitle:"ტრანსპორტი", ttcNearby:"საჯარო ტრანსპორტი", ttcNoStops:"იზოქრონში გაჩერება არ არის", ttcNoArrivals:"მომდევნო ჩამოსვლა არ არის", ttcOnTime:"დროულად", ttcLoading:"იტვირთება...",
     reliefTypes:{ height:"სიმაღლე", slope:"დახრა", aspect:"ორიენტაცია" },
     reliefLoading:"DTM იტვირთება…", reliefMin:"მინ", reliefMax:"მაქს", reliefMean:"საშ",
     reliefUnits:{ height:"მ ა.დ.", slope:"°", aspect:"°" },
@@ -8979,13 +8979,36 @@ async function _ttcLoadStops(){
   return _ttcStopsCache;
 }
 
+// The transit analysis area: the isochrone when one exists; otherwise a
+// large-enough (≥5,000 m²) selected parcel / drawn / uploaded AOI polygon.
+// Returns outer rings to test stops against ([] = no valid area).
+function _transitAreaRings(){
+  const isoGeom=_isoData?.features?.[0]?.geometry;
+  const geom=isoGeom||((_isLargeParcel()&&_currentParcelGeoJSON&&/Polygon/.test(_currentParcelGeoJSON.type))?_currentParcelGeoJSON:null);
+  if(!geom)return[];
+  return geom.type==='MultiPolygon'?geom.coordinates.map(p=>p[0]):[geom.coordinates[0]];
+}
+// Human label for exports: "10 min Walking · 1.84 km²" or "Study area · 8,400 m²"
+function _transitAreaLabel(){
+  const tr=t();
+  try{
+    const isoFeat=_isoData?.features?.[0];
+    if(isoFeat){
+      const km2=(typeof turf!=='undefined'?turf.area(isoFeat):0)/1e6;
+      return`${_accMinutes||10} min ${tr.accModes?.[_accMode||'walking']||''}${km2?` · ${km2.toFixed(2)} km²`:''}`;
+    }
+    if(_isLargeParcel()&&_currentParcelGeoJSON){
+      const m2=_currentParcelAreaM2||0;
+      return`${tr.ttcAoiLabel} · ${m2>=1e6?(m2/1e6).toFixed(2)+' km²':Math.round(m2).toLocaleString()+' m²'}`;
+    }
+  }catch(_){}
+  return null;
+}
 function _ttcFilterStops(){
   if(!_ttcStopsCache) return [];
-  const isoFeat=_isoData?.features?.[0];
-  if(!isoFeat) return [];
-  const geom=isoFeat.geometry;
-  const ring=geom.type==='MultiPolygon'?geom.coordinates[0][0]:geom.coordinates[0];
-  const stops=_ttcStopsCache.filter(s=>_ttcPointInPoly(s.lon,s.lat,ring));
+  const rings=_transitAreaRings();
+  if(!rings.length) return [];
+  const stops=_ttcStopsCache.filter(s=>rings.some(ring=>_ttcPointInPoly(s.lon,s.lat,ring)));
   if(parcelCentroid) stops.forEach(s=>s._dist=_haversineM(parcelCentroid[0],parcelCentroid[1],s.lon,s.lat));
   return stops.sort((a,b)=>(a._dist||0)-(b._dist||0));
 }
@@ -9000,9 +9023,12 @@ async function toggleAccTransit(){
     _histCleanup();
     sw.classList.remove('on'); el.innerHTML=''; _ttcClearPoll(); _ttcRemoveFromMap(); _ttcRenderedStops=null; _ttcMode='live'; return;
   }
-  const isoFeat=_isoData?.features?.[0];
-  if(!isoFeat){
-    if(el)el.innerHTML=`<div style="font-size:0.7rem;color:rgba(255,255,255,0.25);padding:4px 0">${tr.accNoIso||'Generate an isochrone first'}</div>`;
+  if(!_transitAreaRings().length){
+    // Small parcel/AOI (<5,000 m²) → isochrone is the meaningful catchment;
+    // large areas may run transit directly (isochrone remains optional).
+    const smallArea=_currentParcelGeoJSON&&!_isLargeParcel();
+    const msg=smallArea?(tr.ttcAreaSmall||'Area under 5,000 m² — generate an isochrone first'):(tr.accNoIso||'Generate an isochrone first');
+    if(el)el.innerHTML=`<div style="font-size:0.7rem;color:rgba(255,255,255,0.25);padding:4px 0">${msg}</div>`;
     return;
   }
   sw.classList.add('on');
@@ -11704,16 +11730,8 @@ async function _histComposeCapture(){
   const ctxFont=w=>ctx.font=`${w?'600':'400'} ${fs}px -apple-system,sans-serif`;
   const title=`${h.colorBy}: ${cur.l}`;
   const foot=`${_histRange?.from} → ${_histRange?.to} · ${h.days[_histDaytype]} · ${h.bands[_histBand]}`;
-  // isochrone context: travel mode, time, and area of the study catchment
-  let isoLine=null;
-  try{
-    const isoFeat=_isoData?.features?.[0];
-    if(isoFeat){
-      const km2=(typeof turf!=='undefined'?turf.area(isoFeat):0)/1e6;
-      const modeLbl=t().accModes?.[_accMode||'walking']||_accMode||'';
-      isoLine=`${_accMinutes||10} min ${modeLbl}${km2?` · ${km2.toFixed(2)} km²`:''}`;
-    }
-  }catch(_){}
+  // study-area context: isochrone (mode+time+area) or AOI/parcel (area)
+  const isoLine=_transitAreaLabel();
   ctxFont(0);
   const lines=[foot].concat(isoLine?[isoLine]:[]);
   const wMax=Math.max(...lines.map(x=>ctx.measureText(x).width),ctx.measureText(title).width,...rows.map(r=>ctx.measureText(r[1]).width+18*s));
@@ -11774,11 +11792,8 @@ async function _histExportPDF(){
     const cov=_histCoverage;
     doc.text(`Archive coverage: since ${cov?.first_date} (${cov?.days} service days). Source: vehicle positions sampled every 2 min, arrivals interpolated (±1 min).`,M,y);y+=4;
     try{
-      const isoFeat=_isoData?.features?.[0];
-      if(isoFeat){
-        const km2=(typeof turf!=='undefined'?turf.area(isoFeat):0)/1e6;
-        doc.text(`Study area: ${_accMinutes||10}-minute ${(_accMode||'walking')} isochrone${km2?` · ${km2.toFixed(2)} km²`:''} · ${_ttcRenderedStops?.length||0} stops within catchment.`,M,y);y+=4;
-      }
+      const areaLbl=_transitAreaLabel();
+      if(areaLbl)doc.text(`Study area: ${areaLbl} · ${_ttcRenderedStops?.length||0} stops within catchment.`,M,y);y+=4;
     }catch(_){}
     y+=4;
     // headline metrics
