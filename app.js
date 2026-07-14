@@ -7477,6 +7477,8 @@ async function toggleAccParking(){
     const totalAreas=freeAreas+paidAreas;
     const statRow=(label,val,color='rgba(255,255,255,0.65)')=>
       val>0?`<div style="display:flex;justify-content:space-between"><span>${label}</span><span style="font-weight:600;color:${color}">${val}</span></div>`:'';
+    // summary for the report
+    window._parkingSummary={totalAreas,freeAreas,paidAreas,cars:carsTotal,taxi:taxiTotal,accessible:handiTotal,distribution:loadTotal,ev:evTotal};
     if(el) el.innerHTML=`
       <div style="padding:5px 0 4px;font-size:0.67rem;color:rgba(255,255,255,0.4);line-height:1.75">
         <div style="display:flex;gap:10px;margin-bottom:6px">${legendFree}&nbsp;&nbsp;${legendPaid}</div>
@@ -11961,7 +11963,7 @@ async function _morphExportPDF(){
 function _rptOn(id){return !!document.getElementById(id)?.classList.contains('on');}
 function _rptActive(){
   const a={
-    zoning:!!document.getElementById('nav-zoning-btn')?.classList.contains('active'),
+    zoning:(!!document.getElementById('nav-zoning-btn')?.classList.contains('active'))||(typeof _maxFootprintM2==='number'&&_maxFootprintM2>0)||(typeof _noDevZone!=='undefined'&&_noDevZone)||!!(map.getLayer?.('zone-overlay-fill')),
     syntax:!!(_syntaxGJ?.features?.length&&map.getLayer?.('syntax-line')),
     orient:!!(_orientGJ?.features?.length&&map.getLayer?.('orient-line')),
     osm:typeof _osmActive!=='undefined'&&!!_osmActive,
@@ -12128,7 +12130,7 @@ async function exportReportPDF(){
       if(a.lst){const ll=_rptCardLines('acc-lst-result');if(ll.length)P('Land surface temperature: '+ll.join(' · '));src('Land surface temperature: Landsat-derived raster.');}
     }
     // Mobility & access
-    if(a.transit||a.history||a.crashes||a.schools||a.kg){
+    if(a.transit||a.history||a.crashes||a.schools||a.kg||a.parking){
       H3('Mobility & access');
       if(a.history&&_histStats?.length){
         const tot=_histStats.reduce((x,r)=>({m:x.m+Number(r.n_matched),ot:x.ot+Number(r.on_time),l:x.l+Number(r.late)}),{m:0,ot:0,l:0});
@@ -12137,6 +12139,12 @@ async function exportReportPDF(){
         src('Transit reliability: TTC vehicle positions archived every 2 min; arrivals interpolated (±1 min), matched to timetable (on-time −60…+300 s); stops with <30 obs excluded.');
       } else if(a.transit){P(`Public transport: ${_ttcRenderedStops?.length||0} stops within the study area.`);src('Transit stops: Tbilisi Transport Company (TTC).');}
       if(a.crashes){P('Road incidents layer active (see map).');src('Road incidents: Ministry of Internal Affairs crash records.');}
+      if(a.parking){
+        const ps=window._parkingSummary;
+        if(ps){P(`Parking: ${ps.totalAreas} areas (${ps.freeAreas} free · ${ps.paidAreas} paid) · ${ps.cars.toLocaleString()} car spaces${ps.accessible?` · ${ps.accessible} wheelchair-accessible`:''}${ps.ev?` · ${ps.ev} EV chargers`:''}${ps.taxi?` · ${ps.taxi} taxi`:''}${ps.distribution?` · ${ps.distribution} loading`:''}.`);}
+        else P('Parking layer active (see map).');
+        src('Parking: Tbilisi Municipality on-street parking dataset.');
+      }
       if(a.schools||a.kg){P(`Education access: ${[a.schools&&'public schools',a.kg&&'kindergartens'].filter(Boolean).join(' and ')} shown on the area map.`);src('Education facilities: open municipal datasets.');}
     }
     if(a.isochrone)src(`Catchment: ${_accMinutes||10}-minute ${_accMode||'walking'} isochrone (Mapbox Isochrone API).`);
