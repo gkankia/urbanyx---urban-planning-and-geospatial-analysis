@@ -2312,7 +2312,7 @@ function _setDrawHint(text){
 }
 
 function toggleDrawMenu(){
-  if(!currentUser||currentUser.plan!=='pro'){openPaywall();return;}
+  if(!currentUser){openAuthModal('view-signup');return;}
   if(_polyDrawing){cancelDraw();return;}
   _drawMenuOpen=!_drawMenuOpen;
   const popup=document.getElementById('draw-shape-popup');
@@ -2377,7 +2377,7 @@ function makeCirclePoly(center,edge,nPts){
 }
 
 function startDraw(shape){
-  if(!currentUser||currentUser.plan!=='pro'){openPaywall();return;}
+  if(!currentUser){openAuthModal('view-signup');return;}
   if(!mapReady)return;
   if(_noDevZone&&(shape==='polygon'||shape==='rectangle'||shape==='circle')){showToast('This area is not designated for development. Building is not permitted.',4500);return;}
   initDrawControl();
@@ -2486,7 +2486,7 @@ async function _importGeoTIFF(file){
 }
 
 function importDrawFile(type){
-  if(!currentUser||currentUser.plan!=='pro'){openPaywall();return;}
+  if(!currentUser){openAuthModal('view-signup');return;}
   _drawImportType=type;
   const inp=document.getElementById('draw-file-input');
   if(type==='geojson')inp.accept='.geojson,.json';
@@ -6147,7 +6147,7 @@ function setupProCard(show=false){
 }
 
 async function toggleAccSolar(){
-  if(!currentUser||currentUser.plan!=='pro'){openPaywall();return;}
+  if(!currentUser){openAuthModal('view-signup');return;}
   if(!_currentParcelGeoJSON)return;
   if(_solarOverlayCache){
     document.getElementById('acc-solar-sw')?.classList.remove('on');
@@ -6168,7 +6168,7 @@ async function toggleAccSolar(){
 }
 
 async function toggleAccWind(){
-  if(!currentUser||currentUser.plan!=='pro'){openPaywall();return;}
+  if(!currentUser){openAuthModal('view-signup');return;}
   if(!_currentParcelGeoJSON)return;
   if(_windData){
     _windData=null;
@@ -6201,7 +6201,7 @@ async function toggleAccCanopy(){
     if(_climateData)_climateData.canopyPct=null;
     return;
   }
-  if(!currentUser||currentUser.plan!=="pro"){openPaywall();return;}
+  if(!currentUser){openAuthModal('view-signup');return;}
   if(!_currentParcelGeoJSON)return;
   sw.classList.add("on");
   if(el)el.innerHTML=`<div style="display:flex;align-items:center;gap:6px;padding:5px 0 6px;color:rgba(255,255,255,0.35);font-size:0.7rem"><span class="spinner" style="width:10px;height:10px;border-width:1.5px"></span></div>`;
@@ -6241,7 +6241,7 @@ async function toggleAccLST(){
     if(_climateData)_climateData.lst=null;
     return;
   }
-  if(!currentUser||currentUser.plan!=="pro"){openPaywall();return;}
+  if(!currentUser){openAuthModal('view-signup');return;}
   if(!_currentParcelGeoJSON)return;
   sw.classList.add("on");
   if(el)el.innerHTML=`<div style="display:flex;align-items:center;gap:6px;padding:5px 0 6px;color:rgba(255,255,255,0.35);font-size:0.7rem"><span class="spinner" style="width:10px;height:10px;border-width:1.5px"></span></div>`;
@@ -7500,7 +7500,7 @@ async function toggleAccMobility(){
   const el=document.getElementById("acc-mob-result");
   const isKa=lang==="ka";
   if(sw.classList.contains("on")){sw.classList.remove("on");if(el)el.innerHTML="";return;}
-  if(!currentUser||currentUser.plan!=="pro"){openPaywall();return;}
+  if(!currentUser){openAuthModal('view-signup');return;}
   const isoFeat=_isoData?.features?.[0];
   if(!isoFeat&&!_isLargeParcel()){
     const msg=isKa?"პირველ გაუშვით სივრცული ანალიზი":"Run Pro Analysis first to get isochrone";
@@ -7743,7 +7743,7 @@ function _writeFloat32GeoTIFF(values,width,height,originX,originY,resX,resY,noda
 }
 
 function exportReliefGeoTIFF(type){
-  if(!currentUser||currentUser.plan!=="pro"){openPaywall();return;}
+  if(!currentUser){openAuthModal('view-signup');return;}
   if(!_dtmCache||!_currentParcelGeoJSON)return;
   const {values,width,height,originX,originY,resX,resY,nodata}=_dtmCache;
   let rawVals,filename;
@@ -8044,7 +8044,7 @@ function _suitableRasterToRings(suitableGrid, width, height){
 }
 
 function exportSolarGeoJSON(){
-  if(!currentUser||currentUser.plan!=="pro"){openPaywall();return;}
+  if(!currentUser){openAuthModal('view-signup');return;}
   if(!_solarGeoData||!_currentParcelGeoJSON)return;
   const{dtm,slopeArr,aspectArr,shadowBoundsW}=_solarGeoData;
   const{width,height,originX,originY,resX,resY}=dtm;
@@ -8174,7 +8174,7 @@ function osmElementRing(el){
 
 async function runSolarAnalysis(){
   if(!_currentParcelGeoJSON)return;
-  if(!currentUser||currentUser.plan!=="pro"){openPaywall();return;}
+  if(!currentUser){openAuthModal('view-signup');return;}
   if(_currentParcelAreaM2!==null&&_currentParcelAreaM2<1000){setStatus(lang==="ka"?"ანალიზისთვის საჭიროა მინ. 1000 კვ.მ.":"Parcel too small — min. 1000 m² required","","status-analysis");return;}
   const btn=document.getElementById("solar-btn");
   if(_solarOverlayCache){
@@ -8528,7 +8528,7 @@ function stopWindAnimation(){
 
 async function runWindAnalysis(){
   if(!_currentParcelGeoJSON)return;
-  if(!currentUser||currentUser.plan!=='pro'){openPaywall();return;}
+  if(!currentUser){openAuthModal('view-signup');return;}
   if(_currentParcelAreaM2!==null&&_currentParcelAreaM2<1000){setStatus(lang==='ka'?'ანალიზისთვის საჭიროა მინ. 1000 კვ.მ.':'Parcel too small — min. 1000 m² required','','status-analysis');return;}
   if(!parcelCentroid)return;
   const btn=document.getElementById('wind-btn');
@@ -8579,7 +8579,7 @@ async function runWindAnalysis(){
 
 async function runReliefAnalysis(type){
   if(!_currentParcelGeoJSON)return;
-  if(!currentUser||currentUser.plan!=="pro"){openPaywall();return;}
+  if(!currentUser){openAuthModal('view-signup');return;}
   if(_currentParcelAreaM2!==null&&_currentParcelAreaM2<1000){setStatus(lang==="ka"?"ანალიზისთვის საჭიროა მინ. 1000 კვ.მ.":"Parcel too small — min. 1000 m² required","","status-analysis");return;}
   _reliefActiveType=type;
   ['height','slope','aspect'].forEach(tp=>{document.getElementById(`acc-relief-${tp}-sw`)?.classList.toggle('on',tp===type);});
@@ -8652,7 +8652,7 @@ function clearReliefOverlay(){
   try{if(map.getSource("profile-line"))map.removeSource("profile-line");}catch(_){}
 }
 function toggleAccRelief(type){
-  if(!currentUser||currentUser.plan!=="pro"){openPaywall();return;}
+  if(!currentUser){openAuthModal('view-signup');return;}
   if(!_currentParcelGeoJSON)return;
   if(_reliefActiveType===type){
     clearReliefOverlay();
@@ -9931,7 +9931,7 @@ function clearLSTOverlay(){
 
 function onClimateAnalysisClick(){
   if(!_currentParcelGeoJSON)return;
-  if(!currentUser||currentUser.plan!=="pro"){openPaywall();return;}
+  if(!currentUser){openAuthModal('view-signup');return;}
   if(_currentParcelAreaM2!==null&&_currentParcelAreaM2<1000){setStatus(lang==="ka"?"ანალიზისთვის საჭიროა მინ. 1000 კვ.მ.":"Parcel too small — min. 1000 m² required","","status-analysis");return;}
   runClimateAnalysis(_currentParcelGeoJSON);
 }
@@ -10042,7 +10042,7 @@ async function toggleCanopyLayer(){
     if(chart){chart.style.display="none";chart.innerHTML="";}
     return;
   }
-  if(!currentUser||currentUser.plan!=="pro"){openPaywall();return;}
+  if(!currentUser){openAuthModal('view-signup');return;}
   if(!_currentParcelGeoJSON||!mapReady)return;
   if(sw)sw.classList.add("on");
   function _showCanopyChart(pct){
@@ -10088,7 +10088,7 @@ async function toggleLSTLayer(){
     if(chart){chart.style.display="none";chart.innerHTML="";}
     return;
   }
-  if(!currentUser||currentUser.plan!=="pro"){openPaywall();return;}
+  if(!currentUser){openAuthModal('view-signup');return;}
   if(!_currentParcelGeoJSON||!mapReady)return;
   if(_currentParcelAreaM2!==null&&_currentParcelAreaM2<1000){setStatus(lang==="ka"?"ანალიზისთვის საჭიროა მინ. 1000 კვ.მ.":"Parcel too small — min. 1000 m² required","","status-analysis");return;}
   if(sw)sw.classList.add("on");
@@ -10205,7 +10205,7 @@ function toggleLPClimate(){
   }else{
     sw.classList.add("on");
     if(!_climateData&&_currentParcelGeoJSON){
-      if(!currentUser||currentUser.plan!=="pro"){openPaywall();sw.classList.remove("on");return;}
+      if(!currentUser){openAuthModal('view-signup');sw.classList.remove("on");return;}
       runClimateAnalysis(_currentParcelGeoJSON);
     }else if(_climateData){
       document.getElementById("pro-analysis-card").style.display="block";
@@ -10225,7 +10225,7 @@ function toggleClimateAnalysis(){
     document.getElementById("pro-cat-climate")?.classList.remove("open");
     _climateData=null;_canopyRawData=null;_lstRawData=null;
   }else{
-    if(!currentUser||currentUser.plan!=="pro"){openPaywall();return;}
+    if(!currentUser){openAuthModal('view-signup');return;}
     if(_currentParcelGeoJSON)runClimateAnalysis(_currentParcelGeoJSON);
   }
 }
@@ -10238,7 +10238,7 @@ function toggleReliefOverlay(){
     clearReliefOverlay();_reliefActiveType=null;
     document.querySelectorAll(".relief-type-btn").forEach(b=>b.classList.remove("active"));
   }else{
-    if(!currentUser||currentUser.plan!=="pro"){openPaywall();return;}
+    if(!currentUser){openAuthModal('view-signup');return;}
     runReliefAnalysis(_reliefActiveType||"slope");
   }
 }
@@ -11988,16 +11988,28 @@ async function exportReportPDF(){
   try{
     const{jsPDF}=window.jspdf||window;
     const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
-    const FONT=await _rptLoadFont(doc)?'NotoGeo':'helvetica';
+    // Latin renders in Helvetica (always present). The embedded Noto font is
+    // used ONLY for strings that contain Georgian glyphs — the Google Fonts
+    // subset has no Latin, so applying it globally blanks all English text.
+    const _F=await _rptLoadFonts(doc); // {lat:'GSans'|null, ka:'NotoGeo'|null}
+    const KA=_F.ka;
+    const hasKa=(s)=>/[ა-ჰ]/.test(String(s||''));
     const M=16,PW=210,BOT=272;let y=M;
-    const sources=[]; // collected in order of appearance → printed under Sources
+    const sources=[];
     const src=(s)=>{if(!sources.includes(s))sources.push(s);};
-    const setF=(w)=>doc.setFont(FONT,w==='bold'?'bold':'normal');
+    // Google Sans (if present) is used for ALL text incl. Georgian. Fallback while
+    // the .ttf is absent: Helvetica for Latin, Noto Sans Georgian for Georgian.
+    const setFor=(str,w)=>{
+      if(_F.lat)doc.setFont('GSans',w==='bold'?'bold':'normal');
+      else if(hasKa(str)&&KA)doc.setFont(KA,'normal');
+      else doc.setFont('helvetica',w==='bold'?'bold':'normal');
+    };
+    const T=(str,x,yy,opts)=>{setFor(str,opts&&opts.w);doc.text(str,x,yy,opts&&opts.o);};
     const ensure=(need)=>{if(y+need>BOT){doc.addPage();y=M;}};
-    const H1=(txt)=>{doc.setFontSize(15);doc.setTextColor(20);setF('bold');doc.text(txt,M,y);setF();y+=7;};
-    const H2=(txt)=>{ensure(11);y+=2;doc.setFontSize(11);doc.setTextColor(30);setF('bold');doc.text(txt,M,y);setF();y+=1.5;doc.setDrawColor(210);doc.line(M,y,PW-M,y);y+=4.5;};
-    const H3=(txt)=>{ensure(8);y+=1;doc.setFontSize(9);doc.setTextColor(40);setF('bold');doc.text(txt,M,y);setF();y+=4.5;};
-    const P=(txt,col)=>{doc.setFontSize(8.5);doc.setTextColor(col??60);const ls=doc.splitTextToSize(txt,PW-M*2);ensure(ls.length*4+1);doc.text(ls,M,y);y+=ls.length*4+1.5;};
+    const H1=(txt)=>{doc.setFontSize(15);doc.setTextColor(20);T(txt,M,y,{w:'bold'});y+=7;};
+    const H2=(txt)=>{ensure(11);y+=2;doc.setFontSize(11);doc.setTextColor(30);T(txt,M,y,{w:'bold'});y+=1.5;doc.setDrawColor(210);doc.line(M,y,PW-M,y);y+=4.5;};
+    const H3=(txt)=>{ensure(8);y+=1;doc.setFontSize(9);doc.setTextColor(40);T(txt,M,y,{w:'bold'});y+=4.5;};
+    const P=(txt,col)=>{doc.setFontSize(8.5);doc.setTextColor(col??60);setFor(txt);const ls=doc.splitTextToSize(txt,PW-M*2);ensure(ls.length*4+1);ls.forEach(l=>{setFor(l);doc.text(l,M,y);y+=4;});y+=1.5;};
     // color-swatch legend row
     const legend=(pairs)=>{doc.setFontSize(7.5);let lx=M;ensure(7);pairs.forEach(([c,l])=>{const tw=doc.getTextWidth(l)+9;if(lx+tw>PW-M){y+=5;lx=M;}doc.setFillColor(c);doc.circle(lx+2,y-1.2,1.6,'F');doc.setTextColor(70);doc.text(l,lx+5,y);lx+=tw+3;});y+=5;};
 
@@ -12005,11 +12017,11 @@ async function exportReportPDF(){
     H1('Urbanyx — Site & Area Analysis Report');
     const rp=window._rptParcel||{};
     const areaLbl=_transitAreaLabel();
-    doc.setFontSize(8.5);doc.setTextColor(110);setF();
+    doc.setFontSize(8.5);doc.setTextColor(110);
     const ctx=[new Date().toISOString().slice(0,10)];
     if(rp.code&&rp.code!=='—')ctx.push('Parcel '+rp.code);
     if(areaLbl)ctx.push(areaLbl);
-    doc.text(ctx.join('   ·   '),M,y);y+=8;
+    T(ctx.join('   ·   '),M,y);y+=8;
 
     // ── Composite map: area full-width, parcel as top-right inset ──
     let areaImg=null,parcelImg=null;
@@ -12129,8 +12141,8 @@ async function exportReportPDF(){
     // ── Sources (ordered by appearance) ──
     if(sources.length){
       H2('Sources');
-      doc.setFontSize(7.5);doc.setTextColor(120);setF();
-      sources.forEach((s,i)=>{const ls=doc.splitTextToSize(`${i+1}.  ${s}`,PW-M*2);ensure(ls.length*3.6+1);doc.text(ls,M,y);y+=ls.length*3.6+1;});
+      doc.setFontSize(7.5);doc.setTextColor(120);
+      sources.forEach((s,i)=>{const ls=doc.splitTextToSize(`${i+1}.  ${s}`,PW-M*2);ensure(ls.length*3.6+1);ls.forEach(l=>{setFor(l);doc.text(l,M,y);y+=3.6;});y+=1;});
     }
 
     // ── Footer: logo (bottom-left) + page number (bottom-right) on every page ──
@@ -12140,7 +12152,7 @@ async function exportReportPDF(){
       doc.setPage(i);
       doc.setDrawColor(225);doc.line(M,283,PW-M,283);
       if(logo){const lw=20,lh=lw*(logo.h/logo.w);doc.addImage(logo.url,'PNG',M,285-lh+2,lw,lh);}
-      doc.setFontSize(7);doc.setTextColor(150);setF();
+      doc.setFontSize(7);doc.setTextColor(150);setFor('Page');
       doc.text(`Page ${i} / ${n}`,PW-M,289,{align:'right'});
       doc.text('urbanyx.zaxis.ge',PW/2,289,{align:'center'});
     }
@@ -12226,28 +12238,25 @@ async function _rptExportGeoTIFF(){
 }
 
 // ── Report helpers: font, logo raster, metric scraping ───────────────────────
-let _rptFontB64=null;
-async function _rptLoadFont(doc){
-  // Noto Sans Georgian covers Latin + Georgian; Helvetica has no Georgian glyphs.
+async function _fetchB64(url){
+  try{const r=await fetch(url);if(!r.ok)return null;const buf=new Uint8Array(await r.arrayBuffer());let bin="";for(let i=0;i<buf.length;i+=8192)bin+=String.fromCharCode(...buf.subarray(i,i+8192));return btoa(bin);}catch(_){return null;}
+}
+// Latin = Google Sans (drop GoogleSans-Regular/Bold.ttf into analysis-logos/ —
+// it's proprietary and not fetchable from a CDN). Georgian = Noto Sans Georgian.
+const _rptFonts={lat:undefined,latB:undefined,ka:undefined};
+async function _rptLoadFonts(doc){
+  if(_rptFonts.lat===undefined){
+    _rptFonts.lat=await _fetchB64('analysis-logos/GoogleSans-Regular.ttf');
+    _rptFonts.latB=await _fetchB64('analysis-logos/GoogleSans-Bold.ttf')||_rptFonts.lat;
+    _rptFonts.ka=await _fetchB64('https://cdn.jsdelivr.net/gh/notofonts/notofonts.github.io/fonts/NotoSansGeorgian/hinted/ttf/NotoSansGeorgian-Regular.ttf');
+  }
+  let lat=null,ka=null;
   try{
-    if(!_rptFontB64){
-      const urls=[
-        "https://cdn.jsdelivr.net/gh/notofonts/notofonts.github.io/fonts/NotoSansGeorgian/hinted/ttf/NotoSansGeorgian-Regular.ttf",
-        "https://fonts.gstatic.com/s/notosansgeorgian/v28/PlIaFke5O6RzLfvNNVSitxkr76PRHBC4Ytyq-Gof7PagevKo6oFpog.ttf",
-      ];
-      for(const u of urls){
-        try{const r=await fetch(u);if(r.ok){const buf=new Uint8Array(await r.arrayBuffer());let bin="";for(let i=0;i<buf.length;i+=8192)bin+=String.fromCharCode(...buf.subarray(i,i+8192));_rptFontB64=btoa(bin);break;}}catch(_){}
-      }
-    }
-    if(_rptFontB64){
-      doc.addFileToVFS("NotoGeo.ttf",_rptFontB64);
-      doc.addFont("NotoGeo.ttf","NotoGeo","normal");
-      doc.addFont("NotoGeo.ttf","NotoGeo","bold"); // same file; jsPDF needs a bold slot
-      doc.setFont("NotoGeo","normal");
-      return true;
-    }
-  }catch(e){console.warn("[report] font load:",e);}
-  return false;
+    if(_rptFonts.lat){doc.addFileToVFS('GSans.ttf',_rptFonts.lat);doc.addFont('GSans.ttf','GSans','normal');
+      doc.addFileToVFS('GSansB.ttf',_rptFonts.latB);doc.addFont('GSansB.ttf','GSans','bold');lat='GSans';}
+    if(_rptFonts.ka){doc.addFileToVFS('NotoGeo.ttf',_rptFonts.ka);doc.addFont('NotoGeo.ttf','NotoGeo','normal');ka='NotoGeo';}
+  }catch(e){console.warn('[report] font load:',e);}
+  return {lat,ka};
 }
 
 // Rasterize an SVG asset to a PNG data URL (jsPDF can't embed SVG directly)
