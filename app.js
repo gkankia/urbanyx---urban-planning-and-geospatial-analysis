@@ -12035,7 +12035,8 @@ async function exportReportPDF(){
       if(areaLbl)lines.push(areaLbl);
       areaImg=await _histCaptureMapImage({title:'Area analyses',rows:rows.slice(0,8),lines});
     }
-    if(a.anyParcel&&_currentParcelGeoJSON){
+    const hasParcelAnalysis=a.zoning||a.canopy||a.lst||a.wind||a.relief||a.solar;
+    if(hasParcelAnalysis&&_currentParcelGeoJSON){
       const lines=[];
       const pl=[a.zoning&&'Zoning & setbacks',a.canopy&&'Tree canopy',a.lst&&'Land surface temp.',a.wind&&'Wind',a.relief&&'Relief'].filter(Boolean);
       if(pl.length)lines.push('Layers: '+pl.join(' · '));
@@ -12100,29 +12101,27 @@ async function exportReportPDF(){
       if(a.osm){const ol=_rptCardLines('osm-legend');if(ol.length)P('Urban functions: '+ol.join(' · '));}
       src('Street network & functions: © OpenStreetMap contributors (Overpass API).');
     }
-    // Relief / slope / aspect
-    if(a.relief||_rptCardLines('pro-cat-relief-content').length){
-      const rl=_rptCardLines('pro-cat-relief-content');
-      if(rl.length){H3('Relief · slope · aspect');
-        P(rl.join(' · '));
-        legend(t().slopeClasses.map((c,i)=>[t().slopeClassColors[i],c.l+' '+c.r]));
-        src('Elevation: digital terrain model (30 m); slope and aspect derived on the fly.');}
+    // Relief / slope / aspect — only when a relief layer is actually active
+    if(a.relief){
+      H3('Relief · slope · aspect');
+      const typeLbl={height:'Elevation',slope:'Slope',aspect:'Aspect'}[_reliefActiveType]||_reliefActiveType;
+      P('Active layer: '+typeLbl+'.');
+      const rl=_rptCardLines('relief-legend').concat(_rptCardLines('relief-stats'));
+      if(rl.length)P(rl.join(' · '));
+      if(_reliefActiveType==='slope'||_reliefActiveType==='aspect')legend(t().slopeClasses.map((c,i)=>[t().slopeClassColors[i],c.l+' '+c.r]));
+      src('Elevation: digital terrain model; slope and aspect derived on the fly.');
     }
-    // Solar / energy
-    {const sl=_rptCardLines('solar-result');
-     if(a.wind||sl.length||_windData){
-       H3('Energy potential');
-       if(sl.length)P('Solar: '+sl.join(' · '));
-       if(_windData){const wd=_windData;P(`Wind: ${wd.speed?wd.speed.toFixed(1)+' m/s mean':''}${wd.powerDensity?` · ${Math.round(wd.powerDensity)} W/m²`:''}${wd.annualYield?` · ${Math.round(wd.annualYield).toLocaleString()} kWh/yr (5 kW ref.)`:''}.`);}
-       src('Solar: slope/aspect irradiation model on the DTM. Wind: Global Wind Atlas / Open-Meteo.');
-     }}
-    // Climate
+    // Energy — only sub-analyses actually run
+    if(a.solar||a.wind){
+      H3('Energy potential');
+      if(a.solar){const sl=_rptCardLines('solar-result');if(sl.length)P('Solar: '+sl.join(' · '));src('Solar: slope/aspect irradiation model on the DTM.');}
+      if(a.wind){const wd=_windData||{};P('Wind: '+[wd.speed&&wd.speed.toFixed(1)+' m/s mean',wd.powerDensity&&Math.round(wd.powerDensity)+' W/m²',wd.annualYield&&Math.round(wd.annualYield).toLocaleString()+' kWh/yr (5 kW ref.)'].filter(Boolean).join(' · ')+'.');src('Wind: Global Wind Atlas / Open-Meteo.');}
+    }
+    // Climate — per active layer
     if(a.canopy||a.lst){
       H3('Climate & land cover');
-      const cl=_rptCardLines('acc-canopy-result');if(cl.length)P('Tree canopy: '+cl.join(' · '));
-      const ll=_rptCardLines('acc-lst-result');if(ll.length)P('Land surface temperature: '+ll.join(' · '));
-      if(a.canopy)src('Tree canopy: ESA WorldCover 10 m (2021).');
-      if(a.lst)src('Land surface temperature: Landsat-derived raster.');
+      if(a.canopy){const cl=_rptCardLines('acc-canopy-result');if(cl.length)P('Tree canopy: '+cl.join(' · '));src('Tree canopy: ESA WorldCover 10 m (2021).');}
+      if(a.lst){const ll=_rptCardLines('acc-lst-result');if(ll.length)P('Land surface temperature: '+ll.join(' · '));src('Land surface temperature: Landsat-derived raster.');}
     }
     // Mobility & access
     if(a.transit||a.history||a.crashes||a.schools||a.kg){
