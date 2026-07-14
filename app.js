@@ -4152,6 +4152,7 @@ async function runStreetOrientation(geoOverride){
       return acc;
     },[]);
     const gj={type:'FeatureCollection',features};
+    _orientGJ=gj;_orientBins=bins;_orientDom=null; // kept for morphology export
     if(!map.getSource('orient-streets'))map.addSource('orient-streets',{type:'geojson',data:gj});
     else map.getSource('orient-streets').setData(gj);
     if(!map.getLayer('orient-line')){
@@ -4171,6 +4172,7 @@ async function runStreetOrientation(geoOverride){
     const maxBinIdx=bins.indexOf(Math.max(...bins));
     const domDeg=maxBinIdx*10;
     const domLabel=domDeg<22.5||domDeg>=157.5?'N–S':domDeg<67.5?'NE–SW':domDeg<112.5?'E–W':'NW–SE';
+    _orientDom=domLabel;
     rose.style.display='block';
     rose.innerHTML=`<div class="lu-section-title" style="margin-bottom:5px"><span>${isKa?'ქუჩის ორიენტაცია':'Street orientation'}</span><span style="color:rgba(255,255,255,0.35)">${domLabel}</span></div>
       <div style="display:flex;justify-content:center">${renderOrientRoseSVG(bins)}</div>`;
@@ -4258,6 +4260,7 @@ async function runSpaceSyntax(geoOverride){
       return acc;
     },[]);
     const gj={type:'FeatureCollection',features};
+    _syntaxGJ=gj; // kept for morphology export
     if(!map.getSource('syntax-streets'))map.addSource('syntax-streets',{type:'geojson',data:gj});
     else map.getSource('syntax-streets').setData(gj);
     if(!map.getLayer('syntax-line')){
@@ -6115,7 +6118,11 @@ function setupProCard(show=false){
       `<div class="lp-row acc-toggle-row" style="padding:4px 0;margin-top:2px" onclick="toggleAccOrientation()"><span class="lp-row-name">${isKa?"ქუჩის ორიენტაცია":"Street Orientation"}</span><div class="lp-sw" id="acc-orientation-sw"></div></div>`+
       `<div id="orient-rose" style="display:none"></div>`+
       `<div class="lp-row acc-toggle-row" style="padding:4px 0;margin-top:2px" onclick="toggleAccOSM()"><span class="lp-row-name">${isKa?"ურბანული ფუნქციები":"Urban Functions"}</span><div class="lp-sw" id="acc-osm-sw"></div></div>`+
-      `<div id="osm-legend" style="display:none"></div>`;
+      `<div id="osm-legend" style="display:none"></div>`+
+      `<div style="display:flex;gap:5px;margin-top:9px">
+        <button onclick="_morphExportPDF()" style="flex:1.4;font-family:inherit;font-size:0.6rem;font-weight:600;padding:7px 0;border-radius:8px;border:1px solid rgba(52,211,153,0.3);background:rgba(52,211,153,0.12);color:#34d399;cursor:pointer">PDF · ${isKa?"მორფოლოგია":"Morphology"}</button>
+        <button onclick="_morphExportGeoJSON()" style="flex:1;font-family:inherit;font-size:0.6rem;font-weight:600;padding:7px 0;border-radius:8px;border:1px solid rgba(255,255,255,0.09);background:rgba(255,255,255,0.03);color:rgba(255,255,255,0.55);cursor:pointer">GeoJSON</button>
+      </div>`;
   }
 
   // Energy and Relief — pro only
@@ -11706,13 +11713,27 @@ async function _histCaptureMapImage(){
     }
   }catch(_){}
   try{
-    return await _histComposeCapture();
+    return await _histComposeCapture(arguments[0]||_histLegendSpec());
   }finally{
     if(framed)map.jumpTo(prev);
   }
 }
 
-async function _histComposeCapture(){
+// History-mode legend spec (default when no spec is passed to the capture)
+function _histLegendSpec(){
+  const h=t().hist;
+  const cur=_histVarDefs(h).find(v=>v.k===_histColorBy)||_histVarDefs(h)[0];
+  const lines=[];
+  const areaLbl=_transitAreaLabel();if(areaLbl)lines.push(areaLbl);
+  lines.push(`${_histRange?.from} → ${_histRange?.to} · ${h.days[_histDaytype]} · ${h.bands[_histBand]}`);
+  return{
+    title:`${h.colorBy}: ${cur.l}`,
+    rows:[[_HIST_OK,cur.leg[0]],[_HIST_WARN,cur.leg[1]],[_HIST_BAD,cur.leg[2]],[_HIST_GREY,h.insufficient+' (<30)']],
+    lines,
+  };
+}
+
+async function _histComposeCapture(spec){
   map.triggerRepaint();
   await new Promise(r=>setTimeout(r,300));
   const src=map.getCanvas();
@@ -11721,20 +11742,16 @@ async function _histComposeCapture(){
   const c=document.createElement('canvas');c.width=W;c.height=H;
   const ctx=c.getContext('2d');
   ctx.drawImage(src,0,0);
-  // legend card, bottom-right, scaled to capture resolution
-  const h=t().hist;
-  const cur=_histVarDefs(h).find(v=>v.k===_histColorBy)||_histVarDefs(h)[0];
+  // legend card, bottom-right, scaled to capture resolution (spec-driven so
+  // any analysis section can reuse this capture with its own symbology)
   const s=Math.max(1,W/1400);
   const pad=12*s,lh=17*s,fs=11*s;
-  const rows=[[_HIST_OK,cur.leg[0]],[_HIST_WARN,cur.leg[1]],[_HIST_BAD,cur.leg[2]],[_HIST_GREY,h.insufficient+' (<30)']];
+  const rows=spec?.rows||[];
   const ctxFont=w=>ctx.font=`${w?'600':'400'} ${fs}px -apple-system,sans-serif`;
-  const title=`${h.colorBy}: ${cur.l}`;
-  const foot=`${_histRange?.from} → ${_histRange?.to} · ${h.days[_histDaytype]} · ${h.bands[_histBand]}`;
-  // study-area context: isochrone (mode+time+area) or AOI/parcel (area)
-  const isoLine=_transitAreaLabel();
+  const title=spec?.title||'';
   ctxFont(0);
-  const lines=[foot].concat(isoLine?[isoLine]:[]);
-  const wMax=Math.max(...lines.map(x=>ctx.measureText(x).width),ctx.measureText(title).width,...rows.map(r=>ctx.measureText(r[1]).width+18*s));
+  const lines=spec?.lines||[];
+  const wMax=Math.max(...lines.map(x=>ctx.measureText(x).width),ctx.measureText(title).width,...rows.map(r=>ctx.measureText(r[1]).width+18*s),40*s);
   const bw=wMax+pad*2+6*s,bh=pad*2+lh*(rows.length+1+lines.length);
   const bx=W-bw-16*s,by=H-bh-16*s;
   const chip=(x,y0,w0,h0)=>{
@@ -11753,8 +11770,10 @@ async function _histComposeCapture(){
     ctx.fillStyle=col;ctx.beginPath();ctx.arc(bx+pad+5*s,ty-fs*0.35,5*s,0,7);ctx.fill();
     ctx.fillStyle='rgba(255,255,255,0.78)';ctx.fillText(label,bx+pad+16*s,ty);ty+=lh;
   }
-  if(isoLine){ctx.fillStyle='rgba(255,255,255,0.78)';ctx.fillText(isoLine,bx+pad,ty);ty+=lh;}
-  ctx.fillStyle='rgba(255,255,255,0.45)';ctx.fillText(foot,bx+pad,ty);
+  lines.forEach((ln,i)=>{
+    ctx.fillStyle=i===lines.length-1?'rgba(255,255,255,0.45)':'rgba(255,255,255,0.78)';
+    ctx.fillText(ln,bx+pad,ty);ty+=lh;
+  });
   // scale bar, bottom-left — meters per canvas pixel from zoom/latitude
   try{
     const lat=map.getCenter().lat*Math.PI/180;
@@ -11850,4 +11869,90 @@ function _histRestore(days,band,daytype){
   _ttcClearPoll();_clearBusStopRoute();
   _ttcMode='history';
   _ttcRenderPanel();
+}
+
+// ── Urban Morphology exports (same styling/machinery as History exports) ─────
+let _orientGJ=null,_orientBins=null,_orientDom=null,_syntaxGJ=null;
+
+function _morphHasData(){return !!(_syntaxGJ?.features?.length||_orientGJ?.features?.length);}
+
+function _morphTotalKm(gj){
+  let m=0;
+  for(const f of gj?.features||[]){
+    const c=f.geometry?.coordinates||[];
+    for(let i=1;i<c.length;i++)m+=_haversineM(c[i-1][0],c[i-1][1],c[i][0],c[i][1]);
+  }
+  return m/1000;
+}
+
+function _morphExportGeoJSON(){
+  if(!currentUser||currentUser.plan!=='pro'){openPaywall(true);return;}
+  if(!_morphHasData()){showToast(lang==='ka'?'ჯერ გაუშვით მორფოლოგიის ანალიზი':'Run a morphology analysis first');return;}
+  const features=[];
+  for(const f of _syntaxGJ?.features||[])features.push({...f,properties:{...f.properties,analysis:'space_syntax'}});
+  for(const f of _orientGJ?.features||[])features.push({...f,properties:{...f.properties,analysis:'orientation'}});
+  const areaGeom=_isoData?.features?.[0]?.geometry||_currentParcelGeoJSON;
+  if(areaGeom)features.push({type:'Feature',geometry:areaGeom,properties:{analysis:'study_area',label:_transitAreaLabel()||''}});
+  logFeatureUse('geojson_export').catch(()=>{});
+  _dlGeoJSON('urban_morphology.geojson',{type:'FeatureCollection',features});
+}
+
+function _morphLegendSpec(){
+  const isKa=lang==='ka';
+  const rows=[];
+  if(_syntaxGJ?.features?.length){
+    rows.push(['#3b82f6',(isKa?'კავშირობა':'Connectivity')+' ≤1'],['#22c55e','2–3'],['#f97316','4–5'],['#ef4444','≥6']);
+  }
+  const lines=[];
+  if(_orientGJ?.features?.length&&_orientDom)lines.push((isKa?'ორიენტაცია':'Dominant orientation')+': '+_orientDom);
+  const areaLbl=_transitAreaLabel();if(areaLbl)lines.push(areaLbl);
+  lines.push(new Date().toLocaleDateString(isKa?'ka-GE':'en-GB',{day:'numeric',month:'short',year:'numeric'}));
+  return{title:isKa?'ურბანული მორფოლოგია':'Urban Morphology',rows,lines};
+}
+
+async function _morphExportPDF(){
+  if(!currentUser||currentUser.plan!=='pro'){openPaywall(true);return;}
+  if(!_morphHasData()){showToast(lang==='ka'?'ჯერ გაუშვით მორფოლოგიის ანალიზი':'Run a morphology analysis first');return;}
+  try{
+    const{jsPDF}=window.jspdf||window;
+    const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+    const M=16,PW=210;let y=M;
+    doc.setFontSize(15);doc.setTextColor(20);doc.text('Urban Morphology — Street Network Assessment',M,y);y+=7;
+    doc.setFontSize(8.5);doc.setTextColor(110);
+    const areaLbl=_transitAreaLabel();
+    doc.text(`Generated by Urbanyx · ${new Date().toISOString().slice(0,10)}${areaLbl?`   ·   Study area: ${areaLbl}`:''}`,M,y);y+=8;
+    // headline metrics
+    doc.setFontSize(11);doc.setTextColor(20);
+    const parts=[];
+    if(_syntaxGJ?.features?.length){
+      const degs=_syntaxGJ.features.map(f=>Number(f.properties?.connectivity||0));
+      const mean=degs.reduce((a,b)=>a+b,0)/Math.max(1,degs.length);
+      parts.push(`Street connectivity: ${degs.length} segments · ${_morphTotalKm(_syntaxGJ).toFixed(1)} km · mean degree ${mean.toFixed(2)} · max ${Math.max(...degs)}`);
+    }
+    if(_orientGJ?.features?.length){
+      parts.push(`Street orientation: ${_orientGJ.features.length} ways${_orientDom?` · dominant axis ${_orientDom}`:''}`);
+    }
+    for(const p of parts){doc.text(p,M,y);y+=5.5;}
+    y+=4;
+    // high-resolution map with burned-in legend (framed to study area)
+    try{
+      const img=await _histCaptureMapImage(_morphLegendSpec());
+      if(img){
+        const imgW=PW-M*2;
+        let imgH=imgW*(img.h/img.w);
+        if(imgH>170)imgH=170;
+        doc.addImage(img.url,'JPEG',M,y,imgW,imgH);
+        doc.setDrawColor(210);doc.rect(M,y,imgW,imgH);
+        y+=imgH+3;
+        doc.setFontSize(6.5);doc.setTextColor(150);
+        doc.text('Street network colored by node connectivity; orientation layer colored by segment bearing. Basemap © Mapbox © OpenStreetMap.',M,y);y+=7;
+      }
+    }catch(e){console.warn('morph pdf map:',e);}
+    if(y>250){doc.addPage();y=M;}
+    doc.setFontSize(7);doc.setTextColor(130);
+    const note='Methodology: street centerlines from OpenStreetMap (Overpass API) within the study area. Connectivity = number of street segments sharing each junction (node degree), a proxy for network integration. Orientation = length-weighted distribution of segment bearings in 10-degree bins. Figures are planning-level estimates; network data completeness depends on OSM coverage. Street data © OpenStreetMap contributors.';
+    doc.text(doc.splitTextToSize(note,178),M,y);
+    logFeatureUse('pdf_export').catch(()=>{});
+    doc.save('urban_morphology.pdf');
+  }catch(e){console.warn('morph pdf:',e);showToast('PDF failed: '+(e.message||''));}
 }
