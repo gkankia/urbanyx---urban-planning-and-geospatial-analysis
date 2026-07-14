@@ -2314,7 +2314,7 @@ function _setDrawHint(text){
 }
 
 function toggleDrawMenu(){
-  if(!currentUser){openAuthModal('view-signup');return;}
+  if(!currentUser||currentUser.plan!=='pro'){openPaywall();return;}
   if(_polyDrawing){cancelDraw();return;}
   _drawMenuOpen=!_drawMenuOpen;
   const popup=document.getElementById('draw-shape-popup');
@@ -2379,7 +2379,7 @@ function makeCirclePoly(center,edge,nPts){
 }
 
 function startDraw(shape){
-  if(!currentUser){openAuthModal('view-signup');return;}
+  if(!currentUser||currentUser.plan!=='pro'){openPaywall();return;}
   if(!mapReady)return;
   if(_noDevZone&&(shape==='polygon'||shape==='rectangle'||shape==='circle')){showToast('This area is not designated for development. Building is not permitted.',4500);return;}
   initDrawControl();
@@ -2488,7 +2488,7 @@ async function _importGeoTIFF(file){
 }
 
 function importDrawFile(type){
-  if(!currentUser){openAuthModal('view-signup');return;}
+  if(!currentUser||currentUser.plan!=='pro'){openPaywall();return;}
   _drawImportType=type;
   const inp=document.getElementById('draw-file-input');
   if(type==='geojson')inp.accept='.geojson,.json';
@@ -6077,8 +6077,8 @@ function setupProCard(show=false){
   document.querySelectorAll(".acc-mode-btn").forEach(b=>b.classList.toggle("active",b.dataset.mode===_accMode));
   document.querySelectorAll(".acc-time-btn").forEach(b=>b.classList.toggle("active",b.dataset.min===String(_accMinutes)));
 
-  // Climate — pro only
-  if(isPro){
+  // Climate — visible to everyone; Pro-lock is a CSS grey-out on the nav
+  // button (body.free-tier), not a display:none — it must never disappear.
   document.getElementById("pro-cat-climate").style.display="";
   document.getElementById("cat-btn-climate").style.display="";
   document.getElementById("pro-cat-climate-content").innerHTML=
@@ -6086,10 +6086,6 @@ function setupProCard(show=false){
     `<div id="acc-canopy-result"></div>`+
     `<div class="lp-row acc-toggle-row" style="padding:4px 0;margin-top:2px" onclick="toggleAccLST()"><span class="lp-row-name">${isKa?"ზედაპირის ტემპ.":"Surface Temperature"}</span><div class="lp-sw" id="acc-lst-sw"></div></div>`+
     `<div id="acc-lst-result"></div>`;
-  }else{
-    document.getElementById("pro-cat-climate").style.display="none";
-    document.getElementById("cat-btn-climate").style.display="none";
-  }
 
   // Education — available to all
   document.getElementById("pro-cat-education").style.display="";
@@ -6149,7 +6145,7 @@ function setupProCard(show=false){
 }
 
 async function toggleAccSolar(){
-  if(!currentUser){openAuthModal('view-signup');return;}
+  if(!currentUser||currentUser.plan!=='pro'){openPaywall();return;}
   if(!_currentParcelGeoJSON)return;
   if(_solarOverlayCache){
     document.getElementById('acc-solar-sw')?.classList.remove('on');
@@ -6170,7 +6166,7 @@ async function toggleAccSolar(){
 }
 
 async function toggleAccWind(){
-  if(!currentUser){openAuthModal('view-signup');return;}
+  if(!currentUser||currentUser.plan!=='pro'){openPaywall();return;}
   if(!_currentParcelGeoJSON)return;
   if(_windData){
     _windData=null;
@@ -6203,7 +6199,7 @@ async function toggleAccCanopy(){
     if(_climateData)_climateData.canopyPct=null;
     return;
   }
-  if(!currentUser){openAuthModal('view-signup');return;}
+  if(!currentUser||currentUser.plan!=='pro'){openPaywall();return;}
   if(!_currentParcelGeoJSON)return;
   sw.classList.add("on");
   if(el)el.innerHTML=`<div style="display:flex;align-items:center;gap:6px;padding:5px 0 6px;color:rgba(255,255,255,0.35);font-size:0.7rem"><span class="spinner" style="width:10px;height:10px;border-width:1.5px"></span></div>`;
@@ -6243,7 +6239,7 @@ async function toggleAccLST(){
     if(_climateData)_climateData.lst=null;
     return;
   }
-  if(!currentUser){openAuthModal('view-signup');return;}
+  if(!currentUser||currentUser.plan!=='pro'){openPaywall();return;}
   if(!_currentParcelGeoJSON)return;
   sw.classList.add("on");
   if(el)el.innerHTML=`<div style="display:flex;align-items:center;gap:6px;padding:5px 0 6px;color:rgba(255,255,255,0.35);font-size:0.7rem"><span class="spinner" style="width:10px;height:10px;border-width:1.5px"></span></div>`;
@@ -7504,7 +7500,7 @@ async function toggleAccMobility(){
   const el=document.getElementById("acc-mob-result");
   const isKa=lang==="ka";
   if(sw.classList.contains("on")){sw.classList.remove("on");if(el)el.innerHTML="";return;}
-  if(!currentUser){openAuthModal('view-signup');return;}
+  if(!currentUser||currentUser.plan!=='pro'){openPaywall();return;}
   const isoFeat=_isoData?.features?.[0];
   if(!isoFeat&&!_isLargeParcel()){
     const msg=isKa?"პირველ გაუშვით სივრცული ანალიზი":"Run Pro Analysis first to get isochrone";
@@ -7747,7 +7743,7 @@ function _writeFloat32GeoTIFF(values,width,height,originX,originY,resX,resY,noda
 }
 
 function exportReliefGeoTIFF(type){
-  if(!currentUser){openAuthModal('view-signup');return;}
+  if(!currentUser||currentUser.plan!=='pro'){openPaywall();return;}
   if(!_dtmCache||!_currentParcelGeoJSON)return;
   const {values,width,height,originX,originY,resX,resY,nodata}=_dtmCache;
   let rawVals,filename;
@@ -8048,7 +8044,7 @@ function _suitableRasterToRings(suitableGrid, width, height){
 }
 
 function exportSolarGeoJSON(){
-  if(!currentUser){openAuthModal('view-signup');return;}
+  if(!currentUser||currentUser.plan!=='pro'){openPaywall();return;}
   if(!_solarGeoData||!_currentParcelGeoJSON)return;
   const{dtm,slopeArr,aspectArr,shadowBoundsW}=_solarGeoData;
   const{width,height,originX,originY,resX,resY}=dtm;
@@ -8178,7 +8174,7 @@ function osmElementRing(el){
 
 async function runSolarAnalysis(){
   if(!_currentParcelGeoJSON)return;
-  if(!currentUser){openAuthModal('view-signup');return;}
+  if(!currentUser||currentUser.plan!=='pro'){openPaywall();return;}
   if(_currentParcelAreaM2!==null&&_currentParcelAreaM2<1000){setStatus(lang==="ka"?"ანალიზისთვის საჭიროა მინ. 1000 კვ.მ.":"Parcel too small — min. 1000 m² required","","status-analysis");return;}
   const btn=document.getElementById("solar-btn");
   if(_solarOverlayCache){
@@ -8532,7 +8528,7 @@ function stopWindAnimation(){
 
 async function runWindAnalysis(){
   if(!_currentParcelGeoJSON)return;
-  if(!currentUser){openAuthModal('view-signup');return;}
+  if(!currentUser||currentUser.plan!=='pro'){openPaywall();return;}
   if(_currentParcelAreaM2!==null&&_currentParcelAreaM2<1000){setStatus(lang==='ka'?'ანალიზისთვის საჭიროა მინ. 1000 კვ.მ.':'Parcel too small — min. 1000 m² required','','status-analysis');return;}
   if(!parcelCentroid)return;
   const btn=document.getElementById('wind-btn');
@@ -8583,7 +8579,7 @@ async function runWindAnalysis(){
 
 async function runReliefAnalysis(type){
   if(!_currentParcelGeoJSON)return;
-  if(!currentUser){openAuthModal('view-signup');return;}
+  if(!currentUser||currentUser.plan!=='pro'){openPaywall();return;}
   if(_currentParcelAreaM2!==null&&_currentParcelAreaM2<1000){setStatus(lang==="ka"?"ანალიზისთვის საჭიროა მინ. 1000 კვ.მ.":"Parcel too small — min. 1000 m² required","","status-analysis");return;}
   _reliefActiveType=type;
   ['height','slope','aspect'].forEach(tp=>{document.getElementById(`acc-relief-${tp}-sw`)?.classList.toggle('on',tp===type);});
@@ -8656,7 +8652,7 @@ function clearReliefOverlay(){
   try{if(map.getSource("profile-line"))map.removeSource("profile-line");}catch(_){}
 }
 function toggleAccRelief(type){
-  if(!currentUser){openAuthModal('view-signup');return;}
+  if(!currentUser||currentUser.plan!=='pro'){openPaywall();return;}
   if(!_currentParcelGeoJSON)return;
   if(_reliefActiveType===type){
     clearReliefOverlay();
@@ -9935,7 +9931,7 @@ function clearLSTOverlay(){
 
 function onClimateAnalysisClick(){
   if(!_currentParcelGeoJSON)return;
-  if(!currentUser){openAuthModal('view-signup');return;}
+  if(!currentUser||currentUser.plan!=='pro'){openPaywall();return;}
   if(_currentParcelAreaM2!==null&&_currentParcelAreaM2<1000){setStatus(lang==="ka"?"ანალიზისთვის საჭიროა მინ. 1000 კვ.მ.":"Parcel too small — min. 1000 m² required","","status-analysis");return;}
   runClimateAnalysis(_currentParcelGeoJSON);
 }
@@ -10046,7 +10042,7 @@ async function toggleCanopyLayer(){
     if(chart){chart.style.display="none";chart.innerHTML="";}
     return;
   }
-  if(!currentUser){openAuthModal('view-signup');return;}
+  if(!currentUser||currentUser.plan!=='pro'){openPaywall();return;}
   if(!_currentParcelGeoJSON||!mapReady)return;
   if(sw)sw.classList.add("on");
   function _showCanopyChart(pct){
@@ -10092,7 +10088,7 @@ async function toggleLSTLayer(){
     if(chart){chart.style.display="none";chart.innerHTML="";}
     return;
   }
-  if(!currentUser){openAuthModal('view-signup');return;}
+  if(!currentUser||currentUser.plan!=='pro'){openPaywall();return;}
   if(!_currentParcelGeoJSON||!mapReady)return;
   if(_currentParcelAreaM2!==null&&_currentParcelAreaM2<1000){setStatus(lang==="ka"?"ანალიზისთვის საჭიროა მინ. 1000 კვ.მ.":"Parcel too small — min. 1000 m² required","","status-analysis");return;}
   if(sw)sw.classList.add("on");
@@ -10229,7 +10225,7 @@ function toggleClimateAnalysis(){
     document.getElementById("pro-cat-climate")?.classList.remove("open");
     _climateData=null;_canopyRawData=null;_lstRawData=null;
   }else{
-    if(!currentUser){openAuthModal('view-signup');return;}
+    if(!currentUser||currentUser.plan!=='pro'){openPaywall();return;}
     if(_currentParcelGeoJSON)runClimateAnalysis(_currentParcelGeoJSON);
   }
 }
@@ -10242,7 +10238,7 @@ function toggleReliefOverlay(){
     clearReliefOverlay();_reliefActiveType=null;
     document.querySelectorAll(".relief-type-btn").forEach(b=>b.classList.remove("active"));
   }else{
-    if(!currentUser){openAuthModal('view-signup');return;}
+    if(!currentUser||currentUser.plan!=='pro'){openPaywall();return;}
     runReliefAnalysis(_reliefActiveType||"slope");
   }
 }
