@@ -6141,22 +6141,7 @@ function setupProCard(show=false){
   // Relief
   document.getElementById("pro-cat-relief").style.display="";
   document.getElementById("cat-btn-relief").style.display="";
-  // ── Report section (below Relief): one place for all exports ──
-  const relEl=document.getElementById("pro-cat-relief");
-  if(relEl&&!document.getElementById("rpt-section")){
-    const d=document.createElement("div");d.id="rpt-section";
-    const btnS='width:100%;text-align:left;font-family:inherit;font-size:0.63rem;font-weight:600;padding:7px 10px;border-radius:8px;margin-top:4px;cursor:pointer;';
-    d.innerHTML=
-      `<div class="lp-row acc-toggle-row" style="padding:7px 0;margin-top:6px;border-top:1px solid rgba(255,255,255,0.07)" onclick="_rptMenuToggle()">`+
-      `<span class="lp-row-name" style="display:flex;align-items:center;gap:7px"><img src="analysis-logos/report.svg" width="15" height="15" style="opacity:0.8">${isKa?"რეპორტის გენერაცია":"Generate report"}</span>`+
-      `<span style="color:rgba(255,255,255,0.3);font-size:0.6rem" id="rpt-caret">▾</span></div>`+
-      `<div id="rpt-menu" style="display:none;padding:2px 0 6px">`+
-      `<button onclick="exportReportPDF()" style="${btnS}border:1px solid rgba(52,211,153,0.3);background:rgba(52,211,153,0.12);color:#34d399">${isKa?"PDF რეპორტის ექსპორტი":"Export PDF report"}</button>`+
-      `<button onclick="_rptExportGeoJSON()" style="${btnS}border:1px solid rgba(255,255,255,0.09);background:rgba(255,255,255,0.03);color:rgba(255,255,255,0.6)">${isKa?"აქტიური ფენები · GeoJSON":"Active layers · GeoJSON"}</button>`+
-      `<button onclick="_rptExportGeoTIFF()" style="${btnS}border:1px solid rgba(255,255,255,0.09);background:rgba(255,255,255,0.03);color:rgba(255,255,255,0.6)">${isKa?"აქტიური რასტრები · GeoTIFF":"Active rasters · GeoTIFF"}</button>`+
-      `</div>`;
-    relEl.parentNode.insertBefore(d,relEl.nextSibling);
-  }
+  // Report entry point lives in the left icon rail (#nav-report-btn)
   renderReliefButtons();
   } // end isPro
 }
@@ -12084,12 +12069,29 @@ async function exportReportPDF(){
 
 // ── Report menu + consolidated exports ────────────────────────────────────────
 const _rptRasterSrc={}; // name → source url of rasters currently loaded
-function _rptMenuToggle(){
-  const m=document.getElementById('rpt-menu'),c=document.getElementById('rpt-caret');
-  if(!m)return;
-  const open=m.style.display==='none';
-  m.style.display=open?'block':'none';
-  if(c)c.textContent=open?'▴':'▾';
+// Flyout next to the left rail, anchored to the Generate Report nav button
+function _rptMenuToggle(btn){
+  let m=document.getElementById('rpt-menu');
+  if(m){m.remove();document.getElementById('nav-report-icon')?.style.setProperty('opacity','0.55');return;}
+  const isKa=lang==='ka';
+  const btnS='display:block;width:100%;text-align:left;font-family:inherit;font-size:0.66rem;font-weight:600;padding:8px 11px;border-radius:8px;margin-top:5px;cursor:pointer;';
+  m=document.createElement('div');m.id='rpt-menu';
+  m.style.cssText='position:fixed;left:64px;z-index:60;width:198px;background:var(--glass-bg,rgba(8,8,8,0.9));backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,0.09);border-radius:11px;padding:9px 10px 11px;box-shadow:0 8px 28px rgba(0,0,0,0.45)';
+  m.innerHTML=
+    `<div style="font-family:ui-monospace,monospace;font-size:0.52rem;letter-spacing:0.14em;text-transform:uppercase;color:rgba(255,255,255,0.35)">${isKa?'რეპორტი':'Report'}</div>`+
+    `<button onclick="_rptMenuToggle();exportReportPDF()" style="${btnS}border:1px solid rgba(52,211,153,0.3);background:rgba(52,211,153,0.12);color:#34d399">${isKa?'PDF რეპორტის ექსპორტი':'Export PDF report'}</button>`+
+    `<button onclick="_rptMenuToggle();_rptExportGeoJSON()" style="${btnS}border:1px solid rgba(255,255,255,0.09);background:rgba(255,255,255,0.03);color:rgba(255,255,255,0.6)">${isKa?'აქტიური ფენები · GeoJSON':'Active layers · GeoJSON'}</button>`+
+    `<button onclick="_rptMenuToggle();_rptExportGeoTIFF()" style="${btnS}border:1px solid rgba(255,255,255,0.09);background:rgba(255,255,255,0.03);color:rgba(255,255,255,0.6)">${isKa?'აქტიური რასტრები · GeoTIFF':'Active rasters · GeoTIFF'}</button>`;
+  document.body.appendChild(m);
+  const r=(btn||document.getElementById('nav-report-btn'))?.getBoundingClientRect();
+  m.style.top=Math.max(8,Math.min((r?.top||120)-8,window.innerHeight-m.offsetHeight-10))+'px';
+  document.getElementById('nav-report-icon')?.style.setProperty('opacity','1');
+  setTimeout(()=>document.addEventListener('click',function _c(e){
+    if(!m.contains(e.target)&&!e.target.closest('#nav-report-btn')){
+      m.remove();document.getElementById('nav-report-icon')?.style.setProperty('opacity','0.55');
+      document.removeEventListener('click',_c);
+    }
+  }),0);
 }
 
 // Georgian (mkhedruli) → Latin, national transliteration system. Helvetica has
