@@ -11741,17 +11741,13 @@ async function _histComposeCapture(spec){
   const ctx=c.getContext('2d');
   ctx.drawImage(src,0,0);
   // legend card, bottom-right, scaled to capture resolution (spec-driven so
-  // any analysis section can reuse this capture with its own symbology)
+  // any analysis section can reuse this capture with its own symbology).
+  // Two shapes: spec.groups (titled, separated sections — one per analysis,
+  // each with its own swatches/note and an optional mini-chart mirroring the
+  // in-app visualization) or the older flat spec.rows/lines (single topic).
   const s=Math.max(1,W/1400);
-  const pad=12*s,lh=17*s,fs=11*s;
-  const rows=spec?.rows||[];
+  const pad=12*s,lh=15*s,fs=10.5*s,gap=9*s;
   const ctxFont=w=>ctx.font=`${w?'600':'400'} ${fs}px -apple-system,sans-serif`;
-  const title=spec?.title||'';
-  ctxFont(0);
-  const lines=spec?.lines||[];
-  const wMax=Math.max(...lines.map(x=>ctx.measureText(x).width),ctx.measureText(title).width,...rows.map(r=>ctx.measureText(r[1]).width+18*s),40*s);
-  const bw=wMax+pad*2+6*s,bh=pad*2+lh*(rows.length+1+lines.length);
-  const bx=W-bw-16*s,by=H-bh-16*s;
   const chip=(x,y0,w0,h0)=>{
     const r0=8*s;
     ctx.fillStyle='rgba(6,6,8,0.88)';
@@ -11760,18 +11756,115 @@ async function _histComposeCapture(spec){
     ctx.fill();
     ctx.strokeStyle='rgba(255,255,255,0.15)';ctx.lineWidth=s;ctx.stroke();
   };
-  chip(bx,by,bw,bh);
-  let ty=by+pad+fs;
-  ctxFont(1);ctx.fillStyle='rgba(255,255,255,0.92)';ctx.fillText(title,bx+pad,ty);ty+=lh;
-  ctxFont(0);
-  for(const[col,label]of rows){
-    ctx.fillStyle=col;ctx.beginPath();ctx.arc(bx+pad+5*s,ty-fs*0.35,5*s,0,7);ctx.fill();
-    ctx.fillStyle='rgba(255,255,255,0.78)';ctx.fillText(label,bx+pad+16*s,ty);ty+=lh;
+  // ring/donut: segments=[{color,frac}] drawn clockwise from the top; a single
+  // segment on a muted track doubles as a gauge (mirrors the app's LST ring).
+  const drawRing=(cx,cy,r,segments,thick)=>{
+    ctx.lineWidth=thick;ctx.lineCap='butt';
+    ctx.strokeStyle='rgba(255,255,255,0.12)';ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.stroke();
+    let a0=-Math.PI/2;
+    for(const seg of segments){
+      const a1=a0+Math.max(0.001,seg.frac)*Math.PI*2;
+      ctx.strokeStyle=seg.color;ctx.beginPath();ctx.arc(cx,cy,r,a0,a1);ctx.stroke();
+      a0=a1;
+    }
+  };
+  const drawBar=(x,y0,w0,h0,frac,color)=>{
+    ctx.fillStyle='rgba(255,255,255,0.12)';ctx.fillRect(x,y0,w0,h0);
+    ctx.fillStyle=color;ctx.fillRect(x,y0,w0*Math.max(0,Math.min(1,frac)),h0);
+  };
+
+  const groups=spec?.groups||null;
+  const NOTE_MAXW=Math.max(180*s,W*0.32);
+  const wrapNote=(text)=>{
+    if(!text)return[];
+    ctxFont(0);
+    const words=text.split(' ');const out=[];let cur='';
+    for(const w of words){
+      const t=cur?cur+' '+w:w;
+      if(ctx.measureText(t).width>NOTE_MAXW&&cur){out.push(cur);cur=w;}else cur=t;
+    }
+    if(cur)out.push(cur);
+    return out;
+  };
+  const noteCache=new Map();
+  const notesOf=(g)=>{if(!g.note)return[];if(!noteCache.has(g))noteCache.set(g,wrapNote(g.note));return noteCache.get(g);};
+  let bw,bh;
+  const measureGroupW=(g)=>{
+    ctxFont(1);let w=ctx.measureText(g.title).width;
+    ctxFont(0);
+    const chartW=g.chart?(g.chart.type==='bar'?46*s:36*s):0;
+    for(const[,label]of g.rows||[])w=Math.max(w,chartW+18*s+ctx.measureText(label).width);
+    for(const nl of notesOf(g))w=Math.max(w,ctx.measureText(nl).width);
+    return w;
+  };
+  const groupHeight=(g)=>{
+    let hh=lh; // title
+    if(g.chart&&g.chart.type!=='bar'){
+      const r=g.chart.type==='gauge'?14*s:16*s;
+      hh+=Math.max(2*r,(g.rows?.length||0)*lh)+4*s;
+    }else if(g.chart&&g.chart.type==='bar'){
+      hh+=(g.rows?.length||0)*lh+8*s+4*s;
+    }else{
+      hh+=(g.rows?.length||0)*lh;
+    }
+    hh+=notesOf(g).length*lh;
+    return hh+gap;
+  };
+  if(groups){
+    bw=Math.max(40*s,...groups.map(measureGroupW))+pad*2+6*s;
+    bh=pad*2+groups.reduce((sum,g)=>sum+groupHeight(g),0)-gap;
+  }else{
+    const rows=spec?.rows||[],lines=spec?.lines||[],title=spec?.title||'';
+    ctxFont(0);
+    bw=Math.max(...lines.map(x=>ctx.measureText(x).width),ctx.measureText(title).width,...rows.map(r=>ctx.measureText(r[1]).width+18*s),40*s)+pad*2+6*s;
+    bh=pad*2+lh*(rows.length+1+lines.length);
   }
-  lines.forEach((ln,i)=>{
-    ctx.fillStyle=i===lines.length-1?'rgba(255,255,255,0.45)':'rgba(255,255,255,0.78)';
-    ctx.fillText(ln,bx+pad,ty);ty+=lh;
-  });
+  const bx=W-bw-16*s,by=H-bh-16*s;
+  chip(bx,by,bw,bh);
+  let ty=by+pad;
+  if(groups){
+    for(const g of groups){
+      ctxFont(1);ctx.fillStyle='#a5b4fc';ctx.fillText(g.title,bx+pad,ty+fs);ty+=lh;
+      ctxFont(0);
+      if(g.chart&&g.chart.type==='donut'){
+        const r=16*s,cx=bx+pad+r,cy=ty+r;
+        drawRing(cx,cy,r,g.chart.segments,6*s);
+        const rowsX=bx+pad+2*r+10*s;let rowY=ty+fs;
+        for(const[col,label]of g.rows||[]){ctx.fillStyle=col;ctx.beginPath();ctx.arc(rowsX,rowY-fs*0.35,4.5*s,0,7);ctx.fill();ctx.fillStyle='rgba(255,255,255,0.82)';ctx.fillText(label,rowsX+10*s,rowY);rowY+=lh;}
+        ty+=Math.max(2*r,(g.rows?.length||0)*lh)+4*s;
+      }else if(g.chart&&g.chart.type==='gauge'){
+        const r=14*s,cx=bx+pad+r,cy=ty+r;
+        drawRing(cx,cy,r,[{color:g.chart.color,frac:g.chart.pct/100}],6*s);
+        ctx.font=`600 ${fs*0.62}px -apple-system,sans-serif`;ctx.textAlign='center';ctx.fillStyle=g.chart.color;ctx.fillText(g.chart.centerLabel||'',cx,cy+fs*0.22);ctx.textAlign='left';ctxFont(0);
+        const rowsX=bx+pad+2*r+10*s;let rowY=ty+fs;
+        for(const[col,label]of g.rows||[]){ctx.fillStyle=col;ctx.beginPath();ctx.arc(rowsX,rowY-fs*0.35,4.5*s,0,7);ctx.fill();ctx.fillStyle='rgba(255,255,255,0.82)';ctx.fillText(label,rowsX+10*s,rowY);rowY+=lh;}
+        ty+=Math.max(2*r,(g.rows?.length||0)*lh)+4*s;
+      }else if(g.chart&&g.chart.type==='bar'){
+        for(const[col,label]of g.rows||[]){ctx.fillStyle='rgba(255,255,255,0.82)';ctx.fillText(label,bx+pad,ty+fs);ty+=lh;}
+        drawBar(bx+pad,ty,40*s,7*s,g.chart.pct/100,g.chart.color);ty+=7*s+8*s;
+      }else{
+        for(const[col,label]of g.rows||[]){
+          if(col){ctx.fillStyle=col;ctx.beginPath();ctx.arc(bx+pad+5*s,ty+fs-fs*0.35,4.5*s,0,7);ctx.fill();ctx.fillStyle='rgba(255,255,255,0.82)';ctx.fillText(label,bx+pad+16*s,ty+fs);}
+          else{ctx.fillStyle='rgba(255,255,255,0.7)';ctx.fillText(label,bx+pad,ty+fs);}
+          ty+=lh;
+        }
+      }
+      for(const nl of notesOf(g)){ctx.fillStyle='rgba(255,255,255,0.42)';ctx.fillText(nl,bx+pad,ty+fs*0.85);ty+=lh;}
+      ty+=gap;
+    }
+  }else{
+    const rows=spec?.rows||[],lines=spec?.lines||[],title=spec?.title||'';
+    ctxFont(1);ctx.fillStyle='rgba(255,255,255,0.92)';ctx.fillText(title,bx+pad,ty+fs);ty+=lh;
+    ctxFont(0);
+    for(const[col,label]of rows){
+      ctx.fillStyle=col;ctx.beginPath();ctx.arc(bx+pad+5*s,ty+fs-fs*0.35,5*s,0,7);ctx.fill();
+      ctx.fillStyle='rgba(255,255,255,0.78)';ctx.fillText(label,bx+pad+16*s,ty+fs);ty+=lh;
+    }
+    lines.forEach((ln,i)=>{
+      ctx.fillStyle=i===lines.length-1?'rgba(255,255,255,0.45)':'rgba(255,255,255,0.78)';
+      ctx.fillText(ln,bx+pad,ty+fs);ty+=lh;
+    });
+  }
   // scale bar, bottom-left — meters per canvas pixel from zoom/latitude
   try{
     const lat=map.getCenter().lat*Math.PI/180;
@@ -12034,39 +12127,50 @@ async function exportReportPDF(){
       return true;
     };
     if(a.anyArea&&(_isoData?.features?.[0]||_isLargeParcel())){
-      const rows=[],lines=[];
+      const groups=[];
       if(a.history){const h=t().hist;const cur=_histVarDefs(h).find(v=>v.k===_histColorBy)||_histVarDefs(h)[0];
-        rows.push([_HIST_OK,cur.leg[0]],[_HIST_WARN,cur.leg[1]],[_HIST_BAD,cur.leg[2]]);lines.push('Transit: '+cur.l);}
-      if(a.syntax)rows.push(['#3b82f6','Conn. ≤1'],['#22c55e','2–3'],['#f97316','4–5'],['#ef4444','≥6']);
+        groups.push({title:'Transit reliability',rows:[[_HIST_OK,cur.leg[0]],[_HIST_WARN,cur.leg[1]],[_HIST_BAD,cur.leg[2]]],note:cur.l});}
+      if(a.syntax)groups.push({title:'Street connectivity',rows:[['#3b82f6','≤1'],['#22c55e','2–3'],['#f97316','4–5'],['#ef4444','≥6']],note:'Node degree (segments per junction)'});
       const others=[a.orient&&('Orientation'+(_orientDom?' ('+_orientDom+')':'')),a.osm&&'Urban functions',a.transit&&!a.history&&'Transit stops',a.schools&&'Schools',a.kg&&'Kindergartens',a.crashes&&'Road incidents',a.parking&&'Parking'].filter(Boolean);
-      if(others.length)lines.push('Layers: '+others.join(' · '));
-      if(areaLbl)lines.push(areaLbl);
-      await addMapBlock('Area-scale map',{title:'Area analyses',rows:rows.slice(0,8),lines});
+      if(others.length)groups.push({title:'Other layers on map',rows:others.map(o=>[null,o])});
+      groups.push({title:'Study area',rows:[],note:areaLbl||''});
+      await addMapBlock('Area-scale map',{title:'Area analyses',groups});
     }
     const hasParcelAnalysis=a.zoning||a.canopy||a.lst||a.wind||a.relief||a.solar;
     if(hasParcelAnalysis&&_currentParcelGeoJSON){
-      const rows=[],lines=[];
-      // Real symbology per active parcel-scale layer — not just a text label
+      const groups=[];
+      // Each analysis is its own titled section, with the same mini-chart the
+      // in-app card shows (zoning=donut of area share, canopy=bar, LST=gauge).
       if(a.zoning&&window._rptZones?.length){
-        const seen=new Set();
+        const seen=new Map();
         for(const z of window._rptZones){
           const info=_zoneInfo(z.kve_zona);const label=z.kve_zona||'Zone';
-          const key=info.f+'|'+label;if(seen.has(key))continue;seen.add(key);
-          rows.push([info.f,label]);
+          if(!seen.has(label))seen.set(label,{color:info.f,pct:0});
+          seen.get(label).pct+=Number(z.pct)||0;
         }
-        lines.push('Zoning'+(_noDevZone?' — no-development area':''));
+        const rows=[...seen.entries()].map(([label,v])=>[v.color,`${label} — ${Math.round(v.pct)}%`]);
+        const segments=[...seen.values()].map(v=>({color:v.color,frac:v.pct/100}));
+        let note=_noDevZone?'No-development area':null;
+        if(seen.size>1)note=(note?note+'. ':'')+'Multiple zones — development parameters (K1/K2) are calculated per zone, proportional to its share of the parcel.';
+        groups.push({title:'Zoning',rows,chart:{type:'donut',segments},note});
       }
-      if(a.canopy){rows.push(['#22c55e','Tree canopy']);lines.push('Tree canopy overlay');}
-      if(a.lst){rows.push(['#f97316','Warmer'],['#3b82f6','Cooler']);lines.push('Land surface temperature');}
+      if(a.canopy&&typeof _canopyPct==='number'&&_canopyPct!=null){
+        const col=_canopyPct>40?'#22c55e':_canopyPct>20?'#84cc16':_canopyPct>10?'#eab308':'#f97316';
+        groups.push({title:'Tree canopy',rows:[[col,_canopyPct+'% covered']],chart:{type:'bar',pct:_canopyPct,color:col},note:'ESA WorldCover 2021 · 10 m'});
+      }
+      if(a.lst&&typeof _lstMean==='number'&&_lstMean!=null){
+        const col=_lstMean>40?'#ef4444':_lstMean>35?'#f97316':_lstMean>28?'#eab308':'#22c55e';
+        const pct=Math.min(100,Math.max(0,((_lstMean-10)/40)*100));
+        groups.push({title:'Land surface temperature',rows:[[col,_lstMean+'°C mean']],chart:{type:'gauge',pct,color:col,centerLabel:Math.round(_lstMean)+'°'},note:'Landsat 8 · 30 m · summer'});
+      }
       if(a.relief&&(_reliefActiveType==='slope'||_reliefActiveType==='aspect')){
-        t().slopeClasses.forEach((c,i)=>rows.push([t().slopeClassColors[i],c.l+' '+c.r]));
-        lines.push('Relief · '+_reliefActiveType);
-      } else if(a.relief){lines.push('Relief · elevation');}
-      if(a.solar){rows.push(['#fbbf24','High irradiation'],['#1e3a8a','Low irradiation']);lines.push('Solar zone');}
-      if(a.wind)lines.push('Wind analysis');
+        groups.push({title:'Relief · '+_reliefActiveType,rows:t().slopeClasses.map((c,i)=>[t().slopeClassColors[i],c.l+' '+c.r])});
+      } else if(a.relief){groups.push({title:'Relief · elevation',rows:[]});}
+      if(a.solar)groups.push({title:'Solar zone',rows:[['#fbbf24','High irradiation'],['#1e3a8a','Low irradiation']]});
+      if(a.wind)groups.push({title:'Wind analysis',rows:[]});
       const m2=_currentParcelAreaM2||0;
-      if(m2)lines.push('Parcel · '+(m2>=1e6?(m2/1e6).toFixed(2)+' km²':Math.round(m2).toLocaleString()+' m²'));
-      await addMapBlock('Parcel-scale map',{title:'Parcel analyses',rows:rows.slice(0,10),lines,frameGeom:_currentParcelGeoJSON});
+      groups.push({title:'Parcel',rows:[],note:m2?(m2>=1e6?(m2/1e6).toFixed(2)+' km²':Math.round(m2).toLocaleString()+' m²'):''});
+      await addMapBlock('Parcel-scale map',{title:'Parcel analyses',groups});
     }
 
     // ── Findings ──
