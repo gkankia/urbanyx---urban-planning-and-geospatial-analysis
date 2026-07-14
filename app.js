@@ -553,6 +553,8 @@ function setAvatar(el, url, initials){
 }
 
 function updateUserUI(){
+  // Free tier: analyses are Pro features — greyed & unclickable (trial = pro).
+  document.body.classList.toggle("free-tier",!currentUser||currentUser.plan!=="pro");
   const pill=document.getElementById("user-pill");
   const pwFooter=document.getElementById("pw-footer");
   const authLink=document.getElementById("center-auth-link");
