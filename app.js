@@ -5085,6 +5085,7 @@ function _buildZoneChart(zones){
         tc+=`<div style="display:grid;grid-template-columns:auto 1fr auto;gap:1px 5px;margin-bottom:2px"><span style="font-size:0.56rem;color:rgba(255,255,255,0.25);font-family:monospace">K1=${fK(z.k1)}</span><span style="font-size:0.56rem;color:rgba(255,255,255,0.45)">Max footprint</span><span style="font-size:0.56rem;color:rgba(255,255,255,0.8);text-align:right">${fM(fp)}</span></div>`;
         if(adjFp<fp)tc+=`<div style="display:grid;grid-template-columns:auto 1fr auto;gap:1px 5px;margin-bottom:2px"><span></span><span style="font-size:0.54rem;color:rgba(239,68,68,0.6)">adj. for setback</span><span style="font-size:0.54rem;color:rgba(239,68,68,0.75);text-align:right">${fM(adjFp)}</span></div>`;}
       if(z.k2!=null)tc+=`<div style="display:grid;grid-template-columns:auto 1fr auto;gap:1px 5px;margin-bottom:2px"><span style="font-size:0.56rem;color:rgba(255,255,255,0.25);font-family:monospace">K2=${fK(z.k2)}</span><span style="font-size:0.56rem;color:rgba(255,255,255,0.45)">Max floor area</span><span style="font-size:0.56rem;color:rgba(255,255,255,0.8);text-align:right">${fM(Math.round(zA*z.k2))}</span></div>`;
+      if(z.k1!=null&&z.k2!=null&&z.k1>0){const maxFloors=Math.floor((z.k2/z.k1)+1e-9);tc+=`<div style="display:grid;grid-template-columns:auto 1fr auto;gap:1px 5px;margin-bottom:2px"><span style="font-size:0.56rem;color:rgba(255,255,255,0.25);font-family:monospace">K2÷K1</span><span style="font-size:0.56rem;color:rgba(255,255,255,0.45)">Max height (floors)</span><span style="font-size:0.56rem;color:rgba(255,255,255,0.8);text-align:right">${maxFloors}</span></div>`;}
       if(z.k3!=null)tc+=`<div style="display:grid;grid-template-columns:auto 1fr auto;gap:1px 5px"><span style="font-size:0.56rem;color:rgba(255,255,255,0.25);font-family:monospace">K3=${fK(z.k3)}</span><span style="font-size:0.56rem;color:rgba(52,211,153,0.6)">Min greening</span><span style="font-size:0.56rem;color:rgba(52,211,153,0.85);text-align:right">${fM(Math.round(zA*z.k3))}</span></div>`;
       tipHtml=`<div style="position:relative;display:inline-flex;align-items:center;cursor:help;flex-shrink:0;margin-left:3px" onmouseenter="this.lastElementChild.style.visibility='visible';this.lastElementChild.style.opacity='1'" onmouseleave="this.lastElementChild.style.visibility='hidden';this.lastElementChild.style.opacity='0'"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg><div style="visibility:hidden;opacity:0;transition:opacity 0.12s;position:absolute;bottom:calc(100% + 5px);right:-4px;background:rgba(12,12,18,0.98);border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:7px 8px;min-width:160px;z-index:200;box-shadow:0 4px 20px rgba(0,0,0,0.6);pointer-events:none">${tc}</div></div>`;
     }
@@ -5193,7 +5194,7 @@ function runZoningAnalysis(){
     _updateZoneLayer(null);
     _updateSetbackRing(null);
     const _bpr0=document.getElementById('pfc-build-params-row');if(_bpr0)_bpr0.style.display='none';
-    _maxFootprintM2=null;_maxFloorAreaM2=null;_noDevZone=false;_noDevZoneUnion=null;document.getElementById('pfc-nodev-warn')?.style&&(document.getElementById('pfc-nodev-warn').style.display='none');document.getElementById('pfc-area-warn')?.style&&(document.getElementById('pfc-area-warn').style.display='none');
+    _maxFootprintM2=null;_maxFloorAreaM2=null;_noDevZone=false;_noDevZoneUnion=null;window._rptZones=null;document.getElementById('pfc-nodev-warn')?.style&&(document.getElementById('pfc-nodev-warn').style.display='none');document.getElementById('pfc-area-warn')?.style&&(document.getElementById('pfc-area-warn').style.display='none');
     return;
   }
   if(!_currentParcelGeoJSON)return;
@@ -5219,10 +5220,11 @@ function runZoningAnalysis(){
       _updateZoneLayer(null);
       _updateSetbackRing(null);
       const _bpr1=document.getElementById('pfc-build-params-row');if(_bpr1)_bpr1.style.display='none';
-      _maxFootprintM2=null;_maxFloorAreaM2=null;_noDevZone=false;_noDevZoneUnion=null;document.getElementById('pfc-nodev-warn')?.style&&(document.getElementById('pfc-nodev-warn').style.display='none');document.getElementById('pfc-area-warn')?.style&&(document.getElementById('pfc-area-warn').style.display='none');
+      _maxFootprintM2=null;_maxFloorAreaM2=null;_noDevZone=false;_noDevZoneUnion=null;window._rptZones=null;document.getElementById('pfc-nodev-warn')?.style&&(document.getElementById('pfc-nodev-warn').style.display='none');document.getElementById('pfc-area-warn')?.style&&(document.getElementById('pfc-area-warn').style.display='none');
       return;
     }
     _updateZoneLayer(zones);
+    window._rptZones=zones; // active zone list, for the report's zoning legend
     {const _zK=zones.filter(z=>z.k1!=null);const _noD=_zK.length>0&&_zK.every(z=>z.k1==0);_noDevZone=_noD;}
     {const _ndF=zones.filter(z=>z.k1!=null&&z.k1==0&&z.geometry).map(z=>({type:'Feature',geometry:z.geometry,properties:{}}));if(_ndF.length>0){try{_noDevZoneUnion=_ndF.reduce((a,f)=>a?(turf.union(a,f)||a):f,null);}catch(_e){_noDevZoneUnion=_ndF[0]||null;}}else{_noDevZoneUnion=null;}}
     _updateSetbackRing(_noDevZone?null:_currentParcelGeoJSON);
@@ -5243,7 +5245,7 @@ function runZoningAnalysis(){
     _updateZoneLayer(null);
     _updateSetbackRing(null);
     const _bpr2=document.getElementById('pfc-build-params-row');if(_bpr2)_bpr2.style.display='none';
-    _maxFootprintM2=null;_maxFloorAreaM2=null;_noDevZone=false;_noDevZoneUnion=null;document.getElementById('pfc-nodev-warn')?.style&&(document.getElementById('pfc-nodev-warn').style.display='none');document.getElementById('pfc-area-warn')?.style&&(document.getElementById('pfc-area-warn').style.display='none');
+    _maxFootprintM2=null;_maxFloorAreaM2=null;_noDevZone=false;_noDevZoneUnion=null;window._rptZones=null;document.getElementById('pfc-nodev-warn')?.style&&(document.getElementById('pfc-nodev-warn').style.display='none');document.getElementById('pfc-area-warn')?.style&&(document.getElementById('pfc-area-warn').style.display='none');
   });
 }
 function clearParcelSelection(){
@@ -5645,7 +5647,7 @@ function hideParcelPopup(){
   _updateZoneLayer(null);
   _updateSetbackRing(null);
   const _bprH=document.getElementById('pfc-build-params-row');if(_bprH)_bprH.style.display='none';
-  _maxFootprintM2=null;_maxFloorAreaM2=null;_noDevZone=false;_noDevZoneUnion=null;document.getElementById('pfc-nodev-warn')?.style&&(document.getElementById('pfc-nodev-warn').style.display='none');document.getElementById('pfc-area-warn')?.style&&(document.getElementById('pfc-area-warn').style.display='none');
+  _maxFootprintM2=null;_maxFloorAreaM2=null;_noDevZone=false;_noDevZoneUnion=null;window._rptZones=null;document.getElementById('pfc-nodev-warn')?.style&&(document.getElementById('pfc-nodev-warn').style.display='none');document.getElementById('pfc-area-warn')?.style&&(document.getElementById('pfc-area-warn').style.display='none');
   document.getElementById('nav-zoning-btn')?.classList.remove('active');
   const zr=document.getElementById('pfc-zone-row');
   const kr=document.getElementById('pfc-kvals-row');
@@ -12018,8 +12020,19 @@ async function exportReportPDF(){
     if(areaLbl)ctx.push(areaLbl);
     T(ctx.join('   ·   '),M,y);y+=8;
 
-    // ── Composite map: area full-width, parcel as top-right inset ──
-    let areaImg=null,parcelImg=null;
+    // ── Maps: area and parcel are two separate, independently captured maps ──
+    H2('Maps');
+    const addMapBlock=async(caption,spec)=>{
+      const img=await _histCaptureMapImage(spec);
+      if(!img)return false;
+      H3(caption);
+      const w=PW-M*2;const hh=Math.min(120,w*(img.h/img.w));ensure(hh+2);
+      doc.addImage(img.url,'JPEG',M,y,w,hh);doc.setDrawColor(200);doc.rect(M,y,w,hh);
+      y+=hh+2;
+      doc.setFontSize(6.5);doc.setTextColor(150);T('Basemap © Mapbox © OpenStreetMap.',M,y);y+=6;
+      src('Basemap: © Mapbox, © OpenStreetMap contributors.');
+      return true;
+    };
     if(a.anyArea&&(_isoData?.features?.[0]||_isLargeParcel())){
       const rows=[],lines=[];
       if(a.history){const h=t().hist;const cur=_histVarDefs(h).find(v=>v.k===_histColorBy)||_histVarDefs(h)[0];
@@ -12028,32 +12041,32 @@ async function exportReportPDF(){
       const others=[a.orient&&('Orientation'+(_orientDom?' ('+_orientDom+')':'')),a.osm&&'Urban functions',a.transit&&!a.history&&'Transit stops',a.schools&&'Schools',a.kg&&'Kindergartens',a.crashes&&'Road incidents',a.parking&&'Parking'].filter(Boolean);
       if(others.length)lines.push('Layers: '+others.join(' · '));
       if(areaLbl)lines.push(areaLbl);
-      areaImg=await _histCaptureMapImage({title:'Area analyses',rows:rows.slice(0,8),lines});
+      await addMapBlock('Area-scale map',{title:'Area analyses',rows:rows.slice(0,8),lines});
     }
     const hasParcelAnalysis=a.zoning||a.canopy||a.lst||a.wind||a.relief||a.solar;
     if(hasParcelAnalysis&&_currentParcelGeoJSON){
-      const lines=[];
-      const pl=[a.zoning&&'Zoning & setbacks',a.canopy&&'Tree canopy',a.lst&&'Land surface temp.',a.wind&&'Wind',a.relief&&'Relief'].filter(Boolean);
-      if(pl.length)lines.push('Layers: '+pl.join(' · '));
+      const rows=[],lines=[];
+      // Real symbology per active parcel-scale layer — not just a text label
+      if(a.zoning&&window._rptZones?.length){
+        const seen=new Set();
+        for(const z of window._rptZones){
+          const info=_zoneInfo(z.kve_zona);const label=z.kve_zona||'Zone';
+          const key=info.f+'|'+label;if(seen.has(key))continue;seen.add(key);
+          rows.push([info.f,label]);
+        }
+        lines.push('Zoning'+(_noDevZone?' — no-development area':''));
+      }
+      if(a.canopy){rows.push(['#22c55e','Tree canopy']);lines.push('Tree canopy overlay');}
+      if(a.lst){rows.push(['#f97316','Warmer'],['#3b82f6','Cooler']);lines.push('Land surface temperature');}
+      if(a.relief&&(_reliefActiveType==='slope'||_reliefActiveType==='aspect')){
+        t().slopeClasses.forEach((c,i)=>rows.push([t().slopeClassColors[i],c.l+' '+c.r]));
+        lines.push('Relief · '+_reliefActiveType);
+      } else if(a.relief){lines.push('Relief · elevation');}
+      if(a.solar){rows.push(['#fbbf24','High irradiation'],['#1e3a8a','Low irradiation']);lines.push('Solar zone');}
+      if(a.wind)lines.push('Wind analysis');
       const m2=_currentParcelAreaM2||0;
       if(m2)lines.push('Parcel · '+(m2>=1e6?(m2/1e6).toFixed(2)+' km²':Math.round(m2).toLocaleString()+' m²'));
-      parcelImg=await _histCaptureMapImage({title:'Parcel analyses',rows:[],lines,frameGeom:_currentParcelGeoJSON});
-    }
-    const bigImg=areaImg||parcelImg;
-    const insetImg=areaImg&&parcelImg?parcelImg:null;
-    if(bigImg){
-      H2('Maps');
-      const w=PW-M*2;const hh=Math.min(120,w*(bigImg.h/bigImg.w));ensure(hh+2);
-      doc.addImage(bigImg.url,'JPEG',M,y,w,hh);doc.setDrawColor(200);doc.rect(M,y,w,hh);
-      if(insetImg){ // parcel inset, top-right corner over the area map
-        const iw=w*0.34,ih=iw*(insetImg.h/insetImg.w),ix=M+w-iw-3,iy=y+3;
-        doc.setFillColor(255,255,255);doc.rect(ix-1,iy-1,iw+2,ih+2,'F');
-        doc.addImage(insetImg.url,'JPEG',ix,iy,iw,ih);doc.setDrawColor(120);doc.rect(ix,iy,iw,ih);
-        doc.setFontSize(6);doc.setTextColor(90);doc.text('Parcel detail',ix+1.5,iy+ih-1.5);
-      }
-      y+=hh+2;
-      doc.setFontSize(6.5);doc.setTextColor(150);doc.text('Basemap © Mapbox © OpenStreetMap. Symbology per on-map legend.',M,y);y+=6;
-      src('Basemap: © Mapbox, © OpenStreetMap contributors.');
+      await addMapBlock('Parcel-scale map',{title:'Parcel analyses',rows:rows.slice(0,10),lines,frameGeom:_currentParcelGeoJSON});
     }
 
     // ── Findings ──
@@ -12089,6 +12102,7 @@ async function exportReportPDF(){
       const kbits=[];
       if(typeof _maxFootprintM2==='number'&&_maxFootprintM2)kbits.push(`max footprint (K1) ${Math.round(_maxFootprintM2).toLocaleString()} m²`);
       if(typeof _maxFloorAreaM2==='number'&&_maxFloorAreaM2)kbits.push(`max floor area (K2) ${Math.round(_maxFloorAreaM2).toLocaleString()} m²`);
+      if(typeof _maxFootprintM2==='number'&&_maxFootprintM2&&typeof _maxFloorAreaM2==='number'&&_maxFloorAreaM2)kbits.push(`max height ${Math.floor(_maxFloorAreaM2/_maxFootprintM2)} floors`);
       if(_noDevZone)kbits.push('area not designated for development');
       if(kbits.length)P('Limits: '+kbits.join(' · ')+'.');
       src('Zoning: Tbilisi Municipality functional-zone WFS; K-coefficient limits per zone.');
