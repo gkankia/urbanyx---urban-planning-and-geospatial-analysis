@@ -6120,7 +6120,7 @@ function setupProCard(show=false){
       `<div class="lp-row acc-toggle-row" style="padding:4px 0;margin-top:2px" onclick="toggleAccOSM()"><span class="lp-row-name">${isKa?"ურბანული ფუნქციები":"Urban Functions"}</span><div class="lp-sw" id="acc-osm-sw"></div></div>`+
       `<div id="osm-legend" style="display:none"></div>`+
       `<div style="display:flex;gap:5px;margin-top:9px">
-        <button onclick="_morphExportPDF()" style="flex:1.4;font-family:inherit;font-size:0.6rem;font-weight:600;padding:7px 0;border-radius:8px;border:1px solid rgba(52,211,153,0.3);background:rgba(52,211,153,0.12);color:#34d399;cursor:pointer">PDF · ${isKa?"მორფოლოგია":"Morphology"}</button>
+        <button onclick="exportReportPDF()" style="flex:1.4;font-family:inherit;font-size:0.6rem;font-weight:600;padding:7px 0;border-radius:8px;border:1px solid rgba(52,211,153,0.3);background:rgba(52,211,153,0.12);color:#34d399;cursor:pointer">PDF · ${isKa?"სრული რეპორტი":"Full report"}</button>
         <button onclick="_morphExportGeoJSON()" style="flex:1;font-family:inherit;font-size:0.6rem;font-weight:600;padding:7px 0;border-radius:8px;border:1px solid rgba(255,255,255,0.09);background:rgba(255,255,255,0.03);color:rgba(255,255,255,0.55);cursor:pointer">GeoJSON</button>
       </div>`;
   }
@@ -11700,7 +11700,7 @@ async function _histCaptureMapImage(){
   const prev={center:map.getCenter(),zoom:map.getZoom(),bearing:map.getBearing(),pitch:map.getPitch()};
   let framed=false;
   try{
-    const geom=_isoData?.features?.[0]?.geometry||_currentParcelGeoJSON;
+    const geom=arguments[0]?.frameGeom||_isoData?.features?.[0]?.geometry||_currentParcelGeoJSON;
     if(geom?.coordinates){
       const lng=[],lat=[];
       (function walk(c){if(typeof c[0]==='number'){lng.push(c[0]);lat.push(c[1]);}else c.forEach(walk);})(geom.coordinates);
@@ -11955,4 +11955,113 @@ async function _morphExportPDF(){
     logFeatureUse('pdf_export').catch(()=>{});
     doc.save('urban_morphology.pdf');
   }catch(e){console.warn('morph pdf:',e);showToast('PDF failed: '+(e.message||''));}
+}
+
+// ── Unified report export: everything active on the map, in one PDF ──────────
+// Two maps: area scale (isochrone/AOI — morphology, mobility, accessibility)
+// and parcel scale (zoning, relief, climate), each with merged symbology.
+function _rptOn(id){return !!document.getElementById(id)?.classList.contains('on');}
+function _rptActive(){
+  const a={
+    zoning:!!document.getElementById('nav-zoning-btn')?.classList.contains('active'),
+    syntax:!!(_syntaxGJ?.features?.length&&map.getLayer?.('syntax-line')),
+    orient:!!(_orientGJ?.features?.length&&map.getLayer?.('orient-line')),
+    osm:typeof _osmActive!=='undefined'&&!!_osmActive,
+    transit:_rptOn('acc-transit-sw'),
+    history:_ttcMode==='history'&&!!_histStats?.length,
+    schools:typeof _schoolsLayerActive!=='undefined'&&!!_schoolsLayerActive,
+    kg:typeof _kgLayerActive!=='undefined'&&!!_kgLayerActive,
+    crashes:_rptOn('acc-mob-sw'),
+    parking:_rptOn('acc-parking-sw'),
+    isochrone:!!_isoData?.features?.[0],
+    canopy:_rptOn('acc-canopy-sw'),
+    lst:_rptOn('acc-lst-sw'),
+    wind:_rptOn('acc-wind-sw'),
+  };
+  a.anyArea=a.syntax||a.orient||a.osm||a.transit||a.history||a.schools||a.kg||a.crashes||a.parking||a.isochrone;
+  a.anyParcel=a.zoning||a.canopy||a.lst||a.wind||!!_currentParcelGeoJSON;
+  return a;
+}
+
+async function exportReportPDF(){
+  if(!currentUser||currentUser.plan!=='pro'){openPaywall(true);return;}
+  const a=_rptActive();
+  if(!a.anyArea&&!a.anyParcel){showToast(lang==='ka'?'აქტიური ანალიზი არ არის':'No active analysis layers to export');return;}
+  showToast(lang==='ka'?'რეპორტი მზადდება…':'Composing report…');
+  try{
+    const{jsPDF}=window.jspdf||window;
+    const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+    const M=16,PW=210;let y=M;
+    const line=(txt,fs,col,dy)=>{doc.setFontSize(fs);doc.setTextColor(col);doc.text(txt,M,y);y+=dy;};
+    const ensure=(need)=>{if(y+need>281){doc.addPage();y=M;}};
+
+    line('Urbanyx — Site & Area Analysis Report',15,20,7);
+    const code=document.getElementById('val-code')?.textContent||'';
+    const addr=document.getElementById('val-addr')?.textContent||'';
+    const ctxBits=[new Date().toISOString().slice(0,10)];
+    if(code&&code!=='—')ctxBits.push('Parcel: '+code);
+    if(addr&&addr!=='—')ctxBits.push(addr);
+    const areaLbl=_transitAreaLabel();if(areaLbl)ctxBits.push(areaLbl);
+    line(ctxBits.join('   ·   '),8.5,110,8);
+
+    // ── Map 1: area scale ──
+    if(a.anyArea&&(_isoData?.features?.[0]||_isLargeParcel())){
+      const rows=[],lines=[];
+      if(a.history){const h=t().hist;const cur=_histVarDefs(h).find(v=>v.k===_histColorBy)||_histVarDefs(h)[0];
+        rows.push([_HIST_OK,cur.leg[0]],[_HIST_WARN,cur.leg[1]],[_HIST_BAD,cur.leg[2]]);lines.push('Transit history: '+cur.l);}
+      if(a.syntax)rows.push(['#3b82f6','Connectivity ≤1'],['#22c55e','2–3'],['#f97316','4–5'],['#ef4444','≥6']);
+      const others=[a.orient&&('Orientation'+(_orientDom?' ('+_orientDom+')':'')),a.osm&&'Urban functions',a.transit&&!a.history&&'Transit stops',a.schools&&'Schools',a.kg&&'Kindergartens',a.crashes&&'Road incidents',a.parking&&'Parking'].filter(Boolean);
+      if(others.length)lines.push('Layers: '+others.join(' · '));
+      if(areaLbl)lines.push(areaLbl);
+      ensure(96);
+      line('Area-scale analyses',10.5,20,5);
+      const img=await _histCaptureMapImage({title:'Area analyses',rows:rows.slice(0,8),lines});
+      if(img){const w=PW-M*2;let hh=Math.min(105,w*(img.h/img.w));doc.addImage(img.url,'JPEG',M,y,w,hh);doc.setDrawColor(210);doc.rect(M,y,w,hh);y+=hh+6;}
+    }
+
+    // ── Map 2: parcel scale ──
+    if(a.anyParcel&&_currentParcelGeoJSON){
+      const lines=[];
+      const pl=[a.zoning&&'Zoning & setbacks',a.canopy&&'Tree canopy',a.lst&&'Land surface temp.',a.wind&&'Wind'].filter(Boolean);
+      if(pl.length)lines.push('Layers: '+pl.join(' · '));
+      const m2=_currentParcelAreaM2||0;
+      if(m2)lines.push('Parcel · '+(m2>=1e6?(m2/1e6).toFixed(2)+' km²':Math.round(m2).toLocaleString()+' m²'));
+      ensure(96);
+      line('Parcel-scale analyses',10.5,20,5);
+      const img=await _histCaptureMapImage({title:'Parcel analyses',rows:[],lines,frameGeom:_currentParcelGeoJSON});
+      if(img){const w=PW-M*2;let hh=Math.min(105,w*(img.h/img.w));doc.addImage(img.url,'JPEG',M,y,w,hh);doc.setDrawColor(210);doc.rect(M,y,w,hh);y+=hh+6;}
+    }
+
+    // ── Metrics per active analysis ──
+    ensure(30);
+    line('Findings',10.5,20,6);
+    doc.setFontSize(8.5);doc.setTextColor(40);
+    const finding=(txt)=>{ensure(6);doc.text(doc.splitTextToSize(txt,PW-M*2),M,y);y+=doc.splitTextToSize(txt,PW-M*2).length*4+1.5;};
+    if(_currentParcelAreaM2)finding(`Site: ${Math.round(_currentParcelAreaM2).toLocaleString()} m²${(typeof _maxFootprintM2==='number'&&_maxFootprintM2)?` · max footprint (K1) ${Math.round(_maxFootprintM2).toLocaleString()} m²`:''}${(typeof _maxFloorAreaM2==='number'&&_maxFloorAreaM2)?` · max floor area (K2) ${Math.round(_maxFloorAreaM2).toLocaleString()} m²`:''}.`);
+    if(a.syntax){const degs=_syntaxGJ.features.map(f=>Number(f.properties?.connectivity||0));finding(`Street network: ${degs.length} segments · ${_morphTotalKm(_syntaxGJ).toFixed(1)} km · mean node degree ${(degs.reduce((x,b)=>x+b,0)/Math.max(1,degs.length)).toFixed(2)}, max ${Math.max(...degs)}.`);}
+    if(a.orient)finding(`Street orientation: ${_orientGJ.features.length} ways${_orientDom?`, dominant axis ${_orientDom}`:''}.`);
+    if(a.history&&_histStats?.length){
+      const tot=_histStats.reduce((x,r)=>({m:x.m+Number(r.n_matched),ot:x.ot+Number(r.on_time),l:x.l+Number(r.late)}),{m:0,ot:0,l:0});
+      if(tot.m)finding(`Transit reliability (${_histRange?.from} → ${_histRange?.to}): ${Math.round(100*tot.ot/tot.m)}% on-time, ${Math.round(100*tot.l/tot.m)}% late (>5 min), across ${tot.m.toLocaleString()} matched arrivals at ${_histStats.length} stop-route pairs.`);
+    } else if(a.transit)finding(`Public transport: ${_ttcRenderedStops?.length||0} stops within the study area.`);
+    if(a.crashes)finding('Road incidents layer active (2019–2023 crash records, see map).');
+    if(a.schools||a.kg)finding(`Education access: ${[a.schools&&'public schools',a.kg&&'kindergartens'].filter(Boolean).join(' and ')} within reach shown on the area map.`);
+
+    // ── Methodology ──
+    ensure(26);
+    y+=2;line('Methodology & sources',10.5,20,5);
+    doc.setFontSize(7);doc.setTextColor(130);
+    const meth=[];
+    if(a.isochrone)meth.push(`Catchment: ${_accMinutes||10}-minute ${_accMode||'walking'} isochrone (Mapbox Isochrone API).`);
+    if(a.zoning)meth.push('Zoning: Tbilisi functional zones (municipal WFS); K-coefficient limits per zone.');
+    if(a.syntax||a.orient)meth.push('Street network from OpenStreetMap (Overpass). Connectivity = junction node degree; orientation = length-weighted bearings in 10° bins. © OpenStreetMap contributors.');
+    if(a.history)meth.push('Transit reliability derived from TTC vehicle positions archived every 2 min; arrivals interpolated (±1 min) and matched to timetables (on-time = −60s…+300s). Stops with <30 observations excluded.');
+    if(a.canopy)meth.push('Tree canopy: ESA WorldCover 10 m (2021).');
+    if(a.lst)meth.push('Land surface temperature: Landsat-derived raster.');
+    if(a.crashes)meth.push('Road incidents: MIA crash records, point-mapped.');
+    meth.push('Maps: © Mapbox © OpenStreetMap. Figures are planning-level estimates generated by Urbanyx.');
+    doc.text(doc.splitTextToSize(meth.join(' '),178),M,y);
+    logFeatureUse('pdf_export').catch(()=>{});
+    doc.save('urbanyx_report.pdf');
+  }catch(e){console.warn('report pdf:',e);showToast('PDF failed: '+(e.message||''));}
 }
