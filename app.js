@@ -5671,7 +5671,7 @@ function parseAttrs(html){
     if(l.includes("დამატებითი მახასიათებლები"))extraFeatures=v;
   });
   const owners=[...doc.querySelectorAll(".divide-y.text-gray-800 p")].map(p=>p.textContent.trim()).filter(Boolean).join(", ");
-  let registryDocUrl="";
+  let registryDocUrl="",regDate="";
   doc.querySelectorAll("label.expandable").forEach(label=>{
     const sn=label.querySelector("span.flex-1")?.textContent?.trim()||"";
     if(!sn.includes("ამონაწერი"))return;
@@ -5681,9 +5681,9 @@ function parseAttrs(html){
       const dateStr=a.querySelector("span.font-light")?.textContent?.trim()||"";
       if(dateStr){const[d,m,y]=dateStr.split(".");const iso=`${y}-${m}-${d}`;if(!latest||iso>latest.date)latest={href,date:iso};}
     });
-    if(latest)registryDocUrl=latest.href;
+    if(latest){registryDocUrl=latest.href;regDate=latest.date;}
   });
-  return{area,parcelType,address,owners,registryDocUrl,objectType,objectDesc,coverageZone,ownershipType,extraFeatures};
+  return{area,parcelType,address,owners,registryDocUrl,regDate,objectType,objectDesc,coverageZone,ownershipType,extraFeatures};
 }
 
 // ── PDF owner extraction ──────────────────────────────────────────────────────
@@ -10415,7 +10415,8 @@ async function loadParcel(lbl, code){
   // Full parcel record for the report (ownership can be multi-owner)
   window._rptParcel={code:name,area:attrs.area||null,type:attrs.parcelType||attrs.type||null,
     address:attrs.address||null,ownersRaw:attrs.owners||null,owners:htmlOwners,
-    ownershipType:attrs.ownershipType||null,registryDocUrl:attrs.registryDocUrl||null};
+    ownershipType:attrs.ownershipType||null,registryDocUrl:attrs.registryDocUrl||null,
+    regDate:attrs.regDate||null};
   saveToSupabase(pid,name,attrs,shape,htmlOwners.length?htmlOwners:null);
   if(attrs.registryDocUrl){
     fetchOwnerIds(attrs.registryDocUrl)
@@ -11991,19 +11992,13 @@ async function exportReportPDF(){
     // Latin renders in Helvetica (always present). The embedded Noto font is
     // used ONLY for strings that contain Georgian glyphs — the Google Fonts
     // subset has no Latin, so applying it globally blanks all English text.
-    const _F=await _rptLoadFonts(doc); // {lat:'GSans'|null, ka:'NotoGeo'|null}
-    const KA=_F.ka;
-    const hasKa=(s)=>/[ა-ჰ]/.test(String(s||''));
+    const _F=await _rptLoadFonts(doc); // Google Sans (Latin+Georgian) or fallback
+    const FAM=_F.ok?'GSans':'helvetica';
     const M=16,PW=210,BOT=272;let y=M;
     const sources=[];
     const src=(s)=>{if(!sources.includes(s))sources.push(s);};
-    // Google Sans (if present) is used for ALL text incl. Georgian. Fallback while
-    // the .ttf is absent: Helvetica for Latin, Noto Sans Georgian for Georgian.
-    const setFor=(str,w)=>{
-      if(_F.lat)doc.setFont('GSans',w==='bold'?'bold':'normal');
-      else if(hasKa(str)&&KA)doc.setFont(KA,'normal');
-      else doc.setFont('helvetica',w==='bold'?'bold':'normal');
-    };
+    // Google Sans SemiBold for headings, Regular for body — same family throughout
+    const setFor=(str,w)=>doc.setFont(FAM,w==='bold'?'bold':'normal');
     const T=(str,x,yy,opts)=>{setFor(str,opts&&opts.w);doc.text(str,x,yy,opts&&opts.o);};
     const ensure=(need)=>{if(y+need>BOT){doc.addPage();y=M;}};
     const H1=(txt)=>{doc.setFontSize(15);doc.setTextColor(20);T(txt,M,y,{w:'bold'});y+=7;};
@@ -12063,21 +12058,28 @@ async function exportReportPDF(){
 
     // ── Findings ──
     H2('Findings');
-    // Site & ownership (full, native Georgian rendered via embedded font)
+    // Ownership analysis — always included when a parcel is selected
     if(_currentParcelGeoJSON){
-      H3('Site & ownership');
-      const bits=[];
-      const m2=_currentParcelAreaM2||0;if(m2)bits.push(`${Math.round(m2).toLocaleString()} m²`);
-      if(rp.type&&rp.type!=='—')bits.push(rp.type);
-      if(rp.ownershipType&&rp.ownershipType!=='—')bits.push(rp.ownershipType);
-      if(bits.length)P('Site: '+bits.join(' · ')+'.');
-      if(rp.address&&rp.address!=='—')P('Address: '+rp.address+'.');
+      H3('Ownership');
+      // labelled key/value rows (label in muted ink, value in near-black)
+      const kv=(label,val)=>{if(!val||val==='—')return;doc.setFontSize(8.5);ensure(5);
+        setFor(label);doc.setTextColor(120);doc.text(label,M,y);
+        const vx=M+40,vw=PW-M-vx;const ls=doc.splitTextToSize(String(val),vw);
+        setFor(String(val));doc.setTextColor(30);doc.text(ls,vx,y);y+=Math.max(1,ls.length)*4+1.2;};
+      kv('Parcel code',rp.code);
+      const m2=_currentParcelAreaM2||0;
+      kv('Area',m2?Math.round(m2).toLocaleString()+' m²':null);
+      kv('Parcel type',rp.type&&rp.type!=='—'?rp.type:null);
+      kv('Ownership type',rp.ownershipType&&rp.ownershipType!=='—'?rp.ownershipType:null);
+      kv('Address',rp.address&&rp.address!=='—'?rp.address:null);
+      kv('Registered',rp.regDate?new Date(rp.regDate).toLocaleDateString(lang==='ka'?'ka-GE':'en-GB',{day:'numeric',month:'long',year:'numeric'}):null);
       const owners=rp.owners&&rp.owners.length?rp.owners:null;
       if(owners){
-        P('Registered owner(s):');
-        owners.forEach(o=>P('   • '+[o.name,o.id&&('ID '+o.id),o.type].filter(Boolean).join(' · '),40));
-        src('Ownership: National Agency of Public Registry (NAPR), Georgia.');
-      } else if(rp.ownersRaw&&rp.ownersRaw!=='—'){P('Registered owner(s): '+rp.ownersRaw+'.');src('Ownership: National Agency of Public Registry (NAPR), Georgia.');}
+        kv('Owner(s)',owners.map(o=>o.name).filter(Boolean).join('; ')||rp.ownersRaw);
+        const withId=owners.filter(o=>o.id);
+        if(withId.length){y+=0.5;withId.forEach(o=>{doc.setFontSize(7.5);setFor(o.name);doc.setTextColor(110);ensure(4);doc.text('   • '+[o.name,o.id&&('ID '+o.id),o.type].filter(Boolean).join(' · '),M,y);y+=3.8;});}
+        src('Ownership & registration: National Agency of Public Registry (NAPR), Georgia.');
+      } else if(rp.ownersRaw&&rp.ownersRaw!=='—'){kv('Owner(s)',rp.ownersRaw);src('Ownership & registration: National Agency of Public Registry (NAPR), Georgia.');}
     }
     // Zoning
     if(a.zoning){
@@ -12240,22 +12242,23 @@ async function _rptExportGeoTIFF(){
 async function _fetchB64(url){
   try{const r=await fetch(url);if(!r.ok)return null;const buf=new Uint8Array(await r.arrayBuffer());let bin="";for(let i=0;i<buf.length;i+=8192)bin+=String.fromCharCode(...buf.subarray(i,i+8192));return btoa(bin);}catch(_){return null;}
 }
-// Latin = Google Sans (drop GoogleSans-Regular/Bold.ttf into analysis-logos/ —
-// it's proprietary and not fetchable from a CDN). Georgian = Noto Sans Georgian.
-const _rptFonts={lat:undefined,latB:undefined,ka:undefined};
+// Google Sans (static weights, incl. Georgian glyphs) from the local fonts/ dir.
+// Regular for body, SemiBold for headings — one family covers Latin + Georgian.
+const _rptFonts={reg:undefined,semi:undefined};
 async function _rptLoadFonts(doc){
-  if(_rptFonts.lat===undefined){
-    _rptFonts.lat=await _fetchB64('analysis-logos/GoogleSans-Regular.ttf');
-    _rptFonts.latB=await _fetchB64('analysis-logos/GoogleSans-Bold.ttf')||_rptFonts.lat;
-    _rptFonts.ka=await _fetchB64('https://cdn.jsdelivr.net/gh/notofonts/notofonts.github.io/fonts/NotoSansGeorgian/hinted/ttf/NotoSansGeorgian-Regular.ttf');
+  if(_rptFonts.reg===undefined){
+    _rptFonts.reg =await _fetchB64('fonts/static/GoogleSans-Regular.ttf');
+    _rptFonts.semi=await _fetchB64('fonts/static/GoogleSans-SemiBold.ttf')||_rptFonts.reg;
   }
-  let lat=null,ka=null;
+  let ok=false;
   try{
-    if(_rptFonts.lat){doc.addFileToVFS('GSans.ttf',_rptFonts.lat);doc.addFont('GSans.ttf','GSans','normal');
-      doc.addFileToVFS('GSansB.ttf',_rptFonts.latB);doc.addFont('GSansB.ttf','GSans','bold');lat='GSans';}
-    if(_rptFonts.ka){doc.addFileToVFS('NotoGeo.ttf',_rptFonts.ka);doc.addFont('NotoGeo.ttf','NotoGeo','normal');ka='NotoGeo';}
+    if(_rptFonts.reg){
+      doc.addFileToVFS('GSans.ttf',_rptFonts.reg);doc.addFont('GSans.ttf','GSans','normal');
+      doc.addFileToVFS('GSansSB.ttf',_rptFonts.semi);doc.addFont('GSansSB.ttf','GSans','bold');
+      ok=true;
+    }
   }catch(e){console.warn('[report] font load:',e);}
-  return {lat,ka};
+  return {ok};
 }
 
 // Rasterize an SVG asset to a PNG data URL (jsPDF can't embed SVG directly)
