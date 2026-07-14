@@ -6118,11 +6118,7 @@ function setupProCard(show=false){
       `<div class="lp-row acc-toggle-row" style="padding:4px 0;margin-top:2px" onclick="toggleAccOrientation()"><span class="lp-row-name">${isKa?"ქუჩის ორიენტაცია":"Street Orientation"}</span><div class="lp-sw" id="acc-orientation-sw"></div></div>`+
       `<div id="orient-rose" style="display:none"></div>`+
       `<div class="lp-row acc-toggle-row" style="padding:4px 0;margin-top:2px" onclick="toggleAccOSM()"><span class="lp-row-name">${isKa?"ურბანული ფუნქციები":"Urban Functions"}</span><div class="lp-sw" id="acc-osm-sw"></div></div>`+
-      `<div id="osm-legend" style="display:none"></div>`+
-      `<div style="display:flex;gap:5px;margin-top:9px">
-        <button onclick="exportReportPDF()" style="flex:1.4;font-family:inherit;font-size:0.6rem;font-weight:600;padding:7px 0;border-radius:8px;border:1px solid rgba(52,211,153,0.3);background:rgba(52,211,153,0.12);color:#34d399;cursor:pointer">PDF · ${isKa?"სრული რეპორტი":"Full report"}</button>
-        <button onclick="_morphExportGeoJSON()" style="flex:1;font-family:inherit;font-size:0.6rem;font-weight:600;padding:7px 0;border-radius:8px;border:1px solid rgba(255,255,255,0.09);background:rgba(255,255,255,0.03);color:rgba(255,255,255,0.55);cursor:pointer">GeoJSON</button>
-      </div>`;
+      `<div id="osm-legend" style="display:none"></div>`;
   }
 
   // Energy and Relief — pro only
@@ -6145,6 +6141,22 @@ function setupProCard(show=false){
   // Relief
   document.getElementById("pro-cat-relief").style.display="";
   document.getElementById("cat-btn-relief").style.display="";
+  // ── Report section (below Relief): one place for all exports ──
+  const relEl=document.getElementById("pro-cat-relief");
+  if(relEl&&!document.getElementById("rpt-section")){
+    const d=document.createElement("div");d.id="rpt-section";
+    const btnS='width:100%;text-align:left;font-family:inherit;font-size:0.63rem;font-weight:600;padding:7px 10px;border-radius:8px;margin-top:4px;cursor:pointer;';
+    d.innerHTML=
+      `<div class="lp-row acc-toggle-row" style="padding:7px 0;margin-top:6px;border-top:1px solid rgba(255,255,255,0.07)" onclick="_rptMenuToggle()">`+
+      `<span class="lp-row-name" style="display:flex;align-items:center;gap:7px"><img src="analysis-logos/report.svg" width="15" height="15" style="opacity:0.8">${isKa?"რეპორტის გენერაცია":"Generate report"}</span>`+
+      `<span style="color:rgba(255,255,255,0.3);font-size:0.6rem" id="rpt-caret">▾</span></div>`+
+      `<div id="rpt-menu" style="display:none;padding:2px 0 6px">`+
+      `<button onclick="exportReportPDF()" style="${btnS}border:1px solid rgba(52,211,153,0.3);background:rgba(52,211,153,0.12);color:#34d399">${isKa?"PDF რეპორტის ექსპორტი":"Export PDF report"}</button>`+
+      `<button onclick="_rptExportGeoJSON()" style="${btnS}border:1px solid rgba(255,255,255,0.09);background:rgba(255,255,255,0.03);color:rgba(255,255,255,0.6)">${isKa?"აქტიური ფენები · GeoJSON":"Active layers · GeoJSON"}</button>`+
+      `<button onclick="_rptExportGeoTIFF()" style="${btnS}border:1px solid rgba(255,255,255,0.09);background:rgba(255,255,255,0.03);color:rgba(255,255,255,0.6)">${isKa?"აქტიური რასტრები · GeoTIFF":"Active rasters · GeoTIFF"}</button>`+
+      `</div>`;
+    relEl.parentNode.insertBefore(d,relEl.nextSibling);
+  }
   renderReliefButtons();
   } // end isPro
 }
@@ -7610,7 +7622,7 @@ async function fetchDTM(geojson){
   const minLng=Math.min(...lngs),maxLng=Math.max(...lngs);
   const minLat=Math.min(...lats),maxLat=Math.max(...lats);
 
-  const proxyUrl=`${PROXY}/lst?url=${encodeURIComponent(DTM_URL)}`;
+  const proxyUrl=`${PROXY}/lst?url=${encodeURIComponent(DTM_URL)}`;_rptRasterSrc.relief_dtm=proxyUrl;
   const tiff=await GeoTIFF.fromUrl(proxyUrl,{allowFullFile:false});
   const image=await tiff.getImage();
   const imgBbox=image.getBoundingBox(); // [minX,minY,maxX,maxY]
@@ -8322,7 +8334,7 @@ const GWA_R2={
 async function gwaPointQuery(variable,height,lat,lng){
   const r2file=GWA_R2[variable];
   if(!r2file)throw new Error('unknown GWA variable: '+variable);
-  const url=`${PROXY}/lst?url=${encodeURIComponent('https://pub-9071f31b4edc4a15ba28c48f949017fc.r2.dev/'+r2file)}`;
+  const url=`${PROXY}/lst?url=${encodeURIComponent('https://pub-9071f31b4edc4a15ba28c48f949017fc.r2.dev/'+r2file)}`;_rptRasterSrc[r2file.replace(/\W+/g,'_')]=url;
   const tiff=await GeoTIFF.fromUrl(url,{allowHttpExceptions:true});
   const image=await tiff.getImage();
   const bbox=image.getBoundingBox();
@@ -9747,7 +9759,7 @@ async function fetchTreeCanopy(geojson){
   const latStr=(tileLat>=0?"N":"S")+String(Math.abs(tileLat)).padStart(2,"0");
   const lngStr=(tileLng>=0?"E":"W")+String(Math.abs(tileLng)).padStart(3,"0");
   const url=`https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/map/ESA_WorldCover_10m_2021_v200_${latStr}${lngStr}_Map.tif`;
-  const proxyUrl=`${PROXY}/worldcover?url=${encodeURIComponent(url)}`;
+  const proxyUrl=`${PROXY}/worldcover?url=${encodeURIComponent(url)}`;_rptRasterSrc.canopy_worldcover=proxyUrl;
   const tiff=await GeoTIFF.fromUrl(proxyUrl,{allowFullFile:false});
   const image=await tiff.getImage();
   const bbox=image.getBoundingBox();
@@ -9781,7 +9793,7 @@ async function fetchTreeCanopy(geojson){
 
 async function fetchLST(geojson) {
   const LST_URL = "https://pub-9071f31b4edc4a15ba28c48f949017fc.r2.dev/lst_tbilisi_cog.tif";  
-  const proxyUrl = `${PROXY}/lst?url=${encodeURIComponent(LST_URL)}`;
+  const proxyUrl = `${PROXY}/lst?url=${encodeURIComponent(LST_URL)}`;_rptRasterSrc.lst=proxyUrl;
 
   let allCoords = [];
   if(geojson.type==="Polygon") allCoords=geojson.coordinates.flat();
@@ -11298,12 +11310,7 @@ function _histRenderContent(){
     }).join('');
     html+=`<div style="font-size:0.56rem;color:rgba(255,255,255,0.25);margin-top:4px">${h.traceHint}</div>`;
   }
-  html+=`<div id="hist-trace-bar"></div>`;
-  html+=`<div style="display:flex;gap:5px;margin-top:9px">
-    <button onclick="_histExportPDF()" style="flex:1.4;font-family:inherit;font-size:0.6rem;font-weight:600;padding:7px 0;border-radius:8px;border:1px solid rgba(52,211,153,0.3);background:rgba(52,211,153,0.12);color:#34d399;cursor:pointer">${h.exportPdf}</button>
-    <button onclick="_histExportCSV()" style="flex:1;font-family:inherit;font-size:0.6rem;font-weight:600;padding:7px 0;border-radius:8px;border:1px solid rgba(255,255,255,0.09);background:rgba(255,255,255,0.03);color:rgba(255,255,255,0.55);cursor:pointer">${h.exportCsv}</button>
-    <button onclick="_histExportGeoJSON()" style="flex:1;font-family:inherit;font-size:0.6rem;font-weight:600;padding:7px 0;border-radius:8px;border:1px solid rgba(255,255,255,0.09);background:rgba(255,255,255,0.03);color:rgba(255,255,255,0.55);cursor:pointer">${h.exportGeo}</button>
-  </div>`;
+  html+=`<div id="hist-trace-bar"></div>`; // exports live in the Report section below Relief
   c.innerHTML=html;
   _histChartBind();
 }
@@ -11996,8 +12003,9 @@ async function exportReportPDF(){
     const ensure=(need)=>{if(y+need>281){doc.addPage();y=M;}};
 
     line('Urbanyx — Site & Area Analysis Report',15,20,7);
-    const code=document.getElementById('val-code')?.textContent||'';
-    const addr=document.getElementById('val-addr')?.textContent||'';
+    const code=_kaToLat(document.getElementById('val-code')?.textContent||'');
+    const addr=_kaToLat(document.getElementById('val-addr')?.textContent||'');
+    const owner=_kaToLat(document.getElementById('val-owner')?.textContent||'');
     const ctxBits=[new Date().toISOString().slice(0,10)];
     if(code&&code!=='—')ctxBits.push('Parcel: '+code);
     if(addr&&addr!=='—')ctxBits.push(addr);
@@ -12036,10 +12044,18 @@ async function exportReportPDF(){
     ensure(30);
     line('Findings',10.5,20,6);
     doc.setFontSize(8.5);doc.setTextColor(40);
-    const finding=(txt)=>{ensure(6);doc.text(doc.splitTextToSize(txt,PW-M*2),M,y);y+=doc.splitTextToSize(txt,PW-M*2).length*4+1.5;};
-    if(_currentParcelAreaM2)finding(`Site: ${Math.round(_currentParcelAreaM2).toLocaleString()} m²${(typeof _maxFootprintM2==='number'&&_maxFootprintM2)?` · max footprint (K1) ${Math.round(_maxFootprintM2).toLocaleString()} m²`:''}${(typeof _maxFloorAreaM2==='number'&&_maxFloorAreaM2)?` · max floor area (K2) ${Math.round(_maxFloorAreaM2).toLocaleString()} m²`:''}.`);
+    const finding=(txt)=>{ensure(6);doc.setFontSize(8.5);doc.setTextColor(40);doc.text(doc.splitTextToSize(txt,PW-M*2),M,y);y+=doc.splitTextToSize(txt,PW-M*2).length*4+1.5;};
+    const sub=(txt)=>{ensure(9);y+=1.5;doc.setFontSize(9);doc.setTextColor(20);doc.setFont(undefined,'bold');doc.text(txt,M,y);doc.setFont(undefined,'normal');y+=4.5;};
+    if(_currentParcelGeoJSON){
+      sub('Site & ownership');
+      if(_currentParcelAreaM2)finding(`Site: ${Math.round(_currentParcelAreaM2).toLocaleString()} m²${(typeof _maxFootprintM2==='number'&&_maxFootprintM2)?` · max footprint (K1) ${Math.round(_maxFootprintM2).toLocaleString()} m²`:''}${(typeof _maxFloorAreaM2==='number'&&_maxFloorAreaM2)?` · max floor area (K2) ${Math.round(_maxFloorAreaM2).toLocaleString()} m²`:''}.`);
+      if(owner&&owner!=='—')finding(`Registered owner(s): ${owner}. (Names romanized from Georgian; source: NAPR public registry.)`);
+      if(addr&&addr!=='—')finding(`Address: ${addr}.`);
+    }
+    if(a.syntax||a.orient)sub('Street network & morphology');
     if(a.syntax){const degs=_syntaxGJ.features.map(f=>Number(f.properties?.connectivity||0));finding(`Street network: ${degs.length} segments · ${_morphTotalKm(_syntaxGJ).toFixed(1)} km · mean node degree ${(degs.reduce((x,b)=>x+b,0)/Math.max(1,degs.length)).toFixed(2)}, max ${Math.max(...degs)}.`);}
     if(a.orient)finding(`Street orientation: ${_orientGJ.features.length} ways${_orientDom?`, dominant axis ${_orientDom}`:''}.`);
+    if(a.transit||a.history||a.crashes||a.schools||a.kg)sub('Mobility & access');
     if(a.history&&_histStats?.length){
       const tot=_histStats.reduce((x,r)=>({m:x.m+Number(r.n_matched),ot:x.ot+Number(r.on_time),l:x.l+Number(r.late)}),{m:0,ot:0,l:0});
       if(tot.m)finding(`Transit reliability (${_histRange?.from} → ${_histRange?.to}): ${Math.round(100*tot.ot/tot.m)}% on-time, ${Math.round(100*tot.l/tot.m)}% late (>5 min), across ${tot.m.toLocaleString()} matched arrivals at ${_histStats.length} stop-route pairs.`);
@@ -12064,4 +12080,63 @@ async function exportReportPDF(){
     logFeatureUse('pdf_export').catch(()=>{});
     doc.save('urbanyx_report.pdf');
   }catch(e){console.warn('report pdf:',e);showToast('PDF failed: '+(e.message||''));}
+}
+
+// ── Report menu + consolidated exports ────────────────────────────────────────
+const _rptRasterSrc={}; // name → source url of rasters currently loaded
+function _rptMenuToggle(){
+  const m=document.getElementById('rpt-menu'),c=document.getElementById('rpt-caret');
+  if(!m)return;
+  const open=m.style.display==='none';
+  m.style.display=open?'block':'none';
+  if(c)c.textContent=open?'▴':'▾';
+}
+
+// Georgian (mkhedruli) → Latin, national transliteration system. Helvetica has
+// no Georgian glyphs, so PDF text is romanized instead of rendering as boxes.
+const _KA2LAT={'ა':'a','ბ':'b','გ':'g','დ':'d','ე':'e','ვ':'v','ზ':'z','თ':'t','ი':'i','კ':"k'",'ლ':'l','მ':'m','ნ':'n','ო':'o','პ':"p'",'ჟ':'zh','რ':'r','ს':'s','ტ':"t'",'უ':'u','ფ':'p','ქ':'k','ღ':'gh','ყ':"q'",'შ':'sh','ჩ':'ch','ც':'ts','ძ':'dz','წ':"ts'",'ჭ':"ch'",'ხ':'kh','ჯ':'j','ჰ':'h'};
+function _kaToLat(str){
+  if(!str)return str;
+  return String(str).replace(/[ა-ჰ]/g,ch=>_KA2LAT[ch]??ch);
+}
+
+function _rptExportGeoJSON(){
+  if(!currentUser||currentUser.plan!=='pro'){openPaywall(true);return;}
+  const a=_rptActive();
+  const features=[];
+  const tag=(gj,name)=>{for(const f of gj?.features||[])features.push({...f,properties:{...f.properties,analysis:name}});};
+  if(a.syntax)tag(_syntaxGJ,'space_syntax');
+  if(a.orient)tag(_orientGJ,'orientation');
+  if((a.transit||a.history)&&_ttcRenderedStops){
+    for(const s of _ttcRenderedStops){
+      const r=_histStats?.find(x=>x.stop_id===s.id);
+      features.push({type:'Feature',geometry:{type:'Point',coordinates:[s.lon,s.lat]},properties:{
+        analysis:'transit_stop',stop_id:s.id,name:s.name,routes:(s.routes||[]).map(x=>x.shortName).join(','),
+        ...(r?{n_matched:Number(r.n_matched),on_time_share:Number(r.n_matched)?Math.round(1000*Number(r.on_time)/Number(r.n_matched))/1000:null,delay_med_s:r.delay_med_s!=null?Number(r.delay_med_s):null}:{}),
+      }});
+    }
+  }
+  if(a.isochrone)features.push({type:'Feature',geometry:_isoData.features[0].geometry,properties:{analysis:'isochrone',label:_transitAreaLabel()||''}});
+  if(_currentParcelGeoJSON)features.push({type:'Feature',geometry:_currentParcelGeoJSON,properties:{analysis:'parcel',area_m2:Math.round(_currentParcelAreaM2||0)}});
+  if(!features.length){showToast(lang==='ka'?'აქტიური ვექტორული ფენა არ არის':'No active vector layers');return;}
+  logFeatureUse('geojson_export').catch(()=>{});
+  _dlGeoJSON('urbanyx_active_layers.geojson',{type:'FeatureCollection',features});
+}
+
+async function _rptExportGeoTIFF(){
+  if(!currentUser||currentUser.plan!=='pro'){openPaywall(true);return;}
+  const names=Object.keys(_rptRasterSrc);
+  if(!names.length){showToast(lang==='ka'?'აქტიური რასტრული ფენა არ არის':'No active raster layers loaded this session');return;}
+  showToast((lang==='ka'?'იტვირთება':'Downloading')+` ${names.length} GeoTIFF…`);
+  for(const n of names){
+    try{
+      const res=await fetch(_rptRasterSrc[n]);
+      if(!res.ok)continue;
+      const blob=await res.blob();
+      const aEl=document.createElement('a');
+      aEl.href=URL.createObjectURL(blob);aEl.download=`urbanyx_${n}.tif`;aEl.click();
+      setTimeout(()=>URL.revokeObjectURL(aEl.href),2000);
+    }catch(e){console.warn('geotiff dl:',n,e);}
+  }
+  logFeatureUse('geojson_export').catch(()=>{});
 }
