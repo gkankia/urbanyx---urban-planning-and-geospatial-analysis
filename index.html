@@ -17,7 +17,7 @@
 <meta name="twitter:title" content="Urbanyx — Urban Planning & Geospatial Analysis">
 <meta name="twitter:description" content="Urban planning and geospatial analysis platform for walkability, accessibility, morphology, climate, and parcel data.">
 <meta name="twitter:image" content="https://static.wixstatic.com/media/9c6bfd_7ed45f6184af45c29d0e05571bbec790~mv2.png">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗺</text></svg>">
+<link rel="icon" type="image/svg+xml" href="analysis-logos/favicon.svg">
 <link href="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.css" rel="stylesheet">
 <script src="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.js"></script>
 <link href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-draw/v1.4.3/mapbox-gl-draw.css" rel="stylesheet">
@@ -338,14 +338,7 @@
     <div id="wind-result-inner"></div>
   </div>
 
-  <!-- Export button — pro only, shown after analysis -->
-  <button class="analyse-btn" id="export-btn" style="display:none;background:rgba(251,191,36,0.1);border-color:rgba(251,191,36,0.3);color:#fbbf24" onclick="onExportClick()">
-    <span id="export-btn-label"></span>
-  </button>
-  <!-- GeoData download — pro only -->
-  <button class="btn-download" id="geodata-btn" style="display:none" onclick="downloadAnalysisData()">
-    <span id="geodata-btn-label"></span>
-  </button>
+  <!-- Exports consolidated into the left-rail Generate Report menu -->
   <div class="status" id="status-analysis"></div>
   <!-- Search limit warning -->
   <div id="limit-warning" style="display:none;background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.25);border-radius:10px;padding:10px 12px;font-size:0.75rem;color:#fbbf24;line-height:1.5">
@@ -402,9 +395,6 @@
   </div>
   <div class="poly-area" id="poly-area-text" style="display:none"></div>
   <div id="poly-dl-row" style="display:flex;gap:6px">
-    <button class="btn-poly-dl" id="poly-dl-btn" onclick="downloadPolyParcels()" style="flex:1">
-      <span id="lbl-poly-dl"></span>
-    </button>
     <button class="btn-poly-dl" id="poly-dl-3d-btn" onclick="downloadBuildingOBJ()" style="flex:1;display:none" title="Export 3D model for SketchUp, Rhino, Blender">3D OBJ</button>
   </div>
 </div>

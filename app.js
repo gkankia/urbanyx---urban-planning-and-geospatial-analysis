@@ -426,7 +426,7 @@ function applyLang(){
   const _mgl=document.getElementById("lbl-mapillary-gallery");if(_mgl)_mgl.textContent=tr.mapillaryTitle;
   const _lbl=document.getElementById("lbl-lightbox-open");if(_lbl)_lbl.textContent=tr.mapillaryOpen;
   const _pat=document.getElementById("lbl-pro-analysis-title");if(_pat)_pat.textContent=tr.proLayersTitle;
-  document.getElementById("export-btn-label").textContent=tr.exportBtn;
+  const _ebl=document.getElementById("export-btn-label");if(_ebl)_ebl.textContent=tr.exportBtn;
   const _gdl=document.getElementById("geodata-btn-label");if(_gdl)_gdl.textContent=tr.geodataBtn;
   // Polygon select
   const _plt=document.getElementById("lbl-poly-title");if(_plt)_plt.textContent=tr.polyPanelTitle;
@@ -1356,7 +1356,7 @@ function _activateBld(id){
   document.getElementById('lbl-prp-footprint').textContent=isKa?'ფართობი':'Footprint';
   document.getElementById('val-prp-perimeter').textContent=bld.perimStr;
   document.getElementById('lbl-prp-perimeter').textContent=isKa?'პერიმეტრი':'Perimeter';
-  document.getElementById('poly-dl-btn').disabled=false;
+  const _pdb=document.getElementById('poly-dl-btn');if(_pdb)_pdb.disabled=false;
   _update3DMetrics();
   _updateMetricsExtrusion();
   _updateCombinedMetrics();
@@ -9720,7 +9720,7 @@ async function runAnalysis(){
     setStatus("","","status-analysis");
     btn.innerHTML=`<span style="font-size:14px">✓</span><span>${tr.done}</span>`;
     btn.style.opacity="0.5";
-    if(currentUser?.plan==="pro"){document.getElementById("export-btn").style.display="flex";}
+    // report export now lives in the left-rail menu
   }catch(e){
     console.error("Analysis:",e);
     setStatus(tr.analysisError,"error","status-analysis");
@@ -10343,8 +10343,7 @@ async function runProAnalysis(){
     logFeatureUse("pro_analysis").catch(()=>{});
     setStatus("","","status-analysis");
     if(btn){btn.innerHTML=`<span style="font-size:14px">✓</span><span>${tr.proDone}</span>`;btn.style.opacity="0.5";}
-    document.getElementById("geodata-btn").style.display="flex";
-    document.getElementById("geodata-btn-label").textContent=t().geodataBtn;
+    // GeoData export moved to the Generate Report menu (left rail)
   }catch(e){
     console.error("Pro analysis:",e);
     setStatus(tr.analysisError,"error","status-analysis");
@@ -10413,6 +10412,10 @@ async function loadParcel(lbl, code){
   showParcelPopup(parcelCentroid);
   setStatus(tr.found,"success");
   const htmlOwners=parseOwners(attrs.owners);
+  // Full parcel record for the report (ownership can be multi-owner)
+  window._rptParcel={code:name,area:attrs.area||null,type:attrs.parcelType||attrs.type||null,
+    address:attrs.address||null,ownersRaw:attrs.owners||null,owners:htmlOwners,
+    ownershipType:attrs.ownershipType||null,registryDocUrl:attrs.registryDocUrl||null};
   saveToSupabase(pid,name,attrs,shape,htmlOwners.length?htmlOwners:null);
   if(attrs.registryDocUrl){
     fetchOwnerIds(attrs.registryDocUrl)
@@ -11969,9 +11972,11 @@ function _rptActive(){
     canopy:_rptOn('acc-canopy-sw'),
     lst:_rptOn('acc-lst-sw'),
     wind:_rptOn('acc-wind-sw'),
+    relief:typeof _reliefActiveType!=='undefined'&&!!_reliefActiveType,
+    solar:_rptOn('acc-solar-sw')||(typeof _solarOverlayCache!=='undefined'&&!!_solarOverlayCache),
   };
   a.anyArea=a.syntax||a.orient||a.osm||a.transit||a.history||a.schools||a.kg||a.crashes||a.parking||a.isochrone;
-  a.anyParcel=a.zoning||a.canopy||a.lst||a.wind||!!_currentParcelGeoJSON;
+  a.anyParcel=a.zoning||a.canopy||a.lst||a.wind||a.relief||a.solar||!!_currentParcelGeoJSON;
   return a;
 }
 
@@ -11983,85 +11988,162 @@ async function exportReportPDF(){
   try{
     const{jsPDF}=window.jspdf||window;
     const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
-    const M=16,PW=210;let y=M;
-    const line=(txt,fs,col,dy)=>{doc.setFontSize(fs);doc.setTextColor(col);doc.text(txt,M,y);y+=dy;};
-    const ensure=(need)=>{if(y+need>281){doc.addPage();y=M;}};
+    const FONT=await _rptLoadFont(doc)?'NotoGeo':'helvetica';
+    const M=16,PW=210,BOT=272;let y=M;
+    const sources=[]; // collected in order of appearance → printed under Sources
+    const src=(s)=>{if(!sources.includes(s))sources.push(s);};
+    const setF=(w)=>doc.setFont(FONT,w==='bold'?'bold':'normal');
+    const ensure=(need)=>{if(y+need>BOT){doc.addPage();y=M;}};
+    const H1=(txt)=>{doc.setFontSize(15);doc.setTextColor(20);setF('bold');doc.text(txt,M,y);setF();y+=7;};
+    const H2=(txt)=>{ensure(11);y+=2;doc.setFontSize(11);doc.setTextColor(30);setF('bold');doc.text(txt,M,y);setF();y+=1.5;doc.setDrawColor(210);doc.line(M,y,PW-M,y);y+=4.5;};
+    const H3=(txt)=>{ensure(8);y+=1;doc.setFontSize(9);doc.setTextColor(40);setF('bold');doc.text(txt,M,y);setF();y+=4.5;};
+    const P=(txt,col)=>{doc.setFontSize(8.5);doc.setTextColor(col??60);const ls=doc.splitTextToSize(txt,PW-M*2);ensure(ls.length*4+1);doc.text(ls,M,y);y+=ls.length*4+1.5;};
+    // color-swatch legend row
+    const legend=(pairs)=>{doc.setFontSize(7.5);let lx=M;ensure(7);pairs.forEach(([c,l])=>{const tw=doc.getTextWidth(l)+9;if(lx+tw>PW-M){y+=5;lx=M;}doc.setFillColor(c);doc.circle(lx+2,y-1.2,1.6,'F');doc.setTextColor(70);doc.text(l,lx+5,y);lx+=tw+3;});y+=5;};
 
-    line('Urbanyx — Site & Area Analysis Report',15,20,7);
-    const code=_kaToLat(document.getElementById('val-code')?.textContent||'');
-    const addr=_kaToLat(document.getElementById('val-addr')?.textContent||'');
-    const owner=_kaToLat(document.getElementById('val-owner')?.textContent||'');
-    const ctxBits=[new Date().toISOString().slice(0,10)];
-    if(code&&code!=='—')ctxBits.push('Parcel: '+code);
-    if(addr&&addr!=='—')ctxBits.push(addr);
-    const areaLbl=_transitAreaLabel();if(areaLbl)ctxBits.push(areaLbl);
-    line(ctxBits.join('   ·   '),8.5,110,8);
+    // ── Title ──
+    H1('Urbanyx — Site & Area Analysis Report');
+    const rp=window._rptParcel||{};
+    const areaLbl=_transitAreaLabel();
+    doc.setFontSize(8.5);doc.setTextColor(110);setF();
+    const ctx=[new Date().toISOString().slice(0,10)];
+    if(rp.code&&rp.code!=='—')ctx.push('Parcel '+rp.code);
+    if(areaLbl)ctx.push(areaLbl);
+    doc.text(ctx.join('   ·   '),M,y);y+=8;
 
-    // ── Map 1: area scale ──
+    // ── Composite map: area full-width, parcel as top-right inset ──
+    let areaImg=null,parcelImg=null;
     if(a.anyArea&&(_isoData?.features?.[0]||_isLargeParcel())){
       const rows=[],lines=[];
       if(a.history){const h=t().hist;const cur=_histVarDefs(h).find(v=>v.k===_histColorBy)||_histVarDefs(h)[0];
-        rows.push([_HIST_OK,cur.leg[0]],[_HIST_WARN,cur.leg[1]],[_HIST_BAD,cur.leg[2]]);lines.push('Transit history: '+cur.l);}
-      if(a.syntax)rows.push(['#3b82f6','Connectivity ≤1'],['#22c55e','2–3'],['#f97316','4–5'],['#ef4444','≥6']);
+        rows.push([_HIST_OK,cur.leg[0]],[_HIST_WARN,cur.leg[1]],[_HIST_BAD,cur.leg[2]]);lines.push('Transit: '+cur.l);}
+      if(a.syntax)rows.push(['#3b82f6','Conn. ≤1'],['#22c55e','2–3'],['#f97316','4–5'],['#ef4444','≥6']);
       const others=[a.orient&&('Orientation'+(_orientDom?' ('+_orientDom+')':'')),a.osm&&'Urban functions',a.transit&&!a.history&&'Transit stops',a.schools&&'Schools',a.kg&&'Kindergartens',a.crashes&&'Road incidents',a.parking&&'Parking'].filter(Boolean);
       if(others.length)lines.push('Layers: '+others.join(' · '));
       if(areaLbl)lines.push(areaLbl);
-      ensure(96);
-      line('Area-scale analyses',10.5,20,5);
-      const img=await _histCaptureMapImage({title:'Area analyses',rows:rows.slice(0,8),lines});
-      if(img){const w=PW-M*2;let hh=Math.min(105,w*(img.h/img.w));doc.addImage(img.url,'JPEG',M,y,w,hh);doc.setDrawColor(210);doc.rect(M,y,w,hh);y+=hh+6;}
+      areaImg=await _histCaptureMapImage({title:'Area analyses',rows:rows.slice(0,8),lines});
     }
-
-    // ── Map 2: parcel scale ──
     if(a.anyParcel&&_currentParcelGeoJSON){
       const lines=[];
-      const pl=[a.zoning&&'Zoning & setbacks',a.canopy&&'Tree canopy',a.lst&&'Land surface temp.',a.wind&&'Wind'].filter(Boolean);
+      const pl=[a.zoning&&'Zoning & setbacks',a.canopy&&'Tree canopy',a.lst&&'Land surface temp.',a.wind&&'Wind',a.relief&&'Relief'].filter(Boolean);
       if(pl.length)lines.push('Layers: '+pl.join(' · '));
       const m2=_currentParcelAreaM2||0;
       if(m2)lines.push('Parcel · '+(m2>=1e6?(m2/1e6).toFixed(2)+' km²':Math.round(m2).toLocaleString()+' m²'));
-      ensure(96);
-      line('Parcel-scale analyses',10.5,20,5);
-      const img=await _histCaptureMapImage({title:'Parcel analyses',rows:[],lines,frameGeom:_currentParcelGeoJSON});
-      if(img){const w=PW-M*2;let hh=Math.min(105,w*(img.h/img.w));doc.addImage(img.url,'JPEG',M,y,w,hh);doc.setDrawColor(210);doc.rect(M,y,w,hh);y+=hh+6;}
+      parcelImg=await _histCaptureMapImage({title:'Parcel analyses',rows:[],lines,frameGeom:_currentParcelGeoJSON});
+    }
+    const bigImg=areaImg||parcelImg;
+    const insetImg=areaImg&&parcelImg?parcelImg:null;
+    if(bigImg){
+      H2('Maps');
+      const w=PW-M*2;const hh=Math.min(120,w*(bigImg.h/bigImg.w));ensure(hh+2);
+      doc.addImage(bigImg.url,'JPEG',M,y,w,hh);doc.setDrawColor(200);doc.rect(M,y,w,hh);
+      if(insetImg){ // parcel inset, top-right corner over the area map
+        const iw=w*0.34,ih=iw*(insetImg.h/insetImg.w),ix=M+w-iw-3,iy=y+3;
+        doc.setFillColor(255,255,255);doc.rect(ix-1,iy-1,iw+2,ih+2,'F');
+        doc.addImage(insetImg.url,'JPEG',ix,iy,iw,ih);doc.setDrawColor(120);doc.rect(ix,iy,iw,ih);
+        doc.setFontSize(6);doc.setTextColor(90);doc.text('Parcel detail',ix+1.5,iy+ih-1.5);
+      }
+      y+=hh+2;
+      doc.setFontSize(6.5);doc.setTextColor(150);doc.text('Basemap © Mapbox © OpenStreetMap. Symbology per on-map legend.',M,y);y+=6;
+      src('Basemap: © Mapbox, © OpenStreetMap contributors.');
     }
 
-    // ── Metrics per active analysis ──
-    ensure(30);
-    line('Findings',10.5,20,6);
-    doc.setFontSize(8.5);doc.setTextColor(40);
-    const finding=(txt)=>{ensure(6);doc.setFontSize(8.5);doc.setTextColor(40);doc.text(doc.splitTextToSize(txt,PW-M*2),M,y);y+=doc.splitTextToSize(txt,PW-M*2).length*4+1.5;};
-    const sub=(txt)=>{ensure(9);y+=1.5;doc.setFontSize(9);doc.setTextColor(20);doc.setFont(undefined,'bold');doc.text(txt,M,y);doc.setFont(undefined,'normal');y+=4.5;};
+    // ── Findings ──
+    H2('Findings');
+    // Site & ownership (full, native Georgian rendered via embedded font)
     if(_currentParcelGeoJSON){
-      sub('Site & ownership');
-      if(_currentParcelAreaM2)finding(`Site: ${Math.round(_currentParcelAreaM2).toLocaleString()} m²${(typeof _maxFootprintM2==='number'&&_maxFootprintM2)?` · max footprint (K1) ${Math.round(_maxFootprintM2).toLocaleString()} m²`:''}${(typeof _maxFloorAreaM2==='number'&&_maxFloorAreaM2)?` · max floor area (K2) ${Math.round(_maxFloorAreaM2).toLocaleString()} m²`:''}.`);
-      if(owner&&owner!=='—')finding(`Registered owner(s): ${owner}. (Names romanized from Georgian; source: NAPR public registry.)`);
-      if(addr&&addr!=='—')finding(`Address: ${addr}.`);
+      H3('Site & ownership');
+      const bits=[];
+      const m2=_currentParcelAreaM2||0;if(m2)bits.push(`${Math.round(m2).toLocaleString()} m²`);
+      if(rp.type&&rp.type!=='—')bits.push(rp.type);
+      if(rp.ownershipType&&rp.ownershipType!=='—')bits.push(rp.ownershipType);
+      if(bits.length)P('Site: '+bits.join(' · ')+'.');
+      if(rp.address&&rp.address!=='—')P('Address: '+rp.address+'.');
+      const owners=rp.owners&&rp.owners.length?rp.owners:null;
+      if(owners){
+        P('Registered owner(s):');
+        owners.forEach(o=>P('   • '+[o.name,o.id&&('ID '+o.id),o.type].filter(Boolean).join(' · '),40));
+        src('Ownership: National Agency of Public Registry (NAPR), Georgia.');
+      } else if(rp.ownersRaw&&rp.ownersRaw!=='—'){P('Registered owner(s): '+rp.ownersRaw+'.');src('Ownership: National Agency of Public Registry (NAPR), Georgia.');}
     }
-    if(a.syntax||a.orient)sub('Street network & morphology');
-    if(a.syntax){const degs=_syntaxGJ.features.map(f=>Number(f.properties?.connectivity||0));finding(`Street network: ${degs.length} segments · ${_morphTotalKm(_syntaxGJ).toFixed(1)} km · mean node degree ${(degs.reduce((x,b)=>x+b,0)/Math.max(1,degs.length)).toFixed(2)}, max ${Math.max(...degs)}.`);}
-    if(a.orient)finding(`Street orientation: ${_orientGJ.features.length} ways${_orientDom?`, dominant axis ${_orientDom}`:''}.`);
-    if(a.transit||a.history||a.crashes||a.schools||a.kg)sub('Mobility & access');
-    if(a.history&&_histStats?.length){
-      const tot=_histStats.reduce((x,r)=>({m:x.m+Number(r.n_matched),ot:x.ot+Number(r.on_time),l:x.l+Number(r.late)}),{m:0,ot:0,l:0});
-      if(tot.m)finding(`Transit reliability (${_histRange?.from} → ${_histRange?.to}): ${Math.round(100*tot.ot/tot.m)}% on-time, ${Math.round(100*tot.l/tot.m)}% late (>5 min), across ${tot.m.toLocaleString()} matched arrivals at ${_histStats.length} stop-route pairs.`);
-    } else if(a.transit)finding(`Public transport: ${_ttcRenderedStops?.length||0} stops within the study area.`);
-    if(a.crashes)finding('Road incidents layer active (2019–2023 crash records, see map).');
-    if(a.schools||a.kg)finding(`Education access: ${[a.schools&&'public schools',a.kg&&'kindergartens'].filter(Boolean).join(' and ')} within reach shown on the area map.`);
+    // Zoning
+    if(a.zoning){
+      H3('Zoning & development limits');
+      const zl=_rptCardLines('pfc-zones-list');
+      if(zl.length)P(zl.join(' · '));
+      const kbits=[];
+      if(typeof _maxFootprintM2==='number'&&_maxFootprintM2)kbits.push(`max footprint (K1) ${Math.round(_maxFootprintM2).toLocaleString()} m²`);
+      if(typeof _maxFloorAreaM2==='number'&&_maxFloorAreaM2)kbits.push(`max floor area (K2) ${Math.round(_maxFloorAreaM2).toLocaleString()} m²`);
+      if(_noDevZone)kbits.push('area not designated for development');
+      if(kbits.length)P('Limits: '+kbits.join(' · ')+'.');
+      src('Zoning: Tbilisi Municipality functional-zone WFS; K-coefficient limits per zone.');
+    }
+    // Morphology
+    if(a.syntax||a.orient){
+      H3('Street network & morphology');
+      if(a.syntax){const degs=_syntaxGJ.features.map(f=>Number(f.properties?.connectivity||0));
+        P(`Connectivity: ${degs.length} segments · ${_morphTotalKm(_syntaxGJ).toFixed(1)} km · mean node degree ${(degs.reduce((x,b)=>x+b,0)/Math.max(1,degs.length)).toFixed(2)}, max ${Math.max(...degs)}.`);
+        legend([['#3b82f6','≤1'],['#22c55e','2–3'],['#f97316','4–5'],['#ef4444','≥6']]);}
+      if(a.orient){P(`Orientation: ${_orientGJ.features.length} street ways${_orientDom?`, dominant axis ${_orientDom}`:''}.`);}
+      if(a.osm){const ol=_rptCardLines('osm-legend');if(ol.length)P('Urban functions: '+ol.join(' · '));}
+      src('Street network & functions: © OpenStreetMap contributors (Overpass API).');
+    }
+    // Relief / slope / aspect
+    if(a.relief||_rptCardLines('pro-cat-relief-content').length){
+      const rl=_rptCardLines('pro-cat-relief-content');
+      if(rl.length){H3('Relief · slope · aspect');
+        P(rl.join(' · '));
+        legend(t().slopeClasses.map((c,i)=>[t().slopeClassColors[i],c.l+' '+c.r]));
+        src('Elevation: digital terrain model (30 m); slope and aspect derived on the fly.');}
+    }
+    // Solar / energy
+    {const sl=_rptCardLines('solar-result');
+     if(a.wind||sl.length||_windData){
+       H3('Energy potential');
+       if(sl.length)P('Solar: '+sl.join(' · '));
+       if(_windData){const wd=_windData;P(`Wind: ${wd.speed?wd.speed.toFixed(1)+' m/s mean':''}${wd.powerDensity?` · ${Math.round(wd.powerDensity)} W/m²`:''}${wd.annualYield?` · ${Math.round(wd.annualYield).toLocaleString()} kWh/yr (5 kW ref.)`:''}.`);}
+       src('Solar: slope/aspect irradiation model on the DTM. Wind: Global Wind Atlas / Open-Meteo.');
+     }}
+    // Climate
+    if(a.canopy||a.lst){
+      H3('Climate & land cover');
+      const cl=_rptCardLines('acc-canopy-result');if(cl.length)P('Tree canopy: '+cl.join(' · '));
+      const ll=_rptCardLines('acc-lst-result');if(ll.length)P('Land surface temperature: '+ll.join(' · '));
+      if(a.canopy)src('Tree canopy: ESA WorldCover 10 m (2021).');
+      if(a.lst)src('Land surface temperature: Landsat-derived raster.');
+    }
+    // Mobility & access
+    if(a.transit||a.history||a.crashes||a.schools||a.kg){
+      H3('Mobility & access');
+      if(a.history&&_histStats?.length){
+        const tot=_histStats.reduce((x,r)=>({m:x.m+Number(r.n_matched),ot:x.ot+Number(r.on_time),l:x.l+Number(r.late)}),{m:0,ot:0,l:0});
+        if(tot.m){P(`Transit reliability (${_histRange?.from} → ${_histRange?.to}, ${t().hist.days[_histDaytype]}/${t().hist.bands[_histBand]}): ${Math.round(100*tot.ot/tot.m)}% on-time, ${Math.round(100*tot.l/tot.m)}% late (>5 min), ${tot.m.toLocaleString()} matched arrivals at ${_histStats.length} stop-route pairs.`);
+        legend([[_HIST_OK,'≥80%'],[_HIST_WARN,'60–80%'],[_HIST_BAD,'<60%']]);}
+        src('Transit reliability: TTC vehicle positions archived every 2 min; arrivals interpolated (±1 min), matched to timetable (on-time −60…+300 s); stops with <30 obs excluded.');
+      } else if(a.transit){P(`Public transport: ${_ttcRenderedStops?.length||0} stops within the study area.`);src('Transit stops: Tbilisi Transport Company (TTC).');}
+      if(a.crashes){P('Road incidents layer active (see map).');src('Road incidents: Ministry of Internal Affairs crash records.');}
+      if(a.schools||a.kg){P(`Education access: ${[a.schools&&'public schools',a.kg&&'kindergartens'].filter(Boolean).join(' and ')} shown on the area map.`);src('Education facilities: open municipal datasets.');}
+    }
+    if(a.isochrone)src(`Catchment: ${_accMinutes||10}-minute ${_accMode||'walking'} isochrone (Mapbox Isochrone API).`);
 
-    // ── Methodology ──
-    ensure(26);
-    y+=2;line('Methodology & sources',10.5,20,5);
-    doc.setFontSize(7);doc.setTextColor(130);
-    const meth=[];
-    if(a.isochrone)meth.push(`Catchment: ${_accMinutes||10}-minute ${_accMode||'walking'} isochrone (Mapbox Isochrone API).`);
-    if(a.zoning)meth.push('Zoning: Tbilisi functional zones (municipal WFS); K-coefficient limits per zone.');
-    if(a.syntax||a.orient)meth.push('Street network from OpenStreetMap (Overpass). Connectivity = junction node degree; orientation = length-weighted bearings in 10° bins. © OpenStreetMap contributors.');
-    if(a.history)meth.push('Transit reliability derived from TTC vehicle positions archived every 2 min; arrivals interpolated (±1 min) and matched to timetables (on-time = −60s…+300s). Stops with <30 observations excluded.');
-    if(a.canopy)meth.push('Tree canopy: ESA WorldCover 10 m (2021).');
-    if(a.lst)meth.push('Land surface temperature: Landsat-derived raster.');
-    if(a.crashes)meth.push('Road incidents: MIA crash records, point-mapped.');
-    meth.push('Maps: © Mapbox © OpenStreetMap. Figures are planning-level estimates generated by Urbanyx.');
-    doc.text(doc.splitTextToSize(meth.join(' '),178),M,y);
+    // ── Sources (ordered by appearance) ──
+    if(sources.length){
+      H2('Sources');
+      doc.setFontSize(7.5);doc.setTextColor(120);setF();
+      sources.forEach((s,i)=>{const ls=doc.splitTextToSize(`${i+1}.  ${s}`,PW-M*2);ensure(ls.length*3.6+1);doc.text(ls,M,y);y+=ls.length*3.6+1;});
+    }
+
+    // ── Footer: logo (bottom-left) + page number (bottom-right) on every page ──
+    const logo=await _svgToPng('analysis-logos/urbanyx-zaxis-logo.svg',260).catch(()=>null);
+    const n=doc.getNumberOfPages();
+    for(let i=1;i<=n;i++){
+      doc.setPage(i);
+      doc.setDrawColor(225);doc.line(M,283,PW-M,283);
+      if(logo){const lw=20,lh=lw*(logo.h/logo.w);doc.addImage(logo.url,'PNG',M,285-lh+2,lw,lh);}
+      doc.setFontSize(7);doc.setTextColor(150);setF();
+      doc.text(`Page ${i} / ${n}`,PW-M,289,{align:'right'});
+      doc.text('urbanyx.zaxis.ge',PW/2,289,{align:'center'});
+    }
     logFeatureUse('pdf_export').catch(()=>{});
     doc.save('urbanyx_report.pdf');
   }catch(e){console.warn('report pdf:',e);showToast('PDF failed: '+(e.message||''));}
@@ -12141,4 +12223,54 @@ async function _rptExportGeoTIFF(){
     }catch(e){console.warn('geotiff dl:',n,e);}
   }
   logFeatureUse('geojson_export').catch(()=>{});
+}
+
+// ── Report helpers: font, logo raster, metric scraping ───────────────────────
+let _rptFontB64=null;
+async function _rptLoadFont(doc){
+  // Noto Sans Georgian covers Latin + Georgian; Helvetica has no Georgian glyphs.
+  try{
+    if(!_rptFontB64){
+      const urls=[
+        "https://cdn.jsdelivr.net/gh/notofonts/notofonts.github.io/fonts/NotoSansGeorgian/hinted/ttf/NotoSansGeorgian-Regular.ttf",
+        "https://fonts.gstatic.com/s/notosansgeorgian/v28/PlIaFke5O6RzLfvNNVSitxkr76PRHBC4Ytyq-Gof7PagevKo6oFpog.ttf",
+      ];
+      for(const u of urls){
+        try{const r=await fetch(u);if(r.ok){const buf=new Uint8Array(await r.arrayBuffer());let bin="";for(let i=0;i<buf.length;i+=8192)bin+=String.fromCharCode(...buf.subarray(i,i+8192));_rptFontB64=btoa(bin);break;}}catch(_){}
+      }
+    }
+    if(_rptFontB64){
+      doc.addFileToVFS("NotoGeo.ttf",_rptFontB64);
+      doc.addFont("NotoGeo.ttf","NotoGeo","normal");
+      doc.addFont("NotoGeo.ttf","NotoGeo","bold"); // same file; jsPDF needs a bold slot
+      doc.setFont("NotoGeo","normal");
+      return true;
+    }
+  }catch(e){console.warn("[report] font load:",e);}
+  return false;
+}
+
+// Rasterize an SVG asset to a PNG data URL (jsPDF can't embed SVG directly)
+function _svgToPng(url,targetW){
+  return new Promise((resolve)=>{
+    const img=new Image();
+    img.crossOrigin="anonymous";
+    img.onload=()=>{
+      const scale=targetW/(img.width||64);
+      const c=document.createElement("canvas");
+      c.width=targetW;c.height=Math.round((img.height||64)*scale);
+      const ctx=c.getContext("2d");
+      ctx.drawImage(img,0,0,c.width,c.height);
+      try{resolve({url:c.toDataURL("image/png"),w:c.width,h:c.height});}catch(_){resolve(null);}
+    };
+    img.onerror=()=>resolve(null);
+    img.src=url;
+  });
+}
+
+// Pull the rendered metric lines out of an analysis card (label:value text)
+function _rptCardLines(id){
+  const el=document.getElementById(id);
+  if(!el)return[];
+  return (el.innerText||"").split("\n").map(s=>s.trim()).filter(s=>s.length>1);
 }
