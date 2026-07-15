@@ -1,6 +1,6 @@
 # Urbanyx UI Translations — English ↔ Georgian
 
-Extracted from `app.js` (the `const T = { en:{...}, ka:{...} }` dictionary). 418 entries across 19 sections.
+Extracted from `app.js` (the `const T = { en:{...}, ka:{...} }` dictionary). 416 entries across 19 sections.
 
 Edit the **Georgian** column only — keep the **Key** column untouched, that's how edits get matched back to the source. Send the file back when done.
 
@@ -10,15 +10,15 @@ Edit the **Georgian** column only — keep the **Key** column untouched, that's 
 
 | Key | English | Georgian |
 |---|---|---|
-| `brand` | Urbanyx | ნაკვეთის ვიუერი |
+| `brand` | Urbanyx | Urbanyx |
 | `placeholder` | 01.15.07.002.057 | 01.15.07.002.057 |
 | `btn` | Search | ძიება |
 | `btnLoading` | ... | ... |
-| `searching` | Searching… | იძიება… |
+| `searching` | Searching… | ძებნა… |
 | `notFound` | Parcel not found. | ნაკვეთი ვერ მოიძებნა. |
 | `error` | Something went wrong. | შეცდომა. |
 | `found` | Parcel found | ნაკვეთი მოიძებნა |
-| `govGeDown` | maps.gov.ge unavailable — search by cadastral code | maps.gov.ge მიუწვდომელია — ძიებით ჩატვირთეთ ნაკვეთი |
+| `govGeDown` | maps.gov.ge unavailable — try again later... | maps.gov.ge მიუწვდომელია — სცადეთ მოგვიანებით... |
 | `code` | Cadastral | საკადასტრო კოდი |
 | `area` | Area | ფართობი |
 | `type` | Type | ტიპი |
@@ -29,69 +29,69 @@ Edit the **Georgian** column only — keep the **Key** column untouched, that's 
 | `lineCoverage` | Zone | ზონა |
 | `lineOwnership` | Ownership type | საკ. ტიპი |
 | `lineExtra` | Details | მახასიათებლები |
-| `parcelInfo` | Parcel Info | ნაკვეთის ინფო |
-| `analyseBtn` | Walkability Analysis | სიარულის ანალიზი |
+| `parcelInfo` | Parcel Info | ნაკვეთის შესახებ |
+| `analyseBtn` | Walkability Analysis | საფეხმავლო ანალიზი |
 | `freeBadge` | Free | უფასო |
-| `proAnalyseBtn` | Advanced Spatial Analysis | სივრცული ანალიზი |
-| `analysingIso` | 1/2 · Computing isochrone… | 1/2 · იზოქრონი იანგარიშება… |
-| `analysingOsm` | 2/2 · Counting amenities… | 2/2 · ობიექტები ითვლება… |
-| `analysingProIso` | 1/2 · Computing isochrone… | 1/2 · იზოქრონი იანგარიშება… |
+| `proAnalyseBtn` | Advanced Spatial Analysis | სივრცითი ანალიზი |
+| `analysingIso` | 1/2 · Computing isochrone… | 1/2 · იზოქრონის განსაზღვრა… |
+| `analysingOsm` | 2/2 · Counting amenities… | 2/2 · ობიექტების ძებნა... |
+| `analysingProIso` | 1/2 · Computing isochrone… | 1/2 · იზოქრონის განსაზღვრა… |
 | `analysingProLayers` | 2/2 · Fetching education & mobility data… | 2/2 · განათლება და მობილობის მონაცემები… |
 | `climateBtn` | Climate Analysis | კლიმატის ანალიზი |
 | `climateCardTitle` | Climate Analysis | კლიმატის ანალიზი |
 | `retrying` | Retrying… | ხელახლა ცდა… |
-| `analysisError` | Analysis failed — try again. | ანალიზი ვერ მოხერხდა. |
-| `isoTitle` | 10-Min Walking Zone | 10 წუთის სავალი ზონა |
-| `isoDesc` | Free walkable area from parcel | უფასო სიარულის არე |
-| `isoTitlePro` | 15-Min Walking Zone | 15 წუთის სავალი ზონა |
-| `isoDescPro` | Pro walkable area from parcel | Pro სიარულის არე |
+| `analysisError` | Analysis failed — try again. | ანალიზი შეუძლებელია. |
+| `isoTitle` | 10-Min Walking Zone | ფეხით სავალი 10-წუთიანი ზონა |
+| `isoDesc` | Free walkable area from parcel | საფეხმავლო ანალიზი - უფასო |
+| `isoTitlePro` | 15-Min Walking Zone | ფეხით სავალი 15-წუთიანი ზონა |
+| `isoDescPro` | Pro walkable area from parcel | საფეხმავლო ანალიზი - ფასიანი |
 | `scoreTitle` | Diversity Index | მრავალფეროვნების ინდექსი |
-| `outOf` | Shannon SDI | შენონის SDI |
-| `done` | Analysis complete | ანალიზი დასრულდა |
-| `proDone` | Pro analysis complete | Pro ანალიზი დასრულდა |
+| `outOf` | Shannon SDI | შენონის ინდექსი |
+| `done` | Analysis complete | ანალიზი განხორციელდა |
+| `proDone` | Pro analysis complete | ანალიზი განხორციელდა - ფასიანი |
 | `mapillaryTitle` | Street Imagery | ქუჩის სურათები |
 | `mapillaryNone` | No street imagery found nearby. | სურათები ვერ მოიძებნა. |
-| `analyzing` | Analyzing… | ანალიზი… |
+| `analyzing` | Analyzing… | მიმდინარეობს ანალიზი… |
 | `mapillaryNear` | Street imagery — within 20m of parcel | ქუჩის სურათები — ნაკვეთიდან 20მ-ში |
-| `mapillaryFar` | Street imagery — nearest in neighbourhood | ქუჩის სურათები — უახლოესი სამეზობლოში |
+| `mapillaryFar` | Street imagery — nearest in neighbourhood | ქუჩის სურათები — უახლოეს სამეზობლოში |
 | `mapillaryOpen` | Click image to open in Mapillary | სურათზე დაჭერით გაიხსნება Mapillary |
-| `proLayersTitle` | Advanced Spatial Analysis | სივრცული ანალიზი |
-| `planFree` | Free plan | უფასო გეგმა |
-| `planPro` | Pro plan | Pro გეგმა |
+| `proLayersTitle` | Advanced Spatial Analysis | სივრცითი ანალიზი |
+| `planFree` | Free plan | უფასო სერვისი |
+| `planPro` | Pro plan | ფასიანი სერვისი |
 | `upgrade` | Upgrade | განახლება |
 | `billing` | Billing | ბილინგი |
 | `signOut` | Sign out | გასვლა |
 | `centerSignIn` | Sign in | შესვლა |
 | `centerSignUp` | Create account | ანგარიშის შექმნა |
-| `orClick` | click or draw on the map | დააჭირეთ ან დახატეთ რუკაზე |
-| `accessibilityTitle` | Accessibility Analysis | ხელმისაწვდომობის ანალიზი |
+| `orClick` | click or draw on the map | დააკლიკეთ ან მოხაზეთ რუკაზე |
+| `accessibilityTitle` | Accessibility Analysis | მისაწვდომობის ანალიზი |
 | `accModeLabel` | Transport mode | სატრანსპორტო საშუალება |
 | `accTimeLabel` | Travel time | გადაადგილების დრო |
-| `accGenerate` | Generate Isochrone | იზოქრონის გენერაცია |
-| `accNoIso` | Generate an isochrone first | ჯერ გენერირეთ იზოქრონი |
-| `ttcAreaSmall` | Area under 5,000 m² — generate an isochrone first | არეალი 5,000 კვ.მ-ზე ნაკლებია — ჯერ გენერირეთ იზოქრონი |
+| `accGenerate` | Generate Isochrone | იზოქრონის შექმნა |
+| `accNoIso` | Generate an isochrone first | ჯერ შექმენით იზოქრონი |
+| `ttcAreaSmall` | Area under 5,000 m² — generate an isochrone first | არეალი 5,000 კვ.მ-ზე ნაკლებია — ჯერ შექმენით იზოქრონი |
 | `ttcAoiLabel` | Study area | საკვლევი არეალი |
 | `ttcTitle` | Transit | ტრანსპორტი |
-| `ttcNearby` | Public Transport | საჯარო ტრანსპორტი |
-| `ttcNoStops` | No stops in isochrone | იზოქრონში გაჩერება არ არის |
-| `ttcNoArrivals` | No upcoming arrivals | მომდევნო ჩამოსვლა არ არის |
-| `ttcOnTime` | on time | დროულად |
+| `ttcNearby` | Public Transport | საზოგადოებრივი ტრანსპორტი |
+| `ttcNoStops` | No stops in isochrone | მოცემულ იზოქრონში გაჩერება არ გვხვდება |
+| `ttcNoArrivals` | No upcoming arrivals | არ არის დაგეგმილი მგზავრობები |
+| `ttcOnTime` | on time | გრაფიკის მიხედვით |
 | `ttcLoading` | Loading... | იტვირთება... |
-| `reliefLoading` | Loading DTM… | DTM იტვირთება… |
+| `reliefLoading` | Loading DTM… | იტვირთება რელიეფის ციფრული მოდელი… |
 | `reliefMin` | Min | მინ |
 | `reliefMax` | Max | მაქს |
 | `reliefMean` | Mean | საშ |
-| `solarSuitability` | Solar suitability | მზის პოტენციალი |
+| `solarSuitability` | Solar suitability | მზის ენერგიის პოტენციალი |
 | `solarDesc` | South-facing (135–225°), slope ≤ 30° | სამხ. (135–225°), დახ. ≤ 30° |
 | `windBtn` | Wind Analysis | ქარის ანალიზი |
 | `windCardTitle` | Wind Analysis | ქარის ანალიზი |
-| `windSpeed` | Mean wind speed | საშ. ქარის სიჩქარე |
+| `windSpeed` | Mean wind speed | ქარის საშ. სიჩქარე |
 | `windPowerDensity` | Power density | სიმძლავრის სიმჭიდროვე |
 | `windCapFactor` | Capacity factor | სიმძლავრის კოეფ. |
 | `windYield` | Est. annual yield | სავარ. წლ. გამომუშავება |
 | `windRefTurbine` | 5 kW ref. turbine · 30m hub | 5 კვტ ეტ. ტურბინა · 30მ სიმაღლე |
-| `windChecking` | Checking surroundings… | გარემო შემოწმება… |
-| `windBuildings` | Buildings within 500m — site not suitable for wind turbines | 500 მ. რადიუსში შენობებია — ქარის ტურბინა არ არის რეკომენდებული |
+| `windChecking` | Checking surroundings… | გარემოს შემოწმება… |
+| `windBuildings` | Buildings within 500m — site not suitable for wind turbines | 500 მ. რადიუსში შენობები გვხვდება — ქარის ტურბინა ამ არეალში ვერ დაიდგმება |
 | `windRose` | Wind rose | ქარის ვარდი |
 | `polySelectBtn` | Draw | დახატვა |
 | `polySelectBtnActive` | Cancel | გაუქმება |
@@ -149,7 +149,7 @@ Edit the **Georgian** column only — keep the **Key** column untouched, that's 
 
 | Key | English | Georgian |
 |---|---|---|
-| `cats.food.label` | Food & drink | საკვები და სასმელი |
+| `cats.food.label` | Food & drink | საკვები ობიექტები |
 | `cats.food.icon` | 🍽 | 🍽 |
 | `cats.health.label` | Health | ჯანდაცვა |
 | `cats.health.icon` | 🏥 | 🏥 |
@@ -168,7 +168,7 @@ Edit the **Georgian** column only — keep the **Key** column untouched, that's 
 | `proCats.schools.icon` | 🏫 | 🏫 |
 | `proCats.kindergartens.label` | Kindergartens | საბავშვო ბაღები |
 | `proCats.kindergartens.icon` | 🧒 | 🧒 |
-| `proCats.crashes.label` | Road incidents | საგზაო ინციდენტები |
+| `proCats.crashes.label` | Road incidents | საგზაო უსაფრთხოება |
 | `proCats.crashes.icon` | ⚠️ | ⚠️ |
 
 ## proCategories (6)
@@ -186,9 +186,9 @@ Edit the **Georgian** column only — keep the **Key** column untouched, that's 
 
 | Key | English | Georgian |
 |---|---|---|
-| `accModes.walking` | Walking | სიარული |
-| `accModes.cycling` | Cycling | ველოსიპედი |
-| `accModes.driving` | Driving | ავტომობილი |
+| `accModes.walking` | Walking | ფეხით |
+| `accModes.cycling` | Cycling | ველოსიპედით |
+| `accModes.driving` | Driving | ავტომობილით |
 
 ## reliefTypes (3)
 
@@ -196,13 +196,13 @@ Edit the **Georgian** column only — keep the **Key** column untouched, that's 
 |---|---|---|
 | `reliefTypes.height` | Height | სიმაღლე |
 | `reliefTypes.slope` | Slope | დახრა |
-| `reliefTypes.aspect` | Aspect | ორიენტაცია |
+| `reliefTypes.aspect` | Aspect | სივრცითი ორიენტაცია |
 
 ## reliefUnits (3)
 
 | Key | English | Georgian |
 |---|---|---|
-| `reliefUnits.height` | m a.s.l. | მ ა.დ. |
+| `reliefUnits.height` | m a.s.l. | მ ზ.დ. |
 | `reliefUnits.slope` | ° | ° |
 | `reliefUnits.aspect` | ° | ° |
 
@@ -210,15 +210,15 @@ Edit the **Georgian** column only — keep the **Key** column untouched, that's 
 
 | Key | English | Georgian |
 |---|---|---|
-| `slopeClasses.[0].l` | Flat | ბარი |
+| `slopeClasses.[0].l` | Flat | სწორი |
 | `slopeClasses.[0].r` | <3° | <3° |
-| `slopeClasses.[1].l` | Gentle | ვარდნილი |
+| `slopeClasses.[1].l` | Gentle | ოდნავ დახრილი |
 | `slopeClasses.[1].r` | 3–8° | 3–8° |
-| `slopeClasses.[2].l` | Moderate | საშუალო |
+| `slopeClasses.[2].l` | Moderate | საშუალოდ დახრილი |
 | `slopeClasses.[2].r` | 8–15° | 8–15° |
 | `slopeClasses.[3].l` | Steep | ციცაბო |
 | `slopeClasses.[3].r` | 15–30° | 15–30° |
-| `slopeClasses.[4].l` | Very steep | ძ.ციცაბო |
+| `slopeClasses.[4].l` | Very steep | ძალიან ციცაბო |
 | `slopeClasses.[4].r` | >30° | >30° |
 
 ## slopeClassColors (5)
@@ -256,14 +256,14 @@ Edit the **Georgian** column only — keep the **Key** column untouched, that's 
 | `auth.siCreate` | Create account |  |
 | `auth.siFooter` | <a onclick="showView('view-reset')">Forgot password?</a> · <a onclick="showView('view-signup')">Create account</a> | <a onclick="showView('view-reset')">პაროლი დაგავიწყდა?</a> · <a onclick="showView('view-signup')">ანგარიშის შექმნა</a> |
 | `auth.suTitle` | Create account | ანგარიშის შექმნა |
-| `auth.suSub` | Includes a free 14-day Pro trial — no payment needed | მოიცავს უფასო 14-დღიან Pro პერიოდს — ბარათი არ სჭირდება |
-| `auth.suName` | Full name | სახელი |
+| `auth.suSub` | Includes a free 14-day Pro trial — no payment needed | მოიცავს ფასიანი ვერსიის 14-დღიან საცდელ პერიოდს — ბარათი არ არის საჭირო |
+| `auth.suName` | Full name | სრული სახელი |
 | `auth.suSector` | Sector | სექტორი |
-| `auth.suSectorPh` | Select your sector | აირჩიე სექტორი |
+| `auth.suSectorPh` | Select your sector | აირჩიე |
 | `auth.suSectors.[0]` | Architecture / Urban Design | არქიტექტურა / ურბანული დიზაინი |
 | `auth.suSectors.[1]` | Engineering | ინჟინერია |
 | `auth.suSectors.[2]` | Real Estate / Development | უძრავი ქონება / დეველოპმენტი |
-| `auth.suSectors.[3]` | Government / Public Sector | მთავრობა / საჯარო სექტორი |
+| `auth.suSectors.[3]` | Government / Public Sector | სამთავრობო ორგანიზაცია / საჯარო სექტორი |
 | `auth.suSectors.[4]` | Academic / Research | აკადემია / კვლევა |
 | `auth.suSectors.[5]` | Urban Planning | ურბანული დაგეგმარება |
 | `auth.suSectors.[6]` | Construction | მშენებლობა |
@@ -273,10 +273,10 @@ Edit the **Georgian** column only — keep the **Key** column untouched, that's 
 | `auth.suOrg` | Organisation (optional) | ორგანიზაცია (არასავალდებულო) |
 | `auth.suRole` | Role / Job title | როლი / პოზიცია |
 | `auth.suPurpose` | Purpose of use | გამოყენების მიზანი |
-| `auth.suPurposePh` | Select your purpose | აირჩიე მიზანი |
-| `auth.suPurposes.[0]` | Site analysis | ადგილის ანალიზი |
+| `auth.suPurposePh` | Select your purpose | აირჩიე |
+| `auth.suPurposes.[0]` | Site analysis | გეოგრაფიული ანალიზი |
 | `auth.suPurposes.[1]` | Urban planning & research | ურბანული დაგეგმარება და კვლევა |
-| `auth.suPurposes.[2]` | Investment / Due diligence | ინვესტიცია / დიუ-დილიჯენსი |
+| `auth.suPurposes.[2]` | Investment / Due diligence | ინვესტიცია / ყოვლისმომცველი ანალიზი |
 | `auth.suPurposes.[3]` | Academic research | აკადემიური კვლევა |
 | `auth.suPurposes.[4]` | Professional services | პროფესიული მომსახურება |
 | `auth.suPurposes.[5]` | Personal interest | პირადი ინტერესი |
@@ -293,7 +293,7 @@ Edit the **Georgian** column only — keep the **Key** column untouched, that's 
 | `auth.resetBtn` | Send reset link | ბმულის გაგზავნა |
 | `auth.resetBack` | ← Back | ← უკან |
 | `auth.resetSent` | Reset link sent — check your inbox. | ბმული გაიგზავნა — შეამოწმე ელ-ფოსტა. |
-| `auth.errFill` | Please fill in all fields. | შეავსე ყველა ველი. |
+| `auth.errFill` | Please fill in all fields. | გთხოვთ, შეავსე ყველა ველი. |
 | `auth.errPassword` | Password must be at least 8 characters. | პაროლი უნდა იყოს მინიმუმ 8 სიმბოლო. |
 | `auth.errTerms` | You must accept the Terms & Conditions to continue. | გასაგრძელებლად საჭიროა წესებსა და პირობებზე თანხმობა. |
 | `auth.suTerms` | I have read and agree to the <a href="/terms" target="_blank" style="color:#818cf8;text-decoration:underline">Terms & Conditions</a> and <a href="/privacy" target="_blank" style="color:#818cf8;text-decoration:underline">Privacy Policy</a>, including the 14-day free trial and automatic billing after the trial period. | წავიკითხე და ვეთანხმები <a href="/terms" target="_blank" style="color:#818cf8;text-decoration:underline">წესებსა და პირობებს</a> და <a href="/privacy" target="_blank" style="color:#818cf8;text-decoration:underline">კონფიდენციალურობის პოლიტიკას</a>, 14-დღიანი საცდელი პერიოდის ჩათვლით, და ავტომატური ბილინგის ციკლს. |
@@ -304,12 +304,12 @@ Edit the **Georgian** column only — keep the **Key** column untouched, that's 
 | `auth.updatePwBtn` | Update password | პაროლის განახლება |
 | `auth.pwUpdated` | Password updated — you're signed in | პაროლი განახლდა — შესული ხართ |
 
-## pw (65)
+## pw (63)
 
 | Key | English | Georgian |
 |---|---|---|
-| `pw.title` | Upgrade to Pro | Pro-ზე გადასვლა |
-| `pw.sub` | Every new account starts with a 14-day Pro trial (300 analysis tokens). | შექმენი უფასო ანგარიში 50 ნაკვეთის ხედვისა და 50 ანალიზისთვის. Pro აძლევს ულიმიტო წვდომასა და პრემიუმ ფუნქციებს. |
+| `pw.title` | Upgrade to Pro | ფასიან ვერსიაზე გადასვლა |
+| `pw.sub` | Every new account starts with a 14-day Pro trial (300 analysis tokens). | შექმენი უფასო ანგარიში და მიიღე ანალიზის 50 ტოკენი. ფასიანი ვერსია გაძლევს ანალიზის 1000 ტოკენს და სხვა პრემიუმ ფუნქციებს. |
 | `pw.freeName` | Free | უფასო |
 | `pw.proBadge` | Pro | Pro |
 | `pw.proName` | Pro | Pro |
@@ -325,41 +325,39 @@ Edit the **Georgian** column only — keep the **Key** column untouched, that's 
 | `pw.r1` | Parcel-level analysis | ნაკვეთის ანალიზი |
 | `pw.f1` | 50 | 50 |
 | `pw.p1` | 1000 | 1000 |
-| `pw.r2` | Zoning analysis<br><small style='opacity:.45;font-size:.9em'>Tbilisi only</small> | ზონირების ანალიზი<br><small style='opacity:.45;font-size:.9em'>თბილისი თავ</small> |
+| `pw.r2` | Zoning analysis<br><small style='opacity:.45;font-size:.9em'>Tbilisi only</small> | ზონირების ანალიზი<br><small style='opacity:.45;font-size:.9em'>მხოლოდ თბილისი</small> |
 | `pw.f2` | 50 | 50 |
 | `pw.p2` | 1000 | 1000 |
-| `pw.r3` | Plan on your own | საკუთარი გეგმის შედგენა |
+| `pw.r3` | Plan on your own | შექმენი სივრცითი გეგმა |
 | `pw.f3` | — | — |
 | `pw.p3` | ✓ | ✓ |
-| `pw.r4` | Street imagery | ქუჩის გამოსახულება |
+| `pw.r4` | Street imagery | ქუჩის სურათები |
 | `pw.f4` | ✓ | ✓ |
 | `pw.p4` | ✓ | ✓ |
-| `pw.r5` | Urban mobility analysis<br><small style='opacity:.45;font-size:.9em'>Tbilisi only</small> | ურბანული მობილობა<br><small style='opacity:.45;font-size:.9em'>თბილისი თავ</small> |
+| `pw.r5` | Urban mobility analysis<br><small style='opacity:.45;font-size:.9em'>Tbilisi only</small> | ურბანული მობილობა<br><small style='opacity:.45;font-size:.9em'>მხოლოდ თბილისი</small> |
 | `pw.f5` | — | — |
 | `pw.p5` | ✓ | ✓ |
-| `pw.r6` | Space syntax analysis | სივრცული სინტაქსი |
+| `pw.r6` | Space syntax analysis | სივრცითი სინტაქსი |
 | `pw.f6` | ✓ | ✓ |
 | `pw.p6` | ✓ | ✓ |
-| `pw.r7` | Urban diversity score | ურბანული მრავალპეროვნება |
-| `pw.f7` | — | — |
+| `pw.r7` | Urban functional diversity | ურბანული ფუნქციური მრავალფეროვნება |
+| `pw.f7` | — | ✓ |
 | `pw.p7` | ✓ | ✓ |
-| `pw.r8` | Climate analysis | კლიმატის ანალიზი |
+| `pw.r8` | Climate analysis <br><small style='opacity:.45;font-size:.9em'>Georgia partial, Tbilisi fully</small> | კლიმატის ანალიზი<br><small style='opacity:.45;font-size:.9em'>საქართველო ნაწილობრივ, თბილისი სრულად</small> |
 | `pw.f8` | — | — |
 | `pw.p8` | ✓ | ✓ |
-| `pw.r9` | Energy efficiency | ენერგოეფურობა |
+| `pw.r9` | Energy efficiency<br><small style='opacity:.45;font-size:.9em'>Georgia partial, Tbilisi fully</small> | ენერგოეფექტურობა<br><small style='opacity:.45;font-size:.9em'>საქართველო ნაწილობრივ, თბილისი სრულად</small> |
 | `pw.f9` | — | — |
 | `pw.p9` | ✓ | ✓ |
-| `pw.r10` | Relief analysis<br><small style='opacity:.45;font-size:.9em'>Tbilisi only</small> | რელიევის ანალიზი<br><small style='opacity:.45;font-size:.9em'>თბილისი თავ</small> |
+| `pw.r10` | Relief analysis<br><small style='opacity:.45;font-size:.9em'>Tbilisi only</small> | რელიეფის ანალიზი<br><small style='opacity:.45;font-size:.9em'>მხოლოდ თბილისი</small> |
 | `pw.f10` | — | — |
 | `pw.p10` | ✓ | ✓ |
-| `pw.cta` | Upgrade to Pro | Pro-ზე გადასვლა |
+| `pw.cta` | Upgrade to Pro | ფასიანზე გადასვლა |
 | `pw.notSignedIn` | No account? | ანგარიში არ გაქვს? |
 | `pw.createFirst` | Create a free account | შექმენი უფასო ანგარიში |
-| `pw.comingSoon` | Payment coming soon! Contact us to upgrade manually. | გადახდა მალე! დაგვიკავშირდი Pro-ზე გადასასვლელად. |
-| `pw.trialNote` | 14-day free trial included | მოიცავს 14-დღიან უფასო პერიოდს |
-| `pw.trialTitle` | Upgrade to keep your Pro access | განაახლე Pro წვდომის შესანარჩუნებლად |
-| `pw.trialSub` | Your trial ends in X days. Subscribe now to keep climate analysis, GeoData export, and extended isochrone. | საცდელი პერიოდი სრულდება X დღეში. გამოიწერე ახლა კლიმატის ანალიზის, GeoData ექსპორტის და გაფართოებული იზოქრონის შესანარჩუნებლად. |
-| `pw.billingComingSoon` | Billing portal coming soon. | ბილინგის პორტალი მალე. |
+| `pw.trialNote` | 14-day free trial included | მოიცავს ფასიანი ვერსიის 14-დღიან საცდელ პერიოდს |
+| `pw.trialTitle` | Upgrade to keep your Pro access | წვდომის შესანარჩუნებლად განაახლე ფასიანი ვერსია |
+| `pw.trialSub` | Your trial ends in X days. Subscribe now to keep extensive spatial analysis, report and data export features. | საცდელი პერიოდი სრულდება X დღეში. გამოიწერე ახლა სრულყოფილი სივრცითი ანალიზის, . |
 | `pw.freeLimitTitle` | Free limit reached | ლიმიტი ამოიწურა |
 | `pw.freeLimitSub` | You’ve used your 50 parcel views this month. Upgrade to Pro for up to 1,000. | გამოიყენე ამ თვის 50 ნაკვეთის ხედვა. Pro გაძლევს 1,000-მდე ყოველთვიურად. |
 | `pw.freeAnalysisLimitTitle` | Free limit reached | ლიმიტი ამოიწურა |

@@ -1,7 +1,7 @@
 {
   "brand": {
     "en": "Urbanyx",
-    "ka": "ნაკვეთის ვიუერი"
+    "ka": "Urbanyx"
   },
   "placeholder": {
     "en": "01.15.07.002.057",
@@ -17,7 +17,7 @@
   },
   "searching": {
     "en": "Searching…",
-    "ka": "იძიება…"
+    "ka": "ძებნა…"
   },
   "notFound": {
     "en": "Parcel not found.",
@@ -32,8 +32,8 @@
     "ka": "ნაკვეთი მოიძებნა"
   },
   "govGeDown": {
-    "en": "maps.gov.ge unavailable — search by cadastral code",
-    "ka": "maps.gov.ge მიუწვდომელია — ძიებით ჩატვირთეთ ნაკვეთი"
+    "en": "maps.gov.ge unavailable — try again later...",
+    "ka": "maps.gov.ge მიუწვდომელია — სცადეთ მოგვიანებით..."
   },
   "code": {
     "en": "Cadastral",
@@ -69,7 +69,7 @@
   },
   "lineOwnership": {
     "en": "Ownership type",
-    "ka": "საკ. ტიპი"
+    "ka": "საკუთრების ტიპი"
   },
   "lineExtra": {
     "en": "Details",
@@ -77,35 +77,35 @@
   },
   "parcelInfo": {
     "en": "Parcel Info",
-    "ka": "ნაკვეთის ინფო"
+    "ka": "ნაკვეთის შესახებ"
   },
   "analyseBtn": {
     "en": "Walkability Analysis",
-    "ka": "სიარულის ანალიზი"
+    "ka": "საფეხმავლო ანალიზი"
   },
   "freeBadge": {
     "en": "Free",
     "ka": "უფასო"
   },
   "proAnalyseBtn": {
-    "en": "Advanced Spatial Analysis",
-    "ka": "სივრცული ანალიზი"
+    "en": "Advanced Geospatial Analysis",
+    "ka": "სრულყოფილი სივრცითი ანალიზი"
   },
   "analysingIso": {
     "en": "1/2 · Computing isochrone…",
-    "ka": "1/2 · იზოქრონი იანგარიშება…"
+    "ka": "1/2 · იზოქრონის განსაზღვრა…"
   },
   "analysingOsm": {
     "en": "2/2 · Counting amenities…",
-    "ka": "2/2 · ობიექტები ითვლება…"
+    "ka": "2/2 · ობიექტების ძებნა..."
   },
   "analysingProIso": {
     "en": "1/2 · Computing isochrone…",
-    "ka": "1/2 · იზოქრონი იანგარიშება…"
+    "ka": "1/2 · იზოქრონის განსაზღვრა…"
   },
   "analysingProLayers": {
     "en": "2/2 · Fetching education & mobility data…",
-    "ka": "2/2 · განათლება და მობილობის მონაცემები…"
+    "ka": "2/2 · განათლებისა და მობილობის მონაცემების შეგროვება…"
   },
   "climateBtn": {
     "en": "Climate Analysis",
@@ -117,27 +117,27 @@
   },
   "retrying": {
     "en": "Retrying…",
-    "ka": "ხელახლა ცდა…"
+    "ka": "ხელახალი მცდელობა…"
   },
   "analysisError": {
     "en": "Analysis failed — try again.",
-    "ka": "ანალიზი ვერ მოხერხდა."
+    "ka": "ანალიზი შეუძლებელია - სცადე ხელახლა."
   },
   "isoTitle": {
     "en": "10-Min Walking Zone",
-    "ka": "10 წუთის სავალი ზონა"
+    "ka": "ფეხით სავალი 10-წუთიანი ზონა"
   },
   "isoDesc": {
     "en": "Free walkable area from parcel",
-    "ka": "უფასო სიარულის არე"
+    "ka": "ნაკვეთიდან განსაზღვრული საფეხმავლო ანალიზი - უფასო"
   },
   "isoTitlePro": {
     "en": "15-Min Walking Zone",
-    "ka": "15 წუთის სავალი ზონა"
+    "ka": "ფეხით სავალი 15-წუთიანი ზონა"
   },
   "isoDescPro": {
     "en": "Pro walkable area from parcel",
-    "ka": "Pro სიარულის არე"
+    "ka": "ნაკვეთიდან განსაზღვრული საფეხმავლო ანალიზი - Pro"
   },
   "scoreTitle": {
     "en": "Diversity Index",
@@ -145,15 +145,15 @@
   },
   "outOf": {
     "en": "Shannon SDI",
-    "ka": "შენონის SDI"
+    "ka": "შენონის ინდექსი"
   },
   "done": {
     "en": "Analysis complete",
-    "ka": "ანალიზი დასრულდა"
+    "ka": "ანალიზი განხორციელდა"
   },
   "proDone": {
     "en": "Pro analysis complete",
-    "ka": "Pro ანალიზი დასრულდა"
+    "ka": "პრემიუმ ანალიზი განხორციელდა"
   },
   "mapillaryTitle": {
     "en": "Street Imagery",
@@ -161,27 +161,27 @@
   },
   "mapillaryNone": {
     "en": "No street imagery found nearby.",
-    "ka": "სურათები ვერ მოიძებნა."
+    "ka": "ქუჩის სურათები ვერ მოიძებნა."
   },
   "analyzing": {
     "en": "Analyzing…",
-    "ka": "ანალიზი…"
+    "ka": "მიმდინარეობს ანალიზი…"
   },
   "mapillaryNear": {
-    "en": "Street imagery — within 20m of parcel",
-    "ka": "ქუჩის სურათები — ნაკვეთიდან 20მ-ში"
+    "en": "Street imagery — within 20 meters of parcel",
+    "ka": "ქუჩის სურათები — ნაკვეთიდან 20 მეტრის მანძილზე"
   },
   "mapillaryFar": {
-    "en": "Street imagery — nearest in neighbourhood",
-    "ka": "ქუჩის სურათები — უახლოესი სამეზობლოში"
+    "en": "Street imagery — nearest area",
+    "ka": "ქუჩის სურათები — უახლოეს არეალში"
   },
   "mapillaryOpen": {
     "en": "Click image to open in Mapillary",
-    "ka": "სურათზე დაჭერით გაიხსნება Mapillary"
+    "ka": "სურათზე დაკლიკებით გაიხსნება Mapillary"
   },
   "proLayersTitle": {
-    "en": "Advanced Spatial Analysis",
-    "ka": "სივრცული ანალიზი"
+    "en": "Advanced Geospatial Analysis",
+    "ka": "სრულყოფილი სივრცითი ანალიზი"
   },
   "verdicts.[0]": {
     "en": "Very poor",
@@ -193,7 +193,7 @@
   },
   "verdicts.[2]": {
     "en": "Fair",
-    "ka": "საშუალო"
+    "ka": "მისაღები"
   },
   "verdicts.[3]": {
     "en": "Good",
@@ -209,11 +209,11 @@
   },
   "planFree": {
     "en": "Free plan",
-    "ka": "უფასო გეგმა"
+    "ka": "უფასო სერვისი"
   },
   "planPro": {
     "en": "Pro plan",
-    "ka": "Pro გეგმა"
+    "ka": "Pro სერვისი"
   },
   "upgrade": {
     "en": "Upgrade",
@@ -237,11 +237,11 @@
   },
   "orClick": {
     "en": "click or draw on the map",
-    "ka": "დააჭირეთ ან დახატეთ რუკაზე"
+    "ka": "დააკლიკეთ ან მოხაზეთ რუკაზე"
   },
   "cats.food.label": {
     "en": "Food & drink",
-    "ka": "საკვები და სასმელი"
+    "ka": "საკვები ობიექტები"
   },
   "cats.food.icon": {
     "en": "🍽",
@@ -256,8 +256,8 @@
     "ka": "🏥"
   },
   "cats.parks.label": {
-    "en": "Parks & nature",
-    "ka": "პარკები"
+    "en": "Parks & recreation",
+    "ka": "პარკები და რეკრეაცია"
   },
   "cats.parks.icon": {
     "en": "🌿",
@@ -273,7 +273,7 @@
   },
   "cats.culture.label": {
     "en": "Culture & leisure",
-    "ka": "კულტურა"
+    "ka": "კულტურა და დასვენება"
   },
   "cats.culture.icon": {
     "en": "🎭",
@@ -296,8 +296,8 @@
     "ka": "🧒"
   },
   "proCats.crashes.label": {
-    "en": "Road incidents",
-    "ka": "საგზაო ინციდენტები"
+    "en": "Road safety",
+    "ka": "საგზაო უსაფრთხოება"
   },
   "proCats.crashes.icon": {
     "en": "⚠️",
@@ -329,7 +329,7 @@
   },
   "accessibilityTitle": {
     "en": "Accessibility Analysis",
-    "ka": "ხელმისაწვდომობის ანალიზი"
+    "ka": "მისაწვდომობის ანალიზი"
   },
   "accModeLabel": {
     "en": "Transport mode",
@@ -337,31 +337,31 @@
   },
   "accTimeLabel": {
     "en": "Travel time",
-    "ka": "გადაადგილების დრო"
+    "ka": "მგზავრობის დრო"
   },
   "accGenerate": {
     "en": "Generate Isochrone",
-    "ka": "იზოქრონის გენერაცია"
+    "ka": "იზოქრონის შექმნა"
   },
   "accModes.walking": {
     "en": "Walking",
-    "ka": "სიარული"
+    "ka": "ფეხით"
   },
   "accModes.cycling": {
     "en": "Cycling",
-    "ka": "ველოსიპედი"
+    "ka": "ველოსიპედით"
   },
   "accModes.driving": {
     "en": "Driving",
-    "ka": "ავტომობილი"
+    "ka": "ავტომობილით"
   },
   "accNoIso": {
     "en": "Generate an isochrone first",
-    "ka": "ჯერ გენერირეთ იზოქრონი"
+    "ka": "ჯერ შექმენით იზოქრონი"
   },
   "ttcAreaSmall": {
     "en": "Area under 5,000 m² — generate an isochrone first",
-    "ka": "არეალი 5,000 კვ.მ-ზე ნაკლებია — ჯერ გენერირეთ იზოქრონი"
+    "ka": "ტერიტორია 5,000 კვ.მ-ზე ნაკლებია — ჯერ შექმენით იზოქრონი"
   },
   "ttcAoiLabel": {
     "en": "Study area",
@@ -373,19 +373,19 @@
   },
   "ttcNearby": {
     "en": "Public Transport",
-    "ka": "საჯარო ტრანსპორტი"
+    "ka": "საზოგადოებრივი ტრანსპორტი"
   },
   "ttcNoStops": {
     "en": "No stops in isochrone",
-    "ka": "იზოქრონში გაჩერება არ არის"
+    "ka": "მოცემულ იზოქრონში გაჩერება არ გვხვდება"
   },
   "ttcNoArrivals": {
     "en": "No upcoming arrivals",
-    "ka": "მომდევნო ჩამოსვლა არ არის"
+    "ka": "დაგეგმილი მგზავრობები არ გვხვდება"
   },
   "ttcOnTime": {
     "en": "on time",
-    "ka": "დროულად"
+    "ka": "გრაფიკის მიხედვით"
   },
   "ttcLoading": {
     "en": "Loading...",
@@ -401,11 +401,11 @@
   },
   "reliefTypes.aspect": {
     "en": "Aspect",
-    "ka": "ორიენტაცია"
+    "ka": "სივრცითი ორიენტაცია"
   },
   "reliefLoading": {
     "en": "Loading DTM…",
-    "ka": "DTM იტვირთება…"
+    "ka": "იტვირთება რელიეფი…"
   },
   "reliefMin": {
     "en": "Min",
@@ -421,7 +421,7 @@
   },
   "reliefUnits.height": {
     "en": "m a.s.l.",
-    "ka": "მ ა.დ."
+    "ka": "მ ზ.დ."
   },
   "reliefUnits.slope": {
     "en": "°",
@@ -433,7 +433,7 @@
   },
   "slopeClasses.[0].l": {
     "en": "Flat",
-    "ka": "ბარი"
+    "ka": "მოსწორებული"
   },
   "slopeClasses.[0].r": {
     "en": "<3°",
@@ -441,7 +441,7 @@
   },
   "slopeClasses.[1].l": {
     "en": "Gentle",
-    "ka": "ვარდნილი"
+    "ka": "ოდნავ დახრილი"
   },
   "slopeClasses.[1].r": {
     "en": "3–8°",
@@ -449,7 +449,7 @@
   },
   "slopeClasses.[2].l": {
     "en": "Moderate",
-    "ka": "საშუალო"
+    "ka": "საშუალოდ დახრილი"
   },
   "slopeClasses.[2].r": {
     "en": "8–15°",
@@ -465,7 +465,7 @@
   },
   "slopeClasses.[4].l": {
     "en": "Very steep",
-    "ka": "ძ.ციცაბო"
+    "ka": "ძალიან ციცაბო"
   },
   "slopeClasses.[4].r": {
     "en": ">30°",
@@ -492,12 +492,12 @@
     "ka": "#ef4444"
   },
   "solarSuitability": {
-    "en": "Solar suitability",
-    "ka": "მზის პოტენციალი"
+    "en": "Solar power suitability",
+    "ka": "მზის ენერგიის პოტენციალი"
   },
   "solarDesc": {
     "en": "South-facing (135–225°), slope ≤ 30°",
-    "ka": "სამხ. (135–225°), დახ. ≤ 30°"
+    "ka": "სამხრეთ მიმართ. (135–225°), დახრილობა ≤ 30°"
   },
   "windBtn": {
     "en": "Wind Analysis",
@@ -509,7 +509,7 @@
   },
   "windSpeed": {
     "en": "Mean wind speed",
-    "ka": "საშ. ქარის სიჩქარე"
+    "ka": "ქარის საშ. სიჩქარე"
   },
   "windPowerDensity": {
     "en": "Power density",
@@ -517,11 +517,11 @@
   },
   "windCapFactor": {
     "en": "Capacity factor",
-    "ka": "სიმძლავრის კოეფ."
+    "ka": "შესაძლებლობის კოეფ."
   },
   "windYield": {
     "en": "Est. annual yield",
-    "ka": "სავარ. წლ. გამომუშავება"
+    "ka": "სავარ. წლიური გამომუშავება"
   },
   "windRefTurbine": {
     "en": "5 kW ref. turbine · 30m hub",
@@ -529,11 +529,11 @@
   },
   "windChecking": {
     "en": "Checking surroundings…",
-    "ka": "გარემო შემოწმება…"
+    "ka": "გარემოს შემოწმება…"
   },
   "windBuildings": {
     "en": "Buildings within 500m — site not suitable for wind turbines",
-    "ka": "500 მ. რადიუსში შენობებია — ქარის ტურბინა არ არის რეკომენდებული"
+    "ka": "შენობები 500 მ რადიუსში — ქარის ტურბინა ამ არეალში ვერ დაიდგმება"
   },
   "windRose": {
     "en": "Wind rose",
@@ -541,35 +541,35 @@
   },
   "aspectDirs.[0]": {
     "en": "N",
-    "ka": "ჩ"
+    "ka": "ჩრდ"
   },
   "aspectDirs.[1]": {
     "en": "NE",
-    "ka": "ჩ-აღ"
+    "ka": "ჩრდ-აღმ"
   },
   "aspectDirs.[2]": {
     "en": "E",
-    "ka": "აღ"
+    "ka": "აღმ"
   },
   "aspectDirs.[3]": {
     "en": "SE",
-    "ka": "სამ-აღ"
+    "ka": "სამხ-აღმ"
   },
   "aspectDirs.[4]": {
     "en": "S",
-    "ka": "სამ"
+    "ka": "სამხ"
   },
   "aspectDirs.[5]": {
     "en": "SW",
-    "ka": "სამ-დ"
+    "ka": "სამხ-დას"
   },
   "aspectDirs.[6]": {
     "en": "W",
-    "ka": "დ"
+    "ka": "დას"
   },
   "aspectDirs.[7]": {
     "en": "NW",
-    "ka": "ჩ-დ"
+    "ka": "ჩრდ-დას"
   },
   "auth.siTitle": {
     "en": "Sign in",
@@ -589,27 +589,27 @@
   },
   "auth.siForgot": {
     "en": "Forgot password?",
-    "ka": ""
+    "ka": "დაგავიწყდა პაროლი?"
   },
   "auth.siCreate": {
     "en": "Create account",
-    "ka": ""
+    "ka": "ანგარიშის შექმნა"
   },
   "auth.siFooter": {
     "en": "<a onclick=\"showView('view-reset')\">Forgot password?</a> · <a onclick=\"showView('view-signup')\">Create account</a>",
-    "ka": "<a onclick=\"showView('view-reset')\">პაროლი დაგავიწყდა?</a> · <a onclick=\"showView('view-signup')\">ანგარიშის შექმნა</a>"
+    "ka": "<a onclick=\"showView('view-reset')\">დაგავიწყდა პაროლი?</a> · <a onclick=\"showView('view-signup')\">ანგარიშის შექმნა</a>"
   },
   "auth.suTitle": {
     "en": "Create account",
     "ka": "ანგარიშის შექმნა"
   },
   "auth.suSub": {
-    "en": "Includes a free 14-day Pro trial — no payment needed",
-    "ka": "მოიცავს უფასო 14-დღიან Pro პერიოდს — ბარათი არ სჭირდება"
+    "en": "Includes a free 14-day Pro trial — no card needed",
+    "ka": "მოიცავს Pro ვერსიის 14-დღიან საცდელ პერიოდს — ბარათი არ არის საჭირო"
   },
   "auth.suName": {
     "en": "Full name",
-    "ka": "სახელი"
+    "ka": "სრული სახელი"
   },
   "auth.suSector": {
     "en": "Sector",
@@ -633,7 +633,7 @@
   },
   "auth.suSectors.[3]": {
     "en": "Government / Public Sector",
-    "ka": "მთავრობა / საჯარო სექტორი"
+    "ka": "სამთავრობო ორგანიზაცია / საჯარო სექტორი"
   },
   "auth.suSectors.[4]": {
     "en": "Academic / Research",
@@ -677,7 +677,7 @@
   },
   "auth.suPurposes.[0]": {
     "en": "Site analysis",
-    "ka": "ადგილის ანალიზი"
+    "ka": "გეოგრაფიული ანალიზი"
   },
   "auth.suPurposes.[1]": {
     "en": "Urban planning & research",
@@ -685,7 +685,7 @@
   },
   "auth.suPurposes.[2]": {
     "en": "Investment / Due diligence",
-    "ka": "ინვესტიცია / დიუ-დილიჯენსი"
+    "ka": "ინვესტიცია / ყოვლისმომცველი ანალიზი"
   },
   "auth.suPurposes.[3]": {
     "en": "Academic research",
@@ -753,7 +753,7 @@
   },
   "auth.errFill": {
     "en": "Please fill in all fields.",
-    "ka": "შეავსე ყველა ველი."
+    "ka": "გთხოვთ, შეავსე ყველა ველი."
   },
   "auth.errPassword": {
     "en": "Password must be at least 8 characters.",
@@ -765,7 +765,7 @@
   },
   "auth.suTerms": {
     "en": "I have read and agree to the <a href=\"/terms\" target=\"_blank\" style=\"color:#818cf8;text-decoration:underline\">Terms & Conditions</a> and <a href=\"/privacy\" target=\"_blank\" style=\"color:#818cf8;text-decoration:underline\">Privacy Policy</a>, including the 14-day free trial and automatic billing after the trial period.",
-    "ka": "წავიკითხე და ვეთანხმები <a href=\"/terms\" target=\"_blank\" style=\"color:#818cf8;text-decoration:underline\">წესებსა და პირობებს</a> და <a href=\"/privacy\" target=\"_blank\" style=\"color:#818cf8;text-decoration:underline\">კონფიდენციალურობის პოლიტიკას</a>, 14-დღიანი საცდელი პერიოდის ჩათვლით, და ავტომატური ბილინგის ციკლს."
+    "ka": "წავიკითხე და ვეთანხმები <a href=\"/terms\" target=\"_blank\" style=\"color:#818cf8;text-decoration:underline\">წესებსა და პირობებს</a> და <a href=\"/privacy\" target=\"_blank\" style=\"color:#818cf8;text-decoration:underline\">კონფიდენციალურობის პოლიტიკას</a>, 14-დღიანი საცდელი პერიოდის ჩათვლით და გადახდის ავტომატურ ციკლს."
   },
   "auth.errEmail": {
     "en": "Please enter your email.",
@@ -793,11 +793,11 @@
   },
   "pw.title": {
     "en": "Upgrade to Pro",
-    "ka": "Pro-ზე გადასვლა"
+    "ka": "Pro ვერსიაზე გადასვლა"
   },
   "pw.sub": {
     "en": "Every new account starts with a 14-day Pro trial (300 analysis tokens).",
-    "ka": "შექმენი უფასო ანგარიში 50 ნაკვეთის ხედვისა და 50 ანალიზისთვის. Pro აძლევს ულიმიტო წვდომასა და პრემიუმ ფუნქციებს."
+    "ka": "შექმენი უფასო ანგარიში და მიიღე ანალიზის 50 ტოკენი. Pro ვერსია გაძლევს ანალიზის 1000 ტოკენს და სხვა პრემიუმ ფუნქციებს."
   },
   "pw.freeName": {
     "en": "Free",
@@ -821,7 +821,7 @@
   },
   "pw.proBilling": {
     "en": "billed annually · €150/yr",
-    "ka": "წლიურად · €150/წელ"
+    "ka": "წლიურად · €150/წელი"
   },
   "pw.proMonthlyPeriod": {
     "en": "/mo",
@@ -829,7 +829,7 @@
   },
   "pw.proMonthlyBilling": {
     "en": "billed monthly",
-    "ka": "ყოველთვიურად"
+    "ka": "ყოველთვიური გადახდა"
   },
   "pw.togAnnual": {
     "en": "Annual",
@@ -861,7 +861,7 @@
   },
   "pw.r2": {
     "en": "Zoning analysis<br><small style='opacity:.45;font-size:.9em'>Tbilisi only</small>",
-    "ka": "ზონირების ანალიზი<br><small style='opacity:.45;font-size:.9em'>თბილისი თავ</small>"
+    "ka": "ზონირების ანალიზი<br><small style='opacity:.45;font-size:.9em'>მხოლოდ თბილისი</small>"
   },
   "pw.f2": {
     "en": "50",
@@ -873,7 +873,7 @@
   },
   "pw.r3": {
     "en": "Plan on your own",
-    "ka": "საკუთარი გეგმის შედგენა"
+    "ka": "შექმენი სივრცითი გეგმა"
   },
   "pw.f3": {
     "en": "—",
@@ -885,7 +885,7 @@
   },
   "pw.r4": {
     "en": "Street imagery",
-    "ka": "ქუჩის გამოსახულება"
+    "ka": "ქუჩის სურათები"
   },
   "pw.f4": {
     "en": "✓",
@@ -897,7 +897,7 @@
   },
   "pw.r5": {
     "en": "Urban mobility analysis<br><small style='opacity:.45;font-size:.9em'>Tbilisi only</small>",
-    "ka": "ურბანული მობილობა<br><small style='opacity:.45;font-size:.9em'>თბილისი თავ</small>"
+    "ka": "ურბანული მობილობა<br><small style='opacity:.45;font-size:.9em'>მხოლოდ თბილისი</small>"
   },
   "pw.f5": {
     "en": "—",
@@ -909,7 +909,7 @@
   },
   "pw.r6": {
     "en": "Space syntax analysis",
-    "ka": "სივრცული სინტაქსი"
+    "ka": "სივრცითი სინტაქსი"
   },
   "pw.f6": {
     "en": "✓",
@@ -920,20 +920,20 @@
     "ka": "✓"
   },
   "pw.r7": {
-    "en": "Urban diversity score",
-    "ka": "ურბანული მრავალპეროვნება"
+    "en": "Urban functional diversity",
+    "ka": "ურბანული ფუნქციური მრავალფეროვნება"
   },
   "pw.f7": {
     "en": "—",
-    "ka": "—"
+    "ka": "✓"
   },
   "pw.p7": {
     "en": "✓",
     "ka": "✓"
   },
   "pw.r8": {
-    "en": "Climate analysis",
-    "ka": "კლიმატის ანალიზი"
+    "en": "Climate analysis <br><small style='opacity:.45;font-size:.9em'>Georgia partial, Tbilisi fully</small>",
+    "ka": "კლიმატის ანალიზი<br><small style='opacity:.45;font-size:.9em'>საქართველო ნაწილობრივ, თბილისი სრულად</small>"
   },
   "pw.f8": {
     "en": "—",
@@ -944,8 +944,8 @@
     "ka": "✓"
   },
   "pw.r9": {
-    "en": "Energy efficiency",
-    "ka": "ენერგოეფურობა"
+    "en": "Energy efficiency<br><small style='opacity:.45;font-size:.9em'>Georgia partial, Tbilisi fully</small>",
+    "ka": "ენერგოეფექტურობა<br><small style='opacity:.45;font-size:.9em'>საქართველო ნაწილობრივ, თბილისი სრულად</small>"
   },
   "pw.f9": {
     "en": "—",
@@ -957,7 +957,7 @@
   },
   "pw.r10": {
     "en": "Relief analysis<br><small style='opacity:.45;font-size:.9em'>Tbilisi only</small>",
-    "ka": "რელიევის ანალიზი<br><small style='opacity:.45;font-size:.9em'>თბილისი თავ</small>"
+    "ka": "რელიეფის ანალიზი<br><small style='opacity:.45;font-size:.9em'>მხოლოდ თბილისი</small>"
   },
   "pw.f10": {
     "en": "—",
@@ -969,7 +969,7 @@
   },
   "pw.cta": {
     "en": "Upgrade to Pro",
-    "ka": "Pro-ზე გადასვლა"
+    "ka": "Pro ვერსიაზე გადასვლა"
   },
   "pw.notSignedIn": {
     "en": "No account?",
@@ -979,81 +979,73 @@
     "en": "Create a free account",
     "ka": "შექმენი უფასო ანგარიში"
   },
-  "pw.comingSoon": {
-    "en": "Payment coming soon! Contact us to upgrade manually.",
-    "ka": "გადახდა მალე! დაგვიკავშირდი Pro-ზე გადასასვლელად."
-  },
   "pw.trialNote": {
     "en": "14-day free trial included",
-    "ka": "მოიცავს 14-დღიან უფასო პერიოდს"
+    "ka": "მოიცავს Pro ვერსიის 14-დღიან საცდელ პერიოდს"
   },
   "pw.trialTitle": {
     "en": "Upgrade to keep your Pro access",
-    "ka": "განაახლე Pro წვდომის შესანარჩუნებლად"
+    "ka": "წვდომის შესანარჩუნებლად განაახლე Pro ვერსია"
   },
   "pw.trialSub": {
-    "en": "Your trial ends in X days. Subscribe now to keep climate analysis, GeoData export, and extended isochrone.",
-    "ka": "საცდელი პერიოდი სრულდება X დღეში. გამოიწერე ახლა კლიმატის ანალიზის, GeoData ექსპორტის და გაფართოებული იზოქრონის შესანარჩუნებლად."
-  },
-  "pw.billingComingSoon": {
-    "en": "Billing portal coming soon.",
-    "ka": "ბილინგის პორტალი მალე."
+    "en": "Your trial ends in X days. Subscribe now to keep extensive spatial analysis, report and data export features.",
+    "ka": "საცდელი პერიოდი სრულდება X დღეში. გამოიწერე ახლა ყოვლისმომცველი სივრცითი ანალიზისთვის, კვლევითი ანგარიშებისა და მონაცემების გადმოსაწერად."
   },
   "pw.freeLimitTitle": {
     "en": "Free limit reached",
-    "ka": "ლიმიტი ამოიწურა"
+    "ka": "უფასო ტოკენები ამოიწურა"
   },
   "pw.freeLimitSub": {
-    "en": "You’ve used your 50 parcel views this month. Upgrade to Pro for up to 1,000.",
-    "ka": "გამოიყენე ამ თვის 50 ნაკვეთის ხედვა. Pro გაძლევს 1,000-მდე ყოველთვიურად."
+    "en": "You’ve used your 50 analysis tokens this month. Upgrade to Pro for up to 1,000.",
+    "ka": "ამ თვის ანალიზის 50 ტოკენი უკვე გამოიყენე. გადადი Pro ვერსიაზე ყოველთივური ლიმიტის 1,000-მდე გასაზრდელად."
   },
   "pw.freeAnalysisLimitTitle": {
     "en": "Free limit reached",
-    "ka": "ლიმიტი ამოიწურა"
+    "ka": "უფასო ტოკენები ამოიწურა"
   },
   "pw.freeAnalysisLimitSub": {
-    "en": "You’ve used your 50 analyses this month. Upgrade to Pro for up to 1,000.",
-    "ka": "გამოიყენე ამ თვის 50 ანალიზი. Pro გაძლევს 1,000-მდე ყოველთვიურად."
+    "en": "You’ve used your 50 analysis tokens this month. Upgrade to Pro for up to 1,000.",
+    "ka": "ამ თვის ანალიზის 50 ტოკენი უკვე გამოიყენე. გადადი Pro ვერსიაზე ყოველთივური ლიმიტის 1,000-მდე გასაზრდელად."
   },
   "pw.trialLimitTitle": {
     "en": "Trial limit reached",
-    "ka": "საცდელი ლიმიტი ამოიწურა"
+    "ka": "საცდელი ტოკენები ამოიწურა"
   },
   "pw.trialLimitSub": {
-    "en": "You’ve used your 300 trial parcel views. Subscribe to Pro for up to 1,000 every month.",
-    "ka": "გამოიყენე საცდელი პერიოდის 300 ნაკვეთის ხედვა. გამოიწერე Pro 1,000-მდე ყოველთვიური ხედვისთვის."
+    "en": "You’ve used your 300 trial analysis tokens. Subscribe to Pro for up to 1,000 every month.",
+    "ka": "საცდელი პერიოდის ანალიზის 300 ტოკენი უკვე გამოიყენე. გამოიწერე Pro ვერსია ყოველთივური ლიმიტის 1,000-მდე გასაზრდელად."
   },
   "pw.trialAnalysisLimitTitle": {
     "en": "Trial limit reached",
-    "ka": "საცდელი ლიმიტი ამოიწურა"
+    "ka": "საცდელი ტოკენები ამოიწურა"
   },
   "pw.trialAnalysisLimitSub": {
-    "en": "You’ve used your 300 trial analyses. Subscribe to Pro for up to 1,000 every month.",
-    "ka": "გამოიყენე საცდელი პერიოდის 300 ანალიზი. გამოიწერე Pro 1,000-მდე ყოველთვიური ანალიზისთვის."
+    "en": "You’ve used your 300 trial analysis tokens. Subscribe to Pro for up to 1,000 every month.",
+    "ka": "საცდელი პერიოდის ანალიზის 300 ტოკენი უკვე გამოიყენე. გამოიწერე Pro ვერსია ყოველთივური ლიმიტის 1,000-მდე გასაზრდელად."
   },
   "pw.proLimitTitle": {
     "en": "Pro limit reached",
-    "ka": "პრო ლიმიტი ამოიწურა"
+    "ka": "Pro ტოკენები ამოიწურა"
   },
   "pw.proLimitSub": {
-    "en": "You’ve used your 1,000 parcel views. Contact us to extend your limit.",
-    "ka": "გამოიყენე 1,000 ნაკვეთის ხედვა. დაგვიკავშირდეთ."
+    "en": "You’ve used your 1,000 analysis tokens. Contact us if you wish to extend your limit.",
+    "ka": "ანალიზის 1,000 ტოკენი უკვე გამოიყენე. თუ გსურს ლიმიტის გაზრდა, დაგვიკავშირდი."
   },
   "pw.proAnalysisLimitTitle": {
     "en": "Pro limit reached",
-    "ka": "პრო ლიმიტი ამოიწურა"
+    "ka": "Pro ტოკენები ამოიწურა"
   },
   "pw.proAnalysisLimitSub": {
-    "en": "You’ve used your 1,000 analyses. Contact us to extend your limit.",
-    "ka": "გამოიყენე 1,000 ანალიზი. დაგვიკავშირდეთ."
+    "en": "You’ve used your 1,000 analysis tokens. Contact us if you wish to extend your limit.",
+    "ka": "ანალიზის 1,000 ტოკენი უკვე გამოიყენე. თუ გსურს ლიმიტის გაზრდა, დაგვიკავშირდი."
   },
   "pw.rateInfoTip": {
     "en": "Different exchange rates and bank fees may apply.",
-    "ka": "შეიძლება განსხვავებული გაცვლითი კურსი და საბანკო საკომისიო მოქმედებდეს."
+    "ka": "შესაძლოა დაემატოს ვალუტის კურსის ცვლილების ან ბანკის ტარიფები."
   },
   "polySelectBtn": {
     "en": "Draw",
-    "ka": "დახატვა"
+    "ka": "დახაზვა"
   },
   "polySelectBtnActive": {
     "en": "Cancel",
@@ -1061,7 +1053,7 @@
   },
   "drawImportLabel": {
     "en": "Import",
-    "ka": "იმპორტი"
+    "ka": "შემოტანა"
   },
   "drawShapeType": {
     "en": "Shape",
@@ -1085,19 +1077,19 @@
   },
   "polyDrawHint": {
     "en": "Click to draw polygon — double-click to finish",
-    "ka": "დააჭირე პოლიგონის დასახატავად — ორჯერ დააჭირე დასასრულებლად"
+    "ka": "დააკლიკე პოლიგონის მოსახაზად — ორჯერ დააკლიკე მონახაზის დასასრულებლად"
   },
   "rectDrawHint": {
     "en": "Click and drag to draw rectangle",
-    "ka": "გადათრიეთ მართკუთხედის დასახატად"
+    "ka": "დააკლიკე და გადაატარე მართკუთხედის მოსახაზად"
   },
   "circleDrawHint": {
     "en": "Click and drag to draw circle",
-    "ka": "გადათრიეთ წრის დასახატად"
+    "ka": "დააკლიკე და გადაატარე წრის მოსახაზად"
   },
   "lineDrawHint": {
     "en": "Click to place points — double-click to finish",
-    "ka": "დააჭირეთ წერტილის დასამატებლად — ორჯერ დაასრულეთ"
+    "ka": "დააკლიკე წერტილის დასამატებლად — ოპერაციის დასასრულებლად დააკლიკე ორჯერ"
   },
   "polyPanelTitle": {
     "en": "Selected Parcels",
@@ -1105,7 +1097,7 @@
   },
   "polyParcelsSub": {
     "en": "parcels intersected",
-    "ka": "ნაკვეთი გადაიკვეთა"
+    "ka": "ნაკვეთების გადაკვეთა"
   },
   "polyDlBtn": {
     "en": "Download GeoJSON",
@@ -1113,7 +1105,7 @@
   },
   "polySearching": {
     "en": "Searching parcels…",
-    "ka": "ნაკვეთები ძიებაში…"
+    "ka": "ნაკვეთების ძებნა…"
   },
   "polyNone": {
     "en": "No parcels found in this area.",
@@ -1145,11 +1137,11 @@
   },
   "pdfGenerated": {
     "en": "Generated by Urbanyx",
-    "ka": "შექმნილია Urbanyx-ით"
+    "ka": "შექმნილია Urbanyx-ის გამოყენებით"
   },
   "pdfWalkability": {
     "en": "Walkability Analysis",
-    "ka": "სიარულის ანალიზი"
+    "ka": "საფეხმავლო ანალიზი"
   },
   "pdfDiversityIndex": {
     "en": "Shannon Diversity Index",
@@ -1161,19 +1153,19 @@
   },
   "pdfProAnalysis": {
     "en": "Pro Analysis",
-    "ka": "სივრცული ანალიზი"
+    "ka": "Pro ანალიზი"
   },
   "pdfNoScore": {
     "en": "Run analysis to generate score",
-    "ka": "ქულის მისაღებად გაუშვი ანალიზი"
+    "ka": "კოეფიციენტის საანგარიშოდ საჭიროა ანალიზის ბრძანება"
   },
   "pdfNoImage": {
     "en": "No street imagery available",
-    "ka": "ქუჩის სურათები არ არის"
+    "ka": "ქუჩის სურათები არ არის ხელმისაწვდომი"
   },
   "hist.live": {
     "en": "Live",
-    "ka": "ლაივი"
+    "ka": "მიმდინარე"
   },
   "hist.history": {
     "en": "History",
@@ -1185,7 +1177,7 @@
   },
   "hist.onTime": {
     "en": "On-time",
-    "ka": "დროულად"
+    "ka": "განრიგის მიხედვით"
   },
   "hist.onTimeSub": {
     "en": "−1…+5 min",
@@ -1193,7 +1185,7 @@
   },
   "hist.medDelay": {
     "en": "Median delay",
-    "ka": "მედიანური დაგვ."
+    "ka": "მედიანური დაგვიანება"
   },
   "hist.p90": {
     "en": "90th-pct delay",
@@ -1209,7 +1201,7 @@
   },
   "hist.noData": {
     "en": "No history for this area yet — data collection began 12 Jul 2026.",
-    "ka": "ამ არეალზე ისტორია ჯერ არ არის — შეგროვება დაიწყო 12 ივლ 2026."
+    "ka": "ამ არეალზე საკმარისი მონაცემი ჯერ არ არის შეგროვებული — დაიწყო 12 ივლ 2026."
   },
   "hist.insufficient": {
     "en": "insufficient data",
@@ -1221,7 +1213,7 @@
   },
   "hist.traceHint": {
     "en": "Click a route chip below to paint its speed along the route",
-    "ka": "დააჭირე მარშრუტის ნომერს სიჩქარის კვალის სანახავად"
+    "ka": "დააჭირე მარშრუტს შესაბამისი სიჩქარის სანახავად"
   },
   "hist.dirToggle": {
     "en": "⇄ direction",
@@ -1233,7 +1225,7 @@
   },
   "hist.loading": {
     "en": "Crunching history…",
-    "ka": "ისტორია იტვირთება…"
+    "ka": "იტვირთება…"
   },
   "hist.days.all": {
     "en": "All days",
@@ -1241,7 +1233,7 @@
   },
   "hist.days.weekday": {
     "en": "Weekdays",
-    "ka": "სამუშაო"
+    "ka": "სამუშაო დღეები"
   },
   "hist.days.sat": {
     "en": "Sat",
@@ -1257,7 +1249,7 @@
   },
   "hist.bands.am_peak": {
     "en": "AM peak",
-    "ka": "დილის პიკი"
+    "ka": "დილის პიკის საათი"
   },
   "hist.bands.midday": {
     "en": "Midday",
@@ -1265,7 +1257,7 @@
   },
   "hist.bands.pm_peak": {
     "en": "PM peak",
-    "ka": "საღამოს პიკი"
+    "ka": "საღამოს პიკის საათი"
   },
   "hist.bands.evening": {
     "en": "Evening",
@@ -1289,19 +1281,19 @@
   },
   "hist.worstRoute": {
     "en": "Worst route",
-    "ka": "ყველაზე ცუდი მარშ."
+    "ka": "ყველაზე ცუდი მარშრუტი"
   },
   "hist.schedHeadway": {
-    "en": "Sched. headway",
-    "ka": "გეგმ. ინტერვალი"
+    "en": "Scheduled headway",
+    "ka": "დაგეგმილი ინტერვალი"
   },
   "hist.perDay": {
     "en": "/day avg",
-    "ka": "/დღეში"
+    "ka": "/საშ. დღეში"
   },
   "hist.infoScore": {
     "en": "Weighted share of arrivals within +5 min of schedule across all observed stops in this isochrone (each stop weighted by its observation count). Grades: A ≥80%, B ≥70%, C ≥60%, D ≥50%, E ≥40%, F below 40%.",
-    "ka": "გეგმიდან +5 წუთამდე მოსული ავტობუსების შეწონილი წილი იზოქრონის ყველა გაჩერებაზე (თითო გაჩერება იწონება დაკვირვებების რაოდენობით). შეფასება: A ≥80%, B ≥70%, C ≥60%, D ≥50%, E ≥40%, F 40%-ზე ქვემოთ."
+    "ka": "განრიგით 5 წუთზე მეტით დაგვიანებული ავტობუსების შეწონილი წილი იზოქრონის ყველა გაჩერებაზე (თითო გაჩერება იწონება დაკვირვებების რაოდენობით). შეფასება: A ≥80%, B ≥70%, C ≥60%, D ≥50%, E ≥40%, F 40%-ზე ქვემოთ."
   },
   "hist.colorBy": {
     "en": "Color stops by",
@@ -1309,7 +1301,7 @@
   },
   "hist.varOntime": {
     "en": "On-time",
-    "ka": "დროულობა"
+    "ka": "განრიგის მიხედვით"
   },
   "hist.varLate": {
     "en": "Late >5 min",
@@ -1324,28 +1316,28 @@
     "ka": "ინტერვალი"
   },
   "hist.infoOnTime": {
-    "en": "Share of observed arrivals within −60s…+300s of the scheduled time (industry standard window). Sample size shown in the tooltip; stops with fewer than 30 matched observations are excluded from coloring.",
-    "ka": "დაკვირვებული მოსვლების წილი გეგმიურ დროსთან −60წმ…+300წმ ფარგლებში (ინდუსტრიული სტანდარტი). 30-ზე ნაკლები დაკვირვების გაჩერებები შეფასებიდან გამორიცხულია."
+    "en": "Share of arrivals within −60s…+300s of the scheduled time (industry standard). Sample size shown in the tooltip; stops with fewer than 30 matched observations are excluded from coloring.",
+    "ka": "მოსვლების წილი განრიგით −60წმ…+300წმ ფარგლებში (მიღებული სტანდარტი). დაკვირვების ზომა მოცემულია თულთიფ ფანჯარაში; გაჩერებები, სადაც დაკვირვების ზომა 30-ზე ნაკლებია, შეფასებიდან გამორიცხულია."
   },
   "hist.infoMed": {
     "en": "Median of the daily median signed delays across the area's stops. Positive = late, negative = early. Derived from vehicle positions sampled every 2 minutes; individual arrivals are interpolated, giving roughly ±1 minute precision.",
-    "ka": "დღიური მედიანური დაგვიანებების მედიანა არეალის გაჩერებებზე. დადებითი = გვიან, უარყოფითი = ადრე. სიზუსტე დაახლ. ±1 წუთი (პოზიციები იზომება ყოველ 2 წუთში)."
+    "ka": "დღიური მედიანური დაგვიანებების მედიანა მოცემულ ტერიტორიაზე არსებულ გაჩერებებზე. დადებითი = გვიან, უარყოფითი = ადრე. შეფასება ეყრდნობა ტრანსპორტის ცვალებად პოზიციას 2 წუთიანი ინტერვალით; ყოველი მოსვლა განზოგადობულია დაახლოებით ±1 წუთიანი სიზუსტით."
   },
   "hist.infoP90": {
     "en": "90th percentile of delay — the worst-case a rider should plan for. One in ten arrivals is later than this.",
-    "ka": "დაგვიანების 90-ე პროცენტილი — ყველაზე ცუდი შემთხვევა, რასაც მგზავრი უნდა ელოდოს. ათიდან ერთი მოსვლა ამაზე გვიანია."
+    "ka": "დაგვიანების 90-ე პროცენტილი — უარესი შემთხვევა, რომელიც მგზავრმა დაგეგმვისას უნდა გაითვალისწინოს. ათიდან ერთი მოსვლა ამაზე გვიანაა."
   },
   "hist.infoEwt": {
     "en": "Excess Wait Time: how much longer riders actually wait versus the scheduled headway (E[h²]/2E[h]). Only computed for the All-day view, since headways need the full day's arrivals.",
-    "ka": "ზედმეტი ლოდინის დრო: რამდენად მეტს ელოდება მგზავრი რეალურად გეგმიურ ინტერვალთან შედარებით. მხოლოდ მთელი დღის ხედშია ხელმისაწვდომი."
+    "ka": "ზედმეტი ლოდინი: რამდენად მეტს ელოდება მგზავრი გრაფიკით დაგეგმილ ინტერვალთან შედარებით. გამოთვლა ითვალისწინებს მთელი დღის მონაცემს, რადგანაც ინტერვალის გამოსაანგარიშებლად სრული დღის დაფარვაა საჭირო."
   },
   "hist.infoBandEwt": {
     "en": "EWT and headway metrics are available in the All-day view only.",
-    "ka": "EWT და ინტერვალის მეტრიკები მხოლოდ მთელი დღის ხედშია."
+    "ka": "ზედმეტი ლოდინი და ინტერვალი მხოლოდ მთელი დღის კონტექსტშია ხელმისაწვდომი."
   },
   "hist.exportPdf": {
-    "en": "PDF · TIA",
-    "ka": "PDF · TIA"
+    "en": "PDF · Transport Assessment",
+    "ka": "PDF · ტრანსპორტის ანგარიში"
   },
   "hist.exportCsv": {
     "en": "CSV",
@@ -1381,39 +1373,39 @@
   },
   "dash.billing": {
     "en": "Plan & Billing",
-    "ka": "გეგმა და ბილინგი"
+    "ka": "ვერსია და გადახდა"
   },
   "dash.freePlan": {
     "en": "Free plan",
-    "ka": "უფასო გეგმა"
+    "ka": "უფასო ვერსია"
   },
   "dash.proPlan": {
     "en": "Pro plan",
-    "ka": "Pro გეგმა"
+    "ka": "Pro ვერსია"
   },
   "dash.freeDesc": {
-    "en": "50 parcel views and analyses / month",
-    "ka": "50 ნაკვეთის ხედვა და ანალიზი / თვეში"
+    "en": "50 analysis tokens / month",
+    "ka": "ანალიზის 50 ტოკენი / თვეში"
   },
   "dash.proDesc": {
-    "en": "1,000 searches / month · Full Pro analysis · GeoData export",
-    "ka": "1,000 ძიება / თვეში · Pro ანალიზი · GeoData ექსპორტი"
+    "en": "1,000 tokens / month · Full analysis · Report and data export",
+    "ka": "1,000 ტოკენი / თვეში · სრულყოფილი ანალიზი · კვლევითი ანალიზის და მონაცემთა გადმოწერა"
   },
   "dash.upgrade": {
     "en": "Upgrade to Pro",
-    "ka": "Pro-ზე გადასვლა"
+    "ka": "Pro ვერსიაზე გადასვლა"
   },
   "dash.manageBilling": {
     "en": "Manage billing",
-    "ka": "ბილინგის მართვა"
+    "ka": "გადახდის მართვა"
   },
   "dash.billingTitle": {
     "en": "Billing",
-    "ka": "ბილინგი"
+    "ka": "გადახდა"
   },
   "dash.billingSubFree": {
     "en": "Manage your plan",
-    "ka": "გეგმის მართვა"
+    "ka": "ვერსიის მართვა"
   },
   "dash.billingSubPro": {
     "en": "Your active subscription",
@@ -1421,7 +1413,7 @@
   },
   "dash.billingLblPlan": {
     "en": "Current plan",
-    "ka": "მიმდინარე გეგმა"
+    "ka": "მიმდინარე ვერსია"
   },
   "dash.billingLblHistory": {
     "en": "Billing history",
@@ -1437,7 +1429,7 @@
   },
   "dash.billingTrialEnds": {
     "en": "Trial ends",
-    "ka": "საცდელი მთავრდება"
+    "ka": "საცდელი პერიოდი მთავრდება"
   },
   "dash.billingDaysLeft": {
     "en": "days remaining",
@@ -1445,7 +1437,7 @@
   },
   "dash.billingTrialNote": {
     "en": "Your 14-day free trial is active. If you cancel now, you keep full access until the trial ends.",
-    "ka": "14-დღიანი უფასო პერიოდი აქტიურია. გაუქმების შემთხვევაში პრო ფუნქციები ხელმისაწვდომი იქნება გამოცდის ბოლომდე."
+    "ka": "14-დღიანი საცდელი პერიოდი აქტიურია. გაუქმების შემთხვევაში სრული წვდომა გაგრძელდება საცდელი პერიოდის ბოლომდე."
   },
   "dash.billingPostTrialNote": {
     "en": "If you cancel, you keep Pro access until your renewal date. No further charges after that.",
@@ -1505,7 +1497,7 @@
   },
   "projects.deleteConfirm": {
     "en": "Delete this project?",
-    "ka": "წაშალოს ეს პროექტი?"
+    "ka": "პროექტის წაშლა?"
   },
   "projects.loadingMsg": {
     "en": "Loading…",
@@ -1561,19 +1553,19 @@
   },
   "projects.layersPlural": {
     "en": "layers",
-    "ka": "ფენა"
+    "ka": "ფენები"
   },
   "activityLabels.map_click": {
     "en": "Clicks",
-    "ka": "ნაკვეთები"
+    "ka": "კლიკები"
   },
   "activityLabels.free_analysis": {
     "en": "Free analysis",
-    "ka": "სიარული"
+    "ka": "უფასო ანალიზი"
   },
   "activityLabels.pro_analysis": {
     "en": "Pro analysis",
-    "ka": "სივრც. ანალ."
+    "ka": "Pro ანალიზი"
   },
   "activityLabels.relief_analysis": {
     "en": "Relief",
@@ -1581,11 +1573,11 @@
   },
   "activityLabels.pdf_export": {
     "en": "PDF export",
-    "ka": "PDF"
+    "ka": "PDF გადმოწერა"
   },
   "activityLabels.geojson_export": {
     "en": "GeoJSON export",
-    "ka": "GeoJSON"
+    "ka": "GeoJSON გადმოწერა"
   },
   "activityIcons.map_click": {
     "en": "—",
@@ -1657,18 +1649,18 @@
   },
   "viewPlans": {
     "en": "View plans",
-    "ka": "გეგმების ნახვა"
+    "ka": "ვერსიების ნახვა"
   },
   "plansBtn": {
     "en": "Plans",
-    "ka": "გეგმები"
+    "ka": "ვერსიები"
   },
   "limitWarning": {
     "en": "(left,resetDate)=>`You've used 90%+ of your monthly searches. ${left} remaining, resets on ${resetDate}.`",
     "ka": "(left,resetDate)=>`თვიური ლიმიტის 90%+ გამოიყენე. დარჩა ${left}, განახლდება ${resetDate}.`"
   },
   "limitWarnCta": {
-    "en": "Upgrade for 1,000 searches/month →",
-    "ka": "Pro-ზე გადასვლა — 1,000 ძიება/თვეში →"
+    "en": "Upgrade for 1,000 tokens/month →",
+    "ka": "Pro ვერსიაზე გადასვლა — 1,000 ტოკენი/თვეში →"
   }
 }
