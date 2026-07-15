@@ -781,11 +781,15 @@
   .nav-sep { width:32px; height:1px; background:rgba(255,255,255,0.07); margin:4px 0; flex-shrink:0; }
   .nav-btn { width:44px; height:44px; border-radius:10px; border:none; outline:none; background:transparent; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0; transition:background 0.15s,color 0.15s; color:rgba(255,255,255,0.28); position:relative; flex-shrink:0; font-family:inherit; }
   .nav-btn:hover { background:rgba(255,255,255,0.07); color:rgba(255,255,255,0.72); }
-  /* Free tier — only Climate/Energy/Relief are Pro per the plan comparison table;
-     Accessibility, Education, Mobility, Morphology, Zoning stay free (trial = pro). */
+  /* Free tier — Climate/Energy/Relief/Draw/3D-Extrude are Pro per the plan
+     comparison table; Accessibility, Education, Mobility, Morphology, Zoning
+     stay free (trial = pro). Greyed buttons stay CLICKABLE — clicking opens
+     the paywall/signup, it's the upgrade prompt, not a dead button. */
   body.free-tier #cat-btn-climate,
   body.free-tier #cat-btn-energy,
-  body.free-tier #cat-btn-relief { filter:grayscale(1); opacity:0.4; pointer-events:none; }
+  body.free-tier #cat-btn-relief,
+  body.free-tier #nav-draw-btn,
+  body.free-tier #nav-extrusion-btn { filter:grayscale(1); opacity:0.4; }
   .nav-btn.active { background:rgba(52,211,153,0.22); color:#34d399; border-radius:10px; box-shadow:inset 0 0 0 1px rgba(52,211,153,0.4); }
   .nav-btn.active:hover { background:rgba(52,211,153,0.30); }
   .nav-btn.layer-active { background:rgba(165,180,252,0.22); color:#a5b4fc; border-radius:10px; box-shadow:inset 0 0 0 1px rgba(165,180,252,0.4); }

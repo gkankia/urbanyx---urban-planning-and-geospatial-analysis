@@ -1173,6 +1173,7 @@ function _ensureThreeJs(cb){
 }
 
 function toggleExtrusion(){
+  if(!currentUser||currentUser.plan!=='pro'){openPaywall();return;}
   const canExtrude=_isDrawnArea&&['polygon','rectangle','circle'].includes(_drawShape);
   if(!canExtrude){showToast(lang==='ka'?'3D გასააქტიურებლად დახაზე პოლიგონი, წრე ან კვადრატი':'Draw a polygon, circle or square on the map to use 3D extrusion');return;}
   if(!_isDrawnArea)return;
