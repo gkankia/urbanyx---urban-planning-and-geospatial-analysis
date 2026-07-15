@@ -800,7 +800,6 @@
   .nav-btn .nav-tip { position:absolute; left:calc(100% + 10px); top:50%; transform:translateY(-50%); background:rgba(10,10,10,0.95); color:rgba(255,255,255,0.78); font-size:0.62rem; font-weight:600; letter-spacing:0.04em; white-space:nowrap; padding:4px 9px; border-radius:6px; opacity:0; pointer-events:none; transition:opacity 0.12s; border:1px solid rgba(255,255,255,0.08); z-index:100; }
   .nav-btn:hover .nav-tip { opacity:1; }
   #nav-lang-label { font-size:0.58rem; font-weight:700; letter-spacing:0.06em; }
-  #nav-lang-btn { display:none !important; }
 
   /* Parcel floating card */
   #parcel-float-card {
