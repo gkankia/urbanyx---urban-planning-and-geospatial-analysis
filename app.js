@@ -390,8 +390,8 @@ const T = {
     pdfNoImage:"ქუჩის სურათები არ არის ხელმისაწვდომი",
     layers:{btn:"ფენები",basemap:"საბაზო რუკა",layers:"ფენები",cadastral:"ნაკვეთები",lineObjects:"ხაზები",forestFund:"ტყე",dark:"მუქი",satellite:"სატელიტი",day:"დღე",night:"ღამე"},
     searchesLeft:"ძიება დარჩა ამ თვეში",
-    viewPlans:"ვერსიების ნახვა",
-    plansBtn:"ვერსიები",
+    viewPlans:"ტარიფების ნახვა",
+    plansBtn:"ტარიფები",
     limitWarning:(left,resetDate)=>`თვიური ლიმიტის 90%+ გამოიყენე. დარჩა ${left}, განახლდება ${resetDate}.`,
     limitWarnCta:"Pro ვერსიაზე გადასვლა — 1,000 ტოკენი/თვეში →"
   }
@@ -404,6 +404,15 @@ function setLang(l){
   if(mapReady) map.setLanguage(l==='ka'?'ka':'en');
   const _nll=document.getElementById('nav-lang-label');if(_nll)_nll.textContent=l==='en'?'EN':'ქა';
   applyLang();
+  // The left analysis panels (Climate/Mobility/Education/Morphology/Energy)
+  // build their labels into innerHTML once and don't self-update — force a
+  // rebuild in the new language. Morphology/Energy skip rebuilding unless
+  // their content is empty, so clear those two first.
+  if(typeof setupProCard==='function'){
+    const _morphC=document.getElementById('pro-cat-morphology-content');if(_morphC)_morphC.innerHTML='';
+    const _energyC=document.getElementById('pro-cat-energy-content');if(_energyC)_energyC.innerHTML='';
+    setupProCard(false);
+  }
 }
 
 function applyLang(){
@@ -6034,6 +6043,11 @@ function toggleProCat(id){
 var _activeCatKey=null;
 
 function showCatInPanel(catKey,btnEl){
+  // Climate/Energy/Relief are Pro — show the paywall immediately on click
+  // rather than opening an (empty) panel first.
+  if(['climate','energy','relief'].includes(catKey)&&(!currentUser||currentUser.plan!=='pro')){
+    openPaywall();return;
+  }
   _closeOtherNavPanels('cat');
   const proCard=document.getElementById('pro-analysis-card');
   const catEl=document.getElementById('pro-cat-'+catKey);
@@ -6117,14 +6131,18 @@ function setupProCard(show=false){
     `<div class="lp-row acc-toggle-row" style="padding:4px 0;margin-top:2px" onclick="toggleAccKindergartens()"><span class="lp-row-name">${tr.proCats.kindergartens.label}</span><div class="lp-sw" id="acc-kg-sw"></div></div>`+
     `<div id="acc-kg-result"></div>`;
 
-  // Mobility
+  // Mobility — Road Incidents and Parking are Pro (municipal-only datasets);
+  // Nearby Stops (live transit) stays free. Locked rows carry the same PRO
+  // badge + dim treatment as the Transit History switch.
   document.getElementById("pro-cat-mobility").style.display="";
+  const _proTag=isPro?'':` <span style="font-size:0.5rem;letter-spacing:0.08em;background:rgba(129,140,248,0.14);color:#818cf8;border:1px solid rgba(129,140,248,0.3);border-radius:3px;padding:1px 4px;vertical-align:1px">PRO</span>`;
+  const _lockedRow=isPro?'':'opacity:0.5;filter:grayscale(1);';
   document.getElementById("pro-cat-mobility-content").innerHTML=
-    `<div class="lp-row acc-toggle-row" style="padding:4px 0" onclick="toggleAccMobility()"><span class="lp-row-name">${isKa?"საგზაო ინციდენტები":"Road Incidents"}</span><div class="lp-sw" id="acc-mob-sw"></div></div>`+
+    `<div class="lp-row acc-toggle-row" style="padding:4px 0;${_lockedRow}" onclick="toggleAccMobility()"><span class="lp-row-name">${isKa?"საგზაო ინციდენტები":"Road Incidents"}${_proTag}</span><div class="lp-sw" id="acc-mob-sw"></div></div>`+
     `<div id="acc-mob-result"></div>`+
     `<div class="lp-row acc-toggle-row" style="padding:4px 0" onclick="toggleAccTransit()"><span class="lp-row-name">${tr.ttcNearby||"Nearby Stops"}</span><div class="lp-sw" id="acc-transit-sw"></div></div>`+
     `<div id="acc-transit-result"></div>`+
-    `<div class="lp-row acc-toggle-row" style="padding:4px 0;margin-top:2px" onclick="toggleAccParking()"><span class="lp-row-name">${isKa?"🅿 ავტოსადგომები":"🅿 Parking"}</span><div class="lp-sw" id="acc-parking-sw"></div></div>`+
+    `<div class="lp-row acc-toggle-row" style="padding:4px 0;margin-top:2px;${_lockedRow}" onclick="toggleAccParking()"><span class="lp-row-name">${isKa?"🅿 ავტოსადგომები":"🅿 Parking"}${_proTag}</span><div class="lp-sw" id="acc-parking-sw"></div></div>`+
     `<div id="acc-parking-result"></div>`;
 
   // Urban Morphology — always visible
@@ -7281,6 +7299,7 @@ async function toggleAccParking(){
     if(el) el.innerHTML='';
     return;
   }
+  if(!currentUser||currentUser.plan!=='pro'){openPaywall();return;}
   const isoFeat=_isoData?.features?.[0];
   if(!isoFeat){
     if(el) el.innerHTML=`<div style="font-size:0.7rem;color:rgba(255,255,255,0.25);padding:4px 0">${t().accNoIso||'Generate an isochrone first'}</div>`;

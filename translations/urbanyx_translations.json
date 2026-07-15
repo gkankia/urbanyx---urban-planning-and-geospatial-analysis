@@ -1649,11 +1649,11 @@
   },
   "viewPlans": {
     "en": "View plans",
-    "ka": "ვერსიების ნახვა"
+    "ka": "ტარიფების ნახვა"
   },
   "plansBtn": {
     "en": "Plans",
-    "ka": "ვერსიები"
+    "ka": "ტარიფები"
   },
   "limitWarning": {
     "en": "(left,resetDate)=>`You've used 90%+ of your monthly searches. ${left} remaining, resets on ${resetDate}.`",
