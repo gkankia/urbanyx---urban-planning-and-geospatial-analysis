@@ -9,7 +9,7 @@
   },
   "btn": {
     "en": "Search",
-    "ka": "ძებნა"
+    "ka": "ძიება"
   },
   "btnLoading": {
     "en": "...",
@@ -333,7 +333,7 @@
   },
   "navTips.search": {
     "en": "Search",
-    "ka": "ძებნა"
+    "ka": "ძიება"
   },
   "navTips.importLabel": {
     "en": "Import",
