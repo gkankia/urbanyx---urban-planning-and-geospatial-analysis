@@ -1,6 +1,6 @@
 # Urbanyx UI Translations — English ↔ Georgian
 
-Extracted from `app.js` (the `const T = { en:{...}, ka:{...} }` dictionary). 416 entries across 19 sections.
+Extracted from `app.js` (the `const T = { en:{...}, ka:{...} }` dictionary). 425 entries across 20 sections.
 
 Edit the **Georgian** column only — keep the **Key** column untouched, that's how edits get matched back to the source. Send the file back when done.
 
@@ -124,8 +124,8 @@ Edit the **Georgian** column only — keep the **Key** column untouched, that's 
 | `pdfNoScore` | Run analysis to generate score | კოეფიციენტის საანგარიშოდ საჭიროა ანალიზის ბრძანება |
 | `pdfNoImage` | No street imagery available | ქუჩის სურათები არ არის ხელმისაწვდომი |
 | `searchesLeft` | searches left this month | ძიება დარჩა ამ თვეში |
-| `viewPlans` | View plans | ვერსიების ნახვა |
-| `plansBtn` | Plans | ვერსიები |
+| `viewPlans` | View plans | ტარიფების ნახვა |
+| `plansBtn` | Plans | ტარიფები |
 | `limitWarnCta` | Upgrade for 1,000 tokens/month → | Pro ვერსიაზე გადასვლა — 1,000 ტოკენი/თვეში → |
 
 **Templated strings** (contain `${...}` placeholders — keep them intact, only edit the surrounding wording):
@@ -181,6 +181,20 @@ Edit the **Georgian** column only — keep the **Key** column untouched, that's 
 | `proCategories.morphology` | Urban Morphology | ურბანული მორფოლოგია |
 | `proCategories.energy` | Clean Energy | სუფთა ენერგია |
 | `proCategories.relief` | Relief Analysis | რელიეფის ანალიზი |
+
+## navTips (9)
+
+| Key | English | Georgian |
+|---|---|---|
+| `navTips.search` | Search | ძიება |
+| `navTips.importLabel` | Import | იმპორტი |
+| `navTips.draw` | Draw | დახაზვა |
+| `navTips.extrude3d` | 3D Extrude | 3D რეჟიმი |
+| `navTips.report` | Generate Report | რეპორტის გენერაცია |
+| `navTips.accessibility` | Accessibility | მისაწვდომობა |
+| `navTips.zoning` | Zoning | ზონირება |
+| `navTips.language` | Language | ენა |
+| `navTips.data` | Data | მონაცემები |
 
 ## accModes (3)
 

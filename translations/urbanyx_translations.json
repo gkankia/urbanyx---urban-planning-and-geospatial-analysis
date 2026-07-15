@@ -9,7 +9,7 @@
   },
   "btn": {
     "en": "Search",
-    "ka": "ძიება"
+    "ka": "ძებნა"
   },
   "btnLoading": {
     "en": "...",
@@ -330,6 +330,42 @@
   "accessibilityTitle": {
     "en": "Accessibility Analysis",
     "ka": "მისაწვდომობის ანალიზი"
+  },
+  "navTips.search": {
+    "en": "Search",
+    "ka": "ძებნა"
+  },
+  "navTips.importLabel": {
+    "en": "Import",
+    "ka": "შემოტანა"
+  },
+  "navTips.draw": {
+    "en": "Draw",
+    "ka": "დახაზვა"
+  },
+  "navTips.extrude3d": {
+    "en": "3D Extrude",
+    "ka": "3D რეჟიმი"
+  },
+  "navTips.report": {
+    "en": "Generate Report",
+    "ka": "რეპორტის შექმნა"
+  },
+  "navTips.accessibility": {
+    "en": "Accessibility Isochrones",
+    "ka": "მისაწვდომობის იზოქრონები"
+  },
+  "navTips.zoning": {
+    "en": "Zoning",
+    "ka": "ზონირება"
+  },
+  "navTips.language": {
+    "en": "Language",
+    "ka": "ენა"
+  },
+  "navTips.data": {
+    "en": "Data",
+    "ka": "მონაცემები"
   },
   "accModeLabel": {
     "en": "Transport mode",
@@ -1357,7 +1393,7 @@
   },
   "dash.usedToday": {
     "en": "Searches this month",
-    "ka": "ძიება ამ თვეში"
+    "ka": "ძებნა ამ თვეში"
   },
   "dash.remaining": {
     "en": "Remaining",
@@ -1645,7 +1681,7 @@
   },
   "searchesLeft": {
     "en": "searches left this month",
-    "ka": "ძიება დარჩა ამ თვეში"
+    "ka": "ძებნა დარჩა ამ თვეში"
   },
   "viewPlans": {
     "en": "View plans",

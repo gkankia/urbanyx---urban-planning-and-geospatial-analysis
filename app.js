@@ -179,6 +179,7 @@ const T = {
     proCats:{schools:{label:"Schools",icon:"🏫"},kindergartens:{label:"Kindergartens",icon:"🧒"},crashes:{label:"Road safety",icon:"⚠️"}},
     proCategories:{climate:"Climate",education:"Education",mobility:"Mobility",morphology:"Urban Morphology",energy:"Clean Energy",relief:"Relief Analysis"},
     accessibilityTitle:"Accessibility Analysis",
+    navTips:{search:"Search",importLabel:"Import",draw:"Draw",extrude3d:"3D Extrude",report:"Generate Report",accessibility:"Accessibility",zoning:"Zoning",language:"Language",data:"Data"},
     accModeLabel:"Transport mode",
     accTimeLabel:"Travel time",
     accGenerate:"Generate Isochrone",
@@ -317,6 +318,7 @@ const T = {
     proCats:{schools:{label:"სკოლები",icon:"🏫"},kindergartens:{label:"საბავშვო ბაღები",icon:"🧒"},crashes:{label:"საგზაო უსაფრთხოება",icon:"⚠️"}},
     proCategories:{climate:"კლიმატი",education:"განათლება",mobility:"მობილობა",morphology:"ურბანული მორფოლოგია",energy:"სუფთა ენერგია",relief:"რელიეფის ანალიზი"},
     accessibilityTitle:"მისაწვდომობის ანალიზი",
+    navTips:{search:"ძიება",importLabel:"იმპორტი",draw:"დახაზვა",extrude3d:"3D რეჟიმი",report:"რეპორტის გენერაცია",accessibility:"მისაწვდომობა",zoning:"ზონირება",language:"ენა",data:"მონაცემები"},
     accModeLabel:"სატრანსპორტო საშუალება",
     accTimeLabel:"მგზავრობის დრო",
     accGenerate:"იზოქრონის შექმნა",
@@ -468,6 +470,27 @@ function applyLang(){
   const _ntu=document.getElementById("nav-tip-user");if(_ntu)_ntu.textContent=lang==="ka"?"ანგარიში":"Account";
   const _ntp=document.getElementById("nav-tip-parcel");if(_ntp)_ntp.textContent=lang==="ka"?"მიწის ნაკვეთი":"Parcel search";
   const _ntan=document.getElementById("nav-tip-analysis");if(_ntan)_ntan.textContent=lang==="ka"?"ანალიზი":"Analysis";
+  // Left icon-rail tooltips — these were static English-only text baked into
+  // the HTML; wire them to the dictionary so they actually switch language.
+  {
+    const nt=tr.navTips||{}, pc=tr.proCategories||{};
+    const setTip=(id,txt)=>{if(!txt)return;const el=document.getElementById(id);if(el)el.textContent=txt;};
+    setTip("nav-tip-search",nt.search);
+    setTip("nav-tip-import",nt.importLabel);
+    setTip("nav-tip-draw",nt.draw);
+    setTip("nav-tip-extrude",nt.extrude3d);
+    setTip("nav-tip-report",nt.report);
+    setTip("nav-tip-lang",nt.language);
+    setTip("nav-tip-data",nt.data);
+    setTip("nav-tip-cat-accessibility",nt.accessibility);
+    setTip("nav-tip-cat-zoning",nt.zoning);
+    setTip("nav-tip-cat-education",pc.education);
+    setTip("nav-tip-cat-mobility",pc.mobility);
+    setTip("nav-tip-cat-climate",pc.climate);
+    setTip("nav-tip-cat-morphology",pc.morphology);
+    setTip("nav-tip-cat-energy",pc.energy);
+    setTip("nav-tip-cat-relief",pc.relief);
+  }
   const _ntl=document.getElementById("nav-tip-layers");if(_ntl)_ntl.textContent=lang==="ka"?"ფენები":"Layers";
   const plansBtn=document.getElementById("plans-btn");if(plansBtn)plansBtn.textContent=tr.plansBtn;
   const signinBtnEl=document.getElementById("signin-btn");if(signinBtnEl)signinBtnEl.textContent=tr.centerSignIn;
