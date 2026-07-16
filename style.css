@@ -270,7 +270,7 @@
   .dash-limit-bar-track { height: 4px; background: rgba(255,255,255,0.08); border-radius: 4px; overflow: hidden; margin-top: 10px; }
   .dash-limit-bar-fill { height: 100%; border-radius: 4px; transition: width 0.8s cubic-bezier(0.23,1,0.32,1); }
   .dash-limit-notice { margin-top: 10px; border-radius: 8px; padding: 8px 11px; font-size: 0.72rem; line-height: 1.5; display: flex; align-items: flex-start; gap: 8px; }
-  .dash-limit-notice.bonus { background: rgba(52,211,153,0.08); border: 1px solid rgba(52,211,153,0.2); color: #6ee7b7; }
+  .dash-limit-notice.bonus { background: rgba(52,211,153,0.08); border: 1px solid rgba(52,211,153,0.2); color: #38b6ff; }
   .dash-limit-notice.restrict { background: rgba(251,191,36,0.07); border: 1px solid rgba(251,191,36,0.2); color: #fcd34d; }
   .dash-limit-notice-icon { flex-shrink: 0; font-size: 13px; margin-top: 1px; }
   .dash-plan-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
