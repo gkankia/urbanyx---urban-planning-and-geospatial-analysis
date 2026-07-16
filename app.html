@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Urbanyx — Urban Planning & Geospatial Analysis</title>
+<meta name="description" content="Urbanyx is an urban planning and geospatial analysis platform for walkability, accessibility, morphology, climate, and parcel data.">
+<!-- Open Graph (Facebook, LinkedIn) -->
+<meta property="og:site_name" content="Urbanyx">
+<meta property="og:title" content="Urbanyx — Urban Planning & Geospatial Analysis">
+<meta property="og:description" content="Urban planning and geospatial analysis platform for walkability, accessibility, morphology, climate, and parcel data.">
+<meta property="og:image" content="https://static.wixstatic.com/media/9c6bfd_7ed45f6184af45c29d0e05571bbec790~mv2.png">
+<meta property="og:url" content="https://urbanyx.zaxis.ge/app.html" />
+<link rel="canonical" href="https://urbanyx.zaxis.ge/app.html" />
+<meta property="og:type" content="website">
+<!-- Twitter card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Urbanyx — Urban Planning & Geospatial Analysis">
+<meta name="twitter:description" content="Urban planning and geospatial analysis platform for walkability, accessibility, morphology, climate, and parcel data.">
+<meta name="twitter:image" content="https://static.wixstatic.com/media/9c6bfd_7ed45f6184af45c29d0e05571bbec790~mv2.png">
+<link rel="icon" type="image/svg+xml" href="analysis-logos/favicon.svg">
+<link href="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.css" rel="stylesheet">
+<script src="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.js"></script>
+<link href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-draw/v1.4.3/mapbox-gl-draw.css" rel="stylesheet">
+<script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-draw/v1.4.3/mapbox-gl-draw.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="map-wrap">
+  <div id="map"></div>
+  <div id="parcel-float-card">
+    <div id="pfc-header">
+      <span id="pfc-code">—</span>
+      <div style="display:flex;align-items:center;gap:2px">
+        <button id="pfc-min-btn" onclick="toggleParcelCardMin()" title="Minimize">−</button>
+        <button class="inline-close-btn" onclick="clearParcelSelection()" title="Close">✕</button>
+      </div>
+    </div>
+    <div id="pfc-body">
+      <div class="pfc-row"><span class="pfc-lbl" id="pfc-lbl-area">Area</span><span class="pfc-val" id="pfc-area">—</span></div>
+      <div class="pfc-row"><span class="pfc-lbl" id="pfc-lbl-type">Type</span><span class="pfc-val" id="pfc-type">—</span></div>
+      <div class="pfc-row"><span class="pfc-lbl" id="pfc-lbl-addr">Address</span><span class="pfc-val" id="pfc-addr">—</span></div>
+      <div class="pfc-row"><span class="pfc-lbl" id="pfc-lbl-owner">Owner</span><span class="pfc-val" id="pfc-owner">—</span></div>
+      <div id="pfc-zone-row" style="display:none;margin-top:5px;padding-top:5px;border-top:1px solid rgba(255,255,255,0.07)"><div id="pfc-zones-list"></div></div>
+      <div id="pfc-kvals-row" style="display:none"></div>
+      <div id="pfc-setback-note" style="display:none;margin-top:6px;padding:5px 7px;background:rgba(252,211,77,0.07);border:1px solid rgba(252,211,77,0.18);border-radius:5px;font-size:0.58rem;color:rgba(252,211,77,0.65);line-height:1.5">3 m inner clearing is the minimum legal requirement. Final setback may vary based on project type, parcel configuration, and negotiation with public authorities.</div>
+      <div id="pfc-setback-warn" style="display:none;margin-top:6px;padding:5px 7px;background:rgba(239,68,68,0.07);border:1px solid rgba(239,68,68,0.25);border-radius:5px;font-size:0.58rem;color:rgba(239,68,68,0.8);line-height:1.5">Building footprint exceeds the 3 m setback boundary. Adjust your drawing to stay within the inner boundary line.</div>
+      <div id="pfc-area-warn" style="display:none;margin-top:6px;padding:5px 7px;background:rgba(239,68,68,0.07);border:1px solid rgba(239,68,68,0.25);border-radius:5px;font-size:0.58rem;color:rgba(239,68,68,0.8);line-height:1.5">Building footprint exceeds the maximum allowed area (K1 × parcel area). Reduce the drawing size.</div>
+      <div id="pfc-nodev-warn" style="display:none;margin-top:6px;padding:5px 7px;background:rgba(239,68,68,0.07);border:1px solid rgba(239,68,68,0.25);border-radius:5px;font-size:0.58rem;color:rgba(239,68,68,0.8);line-height:1.5">Building overlaps a zone not designated for development.</div>
+      <div id="pfc-build-params-row" style="display:none;margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.07)"></div>
+    </div>
+  </div>
+</div>
+<canvas id="wind-canvas"></canvas>
+<div id="map-blur"></div>
+
+<div id="app-toast"></div>
+<div id="icon-nav">
+  <div id="nav-brand-wrap">
+    <button class="nav-btn" id="nav-brand" onclick="navBrandClick()">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <span class="nav-tip" id="nav-tip-search">Search</span>
+    </button>
+  </div>
+  <div class="nav-group">
+    <button class="nav-btn" id="nav-projects-btn" onclick="openProjectsPanel()" style="display:none">
+      <img src="analysis-logos/my project.svg" width="39" height="39" style="opacity:0.65;transition:opacity 0.15s" id="nav-projects-icon">
+      <span class="nav-tip" id="nav-tip-projects">Projects</span>
+    </button>
+    <button class="nav-btn" id="nav-import-btn" onclick="navToggleImport()">
+      <img src="analysis-logos/import data.svg" width="39" height="39" style="opacity:0.55;transition:opacity 0.15s" id="nav-import-icon">
+      <span class="nav-tip" id="nav-tip-import">Import</span>
+    </button>
+    <button class="nav-btn" id="nav-draw-btn" onclick="navToggleDraw()">
+      <img src="analysis-logos/draw.svg" width="39" height="39" style="opacity:0.55;transition:opacity 0.15s" id="nav-draw-icon">
+      <span class="nav-tip" id="nav-tip-draw">Draw</span>
+    </button>
+    <button class="nav-btn" id="nav-extrusion-btn" onclick="toggleExtrusion()" ondblclick="toggleShapeEditMode()" title="3D Extrude">
+      <img src="analysis-logos/extrusion.svg" width="44" height="44" style="opacity:0.55;transition:opacity 0.15s" id="nav-extrusion-icon">
+      <span class="nav-tip" id="nav-tip-extrude">3D Extrude</span>
+    </button>
+    <button class="nav-btn" id="nav-report-btn" onclick="_rptMenuToggle(this)" title="Generate report">
+      <img src="analysis-logos/report.svg" width="44" height="44" style="opacity:0.55;transition:opacity 0.15s" id="nav-report-icon">
+      <span class="nav-tip" id="nav-tip-report">Generate Report</span>
+    </button>
+    <button class="nav-btn active" id="nav-parcel-btn" onclick="navSelect('parcel')" style="display:none">
+      <svg width="31" height="31" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+      <span class="nav-tip" id="nav-tip-parcel">Parcel search</span>
+    </button>
+    <button class="nav-btn" id="nav-analysis-btn" onclick="navSelect('analysis')" style="display:none">
+      <svg width="31" height="31" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="3" y1="20" x2="21" y2="20" opacity="0.45"/></svg>
+      <span class="nav-tip" id="nav-tip-analysis">Analysis</span>
+    </button>
+  </div>
+  <div class="nav-sep"></div>
+  <div class="nav-group" id="nav-cat-group">
+    <button class="nav-btn" id="cat-btn-accessibility" onclick="showCatInPanel('accessibility',this)" title="Accessibility"><img src="analysis-logos/accessibility.svg" width="39" height="39" style="opacity:0.70;transition:opacity 0.15s"><span class="nav-tip" id="nav-tip-cat-accessibility">Accessibility</span></button>
+    <button class="nav-btn" id="nav-zoning-btn" onclick="runZoningAnalysis()" title="Zoning Analysis"><img src="analysis-logos/zoning.svg" width="39" height="39" style="opacity:0.70;transition:opacity 0.15s" id="nav-zoning-icon"><span class="nav-tip" id="nav-tip-cat-zoning">Zoning</span></button>
+    <button class="nav-btn" id="cat-btn-education" onclick="showCatInPanel('education',this)" title="Education"><img src="analysis-logos/education.svg" width="39" height="39" style="opacity:0.70;transition:opacity 0.15s"><span class="nav-tip" id="nav-tip-cat-education">Education</span></button>
+    <button class="nav-btn" id="cat-btn-mobility" onclick="showCatInPanel('mobility',this)" title="Mobility"><img src="analysis-logos/mobility.svg" width="39" height="39" style="opacity:0.70;transition:opacity 0.15s"><span class="nav-tip" id="nav-tip-cat-mobility">Mobility</span></button>
+    <button class="nav-btn" id="cat-btn-climate" onclick="showCatInPanel('climate',this)" title="Climate"><img src="analysis-logos/climate.svg" width="39" height="39" style="opacity:0.70;transition:opacity 0.15s"><span class="nav-tip" id="nav-tip-cat-climate">Climate</span></button>
+    <button class="nav-btn" id="cat-btn-morphology" onclick="showCatInPanel('morphology',this)" title="Morphology"><img src="analysis-logos/urban%20morphology.svg" width="39" height="39" style="opacity:0.70;transition:opacity 0.15s"><span class="nav-tip" id="nav-tip-cat-morphology">Morphology</span></button>
+    <button class="nav-btn" id="cat-btn-energy" onclick="showCatInPanel('energy',this)" title="Clean Energy"><img src="analysis-logos/clean%20energy.svg" width="39" height="39" style="opacity:0.70;transition:opacity 0.15s"><span class="nav-tip" id="nav-tip-cat-energy">Clean Energy</span></button>
+    <button class="nav-btn" id="cat-btn-relief" onclick="showCatInPanel('relief',this)" title="Relief"><img src="analysis-logos/relief%20analysis.svg" width="39" height="39" style="opacity:0.70;transition:opacity 0.15s"><span class="nav-tip" id="nav-tip-cat-relief">Relief</span></button>
+  </div>
+  <div class="nav-sep"></div>
+  <div class="nav-group">
+    <button class="nav-btn" id="nav-lang-btn" onclick="navToggleLang()">
+      <span id="nav-lang-label">EN</span>
+      <span class="nav-tip" id="nav-tip-lang">Language</span>
+    </button>
+  </div>
+  <div class="nav-group bottom">
+    <div class="nav-sep" style="width:32px;margin:0 0 6px"></div>
+    <button class="nav-btn" id="nav-data-btn" onclick="openDataPanel()" style="display:none" title="Data Explorer">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="9" x2="9" y2="21"/></svg>
+      <span class="nav-tip" id="nav-tip-data">Data</span>
+    </button>
+    <button class="nav-btn" id="nav-user-btn" onclick="navOpenAccount()" style="padding:7px">
+      <div id="nav-u-avatar"><span class="avatar-initials"></span></div>
+      <span class="nav-tip" id="nav-tip-user">Account</span>
+    </button>
+    <button class="nav-btn" id="nav-signout-btn" onclick="logout()" style="display:none">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      <span class="nav-tip" id="nav-tip-signout">Sign out</span>
+    </button>
+  </div>
+</div>
+
+<!-- Data Explorer Panel -->
+<div id="data-panel"></div>
+
+<!-- Auto-save status chip — shown when a project is open for editing -->
+<div id="autosave-chip">
+  <span id="asc-dot"></span>
+  <span id="asc-name"></span>
+  <span id="asc-status"></span>
+  <button id="asc-stop" onclick="_stopAutoSave()" title="Stop auto-saving">✕</button>
+</div>
+
+<div id="map-zoom-controls" class="mzc-loading" style="display:none">
+  <button class="mzc-btn" onclick="map.zoomIn()" title="Zoom in">+</button>
+  <div class="mzc-sep"></div>
+  <button class="mzc-btn" onclick="map.zoomOut()" title="Zoom out">−</button>
+  <div class="mzc-sep"></div>
+  <button class="mzc-btn mzc-layers-btn" id="mzc-layers-btn" onclick="toggleLayersPanel()" title="Layers">
+    <img src="analysis-logos/advanced geospatial analysis.svg">
+  </button>
+  <div class="mzc-sep"></div>
+  <button class="mzc-btn mzc-locate-btn" id="mzc-locate-btn" onclick="navLocateUser()" title="Locate me">
+    <img src="analysis-logos/locate.svg" style="width:32px;height:32px;opacity:0.5;transition:opacity 0.15s" id="nav-locate-icon">
+  </button>
+  <div class="mzc-sep"></div>
+  <button class="mzc-btn mzc-3d-btn" id="mzc-3d-btn" onclick="toggle3D()" title="Toggle 3D view">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96" opacity="0.45"/><line x1="12" y1="22.08" x2="12" y2="12" opacity="0.45"/></svg>
+  </button>
+</div>
+
+<div id="layers-btn" onclick="toggleLayersPanel()">
+  <svg id="layers-btn-icon" width="13" height="11" viewBox="0 0 13 11" fill="none" style="flex-shrink:0"><rect x="0" y="0" width="13" height="2.2" rx="1.1" fill="currentColor" opacity="0.5"/><rect x="0" y="4.4" width="13" height="2.2" rx="1.1" fill="currentColor" opacity="0.5"/><rect x="0" y="8.8" width="13" height="2.2" rx="1.1" fill="currentColor" opacity="0.5"/></svg>
+  <span id="layers-btn-text">Layers</span>
+</div>
+<div id="layers-panel">
+  <div class="lp-sec-title" id="lbl-lp-basemap">Basemap</div>
+  <div class="bm-grid">
+    <div class="bm-opt active" id="bm-dark" onclick="switchBasemap('dark')">
+      <div class="bm-thumb bm-thumb-dark"></div><div class="bm-label" id="lbl-bm-dark">Dark</div>
+    </div>
+    <div class="bm-opt" id="bm-satellite" onclick="switchBasemap('satellite')">
+      <div class="bm-thumb bm-thumb-satellite"></div><div class="bm-label" id="lbl-bm-satellite">Satellite</div>
+    </div>
+    <div class="bm-opt" id="bm-day" onclick="switchBasemap('day')">
+      <div class="bm-thumb bm-thumb-day"></div><div class="bm-label" id="lbl-bm-day">Day</div>
+    </div>
+    <div class="bm-opt" id="bm-night" onclick="switchBasemap('night')">
+      <div class="bm-thumb bm-thumb-night"></div><div class="bm-label" id="lbl-bm-night">Night</div>
+    </div>
+  </div>
+  <div class="lp-sep"></div>
+  <div class="lp-sec-title" id="lbl-lp-layers">Layers</div>
+  <div class="lp-row" onclick="toggleCadastral()">
+    <span class="lp-row-name" id="lbl-lp-cadastral">Cadastral parcels</span>
+    <div class="lp-sw" id="cadastral-sw"></div>
+  </div>
+  <div class="lp-row" onclick="toggleLineObjects()">
+    <span class="lp-row-name" id="lbl-lp-lineobjects">Land lines</span>
+    <div class="lp-sw" id="lineobjects-sw"></div>
+  </div>
+  <div class="lp-row" onclick="toggleForestFunds()">
+    <span class="lp-row-name" id="lbl-lp-forestfunds">Forest fund</span>
+    <div class="lp-sw" id="forestfunds-sw"></div>
+  </div>
+  <div class="lp-sep" id="il-panel-sep" style="display:none"></div>
+  <div class="lp-sec-title" id="il-panel-title" style="display:none">Imported Files</div>
+  <div id="il-panel-list"></div>
+</div>
+
+<div id="top-right">
+  <div id="user-pill" onclick="openDashboard()" style="cursor:pointer">
+    <div class="u-avatar" id="u-avatar"><span class="avatar-initials"></span></div>
+    <div class="u-info">
+      <div class="u-name" id="u-name"></div>
+      <div class="u-plan" id="u-plan"></div>
+    </div>
+    <div class="u-sep"></div>
+    <button class="u-menu-btn" id="u-signout-btn" onclick="event.stopPropagation();logout()"></button>
+  </div>
+  <button onclick="openAuthModal('view-signin')" id="signin-btn" style="display:none;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:50px;color:rgba(255,255,255,0.75);font-size:0.75rem;font-weight:600;padding:6px 14px;cursor:pointer;font-family:inherit;transition:all 0.15s;backdrop-filter:blur(12px)"></button>
+  <button onclick="openPaywall()" id="plans-btn" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:50px;color:rgba(255,255,255,0.6);font-size:0.75rem;font-weight:600;padding:6px 14px;cursor:pointer;font-family:inherit;transition:all 0.15s;backdrop-filter:blur(12px)"></button>
+  <button onclick="toggle3D()" id="btn-3d">3D</button>
+  <div class="lang-toggle" id="lang-toggle">
+    <button class="lang-btn active" onclick="setLang('en')">EN</button>
+    <button class="lang-btn" onclick="setLang('ka')">ქა</button>
+  </div>
+</div>
+
+<div id="top-center">
+  <div id="map-status"></div>
+</div>
+
+<div id="center-search">
+  <div class="center-inner">
+    <div class="search-bar">
+      <input type="text" id="input-center" placeholder="01.15.07.002.057" spellcheck="false" onkeydown="if(event.key==='Enter') search()">
+      <button class="search-btn" id="btn-center" onclick="search()">Search</button>
+    </div>
+    <div class="status" id="status-center"></div>
+    <div class="or-click-row" style="color:rgba(255,255,255,0.35);font-size:0.75rem;display:flex;align-items:center;gap:10px;text-shadow:0 1px 6px rgba(0,0,0,0.5)">
+      <div style="height:1px;width:50px;background:rgba(255,255,255,0.15)"></div>
+      <span id="or-click-text"></span>
+      <div style="height:1px;width:50px;background:rgba(255,255,255,0.15)"></div>
+    </div>
+    <div id="center-auth-link" style="font-size:0.75rem;color:rgba(255,255,255,0.35);text-shadow:0 1px 6px rgba(0,0,0,0.5)">
+      <a onclick="openAuthModal('view-signin')" style="color:rgba(255,255,255,0.5);text-decoration:underline;cursor:pointer" id="center-signin-link"></a>
+      &nbsp;·&nbsp;
+      <a onclick="openAuthModal('view-signup')" style="color:rgba(255,255,255,0.5);text-decoration:underline;cursor:pointer" id="center-signup-link"></a>
+    </div>
+  </div>
+</div>
+
+<div id="side-panel">
+  <div class="search-bar">
+    <input type="text" id="input-side" placeholder="01.15.07.002.057" spellcheck="false" onkeydown="if(event.key==='Enter') search()">
+    <button class="search-btn" id="btn-side" onclick="search()">Search</button>
+  </div>
+  <div class="card" id="owner-results-card" style="display:none">
+    <div class="card-label" id="lbl-owner-results">Parcels by Owner ID</div>
+    <div id="owner-results-list"></div>
+  </div>
+  <div class="card" id="info-card" style="display:none">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px">
+      <div class="card-label" id="lbl-parcel-info" style="margin-bottom:0">Parcel Info</div>
+      <button class="inline-close-btn" onclick="clearParcelSelection()" title="Clear selection">✕</button>
+    </div>
+    <div class="info-row"><span class="info-label" id="lbl-code">Cadastral</span><span class="info-value" id="val-code">—</span></div>
+    <div class="info-row"><span class="info-label" id="lbl-area">Area</span><span class="info-value" id="val-area">—</span></div>
+    <div class="info-row"><span class="info-label" id="lbl-type">Type</span><span class="info-value" id="val-type">—</span></div>
+    <div class="info-row"><span class="info-label" id="lbl-addr">Address</span><span class="info-value" id="val-addr">—</span></div>
+    <div class="info-row"><span class="info-label" id="lbl-owner">Owner</span><span class="info-value" id="val-owner">—</span></div>
+    <div class="info-row" id="row-line-ownership" style="display:none"><span class="info-label" id="lbl-ownership">Ownership</span><span class="info-value" id="val-ownership">—</span></div>
+    <div class="info-row" id="row-line-extra" style="display:none"><span class="info-label" id="lbl-extra">Details</span><span class="info-value" id="val-extra">—</span></div>
+    <div class="info-row" id="row-3d-height" style="display:none"><span class="info-label" id="lbl-3d-height">Height</span><span class="info-value" id="val-3d-height">—</span></div>
+    <div class="info-row" id="row-3d-floors" style="display:none"><span class="info-label" id="lbl-3d-floors">Floors</span><span class="info-value" id="val-3d-floors">—</span></div>
+  </div>
+
+  <div class="card" id="floor-detail-panel" style="display:none">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <div style="display:flex;align-items:center;gap:7px">
+        <div id="floor-sel-swatch" style="width:10px;height:10px;border-radius:3px;background:#94a3b4;flex-shrink:0"></div>
+        <span class="card-label" id="floor-sel-num" style="margin-bottom:0">Floor 1</span>
+      </div>
+      <button onclick="_resetSelectedFloors()" style="background:none;border:none;color:rgba(255,255,255,0.25);font-size:0.68rem;cursor:pointer;font-family:inherit;padding:0;transition:color 0.15s" onmouseover="this.style.color='rgba(255,255,255,0.65)'" onmouseout="this.style.color='rgba(255,255,255,0.25)'">Reset</button>
+    </div>
+    <div id="floor-use-btns" style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:8px"></div>
+    <div style="font-size:0.58rem;color:rgba(255,255,255,0.2);line-height:1.5">Click any floor to select · then assign a use type above</div>
+  </div>
+
+  <button class="analyse-btn" id="analyse-btn" style="display:none" onclick="onAnalyseClick()">
+    <span id="analyse-btn-label"></span>
+    <span style="font-size:0.58rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;background:rgba(167,139,250,0.15);color:#a78bfa;border-radius:4px;padding:2px 5px" id="free-badge"></span>
+  </button>
+  <button class="edit-shape-btn" id="edit-shape-btn" onclick="toggleShapeEditMode()" style="display:none">✏ Edit Shape</button>
+
+
+  <div class="card" id="score-card" style="display:none">
+    <div class="card-label" id="lbl-score-title"></div>
+    <div class="score-wrap">
+      <svg width="70" height="70" viewBox="0 0 70 70" style="flex-shrink:0">
+        <circle cx="35" cy="35" r="27" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="7"/>
+        <circle id="score-ring" cx="35" cy="35" r="27" fill="none" stroke="#34d399" stroke-width="7"
+          stroke-linecap="round" stroke-dasharray="169.65" stroke-dashoffset="169.65"
+          transform="rotate(-90 35 35)" style="transition:stroke-dashoffset 1.1s cubic-bezier(0.23,1,0.32,1),stroke 0.4s"/>
+      </svg>
+      <div class="score-meta">
+        <div class="score-num" id="score-num">—</div>
+        <div class="score-sub" id="lbl-out-of"></div>
+        <div class="score-verdict" id="score-verdict"></div>
+      </div>
+    </div>
+    <div id="cat-list"></div>
+  </div>
+
+
+
+  <div class="card" id="pro-analysis-card" style="display:none">
+    <div class="pro-cat" id="pro-cat-accessibility">
+      <div class="pro-cat-body"><div class="pro-cat-body-inner" id="pro-cat-accessibility-content"></div></div>
+    </div>
+    <div class="pro-cat" id="pro-cat-climate">
+      <div class="pro-cat-body"><div class="pro-cat-body-inner" id="pro-cat-climate-content"></div></div>
+    </div>
+    <div class="pro-cat" id="pro-cat-education">
+      <div class="pro-cat-body"><div class="pro-cat-body-inner" id="pro-cat-education-content"></div></div>
+    </div>
+    <div class="pro-cat" id="pro-cat-mobility">
+      <div class="pro-cat-body"><div class="pro-cat-body-inner" id="pro-cat-mobility-content"></div></div>
+    </div>
+    <div class="pro-cat" id="pro-cat-morphology" style="display:none">
+      <div class="pro-cat-body"><div class="pro-cat-body-inner" id="pro-cat-morphology-content">
+        <div id="acc-syntax-result"><div id="syntax-legend" style="display:none"></div><div id="orient-rose" style="display:none"></div></div>
+        <div id="osm-legend" style="display:none"></div>
+      </div></div>
+    </div>
+    <div class="pro-cat" id="pro-cat-energy" style="display:none">
+      <div class="pro-cat-body"><div class="pro-cat-body-inner" id="pro-cat-energy-content"></div></div>
+    </div>
+    <div class="pro-cat" id="pro-cat-relief" style="display:none">
+      <div class="pro-cat-body"><div class="pro-cat-body-inner" id="pro-cat-relief-content"></div></div>
+    </div>
+  </div>
+  <div class="card" id="wind-card" style="display:none">
+    <div class="card-label" id="lbl-wind-card-title"></div>
+    <div id="wind-result-inner"></div>
+  </div>
+
+  <!-- Exports consolidated into the left-rail Generate Report menu -->
+  <div class="status" id="status-analysis"></div>
+  <!-- Search limit warning -->
+  <div id="limit-warning" style="display:none;background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.25);border-radius:10px;padding:10px 12px;font-size:0.75rem;color:#fbbf24;line-height:1.5">
+    <div id="limit-warning-text"></div>
+    <a onclick="openPaywall()" style="color:#fbbf24;font-weight:600;text-decoration:underline;cursor:pointer;display:block;margin-top:4px" id="limit-warning-cta"></a>
+  </div>
+</div>
+
+<!-- Polygon select result panel -->
+<div id="line-profile-panel">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:9px">
+    <div style="font-size:0.57rem;font-weight:700;letter-spacing:0.09em;text-transform:uppercase;color:rgba(129,140,248,0.55)">Elevation Profile</div>
+    <button class="inline-close-btn" onclick="_clearLineProfile()" title="Close">✕</button>
+  </div>
+  <div id="line-profile-meta" class="lp-elev-row"></div>
+  <div id="line-profile-chart"></div>
+</div>
+<div id="poly-result-panel">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+    <div class="card-label" id="lbl-poly-title" style="margin-bottom:0"></div>
+    <div style="display:flex;align-items:center;gap:6px">
+      <button onclick="removeActiveBuilding()" title="Delete building" style="background:none;border:none;cursor:pointer;padding:0 2px;line-height:1;display:flex;align-items:center" onmouseover="this.querySelector('img').style.opacity='0.9';this.querySelector('img').style.filter='sepia(1) saturate(8) hue-rotate(310deg) brightness(0.9)'" onmouseout="this.querySelector('img').style.opacity='0.35';this.querySelector('img').style.filter=''"><img src="analysis-logos/delete.svg" style="width:13px;height:13px;opacity:0.35;transition:opacity 0.15s,filter 0.15s"></button>
+      <button class="inline-close-btn" onclick="_deselectBuilding()" title="Close panel">✕</button>
+    </div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:4px">
+    <div style="display:flex;justify-content:space-between;align-items:baseline">
+      <span style="font-size:0.65rem;color:rgba(255,255,255,0.38)" id="lbl-prp-footprint">Footprint</span>
+      <span style="font-size:0.82rem;font-weight:700;color:#a5b4fc" id="val-prp-footprint">—</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:baseline">
+      <span style="font-size:0.65rem;color:rgba(255,255,255,0.38)" id="lbl-prp-perimeter">Perimeter</span>
+      <span style="font-size:0.75rem;color:rgba(255,255,255,0.6)" id="val-prp-perimeter">—</span>
+    </div>
+    <div id="prp-extrusion-rows" style="display:none;flex-direction:column;gap:3px;margin-top:4px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.07)">
+      <div style="display:flex;justify-content:space-between;align-items:baseline">
+        <span style="font-size:0.65rem;color:rgba(255,255,255,0.38)" id="lbl-prp-height">Height</span>
+        <span style="font-size:0.75rem;color:rgba(255,255,255,0.6)" id="val-prp-height">—</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:baseline">
+        <span style="font-size:0.65rem;color:rgba(255,255,255,0.38)" id="lbl-prp-floors">Floors</span>
+        <span style="font-size:0.75rem;color:rgba(255,255,255,0.6)" id="val-prp-floors">—</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:2px">
+        <span style="font-size:0.65rem;color:rgba(255,255,255,0.38)" id="lbl-prp-totalarea">Total floor area</span>
+        <span style="font-size:0.82rem;font-weight:700;color:#a78bfa" id="val-prp-totalarea">—</span>
+      </div>
+      <div id="row-prp-k2limit" style="display:none;justify-content:space-between;align-items:baseline">
+        <span style="font-size:0.65rem;color:rgba(255,255,255,0.38)" id="lbl-prp-k2limit">K2 limit</span>
+        <span style="font-size:0.75rem;font-weight:600" id="val-prp-k2limit">—</span>
+      </div>
+      <div id="prp-use-breakdown" style="display:flex;flex-direction:column;gap:3px;padding-top:5px;border-top:1px solid rgba(255,255,255,0.05)"></div>
+    </div>
+  </div>
+  <div class="poly-area" id="poly-area-text" style="display:none"></div>
+  <div id="poly-dl-row" style="display:flex;gap:6px">
+    <button class="btn-poly-dl" id="poly-dl-3d-btn" onclick="downloadBuildingOBJ()" style="flex:1;display:none" title="Export 3D model for SketchUp, Rhino, Blender">3D OBJ</button>
+  </div>
+</div>
+
+<!-- Draw hint -->
+<div id="draw-hint"></div>
+
+
+<!-- Category popover — floats above clicked bottom bar icon -->
+<div id="cat-popover">
+  <div id="cat-popover-header">
+    <span id="cat-popover-title"></span>
+    <button id="cat-popover-close" onclick="closeCatPopover()">✕</button>
+  </div>
+  <div id="cat-popover-body"></div>
+</div>
+
+<!-- On-map info badge: shows parcel / building metrics on the canvas -->
+<div id="map-info-badge">
+  <div class="mib-item" id="mib-height-wrap"><span class="mib-lbl">H</span><span class="mib-val" id="mib-height">—</span></div>
+  <div class="mib-sep" id="mib-s2"></div>
+  <div class="mib-item" id="mib-floors-wrap"><span class="mib-lbl">Floors</span><span class="mib-val" id="mib-floors">—</span></div>
+</div>
+
+<!-- Geometry reshape toolbar — placeholder, shown in 3D mode -->
+<div id="geo-toolbar">
+  <button class="geo-tb-btn" disabled title="Cut (coming soon)">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><circle cx="4" cy="4" r="2"/><circle cx="4" cy="12" r="2"/><line x1="5.5" y1="5.5" x2="12" y2="12"/><line x1="12" y1="4" x2="5.5" y2="10.5"/></svg>
+    <span class="geo-tip">Cut</span>
+  </button>
+  <button class="geo-tb-btn" disabled title="Boolean subtract (coming soon)">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="8" height="8" rx="1.5"/><rect x="6" y="6" width="8" height="8" rx="1.5"/></svg>
+    <span class="geo-tip">Subtract</span>
+  </button>
+  <button class="geo-tb-btn" disabled title="Boolean merge (coming soon)">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8 C3 5.2 5.2 3 8 3 C10.8 3 13 5.2 13 8"/><path d="M3 8 C3 10.8 5.2 13 8 13 C10.8 13 13 10.8 13 8"/><line x1="8" y1="6" x2="8" y2="10"/><line x1="6" y1="8" x2="10" y2="8"/></svg>
+    <span class="geo-tip">Merge</span>
+  </button>
+  <div class="geo-tb-sep"></div>
+  <button class="geo-tb-btn" disabled title="Offset walls (coming soon)">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="8" height="8" rx="1"/><rect x="1.5" y="1.5" width="13" height="13" rx="2" stroke-dasharray="2 2" opacity="0.45"/></svg>
+    <span class="geo-tip">Offset</span>
+  </button>
+  <button class="geo-tb-btn" disabled title="Fillet corners (coming soon)">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M3 13 L3 6 Q3 3 6 3 L13 3"/><path d="M3 13 Q3 3 13 3" opacity="0.35" stroke-dasharray="2 2"/></svg>
+    <span class="geo-tip">Fillet</span>
+  </button>
+  <div class="geo-tb-sep"></div>
+  <button class="geo-tb-btn" disabled title="Mirror (coming soon)">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="2" x2="8" y2="14" stroke-dasharray="2 2"/><path d="M2 5 L6 8 L2 11"/><path d="M14 5 L10 8 L14 11"/></svg>
+    <span class="geo-tip">Mirror</span>
+  </button>
+</div>
+
+<!-- Auth modal -->
+<div class="modal-overlay" id="auth-modal" onclick="onAuthOverlayClick(event)">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeAuthModal()">✕</button>
+    <div id="view-signin">
+      <div class="modal-header">
+                <div class="modal-title" id="si-title"></div>
+      </div>
+      <div class="field"><label id="lbl-si-email"></label><input type="email" id="si-email" onkeydown="if(event.key==='Enter')signInEmail()"></div>
+      <div class="field"><label id="lbl-si-password"></label><input type="password" id="si-password" onkeydown="if(event.key==='Enter')signInEmail()"></div>
+      <div class="form-error" id="si-error"></div>
+      <button class="btn-primary" id="btn-signin" onclick="signInEmail()"></button>
+      <div class="modal-footer" id="si-footer"></div>
+    </div>
+    <div id="view-signup" style="display:none">
+      <div class="modal-header">
+                <div class="modal-title" id="su-title"></div>
+        <div class="modal-sub" id="su-sub"></div>
+      </div>
+      <div class="field"><label id="lbl-su-name"></label><input type="text" id="su-name"></div>
+      <div class="field"><label id="lbl-su-sector"></label><select id="su-sector"><option value="" id="su-sector-ph"></option></select></div>
+      <div class="field"><label id="lbl-su-org"></label><input type="text" id="su-org"></div>
+      <div class="field"><label id="lbl-su-role"></label><input type="text" id="su-role"></div>
+      <div class="field"><label id="lbl-su-purpose"></label><select id="su-purpose"><option value="" id="su-purpose-ph"></option></select></div>
+      <div class="field"><label id="lbl-su-email"></label><input type="email" id="su-email"></div>
+      <div class="field"><label id="lbl-su-password"></label><input type="password" id="su-password" onkeydown="if(event.key==='Enter')signUp()"></div>
+      <div style="margin-top:10px;margin-bottom:6px">
+        <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer">
+          <input type="checkbox" id="su-marketing-cb" style="margin-top:3px;flex-shrink:0;accent-color:#6366f1;width:14px;height:14px">
+          <span style="font-size:0.72rem;color:rgba(255,255,255,0.45);line-height:1.5">I'd like to receive product updates from Urbanyx and news from Z.axis (optional).</span>
+        </label>
+      </div>
+      <div style="margin-top:0;margin-bottom:2px">
+        <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer">
+          <input type="checkbox" id="su-terms" style="margin-top:3px;flex-shrink:0;accent-color:#6366f1;width:14px;height:14px">
+          <span id="lbl-su-terms" style="font-size:0.72rem;color:rgba(255,255,255,0.6);line-height:1.5"></span>
+        </label>
+      </div>
+      <div class="form-error" id="su-error"></div>
+      <button class="btn-primary" id="btn-signup" onclick="signUp()"></button>
+      <div class="modal-footer" id="su-footer"></div>
+    </div>
+    <div id="view-confirm" style="display:none">
+      <div class="modal-header">
+                <div class="modal-title" id="confirm-title"></div>
+        <div class="modal-sub" id="confirm-sub"></div>
+      </div>
+      <button class="btn-primary" id="btn-confirm" onclick="closeAuthModal()"></button>
+    </div>
+    <div id="view-reset" style="display:none">
+      <button class="back-link" id="btn-back-reset" onclick="showView('view-signin')"></button>
+      <div class="modal-header">
+                <div class="modal-title" id="reset-title"></div>
+        <div class="modal-sub" id="reset-sub"></div>
+      </div>
+      <div class="field"><label id="lbl-reset-email"></label><input type="email" id="reset-email" onkeydown="if(event.key==='Enter')resetPassword()"></div>
+      <div class="form-error" id="reset-error"></div>
+      <button class="btn-primary" id="btn-reset" onclick="resetPassword()"></button>
+    </div>
+    <div id="view-update-password" style="display:none">
+      <div class="modal-header">
+        <div class="modal-title" id="update-pw-title"></div>
+        <div class="modal-sub" id="update-pw-sub"></div>
+      </div>
+      <div class="field"><label id="lbl-update-pw"></label><input type="password" id="update-pw-input" onkeydown="if(event.key==='Enter')updatePassword()"></div>
+      <div class="form-error" id="update-pw-error"></div>
+      <button class="btn-primary" id="btn-update-pw" onclick="updatePassword()"></button>
+    </div>
+  </div>
+</div>
+
+<!-- Paywall modal -->
+<div class="modal-overlay" id="paywall-modal" onclick="onPaywallOverlayClick(event)">
+  <div class="modal-box" style="max-width:520px">
+    <button class="modal-close" onclick="closePaywall()">✕</button>
+    <div class="modal-header">
+            <div class="modal-title" id="pw-title"></div>
+      <div class="modal-sub" id="pw-sub"></div>
+    </div>
+    <div class="pw-plans">
+      <div class="pw-plan">
+        <div class="pw-plan-name" id="pw-free-name"></div>
+        <div class="pw-plan-price"><strong id="pw-free-price">€0</strong><span id="pw-free-period"></span></div>
+      </div>
+      <div class="pw-plan pro">
+        <div class="pw-plan-badge" id="pw-pro-badge"></div>
+        <div class="pw-plan-name" id="pw-pro-name"></div>
+        <div class="pw-billing-toggle"><button class="pw-btog active" id="pw-btog-annual" onclick="setPwBilling('annual')"></button><button class="pw-btog" id="pw-btog-monthly" onclick="setPwBilling('monthly')"></button></div><div class="pw-plan-price"><div style="display:flex;align-items:baseline;gap:4px;flex-wrap:wrap"><strong id="pw-pro-price">€20</strong><span id="pw-pro-period"></span><span id="pw-pro-billing" style="font-size:0.58rem;color:rgba(255,255,255,0.3);white-space:nowrap"></span><button class="pw-rate-info-btn" id="pw-rate-info-btn" onmouseenter="_showRateInfo(event)" onmousemove="_moveRateInfo(event)" onmouseleave="_hideRateInfo()">ⓘ</button></div></div>
+        <div class="pw-trial-note" id="pw-trial-note"></div>
+      </div>
+    </div>
+    <div class="pw-compare">
+      <div class="pw-row pw-hdr"><span></span><span id="pw-col-free"></span><span id="pw-col-pro"></span></div>
+      <div class="pw-row"><span id="pw-r1"></span><span id="pw-f1"></span><span id="pw-p1"></span></div>
+      <div class="pw-row"><span id="pw-r2"></span><span id="pw-f2"></span><span id="pw-p2"></span></div>
+      <div class="pw-row"><span id="pw-r3"></span><span id="pw-f3"></span><span id="pw-p3"></span></div>
+      <div class="pw-row"><span id="pw-r4"></span><span id="pw-f4"></span><span id="pw-p4"></span></div>
+      <div class="pw-row"><span id="pw-r5"></span><span id="pw-f5"></span><span id="pw-p5"></span></div>
+      <div class="pw-row"><span id="pw-r6"></span><span id="pw-f6"></span><span id="pw-p6"></span></div>
+      <div class="pw-row"><span id="pw-r7"></span><span id="pw-f7"></span><span id="pw-p7"></span></div>
+      <div class="pw-row"><span id="pw-r8"></span><span id="pw-f8"></span><span id="pw-p8"></span></div>
+      <div class="pw-row"><span id="pw-r9"></span><span id="pw-f9"></span><span id="pw-p9"></span></div>
+      <div class="pw-row"><span id="pw-r10"></span><span id="pw-f10"></span><span id="pw-p10"></span></div>
+    </div>
+    <hr class="modal-divider">
+    <button class="btn-pro" id="pw-cta-btn" onclick="startCheckout()"></button>
+    <div class="pw-paddle-note">
+      <svg width="11" height="13" viewBox="0 0 12 14" fill="none" style="flex-shrink:0;margin-top:1px"><rect x="1" y="5.5" width="10" height="8" rx="1.5" stroke="currentColor" stroke-width="1.4"/><path d="M3.5 5.5V4a2.5 2.5 0 0 1 5 0v1.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+      We do not store your credit card details. Payment is securely handled by <a href="https://paddle.com" target="_blank" rel="noopener">Paddle</a>.
+    </div>
+    <div class="modal-footer" id="pw-footer"></div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+
+<!-- Dashboard modal -->
+<div id="billing-modal" onclick="onBillingOverlayClick(event)" style="position:fixed;inset:0;z-index:210;background:rgba(0,0,0,0.55);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;pointer-events:none;transition:opacity 0.22s ease">
+  <div class="dash-box" style="max-width:460px" onclick="event.stopPropagation()">
+    <button class="dash-close" onclick="closeBillingPortal()">✕</button>
+    <!-- Header -->
+    <div style="margin-bottom:22px;padding-bottom:18px;border-bottom:1px solid rgba(255,255,255,0.07)">
+      <div style="font-size:1rem;font-weight:700;color:white;margin-bottom:3px" id="bill-title"></div>
+      <div style="font-size:0.72rem;color:rgba(255,255,255,0.35)" id="bill-subtitle"></div>
+    </div>
+    <!-- Current plan -->
+    <div class="dash-section">
+      <div class="dash-section-title" id="bill-lbl-plan"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0">
+        <div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="dash-plan-badge" id="bill-plan-badge"></span>
+          </div>
+          <div style="color:rgba(255,255,255,0.35);font-size:0.72rem;margin-top:3px" id="bill-plan-desc"></div>
+        </div>
+        <div style="text-align:right;flex-shrink:0;margin-left:16px">
+          <div style="font-size:1.15rem;font-weight:700;color:white" id="bill-price"></div>
+          <div style="font-size:0.65rem;color:rgba(255,255,255,0.3)" id="bill-period"></div>
+        </div>
+      </div>
+      <div id="bill-next-renewal" class="billing-next"></div>
+    </div>
+    <!-- Billing history -->
+    <div class="dash-section" id="bill-history-section">
+      <div class="dash-section-title" id="bill-lbl-history"></div>
+      <div id="bill-history-list"></div>
+    </div>
+    <!-- Actions -->
+    <div class="dash-section" style="padding-bottom:0">
+      <button id="bill-upgrade-btn" class="dash-action-btn upgrade" onclick="closeBillingPortal();openPaywall()" style="width:100%;display:none" id="bill-upgrade-btn"></button>
+      <div id="bill-trial-notice" style="display:none;font-size:0.65rem;color:#a78bfa;margin-bottom:6px;line-height:1.5;padding:8px 10px;background:rgba(167,139,250,0.07);border-radius:7px;border:1px solid rgba(167,139,250,0.15)"></div>
+      <button id="bill-cancel-btn" class="billing-cancel-btn" onclick="cancelSubscription()" style="display:none;width:100%;text-align:center;padding:6px 0"></button>
+    </div>
+  </div>
+</div>
+
+<div id="dashboard-modal" onclick="onDashboardOverlayClick(event)">
+  <div class="dash-box">
+    <button class="dash-close" onclick="closeDashboard()">✕</button>
+    <!-- Profile -->
+    <div style="display:flex;align-items:center;gap:14px;padding-bottom:20px;border-bottom:1px solid rgba(255,255,255,0.07)">
+      <div class="dash-avatar" id="dash-avatar" onclick="triggerAvatarUpload()">
+        <span class="avatar-initials" id="dash-avatar-initials"></span>
+        <div class="avatar-overlay">📷</div>
+      </div>
+      <div style="min-width:0">
+        <div style="color:white;font-weight:600;font-size:0.9rem;margin-bottom:2px" id="dash-name"></div>
+        <div style="color:rgba(255,255,255,0.35);font-size:0.72rem;margin-bottom:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" id="dash-email"></div>
+        <span class="dash-plan-badge" id="dash-plan-badge"></span>
+      </div>
+    </div>
+    <div id="dash-trial-banner" class="trial-banner" style="display:none" onclick="closeDashboard();openPaywall()">
+      <span id="dash-trial-text"></span>
+      <span style="font-size:0.7rem;opacity:0.6">→</span>
+    </div>
+    <!-- Usage -->
+    <div class="dash-section" id="dash-usage-section">
+      <div class="dash-section-title" id="lbl-dash-usage"></div>
+      <div class="dash-stat-grid">
+        <div class="dash-stat">
+          <div class="dash-stat-val" id="dash-used-today">—</div>
+          <div class="dash-stat-label" id="lbl-dash-used-today"></div>
+        </div>
+        <div class="dash-stat">
+          <div class="dash-stat-val" id="dash-remaining">—</div>
+          <div class="dash-stat-label" id="lbl-dash-remaining"></div>
+        </div>
+      </div>
+      <div class="dash-limit-bar-track" style="margin-top:12px">
+        <div class="dash-limit-bar-fill" id="dash-limit-bar" style="width:0%"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:5px">
+        <span style="font-size:0.62rem;color:rgba(255,255,255,0.25)" id="dash-limit-label"></span>
+        <span style="font-size:0.62rem;color:rgba(255,255,255,0.25)" id="dash-reset-label"></span>
+      </div>
+      <div id="dash-limit-notice" style="display:none"></div>
+    </div>
+    <!-- Activity -->
+    <div class="dash-section" id="dash-activity-section" style="display:none">
+      <div class="dash-section-title" id="lbl-dash-activity"></div>
+      <div id="dash-activity-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:6px"></div>
+    </div>
+    <!-- Billing -->
+    <div class="dash-section">
+      <div class="dash-section-title" id="lbl-dash-billing"></div>
+      <div class="dash-plan-row">
+        <div>
+          <div style="color:white;font-size:0.85rem;font-weight:600;margin-bottom:2px" id="dash-plan-name"></div>
+          <div style="color:rgba(255,255,255,0.35);font-size:0.72rem" id="dash-plan-desc"></div>
+        </div>
+        <button class="dash-action-btn upgrade" id="dash-upgrade-btn" onclick="closeDashboard();openPaywall()" style="display:none"></button>
+        <button class="dash-action-btn billing" id="dash-billing-btn" onclick="closeDashboard();openBillingPortal()" style="display:none"></button>
+      </div>
+    </div>
+    <!-- Preferences -->
+    <div class="dash-section">
+      <div class="dash-section-title">Communication</div>
+      <label class="dash-consent-row">
+        <span class="dash-consent-label">Marketing updates from Urbanyx and Z.axis</span>
+        <span class="dash-toggle">
+          <input type="checkbox" id="dash-marketing-cb" onchange="toggleMarketingConsent(this.checked)">
+          <span class="dash-toggle-slider"></span>
+        </span>
+      </label>
+    </div>
+    <!-- Sign out -->
+    <div class="dash-section" style="padding-bottom:0">
+      <button class="dash-action-btn signout" style="width:100%" onclick="closeDashboard();logout()" id="dash-signout-btn"></button>
+      <button class="dash-delete-link" onclick="openDeletionRequest()">Request account deletion</button>
+    </div>
+  </div>
+</div>
+<!-- Account deletion request modal -->
+<div id="deletion-modal" onclick="if(event.target===this)closeDeletionRequest()">
+  <div class="del-box">
+    <div id="del-form-view">
+      <div class="del-title">Request account deletion</div>
+      <div class="del-sub">Your request will be reviewed and your account deleted within 72 hours. You will receive a confirmation once complete.</div>
+      <div class="del-question">Why would you like to delete your account?</div>
+      <label class="del-reason"><input type="radio" name="del-reason" value="no_longer_needed"><span>I no longer need the service</span></label>
+      <label class="del-reason"><input type="radio" name="del-reason" value="found_alternative"><span>I found a better alternative</span></label>
+      <label class="del-reason"><input type="radio" name="del-reason" value="privacy"><span>Privacy or data concerns</span></label>
+      <label class="del-reason"><input type="radio" name="del-reason" value="too_expensive"><span>It's too expensive</span></label>
+      <label class="del-reason"><input type="radio" name="del-reason" value="missing_features"><span>Missing features I need</span></label>
+      <label class="del-reason"><input type="radio" name="del-reason" value="no_reason" checked><span>No reason / prefer not to say</span></label>
+      <div class="del-actions">
+        <button class="del-cancel-btn" onclick="closeDeletionRequest()">Cancel</button>
+        <button class="del-submit-btn" id="del-submit-btn" onclick="submitDeletionRequest()">Submit request</button>
+      </div>
+    </div>
+    <div id="del-success-view" style="display:none">
+      <div class="del-success">
+        <div class="del-success-icon">✓</div>
+        <div class="del-title" style="text-align:center;margin-bottom:8px">Request received</div>
+        <div class="del-success-msg">We've received your account deletion request. You will receive a confirmation within 72 hours.</div>
+        <button class="del-cancel-btn" style="margin-top:20px;width:100%" onclick="closeDeletionRequest()">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Mapillary bottom gallery -->
+<div id="mapillary-gallery">
+  <div class="mapillary-gallery-label" id="lbl-mapillary-gallery"></div>
+  <div class="mapillary-thumbs" id="mapillary-thumbs"></div>
+</div>
+<!-- Mapillary lightbox -->
+<div id="mapillary-lightbox" onclick="mapillaryLightboxBgClick(event)">
+  <div class="lightbox-inner">
+    <button class="lightbox-close" onclick="closeMapillaryLightbox()">✕</button>
+    <img class="lightbox-img" id="lightbox-img" src="" alt="Street view" onclick="mapillaryLightboxOpenMapillary()">
+    <div class="lightbox-controls">
+      <button class="lightbox-nav" id="lightbox-prev" onclick="mapillaryLightboxNav(-1)">←</button>
+      <span class="lightbox-counter" id="lightbox-counter"></span>
+      <button class="lightbox-nav" id="lightbox-next" onclick="mapillaryLightboxNav(1)">→</button>
+    </div>
+    <span class="lightbox-open-link" onclick="mapillaryLightboxOpenMapillary()" id="lbl-lightbox-open"></span>
+  </div>
+</div>
+<div id="zaxis-footer"><a href="https://zaxis.ge" target="_blank" rel="noopener"><img src="analysis-logos/urbanyx-zaxis-footer.svg" alt="Z.axis" width="70"></a></div>
+
+<div id="draw-shape-popup">
+  <div class="draw-import-label">Draw Shape</div>
+  <div class="draw-btn-row">
+    <button class="draw-shape-btn" id="draw-btn-polygon" onclick="startDraw('polygon')" title="Polygon"><img src="analysis-logos/polygon.svg"></button>
+    <button class="draw-shape-btn" id="draw-btn-rectangle" onclick="startDraw('rectangle')" title="Square"><img src="analysis-logos/square.svg"></button>
+    <button class="draw-shape-btn" id="draw-btn-circle" onclick="startDraw('circle')" title="Circle"><img src="analysis-logos/circle.svg"></button>
+    <button class="draw-shape-btn" id="draw-btn-line" onclick="startDraw('line')" title="Line"><img src="analysis-logos/line.svg"></button>
+  </div>
+  <input type="file" id="draw-file-input" style="display:none" onchange="handleDrawFileImport(event)">
+</div>
+
+<div id="import-data-popup">
+  <div class="draw-import-label">Import Data</div>
+  <div class="draw-import-row">
+    <button class="draw-file-btn" onclick="importDrawFile('geojson')" title="Import GeoJSON (.geojson / .json)">
+      <img src="analysis-logos/geojson.svg">
+    </button>
+    <button class="draw-file-btn" onclick="importDrawFile('shapefile')" title="Import Shapefile (.zip containing .shp/.dbf)">
+      <img src="analysis-logos/shp.svg">
+    </button>
+    <button class="draw-file-btn" onclick="importDrawFile('csv')" title="Import CSV with lat/lon columns (.csv)">
+      <img src="analysis-logos/csv.svg">
+    </button>
+    <button class="draw-file-btn" onclick="importDrawFile('geotiff')" title="Import GeoTIFF raster (.tif / .tiff)">
+      <img src="analysis-logos/geotiff.svg">
+    </button>
+  </div>
+</div>
+
+<!-- ── Projects panel ──────────────────────────────────────────────────────── -->
+<div id="projects-panel" onclick="onProjectsPanelOverlayClick(event)">
+  <div class="pp-box">
+    <div class="pp-header">
+      <div class="pp-tab-row">
+        <button class="pp-tab active" id="pp-tab-projects" onclick="_ppSetTab('projects')">Projects</button>
+        <button class="pp-tab" id="pp-tab-data" onclick="_ppSetTab('data')">Data</button>
+      </div>
+      <button class="pp-close" onclick="closeProjectsPanel()" title="Close">✕</button>
+    </div>
+    <!-- Projects tab -->
+    <div class="pp-pane" id="pp-pane-projects">
+      <button class="pp-save-btn" id="pp-save-current-btn" onclick="openSaveProjectModal()">
+        <img src="analysis-logos/new project.svg" style="width:16px;height:16px;opacity:0.9">
+        <span id="lbl-pp-save-btn">New Project</span>
+      </button>
+      <div class="pp-list" id="pp-list"></div>
+    </div>
+    <!-- Data tab -->
+    <div class="pp-pane" id="pp-pane-data" style="display:none">
+      <div class="pp-list" id="pp-data-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Save Project modal ─────────────────────────────────────────────────── -->
+<div id="save-project-modal" onclick="onSaveProjectModalOverlayClick(event)">
+  <div class="spm-box">
+    <div class="spm-title" id="lbl-spm-title">Save Project</div>
+    <input type="text" class="spm-input" id="spm-name-input" placeholder="Project name…" maxlength="80"
+      onkeydown="if(event.key==='Enter')confirmSaveProject()">
+    <div class="spm-hint" id="lbl-spm-hint">Saves map view, selected features, imported layers and analysis results.</div>
+    <div class="spm-actions">
+      <button class="spm-cancel" id="lbl-spm-cancel" onclick="closeSaveProjectModal()">Cancel</button>
+      <button class="spm-confirm" id="spm-confirm-btn" onclick="confirmSaveProject()" style="display:flex;align-items:center;gap:6px"><img src="analysis-logos/save icon.svg" style="width:13px;height:13px;opacity:0.9">Save</button>
+    </div>
+  </div>
+</div>
+</body>
+</html>
