@@ -309,7 +309,7 @@ const T = {
     planFree:"უფასო სერვისი",
     planPro:"Pro სერვისი",
     upgrade:"განახლება",
-    billing:"ბილინგი",
+    billing:"გადახდა",
     signOut:"გასვლა",
     centerSignIn:"შესვლა",
     centerSignUp:"ანგარიშის შექმნა",
