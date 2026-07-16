@@ -5523,7 +5523,7 @@ function resetAnalysis(){
   const btn=document.getElementById("analyse-btn");
   if(btn){
     btn.disabled=false;btn.style.opacity="";btn.filter="";
-    btn.innerHTML=`<span id="analyse-btn-label">${t().analyseBtn}</span><span style="font-size:0.58rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;background:rgba(52,211,153,0.15);color:#34d399;border-radius:4px;padding:2px 5px" id="free-badge">${t().freeBadge}</span>`;
+    btn.innerHTML=`<span id="analyse-btn-label">${t().analyseBtn}</span><span style="font-size:0.58rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;background:rgba(167,139,250,0.15);color:#a78bfa;border-radius:4px;padding:2px 5px" id="free-badge">${t().freeBadge}</span>`;
   }
 
   _mapillaryImages=[];_currentImageIdx=0;
@@ -11153,7 +11153,7 @@ function _ttcRenderPanel(){
   const isPro=currentUser?.plan==='pro';
   const seg=(m,label)=>{
     const locked=m==='history'&&!isPro; // greyed out; click opens the upgrade paywall
-    return `<button onclick="_ttcSetMode('${m}')" style="flex:1;border:0;font-family:inherit;font-size:0.66rem;font-weight:600;padding:5px 0;border-radius:6px;cursor:pointer;${locked?'opacity:0.45;':''}background:${_ttcMode===m?(m==='history'?'rgba(129,140,248,0.16)':'rgba(52,211,153,0.14)'):'none'};color:${_ttcMode===m?(m==='history'?'#818cf8':'#34d399'):'rgba(255,255,255,0.35)'}">${label}</button>`;
+    return `<button onclick="_ttcSetMode('${m}')" style="flex:1;border:0;font-family:inherit;font-size:0.66rem;font-weight:600;padding:5px 0;border-radius:6px;cursor:pointer;${locked?'opacity:0.45;':''}background:${_ttcMode===m?(m==='history'?'rgba(129,140,248,0.16)':'rgba(167,139,250,0.14)'):'none'};color:${_ttcMode===m?(m==='history'?'#818cf8':'#a78bfa'):'rgba(255,255,255,0.35)'}">${label}</button>`;
   };
   const proTag=currentUser?.plan==='pro'?'':` <span style="font-size:0.5rem;letter-spacing:0.08em;background:rgba(129,140,248,0.14);color:#818cf8;border:1px solid rgba(129,140,248,0.3);border-radius:3px;padding:1px 4px;vertical-align:1px">PRO</span>`;
   el.innerHTML=`<div style="display:flex;gap:2px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.09);border-radius:8px;padding:2px;margin:2px 0 8px">${seg('live',h.live)}${seg('history',h.history+proTag)}</div><div id="ttc-panel-body"></div>`;
@@ -12411,7 +12411,7 @@ function _rptMenuToggle(btn){
   m.style.cssText='position:fixed;left:64px;z-index:60;width:198px;background:var(--glass-bg,rgba(8,8,8,0.9));backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,0.09);border-radius:11px;padding:9px 10px 11px;box-shadow:0 8px 28px rgba(0,0,0,0.45)';
   m.innerHTML=
     `<div style="font-family:ui-monospace,monospace;font-size:0.52rem;letter-spacing:0.14em;text-transform:uppercase;color:rgba(255,255,255,0.35)">${isKa?'რეპორტი':'Report'}</div>`+
-    `<button onclick="_rptMenuToggle();exportReportPDF()" style="${btnS}border:1px solid rgba(52,211,153,0.3);background:rgba(52,211,153,0.12);color:#34d399">${isKa?'PDF რეპორტის ექსპორტი':'Export PDF report'}</button>`+
+    `<button onclick="_rptMenuToggle();exportReportPDF()" style="${btnS}border:1px solid rgba(167,139,250,0.3);background:rgba(167,139,250,0.12);color:#a78bfa">${isKa?'PDF რეპორტის ექსპორტი':'Export PDF report'}</button>`+
     `<button onclick="_rptMenuToggle();_rptExportGeoJSON()" style="${btnS}border:1px solid rgba(255,255,255,0.09);background:rgba(255,255,255,0.03);color:rgba(255,255,255,0.6)">${isKa?'აქტიური ფენები · GeoJSON':'Active layers · GeoJSON'}</button>`+
     `<button onclick="_rptMenuToggle();_rptExportGeoTIFF()" style="${btnS}border:1px solid rgba(255,255,255,0.09);background:rgba(255,255,255,0.03);color:rgba(255,255,255,0.6)">${isKa?'აქტიური რასტრები · GeoTIFF':'Active rasters · GeoTIFF'}</button>`;
   document.body.appendChild(m);
