@@ -959,7 +959,7 @@ async function loadDashboardStats(){
     const [used,{limit,custom,planLimit}]=await Promise.all([fetchSearchUsage(),fetchUserMonthlyLimit()]);
     const left=Math.max(0,limit-used);
     const pct=Math.min(100,Math.round((used/limit)*100));
-    const color=pct>=90?"#fca5a5":pct>=70?"#fbbf24":"#34d399";
+    const color=pct>=90?"#fca5a5":pct>=70?"#fbbf24":"#a78bfa"; // healthy = brand purple; amber near limit; red when nearly full
     const _periodEnd=window._subPeriodEnd?new Date(window._subPeriodEnd):null;
     const _freeReset2=currentUser.registeredAt?_getRegPeriod(currentUser.registeredAt).resetDate:new Date(_now.getFullYear(),_now.getMonth()+1,1);
     const resetDate=(_periodEnd&&currentUser.plan==='pro'?_periodEnd:_freeReset2)
