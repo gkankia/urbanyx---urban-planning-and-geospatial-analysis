@@ -208,7 +208,7 @@
   <!-- TRUST -->
   <div class="trust2">
     <div class="trust2-head">
-      <div class="v num">Millions</div>
+      <div class="v num" data-i="trust_v">Millions</div>
       <div class="l" data-i="trust_head">of data points — analyzed through up to <b class="num">10</b> engines</div>
     </div>
     <div class="trust2-tags" id="trust-tags"></div>
@@ -701,9 +701,10 @@ function renderTags(){
 const STR={
   en:{nav_features:'Capabilities',nav_pricing:'Pricing',nav_launch:'Launch app →',
     hero_see:'See the ',hero_through:'through data.',
-    hero_lede:'Urbanyx turns a cadastral code into a full site assessment: development capacity, walkability, infrastructure, terrain, climate and much more — mapped, measured, and exported as a report.',
-    hero_cta1:'Launch the map →',hero_cta2:'See a sample report',hero_note:'<b>14-day Pro trial</b> · no credit card · free plan stays free',
+    hero_lede:'Urbanyx turns a cadastral code into a full geospatial analysis: development capacity, walkability, infrastructure, terrain, climate and much more — mapped, measured, and exported as a report.',
+    hero_cta1:'Launch the map →',hero_cta2:'See a sample report',hero_note:'<b>14-day Pro trial</b> · no credit card · there is also a free plan',
     chip_parcel_w:'Parcel',
+    trust_v:'Millions',
     trust_head:'of data points — analyzed through up to <b class="num">10</b> engines',
     tag_transit:'Transit',tag_nodes:'Street nodes',tag_functions:'Urban functions',tag_elev:'Elevation points',tag_zoning:'Zoning categories',
     cap_eyebrow:'What you can analyze',cap_title:'Nine analysis engines, one parcel.',cap_sub:'Each runs on the parcel or a drawn study area and outputs real metrics with map symbology you can export.',
@@ -719,11 +720,12 @@ const STR={
     plan_pro:'Pro',plan_pro_per:'or €150 / year · 1,000 analyses / month',f_pro1:'Everything in Free',f_pro2:'Climate, relief & energy analysis',f_pro3:'Transit reliability history & road incidents',f_pro4:'PDF / GeoJSON / GeoTIFF export',plan_pro_cta:'Start 14-day trial',
     band_title:'Analyze your first parcel now.',band_sub:'No card. No install. Just a map and your site.',band_cta:'Launch Urbanyx →',
     foot_terms:'Terms',foot_privacy:'Privacy',foot_features:'Capabilities',foot_pricing:'Pricing'},
-  ka:{nav_features:'ფუნქციები',nav_pricing:'ფასები',nav_launch:'აპლიკაცია →',
+  ka:{nav_features:'ფუნქციები',nav_pricing:'ფასები',nav_launch:'რუკა →',
     hero_see:'დაინახე ',hero_through:'მონაცემებით.',
-    hero_lede:'Urbanyx საკადასტრო კოდს გარდაქმნის სრულ ანალიზად: განაშენიანების ტევადობა, ინფრასტრუქტურა, საფეხმავლო წვდომა, ტრანსპორტის სანდოობა, რელიეფი და კლიმატი — რუკაზე, გაზომილი და რეპორტად ექსპორტირებული.',
+    hero_lede:'Urbanyx საკადასტრო კოდს გარდაქმნის სრულყოფილ სივრცით ანალიზად: განაშენიანების პოტენციალი, საფეხმავლო წვდომა, ინფრასტრუქტურა, ტრანსპორტი, რელიეფი, კლიმატი და კიდევ მეტი — თავმოყრილი ერთ რუკაზე, ინდექსით, ერთ კვლევით ანგარიშში.',
     hero_cta1:'რუკის გახსნა →',hero_cta2:'ნიმუშის რეპორტი',hero_note:'<b>14-დღიანი Pro პერიოდი</b> · ბარათის გარეშე · უფასო გეგმა უფასოა',
     chip_parcel_w:'ნაკვეთი',
+    trust_v:'მილიონობით',
     trust_head:'მონაცემი — გაანალიზებული <b class="num">10</b>-მდე ინსტრუმენტით',
     tag_transit:'ტრანსპორტი',tag_nodes:'ქუჩის კვანძები',tag_functions:'ურბ. ფუნქციები',tag_elev:'სიმაღლის წერტილები',tag_zoning:'ზონირება',
     cap_eyebrow:'რისი ანალიზი შეგიძლია',cap_title:'ცხრა ანალიზის ინსტრუმენტი, ერთი ნაკვეთი.',cap_sub:'თითოეული მუშაობს ნაკვეთზე ან დახაზულ არეალზე და გასცემს რეალურ მეტრიკებს რუკის სიმბოლიკით.',
