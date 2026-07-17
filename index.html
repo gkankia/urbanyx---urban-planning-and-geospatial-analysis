@@ -378,8 +378,8 @@ const SITES=[
 const SCENE_DEF={
   mobility:{color:'#a78bfa',label:{en:'Mobility · 10-min walk',ka:'მობილობა · 10-წთ ფეხით'},
     metric:(l,d)=>{const a=d.area?(l==='ka'?`${d.area} კმ²`:`${d.area} km²`):'';const s=d.stops?(l==='ka'?`${d.stops} გაჩერება`:`${d.stops} stops`):'';return [a,s].filter(Boolean).join(' · ');}},
-  education:{color:'#34d399',label:{en:'Education access',ka:'განათლების წვდომა'},
-    metric:(l,d)=>l==='ka'?`${d.schools||0} დაწესებულება ახლოს`:`${d.schools||0} schools within reach`},
+  education:{color:'#38bdf8',label:{en:'Kindergarten access',ka:'ბაღების ხელმისაწვდომობა'},
+    metric:(l,d)=>l==='ka'?`${d.schools||0} ბაღი ახლოს`:`${d.schools||0} kindergartens within reach`},
   connectivity:{color:'#818cf8',label:{en:'Street connectivity',ka:'ქუჩების კავშირობა'},
     metric:(l,d)=>d.segs?(l==='ka'?`${d.segs} ქუჩის სეგმენტი`:`${d.segs} street segments`):''},
   diversity:{color:'#fbbf24',label:{en:'Land-use diversity',ka:'მრავალფეროვნება'},
@@ -475,11 +475,13 @@ function heroMap(){
     const url=`https://api.mapbox.com/isochrone/v1/mapbox/walking/${c[0].toFixed(5)},${c[1].toFixed(5)}?contours_minutes=10&polygons=true&denoise=1&generalize=25&access_token=${MAPBOX_TOKEN}`;
     const r=await fetch(url);if(!r.ok)throw 0;return r.json();
   }
-  async function fetchEdu(c){
-    const url=`https://api.mapbox.com/v4/mapbox.mapbox-streets-v8/tilequery/${c[0].toFixed(5)},${c[1].toFixed(5)}.json?radius=1000&limit=45&dedupe=true&layers=poi_label&access_token=${MAPBOX_TOKEN}`;
-    const r=await fetch(url);if(!r.ok)throw 0;const j=await r.json();
-    const re=/school|college|kindergarten|university|library|education/i;
-    return (j.features||[]).filter(f=>{const p=f.properties||{};return re.test(p.maki||'')||re.test(p.class||'')||re.test(p.category_en||'')||re.test(p.type||'');}).slice(0,14).map((f,i)=>({type:'Feature',properties:{i},geometry:f.geometry}));
+  // kindergartens from the app's own integrated dataset (cached); buildAnalyses() clips to the isochrone
+  let _eduCache=null;
+  async function fetchEdu(){
+    if(!_eduCache){
+      try{const r=await fetch('data/kindergartens_tbilisi_1.geojson');const j=r.ok?await r.json():null;_eduCache=((j&&j.features)||[]).filter(f=>f.geometry&&f.geometry.type==='Point').map(f=>({type:'Feature',properties:{kind:'kindergarten'},geometry:f.geometry}));}catch(e){_eduCache=[];}
+    }
+    return _eduCache;
   }
   function synthPts(c,n){const a=[];for(let i=0;i<n;i++){a.push({type:'Feature',properties:{i},geometry:{type:'Point',coordinates:[c[0]+(Math.random()-0.5)*0.008,c[1]+(Math.random()-0.5)*0.006]}});}return a;}
   // transit stop icons — copied verbatim from app.js (blue bus / red metro)
@@ -509,13 +511,24 @@ function heroMap(){
     return {fc:{type:'FeatureCollection',features:feats},H:H.toFixed(2),n:Object.keys(cnt).length};
   }
 
-  const SCENE_LAYERS=['transit-stops','edu-dots','net-hl','lu-fill','hill'];
+  const SCENE_LAYERS=['transit-stops','edu-dots','net-hl','lu-fill','hill','relief-mask'];
   function hideScenes(){try{map.setTerrain(null);}catch(e){}SCENE_LAYERS.forEach(id=>{if(map.getLayer(id))map.setLayoutProperty(id,'visibility','none');});}
   function show(ids){ids.forEach(id=>{if(map.getLayer(id))map.setLayoutProperty(id,'visibility','visible');});}
 
   // point-in-polygon (ray casting) — clip fetched features to the isochrone
   function ptInRing(pt,ring){let inside=false;for(let i=0,j=ring.length-1;i<ring.length;j=i++){const xi=ring[i][0],yi=ring[i][1],xj=ring[j][0],yj=ring[j][1];if(((yi>pt[1])!==(yj>pt[1]))&&(pt[0]<(xj-xi)*(pt[1]-yi)/(yj-yi)+xi))inside=!inside;}return inside;}
   function ptInGeo(pt,geo){if(!geo)return true;try{if(geo.type==='Polygon')return ptInRing(pt,geo.coordinates[0]);if(geo.type==='MultiPolygon')return geo.coordinates.some(p=>ptInRing(pt,p[0]));}catch(e){}return true;}
+  // inverse polygon (big bbox with the isochrone as a hole) — masks the raster hillshade to the isochrone
+  function inversePoly(iso,pad){
+    try{
+      const outerRings=iso.type==='Polygon'?[iso.coordinates[0]]:iso.type==='MultiPolygon'?iso.coordinates.map(p=>p[0]):null;
+      if(!outerRings)return {type:'FeatureCollection',features:[]};
+      const all=outerRings.flat();const xs=all.map(p=>p[0]),ys=all.map(p=>p[1]);
+      const minx=Math.min(...xs)-pad,maxx=Math.max(...xs)+pad,miny=Math.min(...ys)-pad,maxy=Math.max(...ys)+pad;
+      const outer=[[minx,miny],[maxx,miny],[maxx,maxy],[minx,maxy],[minx,miny]];
+      return {type:'Feature',geometry:{type:'Polygon',coordinates:[outer,...outerRings]}};
+    }catch(e){return {type:'FeatureCollection',features:[]};}
+  }
 
   // analysis results — fetched once per parcel, everything clipped to its 10-min isochrone
   const AD={area:null,stops:0,schools:0,segs:0,H:null,n:0,ele:null,slope:null};
@@ -531,6 +544,8 @@ function heroMap(){
     show(['iso-fill','iso-line']);
     // clip the street network to the isochrone (Mapbox 'within' expression)
     try{if(map.getLayer('net-hl'))map.setFilter('net-hl',ISO?['within',ISO]:null);}catch(e){}
+    // clip the relief hillshade to the isochrone via an inverse-polygon mask
+    try{if(map.getSource('iso-mask'))map.getSource('iso-mask').setData(ISO?inversePoly(ISO,0.5):{type:'FeatureCollection',features:[]});}catch(e){}
     // 2) transit stops within the isochrone
     let stops=[];try{stops=await fetchTransit(center);}catch(e){}
     stops=stops.filter(f=>ptInGeo(f.geometry.coordinates,ISO));
@@ -553,7 +568,7 @@ function heroMap(){
   function sceneEducation(){show(['edu-dots']);heroState.data={schools:AD.schools};}
   function sceneConnectivity(){show(['net-hl']);try{AD.segs=map.querySourceFeatures('composite',{sourceLayer:'road'}).length;}catch(e){}heroState.data={segs:AD.segs};}
   function sceneDiversity(){show(['lu-fill']);heroState.data={H:AD.H,n:AD.n};}
-  function sceneRelief(){show(['hill']);let ele=null;try{map.setTerrain({source:'dem',exaggeration:1.15});}catch(e){}try{ele=map.queryTerrainElevation(site.c,{exaggerated:false});}catch(e){}AD.ele=ele!=null?Math.round(ele):(AD.ele||(420+Math.floor(Math.random()*320)));AD.slope=AD.slope||(3+Math.random()*9).toFixed(0);heroState.data={ele:AD.ele,slope:AD.slope};}
+  function sceneRelief(){show(['hill','relief-mask']);let ele=null;try{map.setTerrain({source:'dem',exaggeration:1.15});}catch(e){}try{ele=map.queryTerrainElevation(site.c,{exaggerated:false});}catch(e){}AD.ele=ele!=null?Math.round(ele):(AD.ele||(420+Math.floor(Math.random()*320)));AD.slope=AD.slope||(3+Math.random()*9).toFixed(0);heroState.data={ele:AD.ele,slope:AD.slope};}
 
   const ORDER=['mobility','education','connectivity','diversity','relief'];
   const RUN={mobility:sceneMobility,education:sceneEducation,connectivity:sceneConnectivity,diversity:sceneDiversity,relief:sceneRelief};
@@ -564,6 +579,9 @@ function heroMap(){
       map.addSource('dem',{type:'raster-dem',url:'mapbox://mapbox.mapbox-terrain-dem-v1',tileSize:512,maxzoom:14});
       map.addLayer({id:'hill',type:'hillshade',source:'dem',layout:{visibility:'none'},paint:{'hillshade-exaggeration':0.6,'hillshade-shadow-color':'#ef4444','hillshade-highlight-color':'#34d399','hillshade-accent-color':'#fbbf24'}},firstSym);
     }catch(e){}
+    // mask that clips the hillshade to the isochrone (dark fill everywhere except the walk area)
+    map.addSource('iso-mask',{type:'geojson',data:{type:'FeatureCollection',features:[]}});
+    map.addLayer({id:'relief-mask',type:'fill',source:'iso-mask',layout:{visibility:'none'},paint:{'fill-color':'#0a0a0a','fill-opacity':0.9,'fill-opacity-transition':{duration:400}}},firstSym);
     map.addSource('iso',{type:'geojson',data:{type:'FeatureCollection',features:[]}});
     map.addLayer({id:'iso-fill',type:'fill',source:'iso',layout:{visibility:'none'},paint:{'fill-color':'#a78bfa','fill-opacity':0.16,'fill-opacity-transition':{duration:500}}},firstSym);
     map.addLayer({id:'iso-line',type:'line',source:'iso',layout:{visibility:'none'},paint:{'line-color':'#c4b5fd','line-width':1.6,'line-opacity':0.85}},firstSym);
@@ -576,7 +594,7 @@ function heroMap(){
     map.addLayer({id:'parcel-fill',type:'fill',source:'parcel',paint:{'fill-color':'#a78bfa','fill-opacity':0.34}});
     map.addLayer({id:'parcel-line',type:'line',source:'parcel',paint:{'line-color':'#e9e2ff','line-width':2.2}});
     map.addSource('edu',{type:'geojson',data:{type:'FeatureCollection',features:[]}});
-    map.addLayer({id:'edu-dots',type:'circle',source:'edu',layout:{visibility:'none'},paint:{'circle-radius':5,'circle-color':'#34d399','circle-stroke-width':1.6,'circle-stroke-color':'rgba(0,0,0,0.45)','circle-opacity':0.9}});
+    map.addLayer({id:'edu-dots',type:'circle',source:'edu',layout:{visibility:'none'},paint:{'circle-radius':5,'circle-color':'#38bdf8','circle-stroke-width':1.6,'circle-stroke-color':'rgba(0,0,0,0.45)','circle-opacity':0.9}});
     map.addSource('transit',{type:'geojson',data:{type:'FeatureCollection',features:[]}});
     addTransitIcons(()=>{try{map.addLayer({id:'transit-stops',type:'symbol',source:'transit',layout:{visibility:'none','icon-image':['match',['get','mode'],'SUBWAY','ttc-metro','ttc-bus'],'icon-size':0.72,'icon-allow-overlap':true,'icon-anchor':'center'}});}catch(e){}});
 
