@@ -615,7 +615,7 @@ function heroMap(){
     let stops=[];try{stops=await fetchTransit(center);}catch(e){}
     stops=stops.filter(f=>ptInGeo(f.geometry.coordinates,ISO));
     if(map.getSource('transit'))map.getSource('transit').setData({type:'FeatureCollection',features:stops});
-    AD.stops=stops.length;
+    AD.stops=stops.length;AD.reliab=null;computeReliability(stops); // live on-time %, async
     // 3) schools within the isochrone
     let edu=[];try{edu=await fetchEdu(center);}catch(e){}
     edu=edu.filter(f=>ptInGeo(f.geometry.coordinates,ISO));
