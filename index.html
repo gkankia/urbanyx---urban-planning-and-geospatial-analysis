@@ -191,7 +191,7 @@
   <section class="hero">
     <div>
       <h1><span data-i="hero_see">See the </span><span id="tw-wrap"><span id="tw">place</span><span id="tw-caret"></span></span> <span data-i="hero_through">through data.</span></h1>
-      <p class="lede" data-i="hero_lede">Urbanyx turns a cadastral code into a full site assessment: built on a 15-minute city concept, it helps you understand development capacity, walkability, transit reliability, terrain, climate and so much more. mapped, measured, and exported as a report.</p>
+      <p class="lede" data-i="hero_lede">Urbanyx turns a cadastral code into a full site assessment: built on a 15-minute city concept, it helps you understand walkability, development capacity, transit reliability, terrain, climate and so much more. All mapped, measured, and exported as a single report.</p>
       <div class="hero-cta">
         <a class="btn btn-primary" href="app.html" data-i="hero_cta1">Launch the map →</a>
         <a class="btn btn-ghost" href="#report" data-i="hero_cta2">See a sample report</a>
@@ -701,7 +701,7 @@ function renderTags(){
 const STR={
   en:{nav_features:'Capabilities',nav_pricing:'Pricing',nav_launch:'Launch app →',
     hero_see:'See the ',hero_through:'through data.',
-    hero_lede:'Urbanyx turns a cadastral code into a full site assessment: development capacity, walkability, transit reliability, terrain and climate — mapped, measured, and exported as a report.',
+    hero_lede:'Urbanyx turns a cadastral code into a full site assessment: development capacity, walkability, infrastructure, terrain, climate and much more — mapped, measured, and exported as a report.',
     hero_cta1:'Launch the map →',hero_cta2:'See a sample report',hero_note:'<b>14-day Pro trial</b> · no credit card · free plan stays free',
     chip_parcel_w:'Parcel',
     trust_head:'of data points — analyzed through up to <b class="num">10</b> engines',
@@ -721,7 +721,7 @@ const STR={
     foot_terms:'Terms',foot_privacy:'Privacy',foot_features:'Capabilities',foot_pricing:'Pricing'},
   ka:{nav_features:'ფუნქციები',nav_pricing:'ფასები',nav_launch:'აპლიკაცია →',
     hero_see:'დაინახე ',hero_through:'მონაცემებით.',
-    hero_lede:'Urbanyx საკადასტრო კოდს გარდაქმნის სრულ ანალიზად: განაშენიანების ტევადობა, საფეხმავლო წვდომა, ტრანსპორტის სანდოობა, რელიეფი და კლიმატი — რუკაზე, გაზომილი და რეპორტად ექსპორტირებული.',
+    hero_lede:'Urbanyx საკადასტრო კოდს გარდაქმნის სრულ ანალიზად: განაშენიანების ტევადობა, ინფრასტრუქტურა, საფეხმავლო წვდომა, ტრანსპორტის სანდოობა, რელიეფი და კლიმატი — რუკაზე, გაზომილი და რეპორტად ექსპორტირებული.',
     hero_cta1:'რუკის გახსნა →',hero_cta2:'ნიმუშის რეპორტი',hero_note:'<b>14-დღიანი Pro პერიოდი</b> · ბარათის გარეშე · უფასო გეგმა უფასოა',
     chip_parcel_w:'ნაკვეთი',
     trust_head:'მონაცემი — გაანალიზებული <b class="num">10</b>-მდე ინსტრუმენტით',
@@ -731,8 +731,8 @@ const STR={
     step1_t:'აირჩიე ადგილი',step1_d:'მოძებნე საკადასტრო კოდი ან დახაზე არეალი. მესაკუთრისა და ნაკვეთის მონაცემები მყისვე იტვირთება.',
     step2_t:'გაუშვი ანალიზი',step2_d:'ჩართე ზონირება, საფეხმავლო, ტრანსპორტი, მორფოლოგია, კლიმატი, რელიეფი ან ენერგია. შედეგები რუკაზე ჩნდება.',
     step3_t:'ექსპორტი',step3_d:'შექმენი PDF რეპორტი რუკებით, მეტრიკებით და წყაროებით — ან GeoJSON / GeoTIFF.',
-    who_eyebrow:'ვისთვისაა',who_title:'შექმნილია მათთვის, ვინც აფასებს ტერიტორიებს.',
-    who1_t:'ურბანისტები',who1_d:'ზონირების ტევადობა',who2_t:'კონსულტანტები',who2_d:'ტრანსპორტის ზეგავლენის შეფასება',
+    who_eyebrow:'ვისთვისაა',who_title:'შექმნილია მათთვის, ვინც აფასებს სივრცეს.',
+    who1_t:'ურბანისტები და ქალაქმგეგბარებლები',who1_d:'ზონირება, ხაზები, ობიექტები, ',who2_t:'კონსულტანტები',who2_d:'ტრანსპორტის ზეგავლენის შეფასება',
     who3_t:'დეველოპერები',who3_d:'ტექნიკურ-ეკონომიკური შეფასება',who4_t:'არქიტექტორები',who4_d:'ტერიტორიის კონტექსტი',
     price_eyebrow:'ფასები',price_title:'დაიწყე უფასოდ. განაახლე ექსპორტისას.',
     plan_free:'უფასო',plan_free_per:'50 ანალიზი / თვეში',f_free1:'ნაკვეთი და ზონირება',f_free2:'საფეხმავლო და მორფოლოგია',f_free3:'ტრანსპორტის გაჩერებები',f_free4:'ქუჩის სურათები',plan_free_cta:'უფასო ანგარიში',
@@ -753,8 +753,8 @@ document.getElementById('langbtn').onclick=()=>{lang=lang==='en'?'ka':'en';apply
 
 // ── typewriter: cycle the subject word, each in a rotating accent colour ──
 const TW={
-  en:['place','location','city','neighbourhood','parcel','region','district','Area of Interest'],
-  ka:['ადგილი','ლოკაცია','ქალაქი','უბანი','ნაკვეთი','რეგიონი','რაიონი','საკვლევი არეალი']
+  en:['parcel','place', 'neighbourhood', 'district', 'city','region','study area'],
+  ka:['ნაკვეთი','ადგილი', 'უბანი','რაიონი','ქალაქი','რეგიონი','საკვლევი ტერიტორია']
 };
 const TW_COLORS=['#fbbf24','#38bdf8','#a78bfa','#34d399','#818cf8'];
 let _twTimer=null,_twGen=0;
