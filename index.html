@@ -310,6 +310,9 @@
 // Public Mapbox token — URL-restricted to urbanyx.zaxis.ge (same token the app uses)
 const MAPBOX_TOKEN="pk.eyJ1Ijoiam9yam9uZTkwIiwiYSI6ImNtZDY5ZDZqbDA5MHUya3F2emJncXk0eXgifQ.U-XZt6e_Z-LeVuWx3hut_A";
 const PROXY="https://spring-recipe-402c.gkankia.workers.dev"; // same worker the app uses for the live TTC feed
+const DTM_URL="https://pub-9071f31b4edc4a15ba28c48f949017fc.r2.dev/tbilisi_dtm_cog.tif"; // Tbilisi DTM COG, read via the worker /lst proxy
+let _geotiffP=null;
+function loadGeoTIFF(){if(window.GeoTIFF)return Promise.resolve();if(!_geotiffP)_geotiffP=new Promise((res,rej)=>{const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/geotiff@2.1.3/dist-browser/geotiff.js';s.onload=res;s.onerror=rej;document.head.appendChild(s);});return _geotiffP;}
 
 // ── capability cards with tiny data-viz thumbnails (real analysis outputs) ──
 const CAPS=[
@@ -324,15 +327,15 @@ const CAPS=[
   {k:'plan',t:'Plan it yourself',tag:'pro',d:'Draw parcels, extrude 3D massing and test development scenarios.',viz:planviz},
 ];
 const I18N_CAP={ka:{
-  zoning:['ზონირების ტევადობა','ფუნქციური ზონები, K1/K2/K3 ლიმიტები, უკუწევა და ასაშენებელი ფართი.'],
-  walk:['საფეხმავლო წვდომა','იზოქრონები; სკოლები, ბაღები, ტრანსპორტი მისაწვდომ ზონაში.'],
-  transit:['ტრანსპორტის სანდოობა','დროულობა, დაგვიანება და ინტერვალი მზარდი არქივიდან.'],
-  morph:['ქუჩების მორფოლოგია','ქსელის კავშირობა და ქუჩების ორიენტაცია.'],
-  diversity:['მიწათსარგებლობის მრავალფეროვნება','ურბანული ფუნქციების შენონის მრავალფეროვნება არეალში.'],
-  climate:['კლიმატი და საფარი','ხის ვარჯის დაფარვა და ზედაპირის ტემპერატურა.'],
-  relief:['რელიეფი','სიმაღლე, დახრილობა და ექსპოზიცია ციფრული მოდელიდან.'],
-  energy:['სუფთა ენერგია','მზის რადიაციის ზონები და ქარის პოტენციალი ნაკვეთზე.'],
-  plan:['დაგეგმე თავად','დახაზე ნაკვეთები, ჩართე 3D მოცულობა და შეამოწმე სცენარები.'],
+  zoning:['ზონირების ანალიზი','ფუნქციური ზონები, კოეფიციენტები და დასაშვები პარამეტრები.'],
+  walk:['საფეხმავლო წვდომა','15-წუთიანი ქალაქის კონცეფცია - სკოლები, ბაღები, ტრანსპორტი და ყოველდღიური ცხოვრება მისაწვდომ ზონაში.'],
+  transit:['ტრანსპორტის სანდოობა','განრიგი, დაგვიანება და ინტერვალის ანალიზი რეალურ დროში.'],
+  morph:['ურბანული მორფოლოგია','ქუჩათა ქსელის კონფიგურაცია და შეკავშირებულობა.'],
+  diversity:['ყოველდღიური მრავალფეროვნება','ურბანული ფუნქციების სიუხვისა და ალტერნატივის ანალიზი (Shannon Diversity Index).'],
+  climate:['ურბანული კლიმატი','გამწვანება და მიწის ზედაპირის ტემპერატურა.'],
+  relief:['რელიეფი','სიმაღლე, დახრილობა და ექსპოზიცია ზედაპირის ციფრული მოდელიდან.'],
+  energy:['სუფთა ენერგია','მზისა და ქარის ენერგიის პოტენციალი ნაკვეთის დონეზე.'],
+  plan:['დაგეგმე თავად','მოხაზე სასურველი არეალი, გამოიყენე 3D მოცულობა და დატესტე სცენარები.'],
 }};
 function el(tag,cls,html){const e=document.createElement(tag);if(cls)e.className=cls;if(html!=null)e.innerHTML=html;return e;}
 function renderCaps(){
@@ -377,15 +380,19 @@ const SITES=[
 ];
 const SCENE_DEF={
   mobility:{color:'#a78bfa',label:{en:'Mobility · 10-min walk',ka:'მობილობა · 10-წთ ფეხით'},
-    metric:(l,d)=>{const a=d.area?(l==='ka'?`${d.area} კმ²`:`${d.area} km²`):'';const s=d.stops?(l==='ka'?`${d.stops} გაჩერება`:`${d.stops} stops`):'';return [a,s].filter(Boolean).join(' · ');}},
+    metric:(l,d)=>{const p=[];if(d.area)p.push(l==='ka'?`${d.area} კმ²`:`${d.area} km²`);if(d.stops)p.push(l==='ka'?`${d.stops} გაჩერება`:`${d.stops} stops`);if(d.reliab!=null)p.push(l==='ka'?`${d.reliab}% განრიგზე`:`${d.reliab}% on-time`);return p.join(' · ');}},
   education:{color:'#38bdf8',label:{en:'Kindergarten access',ka:'ბაღების ხელმისაწვდომობა'},
     metric:(l,d)=>l==='ka'?`${d.schools||0} ბაღი ახლოს`:`${d.schools||0} kindergartens within reach`},
   connectivity:{color:'#818cf8',label:{en:'Street connectivity',ka:'ქუჩების კავშირობა'},
     metric:(l,d)=>d.segs?(l==='ka'?`${d.segs} ქუჩის სეგმენტი`:`${d.segs} street segments`):''},
-  diversity:{color:'#fbbf24',label:{en:'Land-use diversity',ka:'მრავალფეროვნება'},
-    metric:(l,d)=>`Shannon H′ ${d.H} · ${d.n} ${l==='ka'?'კლასი':'uses'}`},
-  relief:{color:'#f472b6',label:{en:'Relief & terrain',ka:'რელიეფი'},
-    metric:(l,d)=>l==='ka'?`${d.ele} მ · დახრა ${d.slope}°`:`${d.ele} m · slope ${d.slope}°`}
+  diversity:{color:'#fbbf24',label:{en:'Urban function diversity',ka:'ფუნქციური მრავალფეროვნება'},
+    metric:(l,d)=>d.H!=null?`Shannon H′ ${d.H}`:''},
+  relief_slope:{color:'#f59e0b',label:{en:'Relief · slope',ka:'რელიეფი · დახრა'},
+    metric:(l,d)=>d.slope!=null?(l==='ka'?`საშ. დახრა ${d.slope}°`:`avg slope ${d.slope}°`):''},
+  relief_height:{color:'#60a5fa',label:{en:'Relief · elevation',ka:'რელიეფი · სიმაღლე'},
+    metric:(l,d)=>d.ele!=null?(l==='ka'?`საშ. ${d.ele} მ`:`avg ${d.ele} m`):''},
+  relief_aspect:{color:'#c084fc',label:{en:'Relief · aspect',ka:'რელიეფი · ექსპოზიცია'},
+    metric:(l,d)=>{if(d.aspectIdx==null)return '';const en=['N','NE','E','SE','S','SW','W','NW'],ka=['ჩრდ','ჩრდ-აღმ','აღმ','სამხ-აღმ','სამხ','სამხ-დას','დას','ჩრდ-დას'];const dir=(l==='ka'?ka:en)[d.aspectIdx];return l==='ka'?`ძირითადად ${dir}`:`mostly ${dir}-facing`;}}
 };
 function renderHeroChips(){
   const s=STR[lang];
@@ -493,7 +500,20 @@ function heroMap(){
   let _stopsCache=null;
   async function fetchTransit(){
     if(!_stopsCache){const r=await fetch(`${PROXY}/ttc/stops`);if(!r.ok)throw 0;_stopsCache=await r.json();}
-    return (_stopsCache||[]).map(s=>({type:'Feature',properties:{mode:/subway|metro|rail/i.test(s.vehicleMode||'')?'SUBWAY':'BUS'},geometry:{type:'Point',coordinates:[+s.lon,+s.lat]}})).filter(f=>Number.isFinite(f.geometry.coordinates[0])&&Number.isFinite(f.geometry.coordinates[1]));
+    return (_stopsCache||[]).map(s=>({type:'Feature',properties:{id:s.id,mode:/subway|metro|rail/i.test(s.vehicleMode||'')?'SUBWAY':'BUS'},geometry:{type:'Point',coordinates:[+s.lon,+s.lat]}})).filter(f=>Number.isFinite(f.geometry.coordinates[0])&&Number.isFinite(f.geometry.coordinates[1]));
+  }
+  // live on-time % across a sample of stops in the isochrone (worker arrivals feed; on-time = -1..+5 min, app's definition)
+  async function computeReliability(stops){
+    try{
+      const sample=stops.slice(0,10);let onTime=0,total=0;
+      await Promise.all(sample.map(async f=>{
+        const id=f.properties&&f.properties.id;if(!id)return;
+        try{const r=await fetch(`${PROXY}/ttc/stops/${encodeURIComponent(id)}/arrivals`);if(!r.ok)return;const arr=await r.json();
+          (Array.isArray(arr)?arr:[]).forEach(a=>{if(a.realtime&&a.realtimeArrivalMinutes!=null&&a.scheduledArrivalMinutes!=null&&a.scheduledArrivalMinutes>-30&&a.scheduledArrivalMinutes<180){const dl=a.realtimeArrivalMinutes-a.scheduledArrivalMinutes;total++;if(dl>=-1&&dl<=5)onTime++;}});
+        }catch(e){}
+      }));
+      if(total>=5){AD.reliab=Math.round(100*onTime/total);if(heroState.scene==='mobility')renderHeroChips();}
+    }catch(e){}
   }
   function makeLandUse(c,iso){
     const pal=['#a78bfa','#38bdf8','#34d399','#fbbf24','#f472b6'];const feats=[];const cnt={};
@@ -511,27 +531,72 @@ function heroMap(){
     return {fc:{type:'FeatureCollection',features:feats},H:H.toFixed(2),n:Object.keys(cnt).length};
   }
 
-  const SCENE_LAYERS=['transit-stops','edu-dots','net-hl','lu-fill','hill','relief-mask'];
+  const SCENE_LAYERS=['transit-stops','edu-dots','net-hl','lu-fill','relief-height-layer','relief-slope-layer','relief-aspect-layer'];
   function hideScenes(){try{map.setTerrain(null);}catch(e){}SCENE_LAYERS.forEach(id=>{if(map.getLayer(id))map.setLayoutProperty(id,'visibility','none');});}
   function show(ids){ids.forEach(id=>{if(map.getLayer(id))map.setLayoutProperty(id,'visibility','visible');});}
 
   // point-in-polygon (ray casting) — clip fetched features to the isochrone
   function ptInRing(pt,ring){let inside=false;for(let i=0,j=ring.length-1;i<ring.length;j=i++){const xi=ring[i][0],yi=ring[i][1],xj=ring[j][0],yj=ring[j][1];if(((yi>pt[1])!==(yj>pt[1]))&&(pt[0]<(xj-xi)*(pt[1]-yi)/(yj-yi)+xi))inside=!inside;}return inside;}
   function ptInGeo(pt,geo){if(!geo)return true;try{if(geo.type==='Polygon')return ptInRing(pt,geo.coordinates[0]);if(geo.type==='MultiPolygon')return geo.coordinates.some(p=>ptInRing(pt,p[0]));}catch(e){}return true;}
-  // inverse polygon (big bbox with the isochrone as a hole) — masks the raster hillshade to the isochrone
-  function inversePoly(iso,pad){
+  // ── relief: real Tbilisi DTM (COG via worker /lst) → slope, painted with the app's ramp, clipped to the isochrone ──
+  let firstSym;
+  async function fetchDTM(geo){
+    const coords=geo.type==='Polygon'?geo.coordinates.flat():geo.type==='MultiPolygon'?geo.coordinates.flat(3):geo.coordinates;
+    const lngs=coords.map(c=>c[0]),lats=coords.map(c=>c[1]);
+    const minLng=Math.min(...lngs),maxLng=Math.max(...lngs),minLat=Math.min(...lats),maxLat=Math.max(...lats);
+    const tiff=await GeoTIFF.fromUrl(`${PROXY}/lst?url=${encodeURIComponent(DTM_URL)}`,{allowFullFile:false});
+    const image=await tiff.getImage();
+    const bb=image.getBoundingBox();const fullW=image.getWidth(),fullH=image.getHeight();
+    const pixW=(bb[2]-bb[0])/fullW,pixH=(bb[3]-bb[1])/fullH;
+    const x1=Math.max(0,Math.floor((minLng-bb[0])/pixW)),y1=Math.max(0,Math.floor((bb[3]-maxLat)/pixH));
+    const x2=Math.min(fullW-1,Math.ceil((maxLng-bb[0])/pixW)),y2=Math.min(fullH-1,Math.ceil((bb[3]-minLat)/pixH));
+    const rawW=Math.max(1,x2-x1),rawH=Math.max(1,y2-y1),MAX=512;
+    const w=Math.min(rawW,MAX),h=Math.min(rawH,Math.max(1,Math.round(rawH*Math.min(rawW,MAX)/rawW)));
+    const raster=await image.readRasters({window:[x1,y1,x2,y2],width:w,height:h});
+    const nd=image.fileDirectory&&image.fileDirectory.GDAL_NODATA!=null?parseFloat(image.fileDirectory.GDAL_NODATA):null;
+    return {values:raster[0],width:w,height:h,originX:bb[0]+x1*pixW,originY:bb[3]-y1*pixH,resX:pixW*rawW/w,resY:pixH*rawH/h,nodata:nd};
+  }
+  function computeSlope(dtm){const {values,width,height,resX,resY,nodata}=dtm;const out=new Float32Array(width*height);for(let r=0;r<height;r++)for(let c=0;c<width;c++){const i=r*width+c,v=values[i];if(v===nodata||isNaN(v)){out[i]=NaN;continue;}const dx=c>0&&c<width-1?((values[i+1]||v)-(values[i-1]||v))/(2*resX*111320):0;const dy=r>0&&r<height-1?((values[(r-1)*width+c]||v)-(values[(r+1)*width+c]||v))/(2*resY*111320):0;out[i]=Math.atan(Math.sqrt(dx*dx+dy*dy))*180/Math.PI;}return out;}
+  function computeAspect(dtm){const {values,width,height,resX,resY,nodata}=dtm;const out=new Float32Array(width*height);for(let r=0;r<height;r++)for(let c=0;c<width;c++){const i=r*width+c,v=values[i];if(v===nodata||isNaN(v)){out[i]=NaN;continue;}const dx=c>0&&c<width-1?((values[i+1]||v)-(values[i-1]||v))/(2*resX*111320):0;const dy=r>0&&r<height-1?((values[(r-1)*width+c]||v)-(values[(r+1)*width+c]||v))/(2*resY*111320):0;let a=Math.atan2(dy,-dx)*180/Math.PI;if(a<0)a+=360;out[i]=a;}return out;}
+  function _lerpC(a,b,t){return [Math.round(a[0]+(b[0]-a[0])*t),Math.round(a[1]+(b[1]-a[1])*t),Math.round(a[2]+(b[2]-a[2])*t)];}
+  function _stopColor(stops,v,vmin,vmax){const n=Math.max(0,Math.min(1,(v-vmin)/((vmax-vmin)||1)));const seg=(stops.length-1)*n,lo=Math.floor(seg),hi=Math.ceil(seg);return _lerpC(stops[lo],stops[hi],seg-lo);}
+  function _bilinear(vals,w,h,fx,fy,nd){const x0=Math.floor(fx),y0=Math.floor(fy),x1=Math.min(x0+1,w-1),y1=Math.min(y0+1,h-1),dx=fx-x0,dy=fy-y0;const a=vals[y0*w+x0],b=vals[y0*w+x1],c=vals[y1*w+x0],e=vals[y1*w+x1];if([a,b,c,e].some(v=>isNaN(v)||(nd!=null&&v===nd)))return NaN;return a*(1-dx)*(1-dy)+b*dx*(1-dy)+c*(1-dx)*dy+e*dx*dy;}
+  function pointInPolygon(lng,lat,geo){if(!geo)return false;if(geo.type==='Polygon'){if(!ptInRing([lng,lat],geo.coordinates[0]))return false;for(let i=1;i<geo.coordinates.length;i++)if(ptInRing([lng,lat],geo.coordinates[i]))return false;return true;}if(geo.type==='MultiPolygon')return geo.coordinates.some(p=>{if(!ptInRing([lng,lat],p[0]))return false;for(let i=1;i<p.length;i++)if(ptInRing([lng,lat],p[i]))return false;return true;});return false;}
+  const SLOPE_STOPS=[[40,200,100],[230,230,50],[230,100,30],[200,30,30]];                                   // app slope ramp
+  const HEIGHT_STOPS=[[20,80,160],[60,120,200],[80,160,100],[180,220,80],[240,200,100],[220,120,60],[200,80,40],[240,240,240]]; // app height ramp
+  function _aspectColor(v){const r=Math.round(128+127*Math.cos(v*Math.PI/180)),g=Math.round(128+127*Math.cos((v-120)*Math.PI/180)),b=Math.round(128+127*Math.cos((v-240)*Math.PI/180));return [r,g,b];}
+  function _bilinearCirc(vals,w,h,fx,fy,nd){const x0=Math.floor(fx),y0=Math.floor(fy),x1=Math.min(x0+1,w-1),y1=Math.min(y0+1,h-1),dx=fx-x0,dy=fy-y0;const vs=[vals[y0*w+x0],vals[y0*w+x1],vals[y1*w+x0],vals[y1*w+x1]];if(vs.some(v=>isNaN(v)||(nd!=null&&v===nd)))return NaN;const ws=[(1-dx)*(1-dy),dx*(1-dy),(1-dx)*dy,dx*dy];const R=Math.PI/180;let sx=0,sy=0;for(let i=0;i<4;i++){sx+=Math.sin(vs[i]*R)*ws[i];sy+=Math.cos(vs[i]*R)*ws[i];}let deg=Math.atan2(sx,sy)/R;return deg<0?deg+360:deg;}
+  function buildOverlay(dtm,vals,type,geo){
+    const {width,height,originX,originY,resX,resY,nodata}=dtm;
+    let vmin=Infinity,vmax=-Infinity,vsum=0,vcnt=0;for(const v of vals){if(isNaN(v)||(nodata!=null&&v===nodata))continue;if(v<vmin)vmin=v;if(v>vmax)vmax=v;vsum+=v;vcnt++;}
+    if(!vcnt)return null;
+    const stops=type==='height'?HEIGHT_STOPS:SLOPE_STOPS;
+    const TARGET=512,cw=TARGET,ch=Math.max(1,Math.round(TARGET*(height/width)));
+    const cv=document.createElement('canvas');cv.width=cw;cv.height=ch;const cx=cv.getContext('2d');const img=cx.createImageData(cw,ch);const d=img.data;
+    for(let y=0;y<ch;y++)for(let x=0;x<cw;x++){const i=y*cw+x;const fx=(x/(cw-1||1))*(width-1),fy=(y/(ch-1||1))*(height-1);const lng=originX+(x/cw)*width*resX,lat=originY-(y/ch)*height*resY;if(!pointInPolygon(lng,lat,geo)){d[i*4+3]=0;continue;}const v=type==='aspect'?_bilinearCirc(vals,width,height,fx,fy,nodata):_bilinear(vals,width,height,fx,fy,nodata);if(isNaN(v)||(nodata!=null&&v===nodata)){d[i*4+3]=0;continue;}const col=type==='aspect'?_aspectColor(v):_stopColor(stops,v,vmin,vmax);d[i*4]=col[0];d[i*4+1]=col[1];d[i*4+2]=col[2];d[i*4+3]=205;}
+    cx.putImageData(img,0,0);const url=cv.toDataURL('image/png');
+    const nw=[originX,originY],ne=[originX+width*resX,originY],se=[originX+width*resX,originY-height*resY],sw=[originX,originY-height*resY];
+    const sid='relief-'+type,lid=sid+'-layer';
+    try{if(map.getLayer(lid))map.removeLayer(lid);if(map.getSource(sid))map.removeSource(sid);}catch(e){}
+    map.addSource(sid,{type:'image',url,coordinates:[nw,ne,se,sw]});
+    map.addLayer({id:lid,type:'raster',source:sid,layout:{visibility:'none'},paint:{'raster-opacity':0.85,'raster-opacity-transition':{duration:400},'raster-resampling':'nearest'}},firstSym);
+    return {vmean:vsum/vcnt};
+  }
+  async function buildRelief(geo){
     try{
-      const outerRings=iso.type==='Polygon'?[iso.coordinates[0]]:iso.type==='MultiPolygon'?iso.coordinates.map(p=>p[0]):null;
-      if(!outerRings)return {type:'FeatureCollection',features:[]};
-      const all=outerRings.flat();const xs=all.map(p=>p[0]),ys=all.map(p=>p[1]);
-      const minx=Math.min(...xs)-pad,maxx=Math.max(...xs)+pad,miny=Math.min(...ys)-pad,maxy=Math.max(...ys)+pad;
-      const outer=[[minx,miny],[maxx,miny],[maxx,maxy],[minx,maxy],[minx,miny]];
-      return {type:'Feature',geometry:{type:'Polygon',coordinates:[outer,...outerRings]}};
-    }catch(e){return {type:'FeatureCollection',features:[]};}
+      await loadGeoTIFF();
+      const dtm=await fetchDTM(geo);
+      const hSt=buildOverlay(dtm,dtm.values,'height',geo);if(hSt)AD.ele=Math.round(hSt.vmean);
+      const slope=computeSlope(dtm);const sSt=buildOverlay(dtm,slope,'slope',geo);if(sSt)AD.slope=sSt.vmean.toFixed(1);
+      const aspect=computeAspect(dtm);buildOverlay(dtm,aspect,'aspect',geo);
+      let sx=0,sy=0,cn=0;for(const v of aspect){if(isNaN(v))continue;const r=v*Math.PI/180;sx+=Math.sin(r);sy+=Math.cos(r);cn++;}
+      if(cn){let m=Math.atan2(sx,sy)*180/Math.PI;if(m<0)m+=360;AD.aspectIdx=Math.round(m/45)%8;}
+      const cur=heroState.scene;if(cur&&cur.indexOf('relief_')===0){show(['relief-'+cur.split('_')[1]+'-layer']);renderHeroChips();}
+    }catch(e){}
   }
 
   // analysis results — fetched once per parcel, everything clipped to its 10-min isochrone
-  const AD={area:null,stops:0,schools:0,segs:0,H:null,n:0,ele:null,slope:null};
+  const AD={area:null,stops:0,schools:0,segs:0,H:null,n:0,ele:null,slope:null,aspectIdx:null,reliab:null};
   let ISO=null;
   async function buildAnalyses(center){
     // 1) real 10-min walking isochrone → persistent frame
@@ -544,8 +609,8 @@ function heroMap(){
     show(['iso-fill','iso-line']);
     // clip the street network to the isochrone (Mapbox 'within' expression)
     try{if(map.getLayer('net-hl'))map.setFilter('net-hl',ISO?['within',ISO]:null);}catch(e){}
-    // clip the relief hillshade to the isochrone via an inverse-polygon mask
-    try{if(map.getSource('iso-mask'))map.getSource('iso-mask').setData(ISO?inversePoly(ISO,0.5):{type:'FeatureCollection',features:[]});}catch(e){}
+    // relief: real DTM slope overlay, clipped to the isochrone (async — appears when the COG read finishes)
+    if(ISO)buildRelief(ISO);
     // 2) transit stops within the isochrone
     let stops=[];try{stops=await fetchTransit(center);}catch(e){}
     stops=stops.filter(f=>ptInGeo(f.geometry.coordinates,ISO));
@@ -564,24 +629,19 @@ function heroMap(){
   }
 
   // scenes = toggle which pre-fetched layer is visible (parcel + isochrone stay on)
-  function sceneMobility(){show(['transit-stops']);heroState.data={area:AD.area,stops:AD.stops};}
+  function sceneMobility(){show(['transit-stops']);heroState.data={area:AD.area,stops:AD.stops,reliab:AD.reliab};}
   function sceneEducation(){show(['edu-dots']);heroState.data={schools:AD.schools};}
   function sceneConnectivity(){show(['net-hl']);try{AD.segs=map.querySourceFeatures('composite',{sourceLayer:'road'}).length;}catch(e){}heroState.data={segs:AD.segs};}
   function sceneDiversity(){show(['lu-fill']);heroState.data={H:AD.H,n:AD.n};}
-  function sceneRelief(){show(['hill','relief-mask']);let ele=null;try{map.setTerrain({source:'dem',exaggeration:1.15});}catch(e){}try{ele=map.queryTerrainElevation(site.c,{exaggerated:false});}catch(e){}AD.ele=ele!=null?Math.round(ele):(AD.ele||(420+Math.floor(Math.random()*320)));AD.slope=AD.slope||(3+Math.random()*9).toFixed(0);heroState.data={ele:AD.ele,slope:AD.slope};}
+  function sceneReliefSlope(){show(['relief-slope-layer']);heroState.data={slope:AD.slope};}
+  function sceneReliefHeight(){show(['relief-height-layer']);heroState.data={ele:AD.ele};}
+  function sceneReliefAspect(){show(['relief-aspect-layer']);heroState.data={aspectIdx:AD.aspectIdx};}
 
-  const ORDER=['mobility','education','connectivity','diversity','relief'];
-  const RUN={mobility:sceneMobility,education:sceneEducation,connectivity:sceneConnectivity,diversity:sceneDiversity,relief:sceneRelief};
+  const ORDER=['mobility','education','connectivity','diversity','relief_slope','relief_height','relief_aspect'];
+  const RUN={mobility:sceneMobility,education:sceneEducation,connectivity:sceneConnectivity,diversity:sceneDiversity,relief_slope:sceneReliefSlope,relief_height:sceneReliefHeight,relief_aspect:sceneReliefAspect};
 
   map.on('load',()=>{
-    let firstSym;try{const ls=map.getStyle().layers;for(const l of ls){if(l.type==='symbol'){firstSym=l.id;break;}}}catch(e){}
-    try{
-      map.addSource('dem',{type:'raster-dem',url:'mapbox://mapbox.mapbox-terrain-dem-v1',tileSize:512,maxzoom:14});
-      map.addLayer({id:'hill',type:'hillshade',source:'dem',layout:{visibility:'none'},paint:{'hillshade-exaggeration':0.6,'hillshade-shadow-color':'#ef4444','hillshade-highlight-color':'#34d399','hillshade-accent-color':'#fbbf24'}},firstSym);
-    }catch(e){}
-    // mask that clips the hillshade to the isochrone (dark fill everywhere except the walk area)
-    map.addSource('iso-mask',{type:'geojson',data:{type:'FeatureCollection',features:[]}});
-    map.addLayer({id:'relief-mask',type:'fill',source:'iso-mask',layout:{visibility:'none'},paint:{'fill-color':'#0a0a0a','fill-opacity':0.9,'fill-opacity-transition':{duration:400}}},firstSym);
+    try{const ls=map.getStyle().layers;for(const l of ls){if(l.type==='symbol'){firstSym=l.id;break;}}}catch(e){}
     map.addSource('iso',{type:'geojson',data:{type:'FeatureCollection',features:[]}});
     map.addLayer({id:'iso-fill',type:'fill',source:'iso',layout:{visibility:'none'},paint:{'fill-color':'#a78bfa','fill-opacity':0.16,'fill-opacity-transition':{duration:500}}},firstSym);
     map.addLayer({id:'iso-line',type:'line',source:'iso',layout:{visibility:'none'},paint:{'line-color':'#c4b5fd','line-width':1.6,'line-opacity':0.85}},firstSym);
