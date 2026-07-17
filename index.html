@@ -309,6 +309,7 @@
 <script>
 // Public Mapbox token — URL-restricted to urbanyx.zaxis.ge (same token the app uses)
 const MAPBOX_TOKEN="pk.eyJ1Ijoiam9yam9uZTkwIiwiYSI6ImNtZDY5ZDZqbDA5MHUya3F2emJncXk0eXgifQ.U-XZt6e_Z-LeVuWx3hut_A";
+const PROXY="https://spring-recipe-402c.gkankia.workers.dev"; // same worker the app uses for the live TTC feed
 
 // ── capability cards with tiny data-viz thumbnails (real analysis outputs) ──
 const CAPS=[
@@ -486,12 +487,11 @@ function heroMap(){
   const _metroSVG=`<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 30 30"><rect width="30" height="30" rx="6" fill="#dc2626"/><polygon points="2,26 4,5 11,7 15,20 12,26" fill="white"/><polygon points="28,26 26,5 19,7 15,20 18,26" fill="white"/></svg>`;
   function _addSvgImg(id,svg,cb){if(map.hasImage(id)){cb();return;}const im=new Image(30,30);im.onload=()=>{try{if(!map.hasImage(id))map.addImage(id,im,{pixelRatio:2});}catch(e){}cb();};im.onerror=cb;im.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);}
   function addTransitIcons(cb){let d=0;const fin=()=>{if(++d>=2)cb();};_addSvgImg('ttc-bus',_busSVG,fin);_addSvgImg('ttc-metro',_metroSVG,fin);}
-  async function fetchTransit(c){
-    const url=`https://api.mapbox.com/v4/mapbox.mapbox-streets-v8/tilequery/${c[0].toFixed(5)},${c[1].toFixed(5)}.json?radius=1100&limit=50&dedupe=true&layers=poi_label&access_token=${MAPBOX_TOKEN}`;
-    const r=await fetch(url);if(!r.ok)throw 0;const j=await r.json();
-    const isMetro=s=>/metro|subway|rail/i.test(s||'');
-    const isTransit=p=>/^(bus|rail-metro|rail|rail-light|entrance)$/.test(p.maki||'')||/bus|metro|subway|tram|station|transit/i.test(p.category_en||'');
-    return (j.features||[]).filter(f=>isTransit(f.properties||{})).slice(0,22).map(f=>{const p=f.properties||{};return {type:'Feature',properties:{mode:isMetro((p.maki||'')+' '+(p.category_en||''))?'SUBWAY':'BUS'},geometry:f.geometry};});
+  // all ~2,742 TTC stops from the app's worker feed (cached); buildAnalyses() clips to the isochrone
+  let _stopsCache=null;
+  async function fetchTransit(){
+    if(!_stopsCache){const r=await fetch(`${PROXY}/ttc/stops`);if(!r.ok)throw 0;_stopsCache=await r.json();}
+    return (_stopsCache||[]).map(s=>({type:'Feature',properties:{mode:/subway|metro|rail/i.test(s.vehicleMode||'')?'SUBWAY':'BUS'},geometry:{type:'Point',coordinates:[+s.lon,+s.lat]}})).filter(f=>Number.isFinite(f.geometry.coordinates[0])&&Number.isFinite(f.geometry.coordinates[1]));
   }
   function makeLandUse(c,iso){
     const pal=['#a78bfa','#38bdf8','#34d399','#fbbf24','#f472b6'];const feats=[];const cnt={};
@@ -529,6 +529,8 @@ function heroMap(){
     ISO=isoFeat?isoFeat.geometry:null;
     try{AD.area=ISO?polyKm2(ISO.type==='Polygon'?ISO.coordinates[0]:ISO.coordinates[0][0]).toFixed(2):null;}catch(e){AD.area=null;}
     show(['iso-fill','iso-line']);
+    // clip the street network to the isochrone (Mapbox 'within' expression)
+    try{if(map.getLayer('net-hl'))map.setFilter('net-hl',ISO?['within',ISO]:null);}catch(e){}
     // 2) transit stops within the isochrone
     let stops=[];try{stops=await fetchTransit(center);}catch(e){}
     stops=stops.filter(f=>ptInGeo(f.geometry.coordinates,ISO));
