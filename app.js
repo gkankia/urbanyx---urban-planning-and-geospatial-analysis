@@ -5013,6 +5013,58 @@ function _translateZone(raw){
   if(!entry)return raw;
   return (typeof lang!=='undefined'&&lang==='ka')?entry.ka:entry.en+'\n'+entry.ka;
 }
+
+// Article 16 — concrete functional-zone regulations that the WFS layer's K
+// coefficients don't carry: minimum parcel area (m²), width/depth (m), maximum
+// building height, plus use rules. noBuild = all construction prohibited (only
+// minor/auxiliary/religious objects allowed). allowedUses = the zone permits
+// only specific uses (Special Zone-1: educational / scientific / medical /
+// urban-infrastructure / storage). multiNote = alternate limits for
+// multi-apartment / non-individual buildings.
+const ZONE_REGS={
+  'landsaftur sarekreacio':{noBuild:true},
+  'sasoflo sameurneo zona':{noBuild:true},
+  'rekreaciuli zona-1':{noBuild:true,maxH:5,maxHUnit:'m'},
+  'rekreaciuli zona-2':{noBuild:true,maxH:5,maxHUnit:'m'},
+  'rekreaciuli zona-3':{},
+  'specialuri zona-1':{allowedUses:true},
+  'specialuri zona-2':{noBuild:true},
+  'specialuri zona-3':{noBuild:true},
+  'satransporto zona-1':{noBuild:true},
+  'satransporto zona-2':{noBuild:true},
+  'sanitaruli zona':{noBuild:true},
+  'satyeo zona':{noBuild:true},
+  'sacxovrebeli zona-1':{minArea:200,minWidth:9,minDepth:15,maxH:15,maxHUnit:'m'},
+  'sacxovrebeli zona-2':{minArea:250,minWidth:9,minDepth:15,maxH:15,maxHUnit:'m'},
+  'sacxovrebeli zona-3':{minArea:300,minWidth:9,minDepth:20,maxH:15,maxHUnit:'m',multiNote:'400 m² / 12 m width / 25 m depth for multi-apartment & hotels'},
+  'sacxovrebeli zona-4':{minArea:300,maxH:3,maxHUnit:'floors'},
+  'sacxovrebeli zona-5':{minArea:400,minWidth:12,minDepth:20,multiNote:'500 m² / 15 m / 25 m for non-individual houses'},
+  'sacxovrebeli zona-6':{minArea:600,minWidth:15,minDepth:25,multiNote:'700 m² / 20 m / 30 m for multi-apartment'},
+  'sazogadoebriv saqmiani zona-1':{minArea:600,minWidth:15,minDepth:25,multiNote:'700 m² / 20 m / 30 m for multi-apartment'},
+  'sazogadoebriv saqmiani zona-2':{minArea:700,minWidth:20,minDepth:30},
+  'sazogadoebriv saqmiani zona-3':{minArea:500,minWidth:20,minDepth:20,maxH:15,maxHUnit:'m'},
+  'samrewvelo zona-1':{},
+  'samrewvelo zona-2':{},
+};
+function _zoneRegs(kve_zona){
+  if(!kve_zona)return null;
+  const k=String(kve_zona).trim().toLowerCase();
+  return ZONE_REGS[k]||null;
+}
+// Does the shown permit's use violate the dominant zone's use rules?
+function _permitViolatesZoning(){
+  const zones=Array.isArray(window._rptZones)?window._rptZones:[];
+  if(!zones.length)return false;
+  const reg=_zoneRegs(zones[0].kve_zona); // zones sorted by area desc → dominant
+  if(!reg)return false;
+  if(reg.noBuild)return true;
+  if(reg.allowedUses){
+    // Special Zone-1 permits only medical/educational/scientific/infrastructure/
+    // storage — a residential / multifunctional / multi-apartment permit conflicts.
+    if(/მრავალფუნქციური|მრავალბინიანი|მრავალსართულიანი|საცხოვრებელი/.test(_lastPermitNomen||''))return true;
+  }
+  return false;
+}
 async function _fetchFunctionalZone(geojson){
   if(!geojson||geojson.type==='LineString'||geojson.type==='MultiLineString')return[];
   const coordsFlat=(geojson.type==='MultiPolygon'?geojson.coordinates.flat(2):geojson.coordinates.flat());
@@ -5138,6 +5190,19 @@ function _buildZoneChart(zones){
       if(z.k2!=null)tc+=`<div style="display:grid;grid-template-columns:auto 1fr auto;gap:1px 5px;margin-bottom:2px"><span style="font-size:0.56rem;color:rgba(255,255,255,0.25);font-family:monospace">K2=${fK(z.k2)}</span><span style="font-size:0.56rem;color:rgba(255,255,255,0.45)">Max floor area</span><span style="font-size:0.56rem;color:rgba(255,255,255,0.8);text-align:right">${fM(Math.round(zA*z.k2))}</span></div>`;
       if(z.k1!=null&&z.k2!=null&&z.k1>0){const maxFloors=Math.floor((z.k2/z.k1)+1e-9);tc+=`<div style="display:grid;grid-template-columns:auto 1fr auto;gap:1px 5px;margin-bottom:2px"><span style="font-size:0.56rem;color:rgba(255,255,255,0.25);font-family:monospace">K2÷K1</span><span style="font-size:0.56rem;color:rgba(255,255,255,0.45)">Max height (floors)</span><span style="font-size:0.56rem;color:rgba(255,255,255,0.8);text-align:right">${maxFloors}</span></div>`;}
       if(z.k3!=null)tc+=`<div style="display:grid;grid-template-columns:auto 1fr auto;gap:1px 5px"><span style="font-size:0.56rem;color:rgba(255,255,255,0.25);font-family:monospace">K3=${fK(z.k3)}</span><span style="font-size:0.56rem;color:rgba(52,211,153,0.6)">Min greening</span><span style="font-size:0.56rem;color:rgba(52,211,153,0.85);text-align:right">${fM(Math.round(zA*z.k3))}</span></div>`;
+      // Article 16 parcel-size requirements (min area/width/depth, max height)
+      const _reg=_zoneRegs(z.kve_zona);
+      if(_reg&&(_reg.minArea||_reg.minWidth||_reg.minDepth||_reg.maxH)){
+        const _pa=_currentParcelAreaM2||0;
+        const _rrow=(lbl,val,warn)=>`<div style="display:grid;grid-template-columns:1fr auto;gap:1px 5px"><span style="font-size:0.56rem;color:rgba(255,255,255,0.45)">${lbl}</span><span style="font-size:0.56rem;color:${warn?'rgba(239,68,68,0.85)':'rgba(255,255,255,0.8)'};text-align:right">${val}</span></div>`;
+        tc+=`<div style="border-top:1px solid rgba(255,255,255,0.1);margin-top:5px;padding-top:5px"><div style="font-size:0.54rem;font-weight:600;color:rgba(255,255,255,0.4);margin-bottom:3px">Parcel requirements</div>`;
+        if(_reg.minArea){const _below=_pa>0&&_pa<_reg.minArea;tc+=_rrow('Min. parcel area',`${_reg.minArea.toLocaleString('en-US')} m²${_below?' ⚠':''}`,_below);}
+        if(_reg.minWidth)tc+=_rrow('Min. width',`${_reg.minWidth} m`);
+        if(_reg.minDepth)tc+=_rrow('Min. depth',`${_reg.minDepth} m`);
+        if(_reg.maxH)tc+=_rrow('Max. height',`${_reg.maxH} ${_reg.maxHUnit==='floors'?'fl':'m'}`);
+        if(_reg.multiNote)tc+=`<div style="font-size:0.5rem;color:rgba(255,255,255,0.3);margin-top:3px;line-height:1.35">* ${_reg.multiNote}</div>`;
+        tc+=`</div>`;
+      }
       tipHtml=`<div style="position:relative;display:inline-flex;align-items:center;cursor:help;flex-shrink:0;margin-left:3px" onmouseenter="this.lastElementChild.style.visibility='visible';this.lastElementChild.style.opacity='1'" onmouseleave="this.lastElementChild.style.visibility='hidden';this.lastElementChild.style.opacity='0'"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg><div style="visibility:hidden;opacity:0;transition:opacity 0.12s;position:absolute;bottom:calc(100% + 5px);right:-4px;background:rgba(12,12,18,0.98);border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:7px 8px;min-width:160px;z-index:200;box-shadow:0 4px 20px rgba(0,0,0,0.6);pointer-events:none">${tc}</div></div>`;
     }
     legend+=`<div style="display:flex;align-items:center;gap:5px;margin-bottom:4px"><div style="width:8px;height:8px;border-radius:2px;background:${color};flex-shrink:0"></div><span style="color:rgba(255,255,255,0.82);font-size:0.65rem;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${en}</span><span style="color:rgba(255,255,255,0.45);font-size:0.65rem;flex-shrink:0">${z.pct}%</span>${tipHtml}</div>`;
@@ -5522,8 +5587,7 @@ function _updatePermitDevWarning(){
   const w=document.getElementById('pfc-permit-warn');
   if(!w)return;
   const _assessmentOn=!!document.getElementById('nav-zoning-btn')?.classList.contains('active');
-  const _restrictedType=/მრავალფუნქციური|მრავალბინიანი/.test(_lastPermitNomen||'');
-  const show=_assessmentOn&&_permitsActive&&!!_lastPermitFound&&(!!_noDevZone||_restrictedType);
+  const show=_assessmentOn&&_permitsActive&&!!_lastPermitFound&&(!!_noDevZone||_permitViolatesZoning());
   if(show){
     w.textContent=_zpKa()
       ? "ვინაიდან მონიშნული ტერიტორია არ არის გამიზნული განაშენიანებისთვის, ამ ნაკვეთზე მშენებლობის ნებართვის გაცემა ეწინააღმდეგება თბილისის 2019 წლის განაშენიანების გენერალურ გეგმას."
