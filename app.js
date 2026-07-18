@@ -5051,19 +5051,47 @@ function _zoneRegs(kve_zona){
   const k=String(kve_zona).trim().toLowerCase();
   return ZONE_REGS[k]||null;
 }
-// Does the shown permit's use violate the dominant zone's use rules?
-function _permitViolatesZoning(){
+
+// Which residential/mixed building types each concrete zone permits (main OR
+// exceptional-with-zonal-agreement) per the permitted-use lists. Only the types
+// a permit's nomenclature reveals are tracked: singleFamily = ერთბინიანი /
+// ინდივიდუალური; multiApartment = მრავალბინიანი; multifunctional =
+// მრავალფუნქციური. Zones not listed impose no residential-type restriction here
+// (their limits are handled by noBuild / allowedUses in ZONE_REGS).
+const ZONE_USE_POLICY={
+  'sacxovrebeli zona-1':{singleFamily:true, multiApartment:false,multifunctional:false},
+  'sacxovrebeli zona-2':{singleFamily:true, multiApartment:false,multifunctional:false},
+  'sacxovrebeli zona-3':{singleFamily:true, multiApartment:true, multifunctional:false},
+  'sacxovrebeli zona-4':{singleFamily:true, multiApartment:false,multifunctional:false},
+  'sacxovrebeli zona-5':{singleFamily:true, multiApartment:true, multifunctional:false},
+  'sacxovrebeli zona-6':{singleFamily:true, multiApartment:true, multifunctional:false},
+  'sazogadoebriv saqmiani zona-1':{singleFamily:false,multiApartment:true, multifunctional:true},
+  'sazogadoebriv saqmiani zona-2':{singleFamily:false,multiApartment:true, multifunctional:true},
+  'sazogadoebriv saqmiani zona-3':{singleFamily:false,multiApartment:false,multifunctional:false},
+  'rekreaciuli zona-2':{singleFamily:true, multiApartment:false,multifunctional:false},
+  'rekreaciuli zona-3':{singleFamily:true, multiApartment:false,multifunctional:false},
+};
+// Classify the permit's building type from its nomenclature (or null if unknown).
+function _classifyPermitUse(nomen){
+  const n=nomen||'';
+  if(/მრავალფუნქციური/.test(n))return 'multifunctional';
+  if(/მრავალბინიანი/.test(n))return 'multiApartment';
+  if(/ერთბინიანი|ინდივიდუალური საცხოვრებელი/.test(n))return 'singleFamily';
+  return null;
+}
+// Conflict between the shown permit's use and the dominant zone's rules.
+// Returns {type:'noBuild'} | {type:'use', use} | null.
+function _permitZoningConflict(){
   const zones=Array.isArray(window._rptZones)?window._rptZones:[];
-  if(!zones.length)return false;
-  const reg=_zoneRegs(zones[0].kve_zona); // zones sorted by area desc → dominant
-  if(!reg)return false;
-  if(reg.noBuild)return true;
-  if(reg.allowedUses){
-    // Special Zone-1 permits only medical/educational/scientific/infrastructure/
-    // storage — a residential / multifunctional / multi-apartment permit conflicts.
-    if(/მრავალფუნქციური|მრავალბინიანი|მრავალსართულიანი|საცხოვრებელი/.test(_lastPermitNomen||''))return true;
-  }
-  return false;
+  if(!zones.length)return null;
+  const key=String(zones[0].kve_zona||'').trim().toLowerCase(); // dominant zone
+  const reg=_zoneRegs(key);
+  if(reg&&reg.noBuild)return {type:'noBuild'};
+  const use=_classifyPermitUse(_lastPermitNomen);
+  if(reg&&reg.allowedUses)return use?{type:'use',use}:null; // Special Zone-1
+  const policy=ZONE_USE_POLICY[key];
+  if(policy&&use&&policy[use]===false)return {type:'use',use};
+  return null;
 }
 
 // Oriented min-area bounding rectangle of the parcel → { width, depth } in
@@ -5639,19 +5667,32 @@ function _hidePermitFloatRow(){
 }
 
 // Masterplan-conflict notice: shown only when the zoning Assessment is toggled
-// on AND a permit is present AND either the assessment flags the parcel as not
-// designated for development (all zones K1 = 0), or the permit is for a
-// multifunctional / multi-apartment building (nomenclature mentions
-// მრავალფუნქციური / მრავალბინიანი).
+// on AND a permit is present AND the permit conflicts with the dominant zone —
+// either the zone bans all development, or the permit's building use is not
+// permitted in that zone per the Article 16 permitted-use lists.
+const _PERMIT_USE_LABELS={
+  multifunctional:{en:'A multifunctional building',ka:'მრავალფუნქციური შენობა'},
+  multiApartment:{en:'A multi-apartment residential building',ka:'მრავალბინიანი საცხოვრებელი სახლი'},
+  singleFamily:{en:'A residential house',ka:'საცხოვრებელი სახლი'},
+};
 function _updatePermitDevWarning(){
   const w=document.getElementById('pfc-permit-warn');
   if(!w)return;
   const _assessmentOn=!!document.getElementById('nav-zoning-btn')?.classList.contains('active');
-  const show=_assessmentOn&&_permitsActive&&!!_lastPermitFound&&(!!_noDevZone||_permitViolatesZoning());
-  if(show){
-    w.textContent=_zpKa()
-      ? "ვინაიდან მონიშნული ტერიტორია არ არის გამიზნული განაშენიანებისთვის, ამ ნაკვეთზე მშენებლობის ნებართვის გაცემა ეწინააღმდეგება თბილისის 2019 წლის განაშენიანების გენერალურ გეგმას."
-      : "As the selected area is not designated for real estate development, granting a construction permit for this parcel goes against the rules established by the Tbilisi 2019 Urban Masterplan.";
+  const conflict=(_assessmentOn&&_permitsActive&&_lastPermitFound)
+    ? (_noDevZone?{type:'noBuild'}:_permitZoningConflict())
+    : null;
+  if(conflict){
+    if(conflict.type==='use'&&_PERMIT_USE_LABELS[conflict.use]){
+      const u=_PERMIT_USE_LABELS[conflict.use];
+      w.textContent=_zpKa()
+        ? `მონიშნულ ზონაში ${u.ka} დაუშვებელია — მშენებლობის ნებართვის გაცემა ეწინააღმდეგება თბილისის 2019 წლის განაშენიანების გენერალურ გეგმას.`
+        : `${u.en} is not among the permitted uses for this zone — granting the construction permit conflicts with the Tbilisi 2019 Urban Masterplan.`;
+    } else {
+      w.textContent=_zpKa()
+        ? "ვინაიდან მონიშნული ტერიტორია არ არის გამიზნული განაშენიანებისთვის, ამ ნაკვეთზე მშენებლობის ნებართვის გაცემა ეწინააღმდეგება თბილისის 2019 წლის განაშენიანების გენერალურ გეგმას."
+        : "As the selected area is not designated for real estate development, granting a construction permit for this parcel goes against the rules established by the Tbilisi 2019 Urban Masterplan.";
+    }
     w.style.display='';
   } else {
     w.style.display='none';
