@@ -133,6 +133,7 @@
   .plan li{font-size:0.82rem;color:var(--ink2);display:flex;gap:9px;align-items:flex-start}
   .plan li .ck{color:var(--purple);flex-shrink:0}
   .plan .btn{width:100%;justify-content:center}
+  .price-note{max-width:720px;margin:16px auto 0;text-align:center;font-size:0.72rem;line-height:1.5;color:var(--ink3)}
 
   /* footer */
   footer{border-top:1px solid var(--line);padding:40px 0 48px;margin-top:20px}
@@ -287,6 +288,7 @@
         <a class="btn btn-primary" href="app.html" data-i="plan_pro_cta">Start 14-day trial</a>
       </div>
     </div>
+    <p class="price-note" data-i="price_disclaimer">Prices are shown in EUR. Charges are processed in Georgian Lari (₾) at the current exchange rate, so the amount debited may vary slightly; your bank may also apply conversion fees.</p>
   </section>
 
   <div class="cta-band">
@@ -725,7 +727,7 @@ const STR={
     who5_t:'Media',who5_d:'Save precious time on looking for pieces of the puzzle',
     price_eyebrow:'Pricing',price_title:'Start free. Upgrade when desired.',
     plan_free:'Free',plan_free_per:'50 analyses / month',f_free1:'Parcel, zoning & permits',f_free2:'Street imagery and accessibility',f_free3:'Mobility (partial)',f_free4:'Road safety & parking',f_free5:'Urban morphology & land-use diversity',plan_free_cta:'Create free account',
-    plan_pro:'Pro',per_mo:' /mo',plan_pro_per:'or €150 / year · 1,000 analyses / month',f_pro1:'Everything in Free',f_pro2:'Plan it yourself & 3D modelling',f_pro3:'Mobility (full) - Transit reliability assessment',f_pro4:'Climate, relief & clean energy',f_pro5:'Report & data export',plan_pro_cta:'Start 14-day trial',
+    plan_pro:'Pro',per_mo:' /mo',plan_pro_per:'or €150 / year · 1,000 analyses / month',f_pro1:'Everything in Free',f_pro2:'Plan it yourself & 3D modelling',f_pro3:'Mobility (full) - Transit reliability assessment',f_pro4:'Climate, relief & clean energy',f_pro5:'Report & data export',plan_pro_cta:'Start 14-day trial',price_disclaimer:'Prices are shown in EUR. Charges are processed in Georgian Lari (₾) at the current exchange rate, so the amount debited may vary slightly; your bank may also apply conversion fees.',
     band_title:'Analyze your first parcel now.',band_sub:'No card. No install. Just a map and your site.',band_cta:'Launch Urbanyx →',
     foot_terms:'Terms',foot_privacy:'Privacy',foot_features:'Capabilities',foot_pricing:'Pricing'},
   ka:{nav_features:'ფუნქციები',nav_pricing:'ფასები',nav_launch:'რუკა →',
@@ -747,7 +749,7 @@ const STR={
     who5_t:'მედია',who5_d:'დაზოგე დრო ფაზლის ნაწილების ძებნაში',
     price_eyebrow:'ფასები',price_title:'დაიწყე უფასოდ. განაახლე როცა გენებოს.',
     plan_free:'უფასო',plan_free_per:'50 ანალიზი / თვეში',f_free1:'ნაკვეთი, ზონირება და ნებართვები',f_free2:'ქუჩის სურათები და მისაწვდომობა', f_free3:'მობილობა (ნაწილობრივი)',f_free4:'საგზაო უსაფრთხოება და პარკირება',f_free5:'ურბანული მორფოლოგია და მრავალფეროვნება',plan_free_cta:'უფასო ანგარიში',
-    plan_pro:'Pro',per_mo:' /თვე',plan_pro_per:'ან €150 / წელი · 1,000 ანალიზი / თვეში',f_pro1:'ყველაფერი უფასოში',f_pro2:'დაგეგმე თავად და 3D მოდელირება',f_pro3:'მობილობა (სრულყოფილი) - საზ. ტრანსპორტის სანდოობის შეფასება',f_pro4:'კლიმატი, რელიეფი და სუფთა ენერგია',f_pro5:'ანგარიში და მონაცემთა გადმოწერა',plan_pro_cta:'14-დღიანი პერიოდი',
+    plan_pro:'Pro',per_mo:' /თვე',plan_pro_per:'ან €150 / წელი · 1,000 ანალიზი / თვეში',f_pro1:'ყველაფერი უფასოში',f_pro2:'დაგეგმე თავად და 3D მოდელირება',f_pro3:'მობილობა (სრულყოფილი) - საზ. ტრანსპორტის სანდოობის შეფასება',f_pro4:'კლიმატი, რელიეფი და სუფთა ენერგია',f_pro5:'ანგარიში და მონაცემთა გადმოწერა',plan_pro_cta:'14-დღიანი პერიოდი',price_disclaimer:'ფასები მოცემულია ევროში. გადახდა ხორციელდება ლარში (₾) მიმდინარე გაცვლითი კურსით, ამიტომ ჩამოჭრილი თანხა შესაძლოა ოდნავ განსხვავდებოდეს; ბანკმა შესაძლოა დაამატოს კონვერტაციის საკომისიო.',
     band_title:'გააანალიზე რა ხდება შენ გარშემო.',band_sub:'ბარათის გარეშე. ინსტალაციის გარეშე. მხოლოდ რუკა და შენი ტერიტორია.',band_cta:'Urbanyx-ის გახსნა →',
     foot_terms:'წესები',foot_privacy:'კონფიდენციალურობა',foot_features:'ფუნქციები',foot_pricing:'ფასები'}
 };
