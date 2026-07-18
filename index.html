@@ -112,7 +112,10 @@
   .step p{font-size:0.82rem;color:var(--ink2)}
 
   /* audience */
-  .aud{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+  .aud{display:grid;grid-template-columns:repeat(6,1fr);gap:12px}
+  .aud>div{grid-column:span 2}                       /* top row: 3 cards × 2 cols = 6 */
+  .aud>div:nth-child(4){grid-column:2/span 2}         /* bottom row: 2 cards centered */
+  .aud>div:nth-child(5){grid-column:4/span 2}
   .aud div{border:1px solid var(--line);border-radius:11px;padding:16px;background:var(--panel)}
   .aud .t{font-weight:600;font-size:0.86rem;margin-bottom:4px}
   .aud .d{font-size:0.75rem;color:var(--ink3)}
@@ -147,6 +150,7 @@
     .hero{grid-template-columns:1fr;gap:28px;padding:40px 0 36px}
     .mapcard{order:-1;aspect-ratio:1/0.72}
     .caps,.steps,.aud{grid-template-columns:repeat(2,1fr)}
+    .aud>div,.aud>div:nth-child(4),.aud>div:nth-child(5){grid-column:auto}
     .price{grid-template-columns:1fr}
     .nav-right .hide-sm{display:none}
   }
