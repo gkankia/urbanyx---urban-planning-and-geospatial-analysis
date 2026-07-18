@@ -5532,8 +5532,8 @@ function _updatePermitDevWarning(){
   const show=_permitsActive&&!!_lastPermitFound&&!!_noDevZone;
   if(show){
     w.textContent=_zpKa()
-      ? "ამ ნაკვეთზე მშენებლობის ნებართვის გაცემა ეწინააღმდეგება თბილისის 2019 წლის განაშენიანების გენერალურ გეგმას — ტერიტორია არ არის გამიზნული განაშენიანებისთვის."
-      : "Granting a construction permit for this parcel goes against the rules established by the Tbilisi 2019 Urban Masterplan — this area is not designated for development.";
+      ? "ვინაიდან მონიშნული ტერიტორია არ არის გამიზნული განაშენიანებისთვის, ამ ნაკვეთზე მშენებლობის ნებართვის გაცემა ეწინააღმდეგება თბილისის 2019 წლის განაშენიანების გენერალურ გეგმას."
+      : "As the selected area is not designated for real estate development, granting a construction permit for this parcel goes against the rules established by the Tbilisi 2019 Urban Masterplan.";
     w.style.display='';
   } else {
     w.style.display='none';
