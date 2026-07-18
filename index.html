@@ -112,7 +112,7 @@
   .step p{font-size:0.82rem;color:var(--ink2)}
 
   /* audience */
-  .aud{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+  .aud{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
   .aud div{border:1px solid var(--line);border-radius:11px;padding:16px;background:var(--panel)}
   .aud .t{font-weight:600;font-size:0.86rem;margin-bottom:4px}
   .aud .d{font-size:0.75rem;color:var(--ink3)}
@@ -245,6 +245,7 @@
       <div><div class="t" data-i="who2_t">Consultants</div><div class="d" data-i="who2_d">Transport impact assessments</div></div>
       <div><div class="t" data-i="who3_t">Developers</div><div class="d" data-i="who3_d">Feasibility & buildable area</div></div>
       <div><div class="t" data-i="who4_t">Architects</div><div class="d" data-i="who4_d">Site context & constraints</div></div>
+      <div><div class="t" data-i="who5_t">Media</div><div class="d" data-i="who5_d">Save precious time on looking for pieces of the puzzle</div></div>
     </div>
   </section>
 
@@ -707,14 +708,15 @@ const STR={
     trust_v:'Millions',
     trust_head:'of data points — analyzed through diverse approaches',
     tag_ownership:'Parcel ownership',tag_zoning:'Zoning',tag_mobility:'Mobility & transport',tag_infrastructure:'Infrastructure',tag_relief:'Relief',
-    cap_eyebrow:'What you can analyze',cap_title:'Nine analysis engines, one parcel.',cap_sub:'Each runs on the parcel or a drawn study area and outputs real metrics with map symbology you can export.',
-    how_eyebrow:'How it works',how_title:'From cadastral code to a report in three steps.',
+    cap_eyebrow:'What you can do with this',cap_title:'Full [geospatial] analysis of the study area',cap_sub:'Each runs on the parcel or a drawn study area and outputs real metrics with map symbology you can export.',
+    how_eyebrow:'How it works',how_title:'A full project report is a few clicks away.',
     step1_t:'Pick a site',step1_d:'Search a cadastral code or draw a study area on the map.',
-    step2_t:'Analyze',step2_d:'Check zoning parameters, assess accessibility, infrastructure, transit service, morphology, climate, relief and many more layers. Results render live on the map.',
+    step2_t:'Analyze',step2_d:'Check zoning parameters, assess accessibility, infrastructure, transit service, climate, relief and many more layers. Results render live on the map.',
     step3_t:'Report',step3_d:'Generate a full PDF report with maps and metrics integrated — or just download raw geodata files.',
     who_eyebrow:"Who it's for",who_title:'Built for people concerned with space.',
     who1_t:'Planners and architects',who1_d:'Contextualise spatial transformation and future development scenarios ',who2_t:'Policy makers',who2_d:'Design data-informed policy interventions',
     who3_t:'Businesses',who3_d:'Evaluate potential for spatial expansion of your business',who4_t:'Researchers',who4_d:'Gain access to fine-tuned datasets and integrated spatial analaysis for your research project',
+    who5_t:'Media',who5_d:'Save precious time on looking for pieces of the puzzle',
     price_eyebrow:'Pricing',price_title:'Start free. Upgrade when desired.',
     plan_free:'Free',plan_free_per:'50 analyses / month',f_free1:'Parcel & zoning analysis',f_free2:'Walkability & street morphology',f_free3:'Live transit stops',f_free4:'Street imagery',plan_free_cta:'Create free account',
     plan_pro:'Pro',plan_pro_per:'or €150 / year · 1,000 analyses / month',f_pro1:'Everything in Free',f_pro2:'Climate, relief & energy analysis',f_pro3:'Transit reliability history & road incidents',f_pro4:'PDF / GeoJSON / GeoTIFF export',plan_pro_cta:'Start 14-day trial',
@@ -729,13 +731,14 @@ const STR={
     trust_head:'მონაცემი — გაანალიზებული მრავალფეროვანი მიდგომებით',
     tag_ownership:'საკუთრება',tag_zoning:'ზონირება',tag_mobility:'მობილობა და ტრანსპორტი',tag_infrastructure:'ინფრასტრუქტურა',tag_relief:'რელიეფი',
     cap_eyebrow:'რისი გაკეთება შეგიძლია',cap_title:'საკვლევი არეალის სრულყოფილი [სივრცითი] ანალიზი.',cap_sub:'Live და მონაცემების არქივი ერთი კლიკის გაწვდენაზეა.',
-    how_eyebrow:'როგორ მუშაობს',how_title:'საკადასტრო კოდიდან რეპორტამდე სამ ნაბიჯში.',
+    how_eyebrow:'როგორ მუშაობს',how_title:'კვლევით ანგარიშამდე რამდენიმე კლიკი გაშორებს.',
     step1_t:'აირჩიე ადგილი',step1_d:'მოძებნე ნაკვეთი საკადასტრო კოდით ან მოხაზე რუკაზე სასურველი არეალი.',
     step2_t:'შეაფასე',step2_d:'შეამოწმე ზონირების პარამეტრები, მისაწვდომობა, ინფრასტრუქტურა, სატრანსპორტო მომსახურება, კლიმატი, რელიეფი და მრავალი სხვა შრე. შედეგებს რუკაზე დაინახავ.',
     step3_t:'ანგარიში',step3_d:'შექმენი კვლევითი ანგარიში PDF ფორმატში რუკებისა და შესაბამისი ინფორმაციის ინტეგრაციით — ან გადმოწერე სივცრითი მონაცემები ვექტორულ და რასტრულ ფორმატში.',
     who_eyebrow:'ვისთვისაა',who_title:'შექმნილია მათთვის, ვინც აფასებს სივრცეს.',
     who1_t:'ქალაქმგეგბარებლები და არქიტექტორები',who1_d:'სივრცითი კონტექსტი სამომავლო ტრანსფორმაციისა და განვითარების სცენარების შესაქმნელად',who2_t:'პოლიტიკის შემქმნელები',who2_d:'გადაწყვეტილებების მისაღებად მონაცემებზე დაყრდნობით',
     who3_t:'კერძო სექტორი',who3_d:'ბიზნესის სივრცითი განვითარების პოტენციალის შესაფასებლად',who4_t:'მკვლევარები',who4_d:'ხელმისაწვდომი მონაცემები და ინტეგრირებული სივრცითი ანალიზი კვლევის საწარმოებლად',
+    who5_t:'მედია',who5_d:'დაზოგე დრო ფაზლის ნაწილების ძებნაში',
     price_eyebrow:'ფასები',price_title:'დაიწყე უფასოდ. განაახლე როცა გენებოს.',
     plan_free:'უფასო',plan_free_per:'50 ანალიზი / თვეში',f_free1:'ნაკვეთი და ზონირება',f_free2:'საფეხმავლო და მორფოლოგია',f_free3:'ტრანსპორტის გაჩერებები',f_free4:'ქუჩის სურათები',plan_free_cta:'უფასო ანგარიში',
     plan_pro:'Pro',plan_pro_per:'ან €150 / წელი · 1,000 ანალიზი / თვეში',f_pro1:'ყველაფერი უფასოში',f_pro2:'კლიმატი, რელიეფი და ენერგია',f_pro3:'ტრანსპორტის ისტორია და ინციდენტები',f_pro4:'PDF / GeoJSON / GeoTIFF ექსპორტი',plan_pro_cta:'14-დღიანი პერიოდი',
