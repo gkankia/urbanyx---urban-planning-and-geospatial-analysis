@@ -5418,24 +5418,14 @@ async function _fetchLatestPermit(lon,lat){
     link:rec.link||(docId?`https://tas.ge/?p=publicpage&documentId=${docId}`:'')};
 }
 
-// Detail HTML → nomenclature + cadastral code(s). Label-based, degrades gracefully.
+// Detail → nomenclature + cadastral code(s). The worker invokes the DWR call
+// behind the public page and returns { nomenclature, cadastral } as JSON.
 async function _fetchPermitDetail(docId){
   if(!docId)return null;
   const res=await fetch(`${PROXY}/permits/detail?docId=${encodeURIComponent(docId)}`);
   if(!res.ok)throw new Error('detail_fail');
-  const html=await res.text();
-  const plain=html.replace(/<[^>]+>/g,' ').replace(/&nbsp;/gi,' ').replace(/&amp;/gi,'&').replace(/\s+/g,' ').trim();
-  const cadastral=[...new Set((plain.match(/\d{2}\.\d{2}\.\d{2}\.\d{3}\.\d{3}/g)||[]))];
-  let nomenclature='';
-  const idx=plain.indexOf('ნომენკლატურა');
-  if(idx>=0){
-    // Take the chunk after the heading, stop at the next known heading or cadastral code
-    let chunk=plain.slice(idx+'ნომენკლატურა'.length,idx+'ნომენკლატურა'.length+300);
-    chunk=chunk.split(/საკადასტრო|მისამართი|განმცხადებელი|\d{2}\.\d{2}\.\d{2}\.\d{3}\.\d{3}/)[0];
-    nomenclature=chunk.replace(/\s*[|/]\s*/g,' | ').replace(/^[\s|:—-]+/,'').trim();
-    if(nomenclature.length>180)nomenclature=nomenclature.slice(0,180)+'…';
-  }
-  return {nomenclature,cadastral};
+  const data=await res.json();
+  return {nomenclature:data.nomenclature||'',cadastral:Array.isArray(data.cadastral)?data.cadastral:[]};
 }
 
 // Decision PDF → registration date, issue date, result. Parsed client-side via PDF.js.
@@ -5492,7 +5482,6 @@ function _buildPermitHTML(permit,detail,decision,loading){
   html+=field(L.address,permit.address);
   if(detail){
     html+=field(L.nomen,detail.nomenclature);
-    html+=field(L.cadastral,(detail.cadastral||[]).join(', '));
   }
   if(decision){
     html+=field(L.registered,decision.registered);

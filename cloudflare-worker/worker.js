@@ -193,17 +193,49 @@ export default {
       }
     }
 
-    // ── Construction permits: detail HTML by docId (GET) ──────────────────────
-    // /permits/detail?docId=<digits>  → forwards to docs.tbilisi.gov.ge detail page
+    // ── Construction permits: detail by docId (GET) ───────────────────────────
+    // /permits/detail?docId=<digits> → the public detail page is a DWR/ExtJS app,
+    // so the real data lives behind a DWR call. We invoke it server-side and
+    // return a small JSON { nomenclature, cadastral } (the raw reply is ~800KB).
     if (request.method === "GET" && url.pathname === "/permits/detail") {
       const docId = (url.searchParams.get("docId") || "").replace(/\D/g, "");
       if (!docId) return new Response(JSON.stringify({ error: "Missing docId" }), { status: 400, headers: corsHeaders });
       try {
-        const resp = await fetch(`https://docs.tbilisi.gov.ge/architect/public.html?docId=${docId}`, {
-          headers: { "Accept": "text/html", "User-Agent": "Mozilla/5.0" },
+        const dwrBody =
+          "callCount=1\n" +
+          `page=/architect/public.html?docId=${docId}\n` +
+          "httpSessionId=\n" +
+          "scriptSessionId=\n" +
+          "windowName=\n" +
+          "c0-id=0\n" +
+          "c0-scriptName=UserMethods\n" +
+          "c0-methodName=getUserDocumentLastMotion\n" +
+          `c0-param0=number:${docId}\n` +
+          "batchId=0\n";
+        const resp = await fetch("https://docs.tbilisi.gov.ge/architect/dwr/call/plaincall/UserMethods.getUserDocumentLastMotion.dwr", {
+          method: "POST",
+          headers: { "Content-Type": "text/plain", "User-Agent": "Mozilla/5.0", "Referer": `https://docs.tbilisi.gov.ge/architect/public.html?docId=${docId}` },
+          body: dwrBody,
         });
-        const html = await resp.text();
-        return new Response(html, { status: resp.status, headers: { ...corsHeaders, "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, max-age=86400" } });
+        const raw = await resp.text();
+        // Cadastral codes are ASCII in the raw reply
+        const cadastral = [...new Set(raw.match(/\d{2}\.\d{2}\.\d{2}\.\d{3}\.\d{3}/g) || [])];
+        // Nomenclature lives in a nomenklaturMarkup HTML string (unicode-escaped)
+        let nomenclature = "";
+        const nm = raw.match(/nomenklaturMarkup:"((?:[^"\\]|\\.)*)"/);
+        if (nm) {
+          const markup = nm[1]
+            .replace(/\\u([0-9a-fA-F]{4})/g, (_, h) => String.fromCharCode(parseInt(h, 16)))
+            .replace(/\\\//g, "/").replace(/\\n/g, " ").replace(/\\"/g, '"');
+          const items = [...markup.matchAll(/<li>(.*?)<\/li>/gi)].map(m => m[1].replace(/<[^>]+>/g, "").trim()).filter(Boolean);
+          nomenclature = items.length
+            ? items.join(" | ")
+            : markup.replace(/<[^>]+>/g, " ").replace(/ნომენკლატურა\s*:\s*/, "").replace(/\s+/g, " ").trim();
+        }
+        return new Response(JSON.stringify({ nomenclature, cadastral }), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json", "Cache-Control": "public, max-age=86400" },
+        });
       } catch(e) {
         return new Response(JSON.stringify({ error: e.message }), { status: 502, headers: corsHeaders });
       }
