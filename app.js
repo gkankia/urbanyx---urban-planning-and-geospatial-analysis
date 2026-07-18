@@ -1259,7 +1259,10 @@ function toggleExtrusion(){
 function setExtrusionHeight(val){
   _extrusionHeight=+val;
   const _bldA=_activeBld()?.areaM2||_currentParcelAreaM2||0;
-  const _maxH=(_maxFloorAreaM2!=null&&_bldA>0)?Math.max(3,Math.floor(_maxFloorAreaM2/_bldA)*3):null;
+  const _k2Cap=(_maxFloorAreaM2!=null&&_bldA>0)?Math.max(3,Math.floor(_maxFloorAreaM2/_bldA)*3):null;
+  const _zCap=_zoneMaxHeightM(); // absolute zone height limit (Article 16)
+  const _caps=[_k2Cap,_zCap].filter(v=>v!=null);
+  const _maxH=_caps.length?Math.min(..._caps):null;
   if(_maxH!=null&&_extrusionHeight>_maxH)_extrusionHeight=_maxH;
   const floors=Math.max(1,Math.round(_extrusionHeight/3));
   const lbl=document.getElementById('extrusion-height-label');
@@ -1273,10 +1276,14 @@ function setExtrusionHeight(val){
 
 function _applyExtrusionHeightCap(){
   const bldA=(_activeBld()?.areaM2)||_currentParcelAreaM2||0;
-  const maxH=(_maxFloorAreaM2!=null&&bldA>0)?Math.max(3,Math.floor(_maxFloorAreaM2/bldA)*3):null;
+  const k2Cap=(_maxFloorAreaM2!=null&&bldA>0)?Math.max(3,Math.floor(_maxFloorAreaM2/bldA)*3):null;
+  const zCap=_zoneMaxHeightM();
+  const caps=[k2Cap,zCap].filter(v=>v!=null);
+  const maxH=caps.length?Math.min(...caps):null;
   const sl=document.getElementById('extrusion-height-slider');
   if(sl){if(maxH!=null)sl.setAttribute('max',String(maxH));else sl.removeAttribute('max');}
   if(maxH!=null&&_extrusionHeight>maxH)setExtrusionHeight(maxH);
+  if(_extrusionActive&&typeof _updateMetricsExtrusion==='function')_updateMetricsExtrusion();
 }
 function _clearExtrusion(){
   if(mapReady){
@@ -2262,13 +2269,30 @@ function _updateMetricsExtrusion(){
   document.getElementById('val-prp-floors').textContent=numFloors;
   document.getElementById('lbl-prp-totalarea').textContent=isKa?'საერთო ფართი':'Total floor area';
   document.getElementById('val-prp-totalarea').textContent=fmtM2(totalM2);
-  {const _k2r=document.getElementById('row-prp-k2limit');const _k2v=document.getElementById('val-prp-k2limit');
-  if(_k2r&&_k2v){if(_maxFloorAreaM2!=null){
-    _k2r.style.display='flex';
-    document.getElementById('lbl-prp-k2limit').textContent=isKa?'K2 ლიმიტი':'K2 limit';
-    _k2v.textContent=fmtM2(_maxFloorAreaM2);
-    _k2v.style.color='rgba(239,68,68,0.75)';}
-  else{_k2r.style.display='none';}}}
+  // Zoning limits (Article 16) — footprint (K1), floor area (K2), max height,
+  // and use restriction. Consolidated block replaces the old standalone K2 row.
+  {const _k2r=document.getElementById('row-prp-k2limit');if(_k2r)_k2r.style.display='none';
+   const zc=document.getElementById('prp-zoning-compliance');
+   if(zc){
+     const reg=_zoneDominantRegs();
+     const bldA=_activeBld()?.areaM2||_currentParcelAreaM2||0;
+     const zMaxH=_zoneMaxHeightM();
+     const fM=n=>Math.round(n).toLocaleString();
+     const compRow=(lbl,actual,limit,unit,ok)=>`<div style="display:flex;justify-content:space-between;align-items:baseline;gap:6px"><span style="font-size:0.63rem;color:rgba(255,255,255,0.4)">${lbl}</span><span style="font-size:0.7rem;font-weight:600;color:${ok?'rgba(52,211,153,0.9)':'rgba(248,140,140,0.95)'};white-space:nowrap">${actual} / ${limit} ${unit} ${ok?'✓':'✗'}</span></div>`;
+     const rows=[];
+     if(_maxFootprintM2!=null&&bldA>0)rows.push(compRow(isKa?'გაბარიტი (K1)':'Footprint (K1)',fM(bldA),fM(_maxFootprintM2),'m²',bldA<=_maxFootprintM2+1));
+     if(_maxFloorAreaM2!=null)rows.push(compRow(isKa?'ფართობი (K2)':'Floor area (K2)',fM(totalM2),fM(_maxFloorAreaM2),'m²',totalM2<=_maxFloorAreaM2+1));
+     if(zMaxH!=null)rows.push(compRow(isKa?'მაქს. სიმაღლე':'Max height',_extrusionHeight,zMaxH,'m',_extrusionHeight<=zMaxH+0.01));
+     let warn='';
+     if(reg&&reg.noBuild)warn=isKa?'ამ ზონაში მშენებლობა დაუშვებელია':'No construction is permitted in this zone';
+     else if(reg&&reg.allowedUses&&useArea['residential'])warn=isKa?'საცხოვრებელი გამოყენება ამ ზონაში დაუშვებელია':'Residential use is not permitted in this zone';
+     if(rows.length||warn){
+       let hh=`<div style="font-size:0.58rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:rgba(255,255,255,0.28);margin-bottom:1px">${isKa?'ზონირების ლიმიტები':'Zoning limits'}</div>`;
+       hh+=rows.join('');
+       if(warn)hh+=`<div style="font-size:0.58rem;color:rgba(248,140,140,0.92);line-height:1.4;margin-top:2px">⚠ ${warn}</div>`;
+       zc.innerHTML=hh;zc.style.display='flex';
+     }else{zc.style.display='none';zc.innerHTML='';}
+   }}
   // Use-type breakdown
   const bd=document.getElementById('prp-use-breakdown');
   if(!bd)return;
@@ -5051,6 +5075,17 @@ function _zoneRegs(kve_zona){
   const k=String(kve_zona).trim().toLowerCase();
   return ZONE_REGS[k]||null;
 }
+// Dominant zone (largest share of the parcel) regulations, or null.
+function _zoneDominantRegs(){
+  const zones=Array.isArray(window._rptZones)?window._rptZones:[];
+  return zones.length?_zoneRegs(zones[0].kve_zona):null;
+}
+// Zone maximum building height in metres (floors → ×3), or null if unset.
+function _zoneMaxHeightM(){
+  const reg=_zoneDominantRegs();
+  if(!reg||reg.maxH==null)return null;
+  return reg.maxHUnit==='floors'?reg.maxH*3:reg.maxH;
+}
 
 // Which residential/mixed building types each concrete zone permits (main OR
 // exceptional-with-zonal-agreement) per the permitted-use lists. Only the types
@@ -5397,7 +5432,7 @@ function runZoningAnalysis(){
     _updateZoneLayer(null);
     _updateSetbackRing(null);
     const _bpr0=document.getElementById('pfc-build-params-row');if(_bpr0)_bpr0.style.display='none';
-    _maxFootprintM2=null;_maxFloorAreaM2=null;_noDevZone=false;_noDevZoneUnion=null;window._rptZones=null;document.getElementById('pfc-nodev-warn')?.style&&(document.getElementById('pfc-nodev-warn').style.display='none');document.getElementById('pfc-area-warn')?.style&&(document.getElementById('pfc-area-warn').style.display='none');_updatePermitDevWarning();_renderZoningCompliance(null);
+    _maxFootprintM2=null;_maxFloorAreaM2=null;_noDevZone=false;_noDevZoneUnion=null;window._rptZones=null;document.getElementById('pfc-nodev-warn')?.style&&(document.getElementById('pfc-nodev-warn').style.display='none');document.getElementById('pfc-area-warn')?.style&&(document.getElementById('pfc-area-warn').style.display='none');_updatePermitDevWarning();_renderZoningCompliance(null);if(_extrusionActive&&typeof _updateMetricsExtrusion==='function')_updateMetricsExtrusion();
     return;
   }
   if(!_currentParcelGeoJSON)return;
@@ -5423,7 +5458,7 @@ function runZoningAnalysis(){
       _updateZoneLayer(null);
       _updateSetbackRing(null);
       const _bpr1=document.getElementById('pfc-build-params-row');if(_bpr1)_bpr1.style.display='none';
-      _maxFootprintM2=null;_maxFloorAreaM2=null;_noDevZone=false;_noDevZoneUnion=null;window._rptZones=null;document.getElementById('pfc-nodev-warn')?.style&&(document.getElementById('pfc-nodev-warn').style.display='none');document.getElementById('pfc-area-warn')?.style&&(document.getElementById('pfc-area-warn').style.display='none');_updatePermitDevWarning();_renderZoningCompliance(null);
+      _maxFootprintM2=null;_maxFloorAreaM2=null;_noDevZone=false;_noDevZoneUnion=null;window._rptZones=null;document.getElementById('pfc-nodev-warn')?.style&&(document.getElementById('pfc-nodev-warn').style.display='none');document.getElementById('pfc-area-warn')?.style&&(document.getElementById('pfc-area-warn').style.display='none');_updatePermitDevWarning();_renderZoningCompliance(null);if(_extrusionActive&&typeof _updateMetricsExtrusion==='function')_updateMetricsExtrusion();
       return;
     }
     _updateZoneLayer(zones);
@@ -5457,7 +5492,7 @@ function runZoningAnalysis(){
     _updateZoneLayer(null);
     _updateSetbackRing(null);
     const _bpr2=document.getElementById('pfc-build-params-row');if(_bpr2)_bpr2.style.display='none';
-    _maxFootprintM2=null;_maxFloorAreaM2=null;_noDevZone=false;_noDevZoneUnion=null;window._rptZones=null;document.getElementById('pfc-nodev-warn')?.style&&(document.getElementById('pfc-nodev-warn').style.display='none');document.getElementById('pfc-area-warn')?.style&&(document.getElementById('pfc-area-warn').style.display='none');_updatePermitDevWarning();_renderZoningCompliance(null);
+    _maxFootprintM2=null;_maxFloorAreaM2=null;_noDevZone=false;_noDevZoneUnion=null;window._rptZones=null;document.getElementById('pfc-nodev-warn')?.style&&(document.getElementById('pfc-nodev-warn').style.display='none');document.getElementById('pfc-area-warn')?.style&&(document.getElementById('pfc-area-warn').style.display='none');_updatePermitDevWarning();_renderZoningCompliance(null);if(_extrusionActive&&typeof _updateMetricsExtrusion==='function')_updateMetricsExtrusion();
   });
 }
 // ── Zoning panel (Assessment + Construction permits) ──────────────────────────

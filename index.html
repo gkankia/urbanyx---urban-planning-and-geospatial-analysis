@@ -691,7 +691,7 @@ function heroMap(){
 }
 
 // ── data-source tags in the trust band ──
-const TAGS=[['tag_transit','#a78bfa'],['tag_nodes','#818cf8'],['tag_functions','#38bdf8'],['tag_elev','#34d399'],['tag_zoning','#fbbf24']];
+const TAGS=[['tag_ownership','#a78bfa'],['tag_zoning','#818cf8'],['tag_mobility','#38bdf8'],['tag_infrastructure','#34d399'],['tag_relief','#fbbf24']];
 function renderTags(){
   const host=document.getElementById('trust-tags');if(!host)return;const s=STR[lang];host.innerHTML='';
   for(const[k,c]of TAGS){host.appendChild(el('span','tag',`<span class="d" style="background:${c}"></span>${s[k]}`));}
@@ -705,8 +705,8 @@ const STR={
     hero_cta1:'Launch the map →',hero_cta2:'See a sample report',hero_note:'<b>14-day Pro trial</b> · no credit card · there is also a free plan',
     chip_parcel_w:'Parcel',
     trust_v:'Millions',
-    trust_head:'of data points — analyzed through up to <b class="num">10</b> engines',
-    tag_transit:'Transit',tag_nodes:'Street nodes',tag_functions:'Urban functions',tag_elev:'Elevation points',tag_zoning:'Zoning categories',
+    trust_head:'of data points — analyzed through diverse approaches',
+    tag_ownership:'Parcel ownership',tag_zoning:'Zoning',tag_mobility:'Mobility',tag_infrastructure:'Infrastructure',tag_relief:'Relief',
     cap_eyebrow:'What you can analyze',cap_title:'Nine analysis engines, one parcel.',cap_sub:'Each runs on the parcel or a drawn study area and outputs real metrics with map symbology you can export.',
     how_eyebrow:'How it works',how_title:'From cadastral code to a report in three steps.',
     step1_t:'Pick a site',step1_d:'Search a cadastral code or draw a study area on the map. Ownership and parcel data load instantly.',
@@ -726,13 +726,13 @@ const STR={
     hero_cta1:'რუკის გახსნა →',hero_cta2:'ნიმუშის რეპორტი',hero_note:'<b>14-დღიანი Pro პერიოდი</b> · ბარათის გარეშე · გვაქვს უფასო ვერსიაც',
     chip_parcel_w:'ნაკვეთი',
     trust_v:'მილიონობით',
-    trust_head:'მონაცემი — გაანალიზებული მრავალფეროვანი მეთოდოლოგიით',
-    tag_transit:'საკუთრება',tag_nodes:'ზონირება',tag_functions:'ტრანსპორტი',tag_elev:'ინფრასტრუქტურა',tag_zoning:'რელიეფი',
+    trust_head:'მონაცემი — გაანალიზებული მრავალფეროვანი მიდგომებით',
+    tag_ownership:'საკუთრება',tag_zoning:'ზონირება',tag_mobility:'ტრანსპორტი',tag_infrastructure:'ინფრასტრუქტურა',tag_relief:'რელიეფი',
     cap_eyebrow:'რისი გაკეთება შეგიძლია',cap_title:'საკვლევი არეალის სრულყოფილი [სივრცითი] ანალიზი.',cap_sub:'Live და მონაცემების არქივი ერთი კლიკის გაწვდენაზეა.',
     how_eyebrow:'როგორ მუშაობს',how_title:'საკადასტრო კოდიდან რეპორტამდე სამ ნაბიჯში.',
-    step1_t:'აირჩიე ადგილი',step1_d:'მოძებნე საკადასტრო კოდი ან დახაზე არეალი. მესაკუთრისა და ნაკვეთის მონაცემები მყისვე იტვირთება.',
-    step2_t:'გაუშვი ანალიზი',step2_d:'ჩართე ზონირება, საფეხმავლო, ტრანსპორტი, მორფოლოგია, კლიმატი, რელიეფი ან ენერგია. შედეგები რუკაზე ჩნდება.',
-    step3_t:'ექსპორტი',step3_d:'შექმენი PDF რეპორტი რუკებით, მეტრიკებით და წყაროებით — ან GeoJSON / GeoTIFF.',
+    step1_t:'აირჩიე ადგილი',step1_d:'მოძებნე ნაკვეთი საკადასტრო კოდით ან მოხაზე რუკაზე სასურველი არეალი.',
+    step2_t:'შეაფასე',step2_d:'შეამოწმე ზონირების პარამეტრები, მისაწვდომობა, ინფრასტრუქტურა, სატრანსპორტო მომსახურება, კლიმატი, რელიეფი და მრავალი სხვა შრე. შედეგებს რუკაზე დაინახავ.',
+    step3_t:'ანგარიში',step3_d:'შექმენი კვლევითი ანგარიში PDF ფორმატში რუკებისა და შესაბამისი ინფორმაციის ინტეგრაციით — ან გადმოწერე სივცრითი მონაცემები ვექტორულ და რასტრულ ფორმატში.',
     who_eyebrow:'ვისთვისაა',who_title:'შექმნილია მათთვის, ვინც აფასებს სივრცეს.',
     who1_t:'ქალაქმგეგბარებლები და არქიტექტორები',who1_d:'სივრცითი კონტექსტი სამომავლო ტრანსფორმაციისა და განვითარების სცენარების შესაქმნელად',who2_t:'პოლიტიკის შემქმნელები',who2_d:'გადაწყვეტილებების მისაღებად მონაცემებზე დაყრდნობით',
     who3_t:'კერძო სექტორი',who3_d:'ბიზნესის სივრცითი განვითარების პოტენციალის შესაფასებლად',who4_t:'მკვლევარები',who4_d:'ხელმისაწვდომი მონაცემები და ინტეგრირებული სივრცითი ანალიზი კვლევის საწარმოებლად',
