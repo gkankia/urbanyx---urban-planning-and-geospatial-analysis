@@ -4834,6 +4834,12 @@ function _closeOtherNavPanels(keep){
     document.querySelectorAll('#nav-cat-group .nav-btn').forEach(b=>b.classList.remove('active'));
     _activeCatKey=null;
   }
+  if(keep!=='zoning'){
+    // Close the zoning panel — but leave nav-zoning-btn.active (assessment state) alone
+    const zpc=document.getElementById('zoning-panel-card');
+    if(zpc&&zpc.style.display!=='none')zpc.style.display='none';
+    document.getElementById('nav-zoning-btn')?.classList.remove('zoning-panel-open');
+  }
 }
 function navToggleLayers(){ toggleLayersPanel(); }
 function navOpenAccount(){ if(typeof currentUser!=="undefined"&&currentUser) openDashboard(); else openAuthModal("view-signin"); }
@@ -5319,6 +5325,11 @@ function toggleZoningPanel(){
     showToast(_zpKa()?"ჯერ აირჩიეთ ნაკვეთი":"Select a parcel first");
     return;
   }
+  // Close any other open nav panel (analysis category, draw, import, layers).
+  // Preserve nav-zoning-btn.active — that tracks the assessment state, not the panel.
+  const _wasActive=!!btn?.classList.contains('active');
+  _closeOtherNavPanels('zoning');
+  if(_wasActive)btn?.classList.add('active');
   _syncZoningPanel();
   // Align the panel vertically with the zoning nav button (same gap as other panels)
   if(btn){const r=btn.getBoundingClientRect();card.style.top=Math.max(12,Math.min(r.top,window.innerHeight-120))+'px';}
@@ -5350,11 +5361,9 @@ function toggleZoningAssessment(){
 // (dates/result). All cross-origin calls go through the Cloudflare Worker proxy.
 async function toggleConstructionPermits(){
   const sw=document.getElementById('zoning-permits-sw');
-  const out=document.getElementById('zoning-permits-result');
   if(_permitsActive){
     _permitsActive=false;_permitsReqToken++;
     sw?.classList.remove('on');
-    if(out)out.innerHTML='';
     _hidePermitFloatRow();
     return;
   }
@@ -5364,29 +5373,25 @@ async function toggleConstructionPermits(){
   const token=++_permitsReqToken;
   const isKa=_zpKa();
   sw?.classList.add('on');
-  if(out)out.innerHTML=`<div class="zp-note"><span class="zp-spin"></span> ${isKa?"ნებართვების ძიება…":"Searching permits…"}</div>`;
+  _setPermitFloat(`<div class="zp-note"><span class="zp-spin"></span> ${isKa?"ნებართვების ძიება…":"Searching permits…"}</div>`);
   try{
     const permit=await _fetchLatestPermit(parcelCentroid[0],parcelCentroid[1]);
     if(token!==_permitsReqToken)return; // toggled off / re-toggled while loading
     if(!permit){
-      if(out)out.innerHTML=`<div class="zp-note">${isKa?"ამ ნაკვეთზე მშენებლობის ნებართვა ვერ მოიძებნა.":"No construction permits found for this parcel."}</div>`;
-      _hidePermitFloatRow();
+      _setPermitFloat(`<div class="zp-note">${isKa?"ამ ნაკვეთზე მშენებლობის ნებართვა ვერ მოიძებნა.":"No construction permits found for this parcel."}</div>`);
       return;
     }
-    _renderPermit(permit,null,null,true); // show base result immediately
+    _setPermitFloat(_buildPermitHTML(permit,null,null,true)); // base result immediately
     // Enrich (best-effort — either may fail without blocking the other)
     const [detail,decision]=await Promise.all([
       _fetchPermitDetail(permit.docId).catch(()=>null),
       _fetchPermitDecision(permit.docId).catch(()=>null),
     ]);
     if(token!==_permitsReqToken)return;
-    _renderPermit(permit,detail,decision,false);
+    _setPermitFloat(_buildPermitHTML(permit,detail,decision,false));
   }catch(e){
     console.error('[permits]',e);
-    if(token===_permitsReqToken){
-      if(out)out.innerHTML=`<div class="zp-note">${isKa?"ნებართვების ჩატვირთვა ვერ მოხერხდა. სცადეთ თავიდან.":"Could not load permits. Please try again."}</div>`;
-      _hidePermitFloatRow();
-    }
+    if(token===_permitsReqToken)_setPermitFloat(`<div class="zp-note">${isKa?"ნებართვების ჩატვირთვა ვერ მოხერხდა. სცადეთ თავიდან.":"Could not load permits. Please try again."}</div>`);
   }
 }
 
@@ -5490,14 +5495,13 @@ function _buildPermitHTML(permit,detail,decision,loading){
   return html;
 }
 
-// Renders the permit into BOTH the side-panel result box and the parcel float
-// card (below the zoning analysis).
-function _renderPermit(permit,detail,decision,loading){
-  const html=_buildPermitHTML(permit,detail,decision,loading);
-  const out=document.getElementById('zoning-permits-result');if(out)out.innerHTML=html;
-  const pfcList=document.getElementById('pfc-permits-list');if(pfcList)pfcList.innerHTML=html;
+// Renders permit content into the parcel float card only (below the zoning
+// analysis). Passing empty html hides the row.
+function _setPermitFloat(html){
   const pfcTitle=document.getElementById('pfc-permits-title');if(pfcTitle)pfcTitle.textContent=_zpKa()?"ნებართვები":"Construction permits";
-  const pfcRow=document.getElementById('pfc-permits-row');if(pfcRow)pfcRow.style.display='block';
+  const pfcList=document.getElementById('pfc-permits-list');if(pfcList)pfcList.innerHTML=html||'';
+  const pfcRow=document.getElementById('pfc-permits-row');if(pfcRow)pfcRow.style.display=html?'block':'none';
+  if(html){const card=document.getElementById('parcel-float-card');if(card&&card.style.display==='none')card.style.display='block';}
 }
 
 // Hide/clear the float-card permit row (used for empty/error/off/reset states)
@@ -5785,7 +5789,6 @@ function resetAnalysis(){
   {const _zpc=document.getElementById("zoning-panel-card");if(_zpc)_zpc.style.display="none";}
   {const _zas=document.getElementById("zoning-assess-sw");if(_zas)_zas.classList.remove("on");}
   {const _zps=document.getElementById("zoning-permits-sw");if(_zps)_zps.classList.remove("on");}
-  {const _zpr=document.getElementById("zoning-permits-result");if(_zpr)_zpr.innerHTML="";}
   {const _pfr=document.getElementById("pfc-permits-row");if(_pfr)_pfr.style.display="none";}
   {const _pfl=document.getElementById("pfc-permits-list");if(_pfl)_pfl.innerHTML="";}
 }

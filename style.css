@@ -357,7 +357,7 @@
   .btn-step { font-size: 0.62rem; font-weight: 500; opacity: 0.38; letter-spacing: 0.02em; }
   @keyframes spin { to { transform: rotate(360deg); } }
   .pro-badge { font-size: 0.58rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; background: rgba(167,139,250,0.2); color: #a78bfa; border-radius: 4px; padding: 2px 5px; }
-  #top-right { position: absolute; top: 16px; right: 16px; z-index: 20; display: flex; align-items: center; gap: 8px; }
+  #top-right { position: absolute; top: 16px; right: 64px; z-index: 20; display: flex; align-items: center; gap: 8px; }
   /* ── Paused UI features (hidden, JS still intact for future re-enabling) ── */
   #user-pill, #user-pill.visible { display: none !important; }
   #btn-3d { display: none !important; }
@@ -815,7 +815,6 @@
   #zoning-panel-card::-webkit-scrollbar { display:none; }
 
   /* Construction permits result */
-  #zoning-permits-result:not(:empty) { margin-top:8px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.07); }
   .zp-note { font-size:0.68rem; color:rgba(255,255,255,0.35); line-height:1.5; padding:2px 0; }
   .zp-permit-no { font-size:0.72rem; font-weight:700; color:#a78bfa; letter-spacing:0.02em; }
   .zp-field { display:flex; justify-content:space-between; gap:10px; padding:3px 0; font-size:0.68rem; }
