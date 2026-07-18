@@ -5308,7 +5308,7 @@ function runZoningAnalysis(){
   });
 }
 // ── Zoning panel (Assessment + Construction permits) ──────────────────────────
-let _permitsActive=false, _permitsReqToken=0, _lastPermitFound=null;
+let _permitsActive=false, _permitsReqToken=0, _lastPermitFound=null, _lastPermitNomen='';
 
 function _zpKa(){return lang==="ka";}
 
@@ -5379,7 +5379,7 @@ async function toggleConstructionPermits(){
     const permit=await _fetchLatestPermit(parcelCentroid[0],parcelCentroid[1]);
     if(token!==_permitsReqToken)return; // toggled off / re-toggled while loading
     if(!permit){
-      _lastPermitFound=null;_updatePermitDevWarning();
+      _lastPermitFound=null;_lastPermitNomen='';_updatePermitDevWarning();
       _setPermitFloat(`<div class="zp-note">${isKa?"ამ ნაკვეთზე მშენებლობის ნებართვა ვერ მოიძებნა.":"No construction permits found for this parcel."}</div>`);
       return;
     }
@@ -5392,6 +5392,7 @@ async function toggleConstructionPermits(){
       _fetchPermitDecision(permit.docId).catch(()=>null),
     ]);
     if(token!==_permitsReqToken)return;
+    _lastPermitNomen=detail?.nomenclature||'';
     _setPermitFloat(_buildPermitHTML(permit,detail,decision,false));
     _updatePermitDevWarning();
   }catch(e){
