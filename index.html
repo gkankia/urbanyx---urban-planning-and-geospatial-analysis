@@ -265,10 +265,12 @@
         <div class="amt num">€0</div>
         <div class="per" data-i="plan_free_per">50 analyses / month</div>
         <ul>
-          <li><span class="ck">✓</span> <span data-i="f_free1">Parcel & zoning analysis</span></li>
-          <li><span class="ck">✓</span> <span data-i="f_free2">Walkability & street morphology</span></li>
-          <li><span class="ck">✓</span> <span data-i="f_free3">Live transit stops</span></li>
-          <li><span class="ck">✓</span> <span data-i="f_free4">Street imagery</span></li>
+          <li><span class="ck">✓</span> <span data-i="f_free1">Parcel & zoning — incl. building permits</span></li>
+          <li><span class="ck">✓</span> <span data-i="f_free2">Accessibility</span></li>
+          <li><span class="ck">✓</span> <span data-i="f_free3">Mobility — public transport (Tbilisi)</span></li>
+          <li><span class="ck">✓</span> <span data-i="f_free4">Urban morphology & land-use diversity</span></li>
+          <li><span class="ck">✓</span> <span data-i="f_free5">Street imagery</span></li>
+          <li><span class="ck">✓</span> <span data-i="f_free6">Road safety & parking</span></li>
         </ul>
         <a class="btn btn-ghost" href="app.html" data-i="plan_free_cta">Create free account</a>
       </div>
@@ -278,9 +280,10 @@
         <div class="per" data-i="plan_pro_per">or €150 / year · 1,000 analyses / month</div>
         <ul>
           <li><span class="ck">✓</span> <span data-i="f_pro1">Everything in Free</span></li>
-          <li><span class="ck">✓</span> <span data-i="f_pro2">Climate, relief & energy analysis</span></li>
-          <li><span class="ck">✓</span> <span data-i="f_pro3">Transit reliability history & road incidents</span></li>
-          <li><span class="ck">✓</span> <span data-i="f_pro4">PDF / GeoJSON / GeoTIFF export</span></li>
+          <li><span class="ck">✓</span> <span data-i="f_pro2">Climate, relief & clean energy</span></li>
+          <li><span class="ck">✓</span> <span data-i="f_pro3">Transit reliability history</span></li>
+          <li><span class="ck">✓</span> <span data-i="f_pro4">Plan it yourself — draw & 3D</span></li>
+          <li><span class="ck">✓</span> <span data-i="f_pro5">Report & data export — PDF / GeoJSON / GeoTIFF</span></li>
         </ul>
         <a class="btn btn-primary" href="app.html" data-i="plan_pro_cta">Start 14-day trial</a>
       </div>
@@ -322,10 +325,10 @@ function loadGeoTIFF(){if(window.GeoTIFF)return Promise.resolve();if(!_geotiffP)
 // ── capability cards with tiny data-viz thumbnails (real analysis outputs) ──
 const CAPS=[
   {k:'zoning',t:'Zoning',tag:'free',d:'Use-based zoning, development limits and parameters.',viz:donut},
-  {k:'walk',t:'Access',tag:'free',d:'15-minute city concept - social infrastructure and everyday life within reach.',viz:iso},
-  {k:'transit',t:'Transit',tag:'pro',d:'Service reliability index - on-time arrivals, delays and headways based on live and historical data.',viz:reliability},
-  {k:'morph',t:'Urban form',tag:'free',d:'Urban built environment morphology - infrastructure, space syntax, street network orientation and connectivity.',viz:connect},
-  {k:'diversity',t:'Diversity',tag:'free',d:'Urban land-use - Shannon Diversity Index of urban functions in the area.',viz:diversity},
+  {k:'walk',t:'Accessibility',tag:'free',d:'15-minute city concept - social infrastructure and everyday life within reach.',viz:iso},
+  {k:'transit',t:'Transit reliability',tag:'pro',d:'Service reliability index - on-time arrivals, delays and headways based on live and historical data.',viz:reliability},
+  {k:'morph',t:'Urban morphology',tag:'free',d:'Urban built environment morphology - infrastructure, space syntax, street network orientation and connectivity.',viz:connect},
+  {k:'diversity',t:'Land-use diversity',tag:'free',d:'Urban land-use - Shannon Diversity Index of urban functions in the area.',viz:diversity},
   {k:'climate',t:'Climate',tag:'pro',d:'Urban ecosystems - greening, shade assessment and land-surface temperature.',viz:gauge},
   {k:'relief',t:'Relief',tag:'pro',d:'Elevation, slope and aspect from a digital terrain model.',viz:slope},
   {k:'energy',t:'Clean energy',tag:'pro',d:'Solar and wind power potential assessed on a parcel level.',viz:energy},
@@ -334,9 +337,9 @@ const CAPS=[
 const I18N_CAP={ka:{
   zoning:['ზონირება','ფუნქციური ზონები - კოეფიციენტები და დასაშვები პარამეტრები.'],
   walk:['მისაწვდომობა','15-წუთიანი ქალაქის კონცეფცია - სოციალური ინფრასტრუქტურა და ყოველდღიური ცხოვრება მისაწვდომ ზონაში.'],
-  transit:['ტრანსპორტი','მომსახურების სანდოობის ინდექსი - განრიგი, დაგვიანება და ინტერვალის ანალიზი რეალურ და ხანგრძლივ პერიოდზე შეგროვებული მონაცემებით.'],
-  morph:['ურბანული ფორმა','ნაშენი გარემოს მორფოლოგია - ინფრასტრუქტურა, სივრცითი სინტაქსი, ქუჩათა ქსელის კონფიგურაცია და შეკავშირებულობა.'],
-  diversity:['მრავალფეროვნება','ურბანული ფუნქციების სიუხვე - შენონის მრავალფეროვნების ინდექსი (Shannon Diversity Index).'],
+  transit:['ტრანსპორტის სანდოობა','მომსახურების სანდოობის ინდექსი - განრიგი, დაგვიანება და ინტერვალის ანალიზი რეალურ და ხანგრძლივ პერიოდზე შეგროვებული მონაცემებით.'],
+  morph:['ურბანული მორფოლოგია','ნაშენი გარემოს მორფოლოგია - ინფრასტრუქტურა, სივრცითი სინტაქსი, ქუჩათა ქსელის კონფიგურაცია და შეკავშირებულობა.'],
+  diversity:['მიწათსარგებლობის მრავალფეროვნება','ურბანული ფუნქციების სიუხვე - შენონის მრავალფეროვნების ინდექსი (Shannon Diversity Index).'],
   climate:['კლიმატი','ურბანული ეკოსისტემა - გამწვანება, ჩრდილის ანალიზი და მიწის ზედაპირის ტემპერატურა.'],
   relief:['რელიეფი','სიმაღლე, დახრილობა და ექსპოზიცია ზედაპირის ციფრული მოდელიდან.'],
   energy:['სუფთა ენერგია','მზისა და ქარის ენერგიის პოტენციალი ნაკვეთის დონეზე.'],
@@ -722,8 +725,8 @@ const STR={
     who3_t:'Businesses',who3_d:'Evaluate potential for spatial expansion of your business',who4_t:'Researchers',who4_d:'Gain access to fine-tuned datasets and integrated spatial analaysis for your research project',
     who5_t:'Media',who5_d:'Save precious time on looking for pieces of the puzzle',
     price_eyebrow:'Pricing',price_title:'Start free. Upgrade when desired.',
-    plan_free:'Free',plan_free_per:'50 analyses / month',f_free1:'Parcel & zoning analysis',f_free2:'Walkability & street morphology',f_free3:'Live transit stops',f_free4:'Street imagery',plan_free_cta:'Create free account',
-    plan_pro:'Pro',plan_pro_per:'or €150 / year · 1,000 analyses / month',f_pro1:'Everything in Free',f_pro2:'Climate, relief & energy analysis',f_pro3:'Transit reliability history & road incidents',f_pro4:'PDF / GeoJSON / GeoTIFF export',plan_pro_cta:'Start 14-day trial',
+    plan_free:'Free',plan_free_per:'50 analyses / month',f_free1:'Parcel & zoning — incl. building permits',f_free2:'Accessibility',f_free3:'Mobility — public transport (Tbilisi)',f_free4:'Urban morphology & land-use diversity',f_free5:'Street imagery',f_free6:'Road safety & parking',plan_free_cta:'Create free account',
+    plan_pro:'Pro',plan_pro_per:'or €150 / year · 1,000 analyses / month',f_pro1:'Everything in Free',f_pro2:'Climate, relief & clean energy',f_pro3:'Transit reliability history',f_pro4:'Plan it yourself — draw & 3D',f_pro5:'Report & data export — PDF / GeoJSON / GeoTIFF',plan_pro_cta:'Start 14-day trial',
     band_title:'Analyze your first parcel now.',band_sub:'No card. No install. Just a map and your site.',band_cta:'Launch Urbanyx →',
     foot_terms:'Terms',foot_privacy:'Privacy',foot_features:'Capabilities',foot_pricing:'Pricing'},
   ka:{nav_features:'ფუნქციები',nav_pricing:'ფასები',nav_launch:'რუკა →',
@@ -744,8 +747,8 @@ const STR={
     who3_t:'კერძო სექტორი',who3_d:'ბიზნესის სივრცითი განვითარების პოტენციალის შესაფასებლად',who4_t:'მკვლევარები',who4_d:'ხელმისაწვდომი მონაცემები და ინტეგრირებული სივრცითი ანალიზი კვლევის საწარმოებლად',
     who5_t:'მედია',who5_d:'დაზოგე დრო ფაზლის ნაწილების ძებნაში',
     price_eyebrow:'ფასები',price_title:'დაიწყე უფასოდ. განაახლე როცა გენებოს.',
-    plan_free:'უფასო',plan_free_per:'50 ანალიზი / თვეში',f_free1:'ზონირება',f_free2:'მისაწვდომობა და ურბანული მორფოლოგია',f_free3:'მობილობა (ნაწილობრივ)',f_free4:'ქუჩის სურათები',plan_free_cta:'უფასო ანგარიში',
-    plan_pro:'Pro',plan_pro_per:'ან €150 / წელი · 1,000 ანალიზი / თვეში',f_pro1:'ყველაფერი უფასოში',f_pro2:'კლიმატი, რელიეფი და ენერგია',f_pro3:'მობილობის სრული ანალიზი',f_pro4:'კვლევითი ანგარიში / მონაცემთა გადმოწერა',plan_pro_cta:'14-დღიანი პერიოდი',
+    plan_free:'უფასო',plan_free_per:'50 ანალიზი / თვეში',f_free1:'ნაკვეთი და ზონირება — მშენებლობის ნებართვების ჩათვლით',f_free2:'მისაწვდომობა',f_free3:'მობილობა — საზოგადოებრივი ტრანსპორტი (თბილისი)',f_free4:'ურბანული მორფოლოგია და მრავალფეროვნება',f_free5:'ქუჩის სურათები',f_free6:'საგზაო უსაფრთხოება და პარკირება',plan_free_cta:'უფასო ანგარიში',
+    plan_pro:'Pro',plan_pro_per:'ან €150 / წელი · 1,000 ანალიზი / თვეში',f_pro1:'ყველაფერი უფასოში',f_pro2:'კლიმატი, რელიეფი და სუფთა ენერგია',f_pro3:'ტრანსპორტის სანდოობის ისტორია',f_pro4:'დაგეგმე თავად — მოხაზვა და 3D',f_pro5:'რეპორტი და მონაცემთა ექსპორტი — PDF / GeoJSON / GeoTIFF',plan_pro_cta:'14-დღიანი პერიოდი',
     band_title:'გააანალიზე რა ხდება შენ გარშემო.',band_sub:'ბარათის გარეშე. ინსტალაციის გარეშე. მხოლოდ რუკა და შენი ტერიტორია.',band_cta:'Urbanyx-ის გახსნა →',
     foot_terms:'წესები',foot_privacy:'კონფიდენციალურობა',foot_features:'ფუნქციები',foot_pricing:'ფასები'}
 };
@@ -762,8 +765,8 @@ document.getElementById('langbtn').onclick=()=>{lang=lang==='en'?'ka':'en';apply
 
 // ── typewriter: cycle the subject word, each in a rotating accent colour ──
 const TW={
-  en:['parcel','place', 'neighbourhood', 'district', 'city','region','study area'],
-  ka:['ნაკვეთი','ადგილი', 'უბანი','რაიონი','ქალაქი','რეგიონი','საკვლევი ტერიტორია']
+  en:['parcel','place','neighbourhood','district','city','region','study area'],
+  ka:['ნაკვეთი','ადგილი','უბანი','რაიონი','ქალაქი','რეგიონი','საკვლევი ტერიტორია']
 };
 const TW_COLORS=['#fbbf24','#38bdf8','#a78bfa','#34d399','#818cf8'];
 let _twTimer=null,_twGen=0;
