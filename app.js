@@ -5065,6 +5065,78 @@ function _permitViolatesZoning(){
   }
   return false;
 }
+
+// Oriented min-area bounding rectangle of the parcel → { width, depth } in
+// metres (width = shorter side ≈ street frontage, depth = longer side). Article
+// 16.3 defines width as the street-facing boundary and depth as perpendicular;
+// absent street data the min-area rectangle matches that for typical parcels.
+function _parcelDims(geojson){
+  if(!geojson)return null;
+  let rings=[];
+  if(geojson.type==='Polygon')rings=[geojson.coordinates[0]];
+  else if(geojson.type==='MultiPolygon')rings=geojson.coordinates.map(p=>p[0]);
+  else return null;
+  const pts=[];for(const r of rings)for(const c of r)pts.push(c);
+  if(pts.length<3)return null;
+  let lat0=0;for(const p of pts)lat0+=p[1];lat0/=pts.length;
+  const mLat=111320,mLng=111320*Math.cos(lat0*Math.PI/180);
+  const lng0=pts[0][0],la0=pts[0][1];
+  const P=pts.map(p=>[(p[0]-lng0)*mLng,(p[1]-la0)*mLat]);
+  // convex hull — Andrew's monotone chain
+  const uniq=[...new Map(P.map(p=>[p[0].toFixed(2)+','+p[1].toFixed(2),p])).values()];
+  if(uniq.length<3)return null;
+  uniq.sort((a,b)=>a[0]-b[0]||a[1]-b[1]);
+  const cross=(o,a,b)=>(a[0]-o[0])*(b[1]-o[1])-(a[1]-o[1])*(b[0]-o[0]);
+  const lower=[];for(const p of uniq){while(lower.length>=2&&cross(lower[lower.length-2],lower[lower.length-1],p)<=0)lower.pop();lower.push(p);}
+  const upper=[];for(let i=uniq.length-1;i>=0;i--){const p=uniq[i];while(upper.length>=2&&cross(upper[upper.length-2],upper[upper.length-1],p)<=0)upper.pop();upper.push(p);}
+  const hull=lower.slice(0,-1).concat(upper.slice(0,-1));
+  if(hull.length<3)return null;
+  // rotating calipers — min-area rectangle aligned to each hull edge
+  let best=null;
+  for(let i=0;i<hull.length;i++){
+    const a=hull[i],b=hull[(i+1)%hull.length];
+    const len=Math.hypot(b[0]-a[0],b[1]-a[1])||1;
+    const ux=(b[0]-a[0])/len,uy=(b[1]-a[1])/len;
+    let minu=Infinity,maxu=-Infinity,minv=Infinity,maxv=-Infinity;
+    for(const p of hull){
+      const du=p[0]*ux+p[1]*uy,dv=-p[0]*uy+p[1]*ux;
+      if(du<minu)minu=du;if(du>maxu)maxu=du;if(dv<minv)minv=dv;if(dv>maxv)maxv=dv;
+    }
+    const w=maxu-minu,h=maxv-minv,area=w*h;
+    if(!best||area<best.area)best={area,w,h};
+  }
+  if(!best)return null;
+  const s=[best.w,best.h].sort((a,b)=>a-b);
+  return {width:s[0],depth:s[1]};
+}
+
+// Visible, structured zoning-compliance block for the parcel float card:
+// checks parcel area + width + depth against the dominant zone's Article 16
+// minimums, with per-row ✓/✗. Passing null hides it.
+function _renderZoningCompliance(zones){
+  const row=document.getElementById('pfc-compliance-row');
+  if(!row)return;
+  const dom=(Array.isArray(zones)&&zones.length)?zones[0]:null;
+  const reg=dom?_zoneRegs(dom.kve_zona):null;
+  if(!reg||!(reg.minArea||reg.minWidth||reg.minDepth||reg.maxH)){row.style.display='none';row.innerHTML='';return;}
+  const isKa=(typeof lang!=='undefined'&&lang==='ka');
+  const L={title:isKa?'ზონირების შესაბამისობა':'Zoning compliance',area:isKa?'ფართობი':'Area',width:isKa?'სიგანე':'Width',depth:isKa?'სიღრმე':'Depth',maxH:isKa?'მაქს. სიმაღლე':'Max. height',floors:isKa?'სართ.':'fl'};
+  const dims=_parcelDims(_currentParcelGeoJSON);
+  const area=_currentParcelAreaM2||0;
+  const fmt=n=>Math.round(n).toLocaleString('en-US');
+  const cRow=(lbl,actual,req,unit,pass)=>{
+    const col=pass?'rgba(52,211,153,0.9)':'rgba(248,140,140,0.95)';
+    return `<div style="display:grid;grid-template-columns:auto 1fr auto;gap:2px 6px;align-items:baseline;margin-bottom:2px"><span style="font-size:0.6rem;color:rgba(255,255,255,0.5)">${lbl}</span><span style="font-size:0.57rem;color:rgba(255,255,255,0.4);text-align:right">${actual} / ${req} ${unit}</span><span style="font-size:0.62rem;color:${col};font-weight:700;width:10px;text-align:center">${pass?'✓':'✗'}</span></div>`;
+  };
+  let h=`<div style="font-size:0.58rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:rgba(255,255,255,0.3);margin-bottom:5px">${L.title}</div>`;
+  if(reg.minArea)h+=cRow(L.area,fmt(area),fmt(reg.minArea),'m²',area>=reg.minArea);
+  if(reg.minWidth&&dims)h+=cRow(L.width,dims.width.toFixed(1),reg.minWidth,'m',dims.width>=reg.minWidth-0.5);
+  if(reg.minDepth&&dims)h+=cRow(L.depth,dims.depth.toFixed(1),reg.minDepth,'m',dims.depth>=reg.minDepth-0.5);
+  if(reg.maxH)h+=`<div style="display:grid;grid-template-columns:auto 1fr auto;gap:2px 6px;margin-bottom:2px"><span style="font-size:0.6rem;color:rgba(255,255,255,0.5)">${L.maxH}</span><span style="font-size:0.57rem;color:rgba(255,255,255,0.4);text-align:right">${reg.maxH} ${reg.maxHUnit==='floors'?L.floors:'m'}</span><span style="width:10px"></span></div>`;
+  if(reg.multiNote)h+=`<div style="font-size:0.52rem;color:rgba(255,255,255,0.3);margin-top:3px;line-height:1.4">* ${reg.multiNote}</div>`;
+  row.innerHTML=h;
+  row.style.display='block';
+}
 async function _fetchFunctionalZone(geojson){
   if(!geojson||geojson.type==='LineString'||geojson.type==='MultiLineString')return[];
   const coordsFlat=(geojson.type==='MultiPolygon'?geojson.coordinates.flat(2):geojson.coordinates.flat());
@@ -5190,19 +5262,6 @@ function _buildZoneChart(zones){
       if(z.k2!=null)tc+=`<div style="display:grid;grid-template-columns:auto 1fr auto;gap:1px 5px;margin-bottom:2px"><span style="font-size:0.56rem;color:rgba(255,255,255,0.25);font-family:monospace">K2=${fK(z.k2)}</span><span style="font-size:0.56rem;color:rgba(255,255,255,0.45)">Max floor area</span><span style="font-size:0.56rem;color:rgba(255,255,255,0.8);text-align:right">${fM(Math.round(zA*z.k2))}</span></div>`;
       if(z.k1!=null&&z.k2!=null&&z.k1>0){const maxFloors=Math.floor((z.k2/z.k1)+1e-9);tc+=`<div style="display:grid;grid-template-columns:auto 1fr auto;gap:1px 5px;margin-bottom:2px"><span style="font-size:0.56rem;color:rgba(255,255,255,0.25);font-family:monospace">K2÷K1</span><span style="font-size:0.56rem;color:rgba(255,255,255,0.45)">Max height (floors)</span><span style="font-size:0.56rem;color:rgba(255,255,255,0.8);text-align:right">${maxFloors}</span></div>`;}
       if(z.k3!=null)tc+=`<div style="display:grid;grid-template-columns:auto 1fr auto;gap:1px 5px"><span style="font-size:0.56rem;color:rgba(255,255,255,0.25);font-family:monospace">K3=${fK(z.k3)}</span><span style="font-size:0.56rem;color:rgba(52,211,153,0.6)">Min greening</span><span style="font-size:0.56rem;color:rgba(52,211,153,0.85);text-align:right">${fM(Math.round(zA*z.k3))}</span></div>`;
-      // Article 16 parcel-size requirements (min area/width/depth, max height)
-      const _reg=_zoneRegs(z.kve_zona);
-      if(_reg&&(_reg.minArea||_reg.minWidth||_reg.minDepth||_reg.maxH)){
-        const _pa=_currentParcelAreaM2||0;
-        const _rrow=(lbl,val,warn)=>`<div style="display:grid;grid-template-columns:1fr auto;gap:1px 5px"><span style="font-size:0.56rem;color:rgba(255,255,255,0.45)">${lbl}</span><span style="font-size:0.56rem;color:${warn?'rgba(239,68,68,0.85)':'rgba(255,255,255,0.8)'};text-align:right">${val}</span></div>`;
-        tc+=`<div style="border-top:1px solid rgba(255,255,255,0.1);margin-top:5px;padding-top:5px"><div style="font-size:0.54rem;font-weight:600;color:rgba(255,255,255,0.4);margin-bottom:3px">Parcel requirements</div>`;
-        if(_reg.minArea){const _below=_pa>0&&_pa<_reg.minArea;tc+=_rrow('Min. parcel area',`${_reg.minArea.toLocaleString('en-US')} m²${_below?' ⚠':''}`,_below);}
-        if(_reg.minWidth)tc+=_rrow('Min. width',`${_reg.minWidth} m`);
-        if(_reg.minDepth)tc+=_rrow('Min. depth',`${_reg.minDepth} m`);
-        if(_reg.maxH)tc+=_rrow('Max. height',`${_reg.maxH} ${_reg.maxHUnit==='floors'?'fl':'m'}`);
-        if(_reg.multiNote)tc+=`<div style="font-size:0.5rem;color:rgba(255,255,255,0.3);margin-top:3px;line-height:1.35">* ${_reg.multiNote}</div>`;
-        tc+=`</div>`;
-      }
       tipHtml=`<div style="position:relative;display:inline-flex;align-items:center;cursor:help;flex-shrink:0;margin-left:3px" onmouseenter="this.lastElementChild.style.visibility='visible';this.lastElementChild.style.opacity='1'" onmouseleave="this.lastElementChild.style.visibility='hidden';this.lastElementChild.style.opacity='0'"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg><div style="visibility:hidden;opacity:0;transition:opacity 0.12s;position:absolute;bottom:calc(100% + 5px);right:-4px;background:rgba(12,12,18,0.98);border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:7px 8px;min-width:160px;z-index:200;box-shadow:0 4px 20px rgba(0,0,0,0.6);pointer-events:none">${tc}</div></div>`;
     }
     legend+=`<div style="display:flex;align-items:center;gap:5px;margin-bottom:4px"><div style="width:8px;height:8px;border-radius:2px;background:${color};flex-shrink:0"></div><span style="color:rgba(255,255,255,0.82);font-size:0.65rem;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${en}</span><span style="color:rgba(255,255,255,0.45);font-size:0.65rem;flex-shrink:0">${z.pct}%</span>${tipHtml}</div>`;
@@ -5310,7 +5369,7 @@ function runZoningAnalysis(){
     _updateZoneLayer(null);
     _updateSetbackRing(null);
     const _bpr0=document.getElementById('pfc-build-params-row');if(_bpr0)_bpr0.style.display='none';
-    _maxFootprintM2=null;_maxFloorAreaM2=null;_noDevZone=false;_noDevZoneUnion=null;window._rptZones=null;document.getElementById('pfc-nodev-warn')?.style&&(document.getElementById('pfc-nodev-warn').style.display='none');document.getElementById('pfc-area-warn')?.style&&(document.getElementById('pfc-area-warn').style.display='none');_updatePermitDevWarning();
+    _maxFootprintM2=null;_maxFloorAreaM2=null;_noDevZone=false;_noDevZoneUnion=null;window._rptZones=null;document.getElementById('pfc-nodev-warn')?.style&&(document.getElementById('pfc-nodev-warn').style.display='none');document.getElementById('pfc-area-warn')?.style&&(document.getElementById('pfc-area-warn').style.display='none');_updatePermitDevWarning();_renderZoningCompliance(null);
     return;
   }
   if(!_currentParcelGeoJSON)return;
@@ -5336,7 +5395,7 @@ function runZoningAnalysis(){
       _updateZoneLayer(null);
       _updateSetbackRing(null);
       const _bpr1=document.getElementById('pfc-build-params-row');if(_bpr1)_bpr1.style.display='none';
-      _maxFootprintM2=null;_maxFloorAreaM2=null;_noDevZone=false;_noDevZoneUnion=null;window._rptZones=null;document.getElementById('pfc-nodev-warn')?.style&&(document.getElementById('pfc-nodev-warn').style.display='none');document.getElementById('pfc-area-warn')?.style&&(document.getElementById('pfc-area-warn').style.display='none');_updatePermitDevWarning();
+      _maxFootprintM2=null;_maxFloorAreaM2=null;_noDevZone=false;_noDevZoneUnion=null;window._rptZones=null;document.getElementById('pfc-nodev-warn')?.style&&(document.getElementById('pfc-nodev-warn').style.display='none');document.getElementById('pfc-area-warn')?.style&&(document.getElementById('pfc-area-warn').style.display='none');_updatePermitDevWarning();_renderZoningCompliance(null);
       return;
     }
     _updateZoneLayer(zones);
@@ -5350,6 +5409,7 @@ function runZoningAnalysis(){
     }
     {const _zK=zones.filter(z=>z.k1!=null);const _noD=_zK.length>0&&_zK.every(z=>z.k1==0);_noDevZone=_noD;}
     _updatePermitDevWarning();
+    _renderZoningCompliance(zones);
     {const _ndF=zones.filter(z=>z.k1!=null&&z.k1==0&&z.geometry).map(z=>({type:'Feature',geometry:z.geometry,properties:{}}));if(_ndF.length>0){try{_noDevZoneUnion=_ndF.reduce((a,f)=>a?(turf.union(a,f)||a):f,null);}catch(_e){_noDevZoneUnion=_ndF[0]||null;}}else{_noDevZoneUnion=null;}}
     _updateSetbackRing(_noDevZone?null:_currentParcelGeoJSON);
     {const _kz=zones.filter(z=>z.k1!=null&&z.k1>0);_maxFootprintM2=_kz.length?Math.round(_kz.reduce((s,z)=>s+z.area*z.k1,0)):null;}
@@ -5369,7 +5429,7 @@ function runZoningAnalysis(){
     _updateZoneLayer(null);
     _updateSetbackRing(null);
     const _bpr2=document.getElementById('pfc-build-params-row');if(_bpr2)_bpr2.style.display='none';
-    _maxFootprintM2=null;_maxFloorAreaM2=null;_noDevZone=false;_noDevZoneUnion=null;window._rptZones=null;document.getElementById('pfc-nodev-warn')?.style&&(document.getElementById('pfc-nodev-warn').style.display='none');document.getElementById('pfc-area-warn')?.style&&(document.getElementById('pfc-area-warn').style.display='none');_updatePermitDevWarning();
+    _maxFootprintM2=null;_maxFloorAreaM2=null;_noDevZone=false;_noDevZoneUnion=null;window._rptZones=null;document.getElementById('pfc-nodev-warn')?.style&&(document.getElementById('pfc-nodev-warn').style.display='none');document.getElementById('pfc-area-warn')?.style&&(document.getElementById('pfc-area-warn').style.display='none');_updatePermitDevWarning();_renderZoningCompliance(null);
   });
 }
 // ── Zoning panel (Assessment + Construction permits) ──────────────────────────
@@ -5871,7 +5931,7 @@ function resetAnalysis(){
   {const _zb=document.getElementById("nav-zoning-btn");if(_zb){_zb.classList.remove("active");_zb.classList.remove("zoning-panel-open");}}
   _updateSetbackLayer(null);_updateZoneLayer(null);_updateSetbackRing(null);
   _noDevZone=false;_noDevZoneUnion=null;_maxFootprintM2=null;_maxFloorAreaM2=null;
-  ["pfc-zone-row","pfc-setback-note","pfc-setback-warn","pfc-area-warn","pfc-nodev-warn","pfc-build-params-row"].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display="none";});
+  ["pfc-zone-row","pfc-setback-note","pfc-setback-warn","pfc-area-warn","pfc-nodev-warn","pfc-build-params-row","pfc-compliance-row"].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display="none";});
   // Zoning panel + construction permits reset
   _permitsActive=false;_permitsReqToken=(typeof _permitsReqToken==="number"?_permitsReqToken+1:0);_lastPermitFound=null;_lastPermitNomen='';
   {const _pw=document.getElementById("pfc-permit-warn");if(_pw)_pw.style.display="none";}
