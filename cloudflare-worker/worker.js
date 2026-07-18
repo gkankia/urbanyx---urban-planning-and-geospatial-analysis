@@ -172,6 +172,43 @@ export default {
       }
     }
 
+    // ── Construction permits: spatial lookup (GET) ────────────────────────────
+    // /permits/search?x=<lon>&y=<lat>  → forwards to ms.gov.ge search-by-xy
+    if (request.method === "GET" && url.pathname === "/permits/search") {
+      const x = parseFloat(url.searchParams.get("x"));
+      const y = parseFloat(url.searchParams.get("y"));
+      if (isNaN(x) || isNaN(y)) {
+        return new Response(JSON.stringify({ error: "Missing x/y" }), { status: 400, headers: corsHeaders });
+      }
+      try {
+        const resp = await fetch("https://ms.gov.ge/core-api/v1/search/search-by-xy", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Accept": "application/json", "Origin": "https://ms.gov.ge", "Referer": "https://ms.gov.ge/" },
+          body: JSON.stringify({ lrIds: [261644], x, y, zoom: 17 }),
+        });
+        const data = await resp.text();
+        return new Response(data, { status: resp.status, headers: { ...corsHeaders, "Content-Type": "application/json", "Cache-Control": "public, max-age=300" } });
+      } catch(e) {
+        return new Response(JSON.stringify({ error: e.message }), { status: 502, headers: corsHeaders });
+      }
+    }
+
+    // ── Construction permits: detail HTML by docId (GET) ──────────────────────
+    // /permits/detail?docId=<digits>  → forwards to docs.tbilisi.gov.ge detail page
+    if (request.method === "GET" && url.pathname === "/permits/detail") {
+      const docId = (url.searchParams.get("docId") || "").replace(/\D/g, "");
+      if (!docId) return new Response(JSON.stringify({ error: "Missing docId" }), { status: 400, headers: corsHeaders });
+      try {
+        const resp = await fetch(`https://docs.tbilisi.gov.ge/architect/public.html?docId=${docId}`, {
+          headers: { "Accept": "text/html", "User-Agent": "Mozilla/5.0" },
+        });
+        const html = await resp.text();
+        return new Response(html, { status: resp.status, headers: { ...corsHeaders, "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, max-age=86400" } });
+      } catch(e) {
+        return new Response(JSON.stringify({ error: e.message }), { status: 502, headers: corsHeaders });
+      }
+    }
+
     // ── POST-only routes below ────────────────────────────────────────────────
     if (request.method !== "POST") {
       return new Response("Method not allowed", { status: 405, headers: corsHeaders });
@@ -196,7 +233,10 @@ export default {
       let pdfHost = "";
       try { pdfHost = new URL(pdfUrl).hostname; } catch(_) {}
       // Hostname check (not substring) — blocks e.g. https://evil.com/napr.gov.ge
-      if (!pdfHost.endsWith(".napr.gov.ge") && pdfHost !== "napr.gov.ge") {
+      const pdfHostOk =
+        pdfHost.endsWith(".napr.gov.ge") || pdfHost === "napr.gov.ge" ||
+        pdfHost === "docs.tbilisi.gov.ge";
+      if (!pdfHostOk) {
         return new Response(JSON.stringify({ error: "Invalid URL" }), { status: 400, headers: corsHeaders });
       }
       try {

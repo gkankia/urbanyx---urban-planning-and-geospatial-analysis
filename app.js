@@ -5300,6 +5300,193 @@ function runZoningAnalysis(){
     _maxFootprintM2=null;_maxFloorAreaM2=null;_noDevZone=false;_noDevZoneUnion=null;window._rptZones=null;document.getElementById('pfc-nodev-warn')?.style&&(document.getElementById('pfc-nodev-warn').style.display='none');document.getElementById('pfc-area-warn')?.style&&(document.getElementById('pfc-area-warn').style.display='none');
   });
 }
+// ── Zoning panel (Assessment + Construction permits) ──────────────────────────
+let _permitsActive=false, _permitsReqToken=0;
+
+function _zpKa(){return lang==="ka";}
+
+function toggleZoningPanel(){
+  const card=document.getElementById('zoning-panel-card');
+  const btn=document.getElementById('nav-zoning-btn');
+  if(!card)return;
+  const isOpen=card.style.display==='block';
+  if(isOpen){
+    card.style.display='none';
+    btn?.classList.remove('zoning-panel-open');
+    return;
+  }
+  if(!_currentParcelGeoJSON){
+    showToast(_zpKa()?"ჯერ აირჩიეთ ნაკვეთი":"Select a parcel first");
+    return;
+  }
+  _syncZoningPanel();
+  card.style.display='block';
+  btn?.classList.add('zoning-panel-open');
+}
+
+// Reflect current state onto the panel's labels + switches
+function _syncZoningPanel(){
+  const isKa=_zpKa();
+  const tPanel=document.getElementById('lbl-zoning-panel');if(tPanel)tPanel.textContent=isKa?"ზონირება":"Zoning";
+  const tAssess=document.getElementById('lbl-zoning-assess');if(tAssess)tAssess.textContent=isKa?"შეფასება":"Assessment";
+  const tPermits=document.getElementById('lbl-zoning-permits');if(tPermits)tPermits.textContent=isKa?"ნებართვები":"Construction permits";
+  const assessOn=!!document.getElementById('nav-zoning-btn')?.classList.contains('active');
+  document.getElementById('zoning-assess-sw')?.classList.toggle('on',assessOn);
+  document.getElementById('zoning-permits-sw')?.classList.toggle('on',_permitsActive);
+}
+
+// "Assessment" toggle — delegates to the unchanged runZoningAnalysis(), then
+// mirrors the nav button's active state onto the panel switch.
+function toggleZoningAssessment(){
+  runZoningAnalysis();
+  const assessOn=!!document.getElementById('nav-zoning-btn')?.classList.contains('active');
+  document.getElementById('zoning-assess-sw')?.classList.toggle('on',assessOn);
+}
+
+// "Construction permits" toggle — spatial lookup at the parcel, then enrich the
+// latest permit with its detail page (nomenclature/cadastral) and decision PDF
+// (dates/result). All cross-origin calls go through the Cloudflare Worker proxy.
+async function toggleConstructionPermits(){
+  const sw=document.getElementById('zoning-permits-sw');
+  const out=document.getElementById('zoning-permits-result');
+  if(_permitsActive){
+    _permitsActive=false;_permitsReqToken++;
+    sw?.classList.remove('on');
+    if(out)out.innerHTML='';
+    return;
+  }
+  if(!currentUser){openAuthModal("view-signup");return;}
+  if(!parcelCentroid){showToast(_zpKa()?"ჯერ აირჩიეთ ნაკვეთი":"Select a parcel first");return;}
+  _permitsActive=true;
+  const token=++_permitsReqToken;
+  const isKa=_zpKa();
+  sw?.classList.add('on');
+  if(out)out.innerHTML=`<div class="zp-note"><span class="zp-spin"></span> ${isKa?"ნებართვების ძიება…":"Searching permits…"}</div>`;
+  try{
+    const permit=await _fetchLatestPermit(parcelCentroid[0],parcelCentroid[1]);
+    if(token!==_permitsReqToken)return; // toggled off / re-toggled while loading
+    if(!permit){
+      if(out)out.innerHTML=`<div class="zp-note">${isKa?"ამ ნაკვეთზე მშენებლობის ნებართვა ვერ მოიძებნა.":"No construction permits found for this parcel."}</div>`;
+      return;
+    }
+    _renderPermit(permit,null,null,true); // show base result immediately
+    // Enrich (best-effort — either may fail without blocking the other)
+    const [detail,decision]=await Promise.all([
+      _fetchPermitDetail(permit.docId).catch(()=>null),
+      _fetchPermitDecision(permit.docId).catch(()=>null),
+    ]);
+    if(token!==_permitsReqToken)return;
+    _renderPermit(permit,detail,decision,false);
+  }catch(e){
+    console.error('[permits]',e);
+    if(token===_permitsReqToken&&out)out.innerHTML=`<div class="zp-note">${isKa?"ნებართვების ჩატვირთვა ვერ მოხერხდა. სცადეთ თავიდან.":"Could not load permits. Please try again."}</div>`;
+  }
+}
+
+// Spatial lookup → newest permit (docNo, address, link, docId)
+async function _fetchLatestPermit(lon,lat){
+  const res=await fetch(`${PROXY}/permits/search?x=${encodeURIComponent(lon)}&y=${encodeURIComponent(lat)}`);
+  if(!res.ok)throw new Error('permit_search_fail');
+  const data=await res.json();
+  const layers=data.architectureLayerDataResult||[];
+  const layer=layers.find(l=>l.lrId===261644)||layers[0];
+  const rec=layer?.layerRecords?.[0];
+  if(!rec)return null;
+  const docNo=rec.docNo||'';
+  // docId = digits after the "AR1" prefix (AR1336926 → 336926)
+  const m=docNo.match(/AR1(\d+)/i);
+  const docId=m?m[1]:docNo.replace(/\D/g,'');
+  return {docNo,docId,address:rec.address||'',docClass:rec.docClass||'',
+    link:rec.link||(docId?`https://tas.ge/?p=publicpage&documentId=${docId}`:'')};
+}
+
+// Detail HTML → nomenclature + cadastral code(s). Label-based, degrades gracefully.
+async function _fetchPermitDetail(docId){
+  if(!docId)return null;
+  const res=await fetch(`${PROXY}/permits/detail?docId=${encodeURIComponent(docId)}`);
+  if(!res.ok)throw new Error('detail_fail');
+  const html=await res.text();
+  const plain=html.replace(/<[^>]+>/g,' ').replace(/&nbsp;/gi,' ').replace(/&amp;/gi,'&').replace(/\s+/g,' ').trim();
+  const cadastral=[...new Set((plain.match(/\d{2}\.\d{2}\.\d{2}\.\d{3}\.\d{3}/g)||[]))];
+  let nomenclature='';
+  const idx=plain.indexOf('ნომენკლატურა');
+  if(idx>=0){
+    // Take the chunk after the heading, stop at the next known heading or cadastral code
+    let chunk=plain.slice(idx+'ნომენკლატურა'.length,idx+'ნომენკლატურა'.length+300);
+    chunk=chunk.split(/საკადასტრო|მისამართი|განმცხადებელი|\d{2}\.\d{2}\.\d{2}\.\d{3}\.\d{3}/)[0];
+    nomenclature=chunk.replace(/\s*[|/]\s*/g,' | ').replace(/^[\s|:—-]+/,'').trim();
+    if(nomenclature.length>180)nomenclature=nomenclature.slice(0,180)+'…';
+  }
+  return {nomenclature,cadastral};
+}
+
+// Decision PDF → registration date, issue date, result. Parsed client-side via PDF.js.
+async function _fetchPermitDecision(docId){
+  if(!docId)return null;
+  const url=`https://docs.tbilisi.gov.ge/NewArchitectureResponse?documentId=${docId}`;
+  const pr=await fetch(PROXY,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"pdf",url})});
+  if(!pr.ok)throw new Error('pdf_fail');
+  const {base64}=await pr.json();
+  if(!base64)return null;
+  const lib=await loadPDFJS();
+  const bin=atob(base64);const bytes=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);
+  const pdf=await lib.getDocument({data:bytes}).promise;
+  let txt="";
+  for(let i=1;i<=pdf.numPages;i++){const pg=await pdf.getPage(i);const ct=await pg.getTextContent();txt+=ct.items.map(x=>x.str).join(" ")+"\n";}
+  const flat=txt.replace(/\s+/g,' ');
+  const dateAfter=label=>{const m=flat.match(new RegExp(label+"[^0-9]{0,25}(\\d{2}[\\/.]\\d{2}[\\/.]\\d{4})"));return m?m[1].replace(/\./g,'/'):'';};
+  const registered=dateAfter('შემოსვლის თარიღი');
+  const issued=dateAfter('გაცემის თარიღი');
+  let result='';
+  const rm=flat.match(/შედეგი\s*[:—-]?\s*([ა-ჰ]+)/);
+  if(rm)result=rm[1];
+  return {registered,issued,result};
+}
+
+function _permitResultClass(result){
+  if(!result)return 'mid';
+  if(/თანხმ/.test(result))return 'pos';
+  if(/უარ/.test(result))return 'neg';
+  return 'mid';
+}
+
+function _renderPermit(permit,detail,decision,loading){
+  const out=document.getElementById('zoning-permits-result');
+  if(!out)return;
+  const isKa=_zpKa();
+  const L={
+    permit:isKa?"განაცხადი":"Application",
+    address:isKa?"მისამართი":"Address",
+    nomen:isKa?"ნომენკლატურა":"Nomenclature",
+    cadastral:isKa?"საკადასტრო კოდი":"Cadastral code",
+    registered:isKa?"შემოსვლის თარიღი":"Registered",
+    issued:isKa?"გაცემის თარიღი":"Issued",
+    result:isKa?"შედეგი":"Result",
+    view:isKa?"ნახვა tas.ge-ზე →":"View on tas.ge →",
+    loadingMore:isKa?"დამატებითი დეტალები…":"Loading details…",
+  };
+  const field=(lbl,val)=>val?`<div class="zp-field"><span class="zp-field-lbl">${lbl}</span><span class="zp-field-val">${_esc(val)}</span></div>`:'';
+  let html='';
+  html+=`<div class="zp-field"><span class="zp-field-lbl">${L.permit}</span><span class="zp-permit-no">${_esc(permit.docNo||'—')}</span></div>`;
+  html+=field(L.address,permit.address);
+  if(detail){
+    html+=field(L.nomen,detail.nomenclature);
+    html+=field(L.cadastral,(detail.cadastral||[]).join(', '));
+  }
+  if(decision){
+    html+=field(L.registered,decision.registered);
+    html+=field(L.issued,decision.issued);
+    if(decision.result){
+      html+=`<div class="zp-field"><span class="zp-field-lbl">${L.result}</span><span class="zp-field-val"><span class="zp-result-badge ${_permitResultClass(decision.result)}">${_esc(decision.result)}</span></span></div>`;
+    }
+  }
+  if(loading)html+=`<div class="zp-note"><span class="zp-spin"></span> ${L.loadingMore}</div>`;
+  if(permit.link)html+=`<a class="zp-link" href="${_esc(permit.link)}" target="_blank" rel="noopener">${L.view}</a>`;
+  out.innerHTML=html;
+}
+
+function _esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
 function clearParcelSelection(){
   if(_activeBldId){_deselectBuilding();return;}
   if(_isDrawnArea){clearPolygonSelect();return;}
@@ -5568,10 +5755,16 @@ function resetAnalysis(){
   if(typeof clearSchoolsMapLayer==="function")clearSchoolsMapLayer();
   if(typeof clearKgMapLayer==="function")clearKgMapLayer();
   // Zoning analysis reset
-  {const _zb=document.getElementById("nav-zoning-btn");if(_zb)_zb.classList.remove("active");}
+  {const _zb=document.getElementById("nav-zoning-btn");if(_zb){_zb.classList.remove("active");_zb.classList.remove("zoning-panel-open");}}
   _updateSetbackLayer(null);_updateZoneLayer(null);_updateSetbackRing(null);
   _noDevZone=false;_noDevZoneUnion=null;_maxFootprintM2=null;_maxFloorAreaM2=null;
   ["pfc-zone-row","pfc-setback-note","pfc-setback-warn","pfc-area-warn","pfc-nodev-warn","pfc-build-params-row"].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display="none";});
+  // Zoning panel + construction permits reset
+  _permitsActive=false;_permitsReqToken=(typeof _permitsReqToken==="number"?_permitsReqToken+1:0);
+  {const _zpc=document.getElementById("zoning-panel-card");if(_zpc)_zpc.style.display="none";}
+  {const _zas=document.getElementById("zoning-assess-sw");if(_zas)_zas.classList.remove("on");}
+  {const _zps=document.getElementById("zoning-permits-sw");if(_zps)_zps.classList.remove("on");}
+  {const _zpr=document.getElementById("zoning-permits-result");if(_zpr)_zpr.innerHTML="";}
 }
 
 // ── WKT → GeoJSON ─────────────────────────────────────────────────────────────

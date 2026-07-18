@@ -101,7 +101,7 @@
   <div class="nav-sep"></div>
   <div class="nav-group" id="nav-cat-group">
     <button class="nav-btn" id="cat-btn-accessibility" onclick="showCatInPanel('accessibility',this)" title="Accessibility"><img src="analysis-logos/accessibility.svg" width="39" height="39" style="opacity:0.70;transition:opacity 0.15s"><span class="nav-tip" id="nav-tip-cat-accessibility">Accessibility</span></button>
-    <button class="nav-btn" id="nav-zoning-btn" onclick="runZoningAnalysis()" title="Zoning Analysis"><img src="analysis-logos/zoning.svg" width="39" height="39" style="opacity:0.70;transition:opacity 0.15s" id="nav-zoning-icon"><span class="nav-tip" id="nav-tip-cat-zoning">Zoning</span></button>
+    <button class="nav-btn" id="nav-zoning-btn" onclick="toggleZoningPanel()" title="Zoning"><img src="analysis-logos/zoning.svg" width="39" height="39" style="opacity:0.70;transition:opacity 0.15s" id="nav-zoning-icon"><span class="nav-tip" id="nav-tip-cat-zoning">Zoning</span></button>
     <button class="nav-btn" id="cat-btn-education" onclick="showCatInPanel('education',this)" title="Education"><img src="analysis-logos/education.svg" width="39" height="39" style="opacity:0.70;transition:opacity 0.15s"><span class="nav-tip" id="nav-tip-cat-education">Education</span></button>
     <button class="nav-btn" id="cat-btn-mobility" onclick="showCatInPanel('mobility',this)" title="Mobility"><img src="analysis-logos/mobility.svg" width="39" height="39" style="opacity:0.70;transition:opacity 0.15s"><span class="nav-tip" id="nav-tip-cat-mobility">Mobility</span></button>
     <button class="nav-btn" id="cat-btn-climate" onclick="showCatInPanel('climate',this)" title="Climate"><img src="analysis-logos/climate.svg" width="39" height="39" style="opacity:0.70;transition:opacity 0.15s"><span class="nav-tip" id="nav-tip-cat-climate">Climate</span></button>
@@ -308,6 +308,18 @@
 
 
 
+  <div class="card" id="zoning-panel-card" style="display:none">
+    <div class="lp-sec-title" id="lbl-zoning-panel">Zoning</div>
+    <div class="lp-row acc-toggle-row" style="padding:4px 0" onclick="toggleZoningAssessment()">
+      <span class="lp-row-name" id="lbl-zoning-assess">Assessment</span>
+      <div class="lp-sw" id="zoning-assess-sw"></div>
+    </div>
+    <div class="lp-row acc-toggle-row" style="padding:4px 0;margin-top:2px" onclick="toggleConstructionPermits()">
+      <span class="lp-row-name" id="lbl-zoning-permits">Construction permits</span>
+      <div class="lp-sw" id="zoning-permits-sw"></div>
+    </div>
+    <div id="zoning-permits-result"></div>
+  </div>
   <div class="card" id="pro-analysis-card" style="display:none">
     <div class="pro-cat" id="pro-cat-accessibility">
       <div class="pro-cat-body"><div class="pro-cat-body-inner" id="pro-cat-accessibility-content"></div></div>
