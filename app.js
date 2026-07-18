@@ -5245,7 +5245,7 @@ function runZoningAnalysis(){
     _updateZoneLayer(null);
     _updateSetbackRing(null);
     const _bpr0=document.getElementById('pfc-build-params-row');if(_bpr0)_bpr0.style.display='none';
-    _maxFootprintM2=null;_maxFloorAreaM2=null;_noDevZone=false;_noDevZoneUnion=null;window._rptZones=null;document.getElementById('pfc-nodev-warn')?.style&&(document.getElementById('pfc-nodev-warn').style.display='none');document.getElementById('pfc-area-warn')?.style&&(document.getElementById('pfc-area-warn').style.display='none');
+    _maxFootprintM2=null;_maxFloorAreaM2=null;_noDevZone=false;_noDevZoneUnion=null;window._rptZones=null;document.getElementById('pfc-nodev-warn')?.style&&(document.getElementById('pfc-nodev-warn').style.display='none');document.getElementById('pfc-area-warn')?.style&&(document.getElementById('pfc-area-warn').style.display='none');_updatePermitDevWarning();
     return;
   }
   if(!_currentParcelGeoJSON)return;
@@ -5271,7 +5271,7 @@ function runZoningAnalysis(){
       _updateZoneLayer(null);
       _updateSetbackRing(null);
       const _bpr1=document.getElementById('pfc-build-params-row');if(_bpr1)_bpr1.style.display='none';
-      _maxFootprintM2=null;_maxFloorAreaM2=null;_noDevZone=false;_noDevZoneUnion=null;window._rptZones=null;document.getElementById('pfc-nodev-warn')?.style&&(document.getElementById('pfc-nodev-warn').style.display='none');document.getElementById('pfc-area-warn')?.style&&(document.getElementById('pfc-area-warn').style.display='none');
+      _maxFootprintM2=null;_maxFloorAreaM2=null;_noDevZone=false;_noDevZoneUnion=null;window._rptZones=null;document.getElementById('pfc-nodev-warn')?.style&&(document.getElementById('pfc-nodev-warn').style.display='none');document.getElementById('pfc-area-warn')?.style&&(document.getElementById('pfc-area-warn').style.display='none');_updatePermitDevWarning();
       return;
     }
     _updateZoneLayer(zones);
@@ -5284,6 +5284,7 @@ function runZoningAnalysis(){
       }catch(_){}
     }
     {const _zK=zones.filter(z=>z.k1!=null);const _noD=_zK.length>0&&_zK.every(z=>z.k1==0);_noDevZone=_noD;}
+    _updatePermitDevWarning();
     {const _ndF=zones.filter(z=>z.k1!=null&&z.k1==0&&z.geometry).map(z=>({type:'Feature',geometry:z.geometry,properties:{}}));if(_ndF.length>0){try{_noDevZoneUnion=_ndF.reduce((a,f)=>a?(turf.union(a,f)||a):f,null);}catch(_e){_noDevZoneUnion=_ndF[0]||null;}}else{_noDevZoneUnion=null;}}
     _updateSetbackRing(_noDevZone?null:_currentParcelGeoJSON);
     {const _kz=zones.filter(z=>z.k1!=null&&z.k1>0);_maxFootprintM2=_kz.length?Math.round(_kz.reduce((s,z)=>s+z.area*z.k1,0)):null;}
@@ -5303,11 +5304,11 @@ function runZoningAnalysis(){
     _updateZoneLayer(null);
     _updateSetbackRing(null);
     const _bpr2=document.getElementById('pfc-build-params-row');if(_bpr2)_bpr2.style.display='none';
-    _maxFootprintM2=null;_maxFloorAreaM2=null;_noDevZone=false;_noDevZoneUnion=null;window._rptZones=null;document.getElementById('pfc-nodev-warn')?.style&&(document.getElementById('pfc-nodev-warn').style.display='none');document.getElementById('pfc-area-warn')?.style&&(document.getElementById('pfc-area-warn').style.display='none');
+    _maxFootprintM2=null;_maxFloorAreaM2=null;_noDevZone=false;_noDevZoneUnion=null;window._rptZones=null;document.getElementById('pfc-nodev-warn')?.style&&(document.getElementById('pfc-nodev-warn').style.display='none');document.getElementById('pfc-area-warn')?.style&&(document.getElementById('pfc-area-warn').style.display='none');_updatePermitDevWarning();
   });
 }
 // ── Zoning panel (Assessment + Construction permits) ──────────────────────────
-let _permitsActive=false, _permitsReqToken=0;
+let _permitsActive=false, _permitsReqToken=0, _lastPermitFound=null;
 
 function _zpKa(){return lang==="ka";}
 
@@ -5378,10 +5379,13 @@ async function toggleConstructionPermits(){
     const permit=await _fetchLatestPermit(parcelCentroid[0],parcelCentroid[1]);
     if(token!==_permitsReqToken)return; // toggled off / re-toggled while loading
     if(!permit){
+      _lastPermitFound=null;_updatePermitDevWarning();
       _setPermitFloat(`<div class="zp-note">${isKa?"ამ ნაკვეთზე მშენებლობის ნებართვა ვერ მოიძებნა.":"No construction permits found for this parcel."}</div>`);
       return;
     }
+    _lastPermitFound=permit;
     _setPermitFloat(_buildPermitHTML(permit,null,null,true)); // base result immediately
+    _updatePermitDevWarning();
     // Enrich (best-effort — either may fail without blocking the other)
     const [detail,decision]=await Promise.all([
       _fetchPermitDetail(permit.docId).catch(()=>null),
@@ -5389,6 +5393,7 @@ async function toggleConstructionPermits(){
     ]);
     if(token!==_permitsReqToken)return;
     _setPermitFloat(_buildPermitHTML(permit,detail,decision,false));
+    _updatePermitDevWarning();
   }catch(e){
     console.error('[permits]',e);
     if(token===_permitsReqToken)_setPermitFloat(`<div class="zp-note">${isKa?"ნებართვების ჩატვირთვა ვერ მოხერხდა. სცადეთ თავიდან.":"Could not load permits. Please try again."}</div>`);
@@ -5508,6 +5513,25 @@ function _setPermitFloat(html){
 function _hidePermitFloatRow(){
   const pfcRow=document.getElementById('pfc-permits-row');if(pfcRow)pfcRow.style.display='none';
   const pfcList=document.getElementById('pfc-permits-list');if(pfcList)pfcList.innerHTML='';
+  _lastPermitFound=null;
+  _updatePermitDevWarning();
+}
+
+// Masterplan-conflict notice: a permit was granted on a parcel the zoning
+// assessment flags as not designated for development (all zones K1 = 0).
+// Shown only when BOTH a permit is present AND the no-development flag is set.
+function _updatePermitDevWarning(){
+  const w=document.getElementById('pfc-permit-warn');
+  if(!w)return;
+  const show=_permitsActive&&!!_lastPermitFound&&!!_noDevZone;
+  if(show){
+    w.textContent=_zpKa()
+      ? "ამ ნაკვეთზე მშენებლობის ნებართვის გაცემა ეწინააღმდეგება თბილისის 2019 წლის განაშენიანების გენერალურ გეგმას — ტერიტორია არ არის გამიზნული განაშენიანებისთვის."
+      : "Granting a construction permit for this parcel goes against the rules established by the Tbilisi 2019 Urban Masterplan — this area is not designated for development.";
+    w.style.display='';
+  } else {
+    w.style.display='none';
+  }
 }
 
 function _esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
@@ -5785,7 +5809,8 @@ function resetAnalysis(){
   _noDevZone=false;_noDevZoneUnion=null;_maxFootprintM2=null;_maxFloorAreaM2=null;
   ["pfc-zone-row","pfc-setback-note","pfc-setback-warn","pfc-area-warn","pfc-nodev-warn","pfc-build-params-row"].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display="none";});
   // Zoning panel + construction permits reset
-  _permitsActive=false;_permitsReqToken=(typeof _permitsReqToken==="number"?_permitsReqToken+1:0);
+  _permitsActive=false;_permitsReqToken=(typeof _permitsReqToken==="number"?_permitsReqToken+1:0);_lastPermitFound=null;
+  {const _pw=document.getElementById("pfc-permit-warn");if(_pw)_pw.style.display="none";}
   {const _zpc=document.getElementById("zoning-panel-card");if(_zpc)_zpc.style.display="none";}
   {const _zas=document.getElementById("zoning-assess-sw");if(_zas)_zas.classList.remove("on");}
   {const _zps=document.getElementById("zoning-permits-sw");if(_zps)_zps.classList.remove("on");}
