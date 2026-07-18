@@ -810,6 +810,10 @@
   .nav-btn.layer-active:hover { background:rgba(165,180,252,0.30); }
   .nav-btn.zoning-panel-open { background:rgba(255,255,255,0.10); box-shadow:inset 0 0 0 1px rgba(255,255,255,0.18); }
 
+  /* Zoning panel opens beside its nav button (top set in JS), not stacked in #side-panel */
+  #zoning-panel-card { position:fixed; left:70px; top:80px; width:280px; max-height:80vh; overflow-y:auto; margin:0; z-index:12; scrollbar-width:none; }
+  #zoning-panel-card::-webkit-scrollbar { display:none; }
+
   /* Construction permits result */
   #zoning-permits-result:not(:empty) { margin-top:8px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.07); }
   .zp-note { font-size:0.68rem; color:rgba(255,255,255,0.35); line-height:1.5; padding:2px 0; }

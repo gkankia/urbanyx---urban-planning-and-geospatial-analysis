@@ -5320,6 +5320,8 @@ function toggleZoningPanel(){
     return;
   }
   _syncZoningPanel();
+  // Align the panel vertically with the zoning nav button (same gap as other panels)
+  if(btn){const r=btn.getBoundingClientRect();card.style.top=Math.max(12,Math.min(r.top,window.innerHeight-120))+'px';}
   card.style.display='block';
   btn?.classList.add('zoning-panel-open');
 }
@@ -5353,6 +5355,7 @@ async function toggleConstructionPermits(){
     _permitsActive=false;_permitsReqToken++;
     sw?.classList.remove('on');
     if(out)out.innerHTML='';
+    _hidePermitFloatRow();
     return;
   }
   if(!currentUser){openAuthModal("view-signup");return;}
@@ -5367,6 +5370,7 @@ async function toggleConstructionPermits(){
     if(token!==_permitsReqToken)return; // toggled off / re-toggled while loading
     if(!permit){
       if(out)out.innerHTML=`<div class="zp-note">${isKa?"ამ ნაკვეთზე მშენებლობის ნებართვა ვერ მოიძებნა.":"No construction permits found for this parcel."}</div>`;
+      _hidePermitFloatRow();
       return;
     }
     _renderPermit(permit,null,null,true); // show base result immediately
@@ -5379,7 +5383,10 @@ async function toggleConstructionPermits(){
     _renderPermit(permit,detail,decision,false);
   }catch(e){
     console.error('[permits]',e);
-    if(token===_permitsReqToken&&out)out.innerHTML=`<div class="zp-note">${isKa?"ნებართვების ჩატვირთვა ვერ მოხერხდა. სცადეთ თავიდან.":"Could not load permits. Please try again."}</div>`;
+    if(token===_permitsReqToken){
+      if(out)out.innerHTML=`<div class="zp-note">${isKa?"ნებართვების ჩატვირთვა ვერ მოხერხდა. სცადეთ თავიდან.":"Could not load permits. Please try again."}</div>`;
+      _hidePermitFloatRow();
+    }
   }
 }
 
@@ -5450,9 +5457,7 @@ function _permitResultClass(result){
   return 'mid';
 }
 
-function _renderPermit(permit,detail,decision,loading){
-  const out=document.getElementById('zoning-permits-result');
-  if(!out)return;
+function _buildPermitHTML(permit,detail,decision,loading){
   const isKa=_zpKa();
   const L={
     permit:isKa?"განაცხადი":"Application",
@@ -5482,7 +5487,23 @@ function _renderPermit(permit,detail,decision,loading){
   }
   if(loading)html+=`<div class="zp-note"><span class="zp-spin"></span> ${L.loadingMore}</div>`;
   if(permit.link)html+=`<a class="zp-link" href="${_esc(permit.link)}" target="_blank" rel="noopener">${L.view}</a>`;
-  out.innerHTML=html;
+  return html;
+}
+
+// Renders the permit into BOTH the side-panel result box and the parcel float
+// card (below the zoning analysis).
+function _renderPermit(permit,detail,decision,loading){
+  const html=_buildPermitHTML(permit,detail,decision,loading);
+  const out=document.getElementById('zoning-permits-result');if(out)out.innerHTML=html;
+  const pfcList=document.getElementById('pfc-permits-list');if(pfcList)pfcList.innerHTML=html;
+  const pfcTitle=document.getElementById('pfc-permits-title');if(pfcTitle)pfcTitle.textContent=_zpKa()?"ნებართვები":"Construction permits";
+  const pfcRow=document.getElementById('pfc-permits-row');if(pfcRow)pfcRow.style.display='block';
+}
+
+// Hide/clear the float-card permit row (used for empty/error/off/reset states)
+function _hidePermitFloatRow(){
+  const pfcRow=document.getElementById('pfc-permits-row');if(pfcRow)pfcRow.style.display='none';
+  const pfcList=document.getElementById('pfc-permits-list');if(pfcList)pfcList.innerHTML='';
 }
 
 function _esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
@@ -5765,6 +5786,8 @@ function resetAnalysis(){
   {const _zas=document.getElementById("zoning-assess-sw");if(_zas)_zas.classList.remove("on");}
   {const _zps=document.getElementById("zoning-permits-sw");if(_zps)_zps.classList.remove("on");}
   {const _zpr=document.getElementById("zoning-permits-result");if(_zpr)_zpr.innerHTML="";}
+  {const _pfr=document.getElementById("pfc-permits-row");if(_pfr)_pfr.style.display="none";}
+  {const _pfl=document.getElementById("pfc-permits-list");if(_pfl)_pfl.innerHTML="";}
 }
 
 // ── WKT → GeoJSON ─────────────────────────────────────────────────────────────
