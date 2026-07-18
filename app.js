@@ -5407,13 +5407,14 @@ async function _fetchLatestPermit(lon,lat){
   const data=await res.json();
   const layers=data.architectureLayerDataResult||[];
   const layer=layers.find(l=>l.lrId===261644)||layers[0];
-  const rec=layer?.layerRecords?.[0];
+  const records=layer?.layerRecords||[];
+  const rec=records[0];
   if(!rec)return null;
   const docNo=rec.docNo||'';
   // docId = digits after the "AR1" prefix (AR1336926 → 336926)
   const m=docNo.match(/AR1(\d+)/i);
   const docId=m?m[1]:docNo.replace(/\D/g,'');
-  return {docNo,docId,address:rec.address||'',docClass:rec.docClass||'',
+  return {docNo,docId,count:records.length,address:rec.address||'',docClass:rec.docClass||'',
     link:rec.link||(docId?`https://tas.ge/?p=publicpage&documentId=${docId}`:'')};
 }
 
@@ -5477,12 +5478,17 @@ function _buildPermitHTML(permit,detail,decision,loading){
     registered:isKa?"შემოსვლის თარიღი":"Registered",
     issued:isKa?"გაცემის თარიღი":"Issued",
     result:isKa?"შედეგი":"Result",
-    view:isKa?"ნახვა tas.ge-ზე →":"View on tas.ge →",
+    total:isKa?"სულ განაცხადები":"Total applications",
+    latestNote:isKa?"ჩანს უახლესი":"showing latest",
+    view:isKa?"წყაროს ნახვა →":"View source →",
     loadingMore:isKa?"დამატებითი დეტალები…":"Loading details…",
   };
   const field=(lbl,val)=>val?`<div class="zp-field"><span class="zp-field-lbl">${lbl}</span><span class="zp-field-val">${_esc(val)}</span></div>`:'';
   let html='';
   html+=`<div class="zp-field"><span class="zp-field-lbl">${L.permit}</span><span class="zp-permit-no">${_esc(permit.docNo||'—')}</span></div>`;
+  if(permit.count>1){
+    html+=`<div class="zp-field"><span class="zp-field-lbl">${L.total}</span><span class="zp-field-val">${permit.count} <span style="opacity:0.5">(${L.latestNote})</span></span></div>`;
+  }
   html+=field(L.address,permit.address);
   if(detail){
     html+=field(L.nomen,detail.nomenclature);
