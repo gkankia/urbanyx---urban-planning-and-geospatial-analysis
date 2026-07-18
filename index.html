@@ -316,26 +316,26 @@ function loadGeoTIFF(){if(window.GeoTIFF)return Promise.resolve();if(!_geotiffP)
 
 // ── capability cards with tiny data-viz thumbnails (real analysis outputs) ──
 const CAPS=[
-  {k:'zoning',t:'Zoning capacity',tag:'free',d:'Functional zones, K1/K2/K3 limits, setback & buildable area per zone.',viz:donut},
-  {k:'walk',t:'Walkability & access',tag:'free',d:'Isochrone catchments; schools, kindergartens, transit within reach.',viz:iso},
-  {k:'transit',t:'Transit reliability',tag:'pro',d:'On-time %, delay and headway from a growing citywide archive.',viz:reliability},
-  {k:'morph',t:'Street morphology',tag:'free',d:'Network connectivity and street-orientation analysis.',viz:connect},
-  {k:'diversity',t:'Land-use diversity',tag:'free',d:'Shannon diversity of urban functions and land uses in the area.',viz:diversity},
-  {k:'climate',t:'Climate & land cover',tag:'pro',d:'Tree canopy share and land-surface temperature.',viz:gauge},
-  {k:'relief',t:'Relief & terrain',tag:'pro',d:'Elevation, slope and aspect from a digital terrain model.',viz:slope},
-  {k:'energy',t:'Clean energy',tag:'pro',d:'Solar irradiation zones and wind potential on the parcel.',viz:energy},
-  {k:'plan',t:'Plan it yourself',tag:'pro',d:'Draw parcels, extrude 3D massing and test development scenarios.',viz:planviz},
+  {k:'zoning',t:'Zoning',tag:'free',d:'Use-based zoning, development limits and parameters.',viz:donut},
+  {k:'walk',t:'Access',tag:'free',d:'15-minute city concept - social infrastructure and everyday life within reach.',viz:iso},
+  {k:'transit',t:'Transit',tag:'pro',d:'Service reliability index - on-time arrivals, delays and headways based on live and historical data.',viz:reliability},
+  {k:'morph',t:'Urban form',tag:'free',d:'Urban built environment morphology - infrastructure, space syntax, street network orientation and connectivity.',viz:connect},
+  {k:'diversity',t:'Diversity',tag:'free',d:'Urban land-use - Shannon Diversity Index of urban functions in the area.',viz:diversity},
+  {k:'climate',t:'Climate',tag:'pro',d:'Urban ecosystems - greening, shade assessment and land-surface temperature.',viz:gauge},
+  {k:'relief',t:'Relief',tag:'pro',d:'Elevation, slope and aspect from a digital terrain model.',viz:slope},
+  {k:'energy',t:'Clean energy',tag:'pro',d:'Solar and wind power potential assessed on a parcel level.',viz:energy},
+  {k:'plan',t:'Plan it yourself',tag:'pro',d:'Draw plans, build 3D dimensions and test planning scenarios.',viz:planviz},
 ];
 const I18N_CAP={ka:{
-  zoning:['ზონირების ანალიზი','ფუნქციური ზონები, კოეფიციენტები და დასაშვები პარამეტრები.'],
-  walk:['საფეხმავლო წვდომა','15-წუთიანი ქალაქის კონცეფცია - სკოლები, ბაღები, ტრანსპორტი და ყოველდღიური ცხოვრება მისაწვდომ ზონაში.'],
-  transit:['ტრანსპორტის სანდოობა','განრიგი, დაგვიანება და ინტერვალის ანალიზი რეალურ დროში.'],
-  morph:['ურბანული მორფოლოგია','ქუჩათა ქსელის კონფიგურაცია და შეკავშირებულობა.'],
-  diversity:['ყოველდღიური მრავალფეროვნება','ურბანული ფუნქციების სიუხვისა და ალტერნატივის ანალიზი (Shannon Diversity Index).'],
-  climate:['ურბანული კლიმატი','გამწვანება და მიწის ზედაპირის ტემპერატურა.'],
+  zoning:['ზონირება','ფუნქციური ზონები - კოეფიციენტები და დასაშვები პარამეტრები.'],
+  walk:['მისაწვდომობა','15-წუთიანი ქალაქის კონცეფცია - სოციალური ინფრასტრუქტურა და ყოველდღიური ცხოვრება მისაწვდომ ზონაში.'],
+  transit:['ტრანსპორტი','მომსახურების სანდოობის ინდექსი - განრიგი, დაგვიანება და ინტერვალის ანალიზი რეალურ და ხანგრძლივ პერიოდზე შეგროვებული მონაცემებით.'],
+  morph:['ურბანული ფორმა','ნაშენი გარემოს მორფოლოგია - ინფრასტრუქტურა, სივრცითი სინტაქსი, ქუჩათა ქსელის კონფიგურაცია და შეკავშირებულობა.'],
+  diversity:['მრავალფეროვნება','ურბანული ფუნქციების სიუხვე - შენონის მრავალფეროვნების ინდექსი (Shannon Diversity Index).'],
+  climate:['კლიმატი','ურბანული ეკოსისტემა - გამწვანება, ჩრდილის ანალიზი და მიწის ზედაპირის ტემპერატურა.'],
   relief:['რელიეფი','სიმაღლე, დახრილობა და ექსპოზიცია ზედაპირის ციფრული მოდელიდან.'],
   energy:['სუფთა ენერგია','მზისა და ქარის ენერგიის პოტენციალი ნაკვეთის დონეზე.'],
-  plan:['დაგეგმე თავად','მოხაზე სასურველი არეალი, გამოიყენე 3D მოცულობა და დატესტე სცენარები.'],
+  plan:['დაგეგმე თავად','მოხაზე სასურველი არეალი, შექმენი 3D მოცულობა და შეაფასე გეგმარებითი სცენარები.'],
 }};
 function el(tag,cls,html){const e=document.createElement(tag);if(cls)e.className=cls;if(html!=null)e.innerHTML=html;return e;}
 function renderCaps(){
@@ -381,8 +381,8 @@ const SITES=[
 const SCENE_DEF={
   mobility:{color:'#a78bfa',label:{en:'Mobility · 10-min walk',ka:'მობილობა · 10-წთ ფეხით'},
     metric:(l,d)=>{const p=[];if(d.area)p.push(l==='ka'?`${d.area} კმ²`:`${d.area} km²`);if(d.stops)p.push(l==='ka'?`${d.stops} გაჩერება`:`${d.stops} stops`);if(d.reliab!=null)p.push(l==='ka'?`${d.reliab}% განრიგის მიხედვით`:`${d.reliab}% on-time`);return p.join(' · ');}},
-  education:{color:'#38bdf8',label:{en:'Kindergarten access',ka:'ბაღების ხელმისაწვდომობა'},
-    metric:(l,d)=>l==='ka'?`${d.schools||0} ბაღი ახლოს`:`${d.schools||0} kindergartens within reach`},
+  education:{color:'#38bdf8',label:{en:'Kindergartens',ka:'ბაღების ხელმისაწვდომობა'},
+    metric:(l,d)=>l==='ka'?`${d.schools||0} ბაღი ახლოს`:`${d.schools||0} within reach`},
   connectivity:{color:'#818cf8',label:{en:'Street connectivity',ka:'ქუჩების შეკავშირებულობა'},
     metric:(l,d)=>d.segs?(l==='ka'?`${d.segs} ქუჩის სეგმენტი`:`${d.segs} street segments`):''},
   diversity:{color:'#fbbf24',label:{en:'Urban function diversity',ka:'ფუნქციური მრავალფეროვნება'},
@@ -728,7 +728,7 @@ const STR={
     trust_v:'მილიონობით',
     trust_head:'მონაცემი — გაანალიზებული მრავალფეროვანი მეთოდოლოგიით',
     tag_transit:'საკუთრება',tag_nodes:'ზონირება',tag_functions:'ტრანსპორტი',tag_elev:'ინფრასტრუქტურა',tag_zoning:'რელიეფი',
-    cap_eyebrow:'რისი ანალიზი შეგიძლია',cap_title:'სივრცითი .',cap_sub:'თითოეული მუშაობს ნაკვეთზე ან დახაზულ არეალზე და გასცემს რეალურ მეტრიკებს რუკის სიმბოლიკით.',
+    cap_eyebrow:'რისი გაკეთება შეგიძლია',cap_title:'ნაკვეთის ან/და საკვლევი არეალის სრულყოფილი სივრცითი ანალიზი.',cap_sub:'Live და მონაცემების არქივი ერთი კლიკის გაწვდენაზეა.',
     how_eyebrow:'როგორ მუშაობს',how_title:'საკადასტრო კოდიდან რეპორტამდე სამ ნაბიჯში.',
     step1_t:'აირჩიე ადგილი',step1_d:'მოძებნე საკადასტრო კოდი ან დახაზე არეალი. მესაკუთრისა და ნაკვეთის მონაცემები მყისვე იტვირთება.',
     step2_t:'გაუშვი ანალიზი',step2_d:'ჩართე ზონირება, საფეხმავლო, ტრანსპორტი, მორფოლოგია, კლიმატი, რელიეფი ან ენერგია. შედეგები რუკაზე ჩნდება.',
