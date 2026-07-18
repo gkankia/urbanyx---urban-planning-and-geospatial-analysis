@@ -5565,9 +5565,13 @@ async function _fetchLatestPermit(lon,lat){
   const rec=records[0];
   if(!rec)return null;
   const docNo=rec.docNo||'';
-  // docId = digits after the "AR1" prefix (AR1336926 → 336926)
+  // documentId is what the detail (DWR) and decision-PDF endpoints key off. It
+  // lives in the record's tas.ge link (…?documentId=361540) — the reliable
+  // source. Fall back to stripping the "AR1" prefix off docNo (AR1336926 →
+  // 336926) only when the link is missing.
+  const linkId=(rec.link||'').match(/documentId=(\d+)/i);
   const m=docNo.match(/AR1(\d+)/i);
-  const docId=m?m[1]:docNo.replace(/\D/g,'');
+  const docId=linkId?linkId[1]:(m?m[1]:docNo.replace(/\D/g,''));
   return {docNo,docId,count:records.length,address:rec.address||'',docClass:rec.docClass||'',
     link:rec.link||(docId?`https://tas.ge/?p=publicpage&documentId=${docId}`:'')};
 }
@@ -5582,27 +5586,29 @@ async function _fetchPermitDetail(docId){
   return {nomenclature:data.nomenclature||'',cadastral:Array.isArray(data.cadastral)?data.cadastral:[]};
 }
 
-// Decision PDF → registration date, issue date, result. Parsed client-side via PDF.js.
+// Decision → registration date, issue date, result. The worker fetches
+// NewArchitectureResponse and returns parsed JSON for HTML docs, or base64 for
+// PDF docs (parsed here with PDF.js). Both yield the same three fields.
 async function _fetchPermitDecision(docId){
   if(!docId)return null;
-  const url=`https://docs.tbilisi.gov.ge/NewArchitectureResponse?documentId=${docId}`;
-  const pr=await fetch(PROXY,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"pdf",url})});
-  if(!pr.ok)throw new Error('pdf_fail');
-  const {base64}=await pr.json();
-  if(!base64)return null;
-  const lib=await loadPDFJS();
-  const bin=atob(base64);const bytes=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);
-  const pdf=await lib.getDocument({data:bytes}).promise;
-  let txt="";
-  for(let i=1;i<=pdf.numPages;i++){const pg=await pdf.getPage(i);const ct=await pg.getTextContent();txt+=ct.items.map(x=>x.str).join(" ")+"\n";}
-  const flat=txt.replace(/\s+/g,' ');
-  const dateAfter=label=>{const m=flat.match(new RegExp(label+"[^0-9]{0,25}(\\d{2}[\\/.]\\d{2}[\\/.]\\d{4})"));return m?m[1].replace(/\./g,'/'):'';};
-  const registered=dateAfter('შემოსვლის თარიღი');
-  const issued=dateAfter('გაცემის თარიღი');
-  let result='';
-  const rm=flat.match(/შედეგი\s*[:—-]?\s*([ა-ჰ]+)/);
-  if(rm)result=rm[1];
-  return {registered,issued,result};
+  const res=await fetch(`${PROXY}/permits/decision?docId=${encodeURIComponent(docId)}`);
+  if(!res.ok)throw new Error('decision_fail');
+  const data=await res.json();
+  if(data.format==='html'){
+    return {registered:data.registered||'',issued:data.issued||'',result:data.result||''};
+  }
+  if(data.format==='pdf'&&data.base64){
+    const lib=await loadPDFJS();
+    const bin=atob(data.base64);const bytes=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);
+    const pdf=await lib.getDocument({data:bytes}).promise;
+    let txt="";
+    for(let i=1;i<=pdf.numPages;i++){const pg=await pdf.getPage(i);const ct=await pg.getTextContent();txt+=ct.items.map(x=>x.str).join(" ")+"\n";}
+    const flat=txt.replace(/\s+/g,' ');
+    const dateAfter=label=>{const m=flat.match(new RegExp(label+"[^0-9]{0,25}(\\d{1,2}[\\/.]\\d{1,2}[\\/.]\\d{4})"));return m?m[1].replace(/\./g,'/'):'';};
+    const rm=flat.match(/შედეგი\s*[:—-]?\s*([ა-ჰ]+)/);
+    return {registered:dateAfter('შემოსვლის თარიღი'),issued:dateAfter('გაცემის თარიღი'),result:rm?rm[1]:''};
+  }
+  return null;
 }
 
 function _permitResultClass(result){

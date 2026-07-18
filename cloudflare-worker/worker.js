@@ -241,6 +241,38 @@ export default {
       }
     }
 
+    // ── Construction permits: decision by docId (GET) ─────────────────────────
+    // /permits/decision?docId=<digits> → NewArchitectureResponse. That endpoint
+    // returns EITHER a PDF (older docs) or an HTML page (newer docs) with the
+    // same fields. HTML we parse here → JSON; PDF we hand back as base64 for the
+    // client to parse with PDF.js. Either way: registration/issue date + result.
+    if (request.method === "GET" && url.pathname === "/permits/decision") {
+      const docId = (url.searchParams.get("docId") || "").replace(/\D/g, "");
+      if (!docId) return new Response(JSON.stringify({ error: "Missing docId" }), { status: 400, headers: corsHeaders });
+      try {
+        const resp = await fetch(`https://docs.tbilisi.gov.ge/NewArchitectureResponse?documentId=${docId}`, {
+          headers: { "User-Agent": "Mozilla/5.0" },
+        });
+        const buf = await resp.arrayBuffer();
+        const bytes = new Uint8Array(buf);
+        const isPdf = bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46; // %PDF
+        const cache = { ...corsHeaders, "Content-Type": "application/json", "Cache-Control": "public, max-age=86400" };
+        if (isPdf) {
+          let binary = "";
+          for (let i = 0; i < bytes.length; i += 8192) binary += String.fromCharCode(...bytes.subarray(i, i + 8192));
+          return new Response(JSON.stringify({ format: "pdf", base64: btoa(binary) }), { status: 200, headers: cache });
+        }
+        const plain = new TextDecoder("utf-8").decode(bytes).replace(/<[^>]+>/g, " ").replace(/&nbsp;/gi, " ").replace(/\s+/g, " ");
+        const dateAfter = label => { const m = plain.match(new RegExp(label + "[^0-9]{0,20}(\\d{1,2}[\\/.]\\d{1,2}[\\/.]\\d{4})")); return m ? m[1].replace(/\./g, "/") : ""; };
+        const registered = dateAfter("შემოსვლის თარიღი");
+        const issued = dateAfter("გაცემის თარიღი");
+        const rm = plain.match(/შედეგი\s*:?\s*([ა-ჰ]+)/);
+        return new Response(JSON.stringify({ format: "html", registered, issued, result: rm ? rm[1] : "" }), { status: 200, headers: cache });
+      } catch(e) {
+        return new Response(JSON.stringify({ error: e.message }), { status: 502, headers: corsHeaders });
+      }
+    }
+
     // ── POST-only routes below ────────────────────────────────────────────────
     if (request.method !== "POST") {
       return new Response("Method not allowed", { status: 405, headers: corsHeaders });
