@@ -5509,17 +5509,21 @@ function _setPermitFloat(html){
 function _hidePermitFloatRow(){
   const pfcRow=document.getElementById('pfc-permits-row');if(pfcRow)pfcRow.style.display='none';
   const pfcList=document.getElementById('pfc-permits-list');if(pfcList)pfcList.innerHTML='';
-  _lastPermitFound=null;
+  _lastPermitFound=null;_lastPermitNomen='';
   _updatePermitDevWarning();
 }
 
-// Masterplan-conflict notice: a permit was granted on a parcel the zoning
-// assessment flags as not designated for development (all zones K1 = 0).
-// Shown only when BOTH a permit is present AND the no-development flag is set.
+// Masterplan-conflict notice: shown only when the zoning Assessment is toggled
+// on AND a permit is present AND either the assessment flags the parcel as not
+// designated for development (all zones K1 = 0), or the permit is for a
+// multifunctional / multi-apartment building (nomenclature mentions
+// მრავალფუნქციური / მრავალბინიანი).
 function _updatePermitDevWarning(){
   const w=document.getElementById('pfc-permit-warn');
   if(!w)return;
-  const show=_permitsActive&&!!_lastPermitFound&&!!_noDevZone;
+  const _assessmentOn=!!document.getElementById('nav-zoning-btn')?.classList.contains('active');
+  const _restrictedType=/მრავალფუნქციური|მრავალბინიანი/.test(_lastPermitNomen||'');
+  const show=_assessmentOn&&_permitsActive&&!!_lastPermitFound&&(!!_noDevZone||_restrictedType);
   if(show){
     w.textContent=_zpKa()
       ? "ვინაიდან მონიშნული ტერიტორია არ არის გამიზნული განაშენიანებისთვის, ამ ნაკვეთზე მშენებლობის ნებართვის გაცემა ეწინააღმდეგება თბილისის 2019 წლის განაშენიანების გენერალურ გეგმას."
@@ -5805,7 +5809,7 @@ function resetAnalysis(){
   _noDevZone=false;_noDevZoneUnion=null;_maxFootprintM2=null;_maxFloorAreaM2=null;
   ["pfc-zone-row","pfc-setback-note","pfc-setback-warn","pfc-area-warn","pfc-nodev-warn","pfc-build-params-row"].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display="none";});
   // Zoning panel + construction permits reset
-  _permitsActive=false;_permitsReqToken=(typeof _permitsReqToken==="number"?_permitsReqToken+1:0);_lastPermitFound=null;
+  _permitsActive=false;_permitsReqToken=(typeof _permitsReqToken==="number"?_permitsReqToken+1:0);_lastPermitFound=null;_lastPermitNomen='';
   {const _pw=document.getElementById("pfc-permit-warn");if(_pw)_pw.style.display="none";}
   {const _zpc=document.getElementById("zoning-panel-card");if(_zpc)_zpc.style.display="none";}
   {const _zas=document.getElementById("zoning-assess-sw");if(_zas)_zas.classList.remove("on");}
