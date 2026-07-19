@@ -771,9 +771,20 @@ const TW={
 };
 const TW_COLORS=['#fbbf24','#38bdf8','#a78bfa','#34d399','#818cf8'];
 let _twTimer=null,_twGen=0;
+// reserve the headline's tallest height (longest word) so cycling never reflows the page
+function reserveHeroHeight(words){
+  const h1=document.querySelector('.hero h1'),node=document.getElementById('tw');
+  if(!h1||!node)return;
+  const longest=words.reduce((a,b)=>b.length>a.length?b:a,'');
+  const saved=node.textContent;
+  node.textContent=longest;h1.style.minHeight='';
+  const hgt=h1.offsetHeight;h1.style.minHeight=hgt+'px';
+  node.textContent=saved;
+}
 function startTypewriter(){
   const node=document.getElementById('tw');if(!node)return;
   const words=TW[lang];const reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
+  reserveHeroHeight(words);
   clearTimeout(_twTimer);const gen=++_twGen;
   let wi=0;
   if(reduce){
@@ -799,6 +810,9 @@ function startTypewriter(){
 
 applyLang();
 heroMap();
+// keep the reserved headline height correct on font load, resize and orientation change
+window.addEventListener('resize',()=>{clearTimeout(window._rhT);window._rhT=setTimeout(()=>reserveHeroHeight(TW[lang]),150);});
+if(document.fonts&&document.fonts.ready)document.fonts.ready.then(()=>reserveHeroHeight(TW[lang]));
 </script>
 </body>
 </html>
