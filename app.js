@@ -421,6 +421,7 @@ function applyLang(){
   const tr=t(); const pw=tr.pw; const auth=tr.auth;
   // Core
   const _brand=document.getElementById("brand");if(_brand)_brand.textContent=tr.brand;
+  const _tmb=document.getElementById("test-mode-banner");if(_tmb)_tmb.textContent=(lang==='ka')?"სატესტო რეჟიმი. მადლობა უკუკავშირისთვის!":"Test mode. We appreciate your feedback!";
   document.getElementById("input-center").placeholder=tr.placeholder;
   document.getElementById("input-side").placeholder=tr.placeholder;
   document.getElementById("btn-center").textContent=tr.btn;
