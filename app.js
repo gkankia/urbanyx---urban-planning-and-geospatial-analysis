@@ -421,7 +421,7 @@ function applyLang(){
   const tr=t(); const pw=tr.pw; const auth=tr.auth;
   // Core
   const _brand=document.getElementById("brand");if(_brand)_brand.textContent=tr.brand;
-  const _tmb=document.getElementById("test-mode-banner");if(_tmb)_tmb.textContent=(lang==='ka')?"სატესტო რეჟიმი. მადლობა უკუკავშირისთვის!":"Test mode. We appreciate your feedback!";
+  const _tmb=document.getElementById("test-mode-banner");if(_tmb)_tmb.textContent=(lang==='ka')?"სატესტო რეჟიმი. გთხოვთ, არ შეიყვანოთ ბარათის მონაცემები გადახდის პორტალზე! უკუკავშირისთვის, მოგვწერეთ info@zaxis.ge":"Test mode. Don't add card details on the payment page! Any feedback is welcome at info@zais.ge";
   document.getElementById("input-center").placeholder=tr.placeholder;
   document.getElementById("input-side").placeholder=tr.placeholder;
   document.getElementById("btn-center").textContent=tr.btn;
