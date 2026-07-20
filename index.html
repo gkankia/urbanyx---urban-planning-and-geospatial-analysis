@@ -309,8 +309,8 @@
       <img class="logo-text" src="analysis-logos/logo-landing-page-text.png" alt="Urbanyx">
     </div>
     <div class="links">
-      <a href="#" data-i="foot_terms">Terms</a>
-      <a href="#" data-i="foot_privacy">Privacy</a>
+      <a href="terms.html" data-i="foot_terms">Terms</a>
+      <a href="privacy.html" data-i="foot_privacy">Privacy</a>
       <a href="#capabilities" data-i="foot_features">Capabilities</a>
       <a href="#pricing" data-i="foot_pricing">Pricing</a>
     </div>
@@ -761,12 +761,14 @@ const STR={
 };
 
 let lang='en';
+try{if(localStorage.getItem('urbanyx_lang')==='ka')lang='ka';}catch(e){}
 function applyLang(){
   const s=STR[lang];
   document.querySelectorAll('[data-i]').forEach(e=>{const k=e.getAttribute('data-i');if(s[k]!=null)e.innerHTML=s[k];});
   document.getElementById('langbtn').textContent=lang==='en'?'ქა':'EN';
   document.documentElement.lang=lang;
   renderCaps();renderTags();startTypewriter();renderHeroChips();
+  try{localStorage.setItem('urbanyx_lang',lang);}catch(e){}
 }
 document.getElementById('langbtn').onclick=()=>{lang=lang==='en'?'ka':'en';applyLang();};
 
