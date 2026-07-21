@@ -5810,23 +5810,75 @@ async function runNearbyAnalysis(){
     transit:stops.length,
     parkingPaid:pkPoly.filter(p=>p.properties.type==='paid').length,
     parkingFree:pkPoly.filter(p=>p.properties.type==='free').length,
+    // Parking vehicle capacity (cars + taxi + freight/loading)
+    pkCars:pkPoly.reduce((s,p)=>s+(p.properties.cars||0),0),
+    pkTaxi:pkPoly.reduce((s,p)=>s+(p.properties.taxi||0),0),
+    pkLoad:pkPoly.reduce((s,p)=>s+(p.properties.load||0),0),
+    routes:null,        // filled in phase 2
+    reliability:null,   // filled in phase 2 (Pro + data available)
   };
-  _renderNearby(counts);
+  _renderNearby(counts); // phase 1 — immediate
+  // Phase 2 — enrich transit with the routes serving nearby stops + the
+  // reliability index (same source as the history tab). Non-blocking.
+  if(stops.length){
+    (async()=>{
+      try{
+        const rr=await Promise.allSettled(stops.map(s=>fetch(`${PROXY}/ttc/stops/${encodeURIComponent(s.id)}/routes`).then(r=>r.ok?r.json():[])));
+        if(token!==_nearbyReqToken)return;
+        const rset=new Set();
+        for(const res of rr){if(res.status==='fulfilled')for(const rt of(res.value||[])){const sn=rt.shortName||rt.routeShortName;if(sn)rset.add(String(sn));}}
+        counts.routes=[...rset].sort((a,b)=>{const na=parseInt(a,10),nb=parseInt(b,10);if(!isNaN(na)&&!isNaN(nb)&&na!==nb)return na-nb;return String(a).localeCompare(String(b));});
+        if(currentUser&&currentUser.plan==='pro'){try{counts.reliability=await _nearbyReliability(stops.map(s=>s.id));}catch(_){}}
+        if(token!==_nearbyReqToken)return;
+        _renderNearby(counts);
+      }catch(_){}
+    })();
+  }
 }
+// Area transit reliability for the given stop ids — reuses the history-tab RPCs
+// (Pro). Weighted on-time share over the last 30 days → % + A–F grade, or null.
+async function _nearbyReliability(stopIds){
+  if(!stopIds||!stopIds.length)return null;
+  if(!_histCoverage){const{data,error}=await sb.rpc('transit_history_coverage');if(error)throw error;_histCoverage=Array.isArray(data)?data[0]:data;}
+  const cov=_histCoverage;
+  if(!cov?.first_date)return null;
+  const to=cov.last_date;
+  const from=new Date(Math.max(new Date(cov.first_date),new Date(new Date(to).getTime()-29*86400000))).toISOString().slice(0,10);
+  const{data,error}=await sb.rpc('transit_history_stats',{p_stop_ids:stopIds,p_from:from,p_to:to,p_daytype:'all',p_band:'all'});
+  if(error||!data||!data.length)return null;
+  let m=0,ot=0;
+  for(const r of data){m+=Number(r.n_matched)||0;ot+=Number(r.on_time)||0;}
+  if(m<30)return null; // insufficient sample
+  const pct=Math.round(ot/m*100);
+  const grade=pct>=80?'A':pct>=70?'B':pct>=60?'C':pct>=50?'D':pct>=40?'E':'F';
+  return {pct,grade};
+}
+function _relColor(g){return g==='A'?'#34d399':g==='B'?'#a3e635':g==='C'?'#fbbf24':g==='D'?'#fb923c':'#f87171';}
 function _renderNearby(c){
   const isKa=lang==='ka';
   const parkingTotal=c.parkingFree+c.parkingPaid;
-  const items=[
-    {label:isKa?'სკოლები':'Schools',n:c.schools},
-    {label:isKa?'ბაღები':'Kindergartens',n:c.kg},
-    {label:isKa?'გაჩერებები':'Transit stops',n:c.transit},
-    {label:isKa?'ავტოსადგომები':'Parking areas',n:parkingTotal,sub:parkingTotal?`${c.parkingFree} ${isKa?'უფასო':'free'} · ${c.parkingPaid} ${isKa?'ფასიანი':'paid'}`:''},
-  ].filter(it=>it.n>0);  // hide zero-value categories
-  const total=items.reduce((s,i)=>s+i.n,0);
-  let html='';
-  for(const it of items){
-    html+=`<div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:2px"><span style="font-size:0.62rem;color:rgba(255,255,255,0.5)">${it.label}</span><span style="font-size:0.68rem;font-weight:600;color:rgba(255,255,255,0.85);white-space:nowrap">${it.n}${it.sub?` <span style="font-weight:400;font-size:0.55rem;color:rgba(255,255,255,0.4)">(${it.sub})</span>`:''}</span></div>`;
+  // Main line + optional detail line beneath it
+  const mainRow=(label,val)=>`<div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:1px"><span style="font-size:0.62rem;color:rgba(255,255,255,0.5)">${label}</span><span style="font-size:0.68rem;font-weight:600;color:rgba(255,255,255,0.85);white-space:nowrap">${val}</span></div>`;
+  const detail=t=>t?`<div style="font-size:0.56rem;color:rgba(255,255,255,0.4);line-height:1.5;margin:0 0 4px">${t}</div>`:'';
+  const items=[];
+  if(c.schools>0)items.push(mainRow(isKa?'სკოლები':'Schools',c.schools));
+  if(c.kg>0)items.push(mainRow(isKa?'ბაღები':'Kindergartens',c.kg));
+  if(c.transit>0){
+    let det='';
+    if(c.routes&&c.routes.length)det+=`${isKa?'მარშრუტები':'Routes'} (${c.routes.length}): ${c.routes.join(', ')}`;
+    if(c.reliability)det+=`${det?'<br>':''}${isKa?'სანდოობა':'Reliability'}: <b style="color:${_relColor(c.reliability.grade)}">${c.reliability.grade}</b> · ${c.reliability.pct}%`;
+    items.push(mainRow(isKa?'გაჩერებები':'Transit stops',c.transit)+detail(det));
   }
+  if(parkingTotal>0){
+    const cap=[];
+    if(c.pkCars)cap.push(`${c.pkCars} ${isKa?'ავტ.':'cars'}`);
+    if(c.pkTaxi)cap.push(`${c.pkTaxi} ${isKa?'ტაქსი':'taxi'}`);
+    if(c.pkLoad)cap.push(`${c.pkLoad} ${isKa?'დატვირთვა':'loading'}`);
+    const det=`${c.parkingFree} ${isKa?'უფასო':'free'} · ${c.parkingPaid} ${isKa?'ფასიანი':'paid'}${cap.length?`<br>${isKa?'ტევადობა':'Capacity'}: ${cap.join(' · ')}`:''}`;
+    items.push(mainRow(isKa?'ავტოსადგომები':'Parking areas',parkingTotal)+detail(det));
+  }
+  const total=c.schools+c.kg+c.transit+parkingTotal;
+  const html=items.join('');
   // Render directly (not via _setNearbyFloat) so the row + note stay visible even when nothing is found
   const ti=document.getElementById('pfc-nearby-title');if(ti)ti.textContent=isKa?"ახლომდებარე · 100 მ ფეხით":"Nearby · 100 m walk";
   const list=document.getElementById('pfc-nearby-list');if(list)list.innerHTML=html;
