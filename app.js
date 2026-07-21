@@ -5799,6 +5799,24 @@ function _hideNearbyRow(){
   // The map layers are the conventional ones (schools/kg/transit/parking) and are
   // cleared by resetAnalysis; nothing extra to clear here.
 }
+// Parking free/paid overlap helpers (module-level twins of the ones inside
+// toggleAccParking) so the nearby analysis dedupes free areas that overlap a
+// paid zone, exactly like the conventional parking layer.
+function _pkBboxOf(geom){const ring=geom.type==='MultiPolygon'?geom.coordinates[0][0]:geom.coordinates[0];let x0=Infinity,x1=-Infinity,y0=Infinity,y1=-Infinity;for(const [x,y] of ring){if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y;}return{x0,x1,y0,y1};}
+function _pkPtInRing(x,y,ring){let inside=false;for(let i=0,j=ring.length-1;i<ring.length;j=i++){const xi=ring[i][0],yi=ring[i][1],xj=ring[j][0],yj=ring[j][1];if((yi>y)!==(yj>y)&&x<(xj-xi)*(y-yi)/(yj-yi)+xi)inside=!inside;}return inside;}
+function _pkOverlapsAnyPaid(freeGeom,fcx,fcy,paidWgs){
+  const fb=_pkBboxOf(freeGeom);
+  const freeRing=freeGeom.type==='MultiPolygon'?freeGeom.coordinates[0][0]:freeGeom.coordinates[0];
+  for(const pd of paidWgs){
+    if(fb.x0>pd.bbox.x1||fb.x1<pd.bbox.x0||fb.y0>pd.bbox.y1||fb.y1<pd.bbox.y0)continue;
+    const paidRing=pd.geom.type==='MultiPolygon'?pd.geom.coordinates[0][0]:pd.geom.coordinates[0];
+    if(_pkPtInRing(fcx,fcy,paidRing))return true;
+    if(_pkPtInRing(pd.cx,pd.cy,freeRing))return true;
+    for(const [vx,vy] of freeRing){if(_pkPtInRing(vx,vy,paidRing))return true;}
+    for(const [vx,vy] of paidRing){if(_pkPtInRing(vx,vy,freeRing))return true;}
+  }
+  return false;
+}
 // opts.area  — explicit area geometry to analyse (isochrone / large parcel /
 //               drawn AOI). When absent, a walking-network polygon is built
 //               around parcelCentroid.
@@ -5829,8 +5847,21 @@ async function runNearbyAnalysis(opts){
     (async()=>{try{if(!_schoolsGeoJSON){const r=await fetch("data/public_schools.geojson");if(r.ok)_schoolsGeoJSON=await r.json();}for(const f of(_schoolsGeoJSON?.features||[])){const g=f.geometry;if(!g)continue;const pt=g.type==='Point'?g.coordinates:(g.coordinates?.[0]?.[0]??null);if(pt&&pointInPolygon(pt[0],pt[1],area))schoolFeats.push(f);}}catch(_){}})(),
     (async()=>{try{if(!_kgGeoJSON){const r=await fetch("data/kindergartens_tbilisi_1.geojson");if(r.ok)_kgGeoJSON=await r.json();}for(const f of(_kgGeoJSON?.features||[])){const g=f.geometry;if(!g||g.type!=='Point')continue;if(pointInPolygon(g.coordinates[0],g.coordinates[1],area))kgFeats.push(f);}}catch(_){}})(),
     (async()=>{try{const all=await _ttcLoadStops();for(const s of(all||[])){if(s&&s.lon!=null&&pointInPolygon(s.lon,s.lat,area))stops.push(s);}}catch(_){}})(),
-    (async()=>{try{if(!_parkingPaidCache){const r=await fetch(PARKING_PAID_URL);if(r.ok)_parkingPaidCache=await r.json();}for(const f of(_parkingPaidCache?.features||[])){if(f.properties?.zone_id!=='A')continue;try{const wg=_parkingConvertGeom(f.geometry);const ring=wg.type==='MultiPolygon'?wg.coordinates[0][0]:wg.coordinates[0];const c=_parkingCentroidOfRing(ring);if(pointInPolygon(c[0],c[1],area))_pkBuild(wg,c,f.properties,'paid');}catch(_){}}}catch(_){}})(),
-    (async()=>{try{if(!_parkingFreeCache){const r=await fetch(PARKING_FREE_URL);if(r.ok)_parkingFreeCache=await r.json();}for(const f of(_parkingFreeCache?.features||[])){if(f.properties?.zone_id!=='ALL')continue;try{const wg=_parkingConvertGeom(f.geometry);const ring=wg.type==='MultiPolygon'?wg.coordinates[0][0]:wg.coordinates[0];const c=_parkingCentroidOfRing(ring);if(pointInPolygon(c[0],c[1],area))_pkBuild(wg,c,f.properties,'free');}catch(_){}}}catch(_){}})(),
+    (async()=>{try{
+      if(!_parkingPaidCache){const r=await fetch(PARKING_PAID_URL);if(r.ok)_parkingPaidCache=await r.json();}
+      if(!_parkingFreeCache){const r=await fetch(PARKING_FREE_URL);if(r.ok)_parkingFreeCache=await r.json();}
+      // Pass 1 — paid (zone A) inside the area
+      const paidWgs=[];
+      for(const f of(_parkingPaidCache?.features||[])){
+        if(f.properties?.zone_id!=='A')continue;
+        try{const wg=_parkingConvertGeom(f.geometry);const ring=wg.type==='MultiPolygon'?wg.coordinates[0][0]:wg.coordinates[0];const c=_parkingCentroidOfRing(ring);if(!pointInPolygon(c[0],c[1],area))continue;paidWgs.push({geom:wg,bbox:_pkBboxOf(wg),cx:c[0],cy:c[1]});_pkBuild(wg,c,f.properties,'paid');}catch(_){}
+      }
+      // Pass 2 — free (zone ALL) inside the area, excluding any that overlap a paid zone
+      for(const f of(_parkingFreeCache?.features||[])){
+        if(f.properties?.zone_id!=='ALL')continue;
+        try{const wg=_parkingConvertGeom(f.geometry);const ring=wg.type==='MultiPolygon'?wg.coordinates[0][0]:wg.coordinates[0];const c=_parkingCentroidOfRing(ring);if(!pointInPolygon(c[0],c[1],area))continue;if(_pkOverlapsAnyPaid(wg,c[0],c[1],paidWgs))continue;_pkBuild(wg,c,f.properties,'free');}catch(_){}
+      }
+    }catch(_){}})(),
   ];
   await Promise.allSettled(tasks);
   if(token!==_nearbyReqToken)return;
