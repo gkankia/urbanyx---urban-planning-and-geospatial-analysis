@@ -29,7 +29,7 @@
   #center-search.hidden { opacity: 0; pointer-events: none; }
   #center-search.hidden .center-inner { pointer-events: none; }
   #center-search.compact.hidden { transform: translateX(-24px); }
-  #center-search.compact { inset: unset; top: 7px; left: 60px; right: auto; bottom: auto; align-items: flex-start; justify-content: flex-start; transform: none; }
+  #center-search.compact { inset: unset; top: 7px; left: 60px; right: auto; bottom: auto; align-items: flex-start; justify-content: flex-start; transform: none; z-index: 21; }
   #center-search.compact .center-inner { max-width: 300px; padding: 0; gap: 8px; }
   #center-search.compact .brand { display: none; }
   #center-search.compact .or-click-row { display: none !important; }
