@@ -2454,7 +2454,7 @@ function startDraw(shape){
     document.getElementById("owner-results-card").style.display="none";
     document.getElementById("floor-detail-panel").style.display="none";
     setStatus("","");
-    const _inputEl=document.getElementById("input-side");
+    const _inputEl=document.getElementById("input-center");
     if(_inputEl)_inputEl.value="";
     _updateMapInfoBadge();
   }
@@ -4062,7 +4062,7 @@ async function onDrawCreate(){
   _checkSetbackViolation(poly);
   _checkAreaViolation(_activeBld());
   // Show side panel on first draw
-  if(!hasSearched){hasSearched=true;document.getElementById("center-search").classList.add("hidden");document.getElementById("map-blur").classList.add("hidden");document.getElementById("side-panel").classList.add("visible");}
+  if(!hasSearched){hasSearched=true;const _cs=document.getElementById("center-search");_cs.classList.add("compact");_cs.classList.remove("hidden");document.getElementById("map-blur").classList.add("hidden");document.getElementById("side-panel").classList.add("visible");}
   // Fit map to new building
   {const _c=poly.type==="Polygon"?poly.coordinates[0]:poly.coordinates[0][0];
   if(mapReady){const _ln=_c.map(c=>c[0]),_la=_c.map(c=>c[1]);
@@ -5752,7 +5752,7 @@ function clearParcelSelection(){
   document.getElementById("owner-results-card").style.display="none";
   document.getElementById("floor-detail-panel").style.display="none";
   setStatus("","");
-  const inputEl=document.getElementById("input-side");
+  const inputEl=document.getElementById("input-center");
   if(inputEl)inputEl.value="";
   _updateMapInfoBadge();
   if(mapReady)map.getSource("parcel")?.setData({type:"FeatureCollection",features:[]});
@@ -5897,7 +5897,7 @@ map.on("load",()=>{
       const lbl=item.details?.info_link?.split("lbl=")[1];
       if(!lbl){setStatus("","");return;}
       const name=item.name||lbl;
-      const inputEl=document.getElementById(hasSearched?"input-side":"input-center");
+      const inputEl=document.getElementById("input-center");
       if(inputEl)inputEl.value=name;
       try{resetAnalysis();}catch(_){}
       await loadParcel(lbl,name);
@@ -5945,11 +5945,11 @@ function setLoading(on){
   const tr=t();
   ["center","side"].forEach(s=>{const btn=document.getElementById("btn-"+s);if(!btn)return;btn.disabled=on;btn.textContent=on?tr.btnLoading:tr.btn;});
 }
-function getCode(){const el=hasSearched?document.getElementById("input-side"):document.getElementById("input-center");return el?el.value.trim():"";}
+function getCode(){const el=document.getElementById("input-center");return el?el.value.trim():"";}
 function transitionToSide(code){
+  document.getElementById("input-center").value=code;
   if(hasSearched)return;hasSearched=true;
-  document.getElementById("input-side").value=code;
-  document.getElementById("center-search").classList.add("hidden");
+  const cs=document.getElementById("center-search");cs.classList.add("compact");cs.classList.remove("hidden");
   document.getElementById("map-blur").classList.add("hidden");
   document.getElementById("side-panel").classList.add("visible");
 }
@@ -10970,7 +10970,8 @@ async function searchByOwnerId(ownerId){
     const allLngs=features.flatMap(f=>getGeoBounds(f.geometry).lngs);
     const allLats=features.flatMap(f=>getGeoBounds(f.geometry).lats);
     map.fitBounds([[Math.min(...allLngs),Math.min(...allLats)],[Math.max(...allLngs),Math.max(...allLats)]],{padding:80,duration:800});
-    if(!hasSearched){hasSearched=true;document.getElementById("input-side").value=ownerId;document.getElementById("center-search").classList.add("hidden");document.getElementById("map-blur").classList.add("hidden");document.getElementById("side-panel").classList.add("visible");}
+    document.getElementById("input-center").value=ownerId;
+    if(!hasSearched){hasSearched=true;const _cs=document.getElementById("center-search");_cs.classList.add("compact");_cs.classList.remove("hidden");document.getElementById("map-blur").classList.add("hidden");document.getElementById("side-panel").classList.add("visible");}
     const list=document.getElementById("owner-results-list");
     document.getElementById("lbl-owner-results").textContent=`${lang==="ka"?"ნაპოვნი ნაკვეთები":"Parcels found"}${ownerName?" · "+ownerName:""} · ${features.length}`;
     list.innerHTML=validParcels.map((p,i)=>`<div class="owner-result-item" id="oi-${i}" onclick="zoomToOwnerParcel(${i})"><div><div class="owner-result-code">${p.cadastral}</div><div class="owner-result-meta">${p.address||p.area||"—"}</div></div><span class="owner-result-arrow">›</span></div>`).join("");
@@ -10999,7 +11000,8 @@ async function searchByOwnerName(query){
     const allLngs=features.flatMap(f=>getGeoBounds(f.geometry).lngs);
     const allLats=features.flatMap(f=>getGeoBounds(f.geometry).lats);
     map.fitBounds([[Math.min(...allLngs),Math.min(...allLats)],[Math.max(...allLngs),Math.max(...allLats)]],{padding:80,duration:800});
-    if(!hasSearched){hasSearched=true;document.getElementById("input-side").value=query;document.getElementById("center-search").classList.add("hidden");document.getElementById("map-blur").classList.add("hidden");document.getElementById("side-panel").classList.add("visible");}
+    document.getElementById("input-center").value=query;
+    if(!hasSearched){hasSearched=true;const _cs=document.getElementById("center-search");_cs.classList.add("compact");_cs.classList.remove("hidden");document.getElementById("map-blur").classList.add("hidden");document.getElementById("side-panel").classList.add("visible");}
     const totalCount=parseInt(res.headers.get("content-range")?.split("/")?.[1])||features.length;
     const overflowMsg=totalCount>features.length?` (${features.length} / ${totalCount})`:`${features.length}`;
     document.getElementById("lbl-owner-results").textContent=`${lang==="ka"?"ნაპოვნი ნაკვეთები":"Parcels found"} · ${query} · ${overflowMsg}`;
@@ -11511,7 +11513,6 @@ async function init(){
     mapMoved=true;
     document.getElementById("map-blur").classList.add("hidden");
     document.getElementById("center-search").classList.add("compact");
-    document.getElementById("center-search").classList.add("hidden");
   },{passive:true});
   // Password-recovery links land here with a recovery session in the URL. Do NOT
   // sign the user in — show the "set new password" view instead.
