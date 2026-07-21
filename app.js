@@ -4070,6 +4070,8 @@ async function onDrawCreate(){
   document.getElementById("info-card").style.display="none";
   document.getElementById("owner-results-card").style.display="none";
   logFeatureUse("map_click").catch(()=>{});
+  // Livability index over the drawn area of interest
+  runNearbyAnalysis({area:poly});
   // Walkability (free analysis) feature removed — #analyse-btn stays hidden
   setupProCard();
   // OSM analysis moved to Urban Functions accordion
@@ -5743,18 +5745,18 @@ function _updatePermitDevWarning(){
 
 function _esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 
-// ── Nearby (250 m walk) — auto summary appended to the parcel float card ───────
+// ── Nearby (implicit walking radius) — auto summary appended to the parcel float card ───────
 // Replaces the old "generate an isochrone first" gate for the nearby-data layers
 // (schools, kindergartens, transit, parking, road incidents): on parcel select
 // we build a 100 m WALKING-NETWORK polygon (Mapbox contours_meters, not crow-
 // flies) and count each layer within it. Running the full accessibility isochrone
 // still expands the search area via the existing panel toggles.
 let _nearbyReqToken=0;
-const NEARBY_WALK_M=250;
-const UVI_NAME="Urban Vitality Index"; // composite location score (change here to rename)
+const NEARBY_WALK_M=400; // walking-network radius for the default "nearby" area (kept implicit in the UI)
+const UVI_NAME="Urban Livability Index"; // composite location score (change here to rename)
 let _lastDiversity=null; // Shannon land-use diversity (0–100) from the last Urban Functions run, or null
 let _lastNearbyCounts=null; // last nearby result, so the composite can re-render when diversity arrives
-// Composite location score from the 250 m nearby variables (+ diversity when
+// Composite location score from the nearby variables (+ diversity when
 // available). Each sub-score is 0–1 via a saturating curve (diminishing
 // returns); weights: education/transit/diversity 1.0, parking 0.75. Weights are
 // renormalised over whichever components are available. → { score, grade, parts }.
@@ -5784,7 +5786,7 @@ async function _fetchWalkArea(lng,lat,meters){
   const j=await res.json();return j.features?.[0]?.geometry||null;
 }
 function _setNearbyFloat(html){
-  const ti=document.getElementById('pfc-nearby-title');if(ti)ti.textContent=(lang==='ka')?"ახლომდებარე · 250 მ ფეხით":"Nearby · 250 m walk";
+  const ti=document.getElementById('pfc-nearby-title');if(ti)ti.textContent=(lang==='ka')?"ახლომდებარე":"Nearby";
   const list=document.getElementById('pfc-nearby-list');if(list)list.innerHTML=html||'';
   const row=document.getElementById('pfc-nearby-row');if(row)row.style.display=html?'block':'none';
   if(!html){const note=document.getElementById('pfc-nearby-note');if(note){note.style.display='none';note.textContent='';}}
@@ -5797,15 +5799,22 @@ function _hideNearbyRow(){
   // The map layers are the conventional ones (schools/kg/transit/parking) and are
   // cleared by resetAnalysis; nothing extra to clear here.
 }
-async function runNearbyAnalysis(){
-  if(!parcelCentroid)return;
+// opts.area  — explicit area geometry to analyse (isochrone / large parcel /
+//               drawn AOI). When absent, a walking-network polygon is built
+//               around parcelCentroid.
+// opts.renderMap — plot the conventional map layers (default true; pass false
+//               for the isochrone case where the accessibility panel owns them).
+async function runNearbyAnalysis(opts){
+  opts=opts||{};
+  const renderMap=opts.renderMap!==false;
+  if(!opts.area&&!parcelCentroid)return;
   const token=++_nearbyReqToken;
   const isKa=lang==='ka';
-  _setNearbyFloat(`<div class="zp-note"><span class="zp-spin"></span> ${isKa?"ახლომდებარე ობიექტების ძიება…":"Searching within a 250 m walk…"}</div>`);
-  let area=null;
-  try{area=await _fetchWalkArea(parcelCentroid[0],parcelCentroid[1],NEARBY_WALK_M);}catch(_){}
+  _setNearbyFloat(`<div class="zp-note"><span class="zp-spin"></span> ${isKa?"ახლომდებარე ობიექტების ძიება…":"Searching nearby…"}</div>`);
+  let area=opts.area||null;
+  if(!area){try{area=await _fetchWalkArea(parcelCentroid[0],parcelCentroid[1],NEARBY_WALK_M);}catch(_){}}
   if(token!==_nearbyReqToken)return;
-  if(!area){_setNearbyFloat(`<div class="zp-note">${isKa?"ვერ მოხერხდა არეალის დათვლა.":"Could not compute the walking area."}</div>`);return;}
+  if(!area){_setNearbyFloat(`<div class="zp-note">${isKa?"ვერ მოხერხდა არეალის დათვლა.":"Could not compute the search area."}</div>`);return;}
   // Collect the raw features per layer so we can render them with the SAME
   // conventional map symbology / tooltip / functionality (not custom markers).
   const schoolFeats=[],kgFeats=[],stops=[],pkPoly=[],pkCent=[];
@@ -5826,7 +5835,7 @@ async function runNearbyAnalysis(){
   await Promise.allSettled(tasks);
   if(token!==_nearbyReqToken)return;
   // Render on the map with the conventional layers (same icons/tooltips/behaviour)
-  if(mapReady){
+  if(renderMap&&mapReady){
     if(schoolFeats.length)addSchoolsMapLayer(schoolFeats);else if(typeof clearSchoolsMapLayer==='function')clearSchoolsMapLayer();
     if(kgFeats.length)addKgMapLayer(kgFeats);else if(typeof clearKgMapLayer==='function')clearKgMapLayer();
     if(stops.length)_ttcShowOnMap(stops);else if(typeof _ttcRemoveFromMap==='function')_ttcRemoveFromMap();
@@ -5844,6 +5853,7 @@ async function runNearbyAnalysis(){
     pkLoad:pkPoly.reduce((s,p)=>s+(p.properties.load||0),0),
     routes:null,        // filled in phase 2
     reliability:null,   // filled in phase 2 (Pro + data available)
+    overpass:'pending', // land-use diversity fetch: 'pending' | 'ok' | 'fail'
   };
   _renderNearby(counts); // phase 1 — immediate
   // Phase 2 — enrich transit with the routes serving nearby stops + the
@@ -5862,6 +5872,47 @@ async function runNearbyAnalysis(){
       }catch(_){}
     })();
   }
+  // Phase 2b — land-use diversity (Shannon SDI) via Overpass. If the service
+  // doesn't respond, keep the index (diversity is dropped + weights renormalise)
+  // and flag it so the user knows to run the wider accessibility analysis.
+  (async()=>{
+    try{
+      const gb=getGeoBounds(area);
+      const bbox=[Math.min(...gb.lats),Math.min(...gb.lngs),Math.max(...gb.lats),Math.max(...gb.lngs)].join(',');
+      const dc=await _nearbyDiversitySDI(bbox);
+      if(token!==_nearbyReqToken)return;
+      if(dc){_lastDiversity=shannonIndex(dc);counts.overpass='ok';}
+      else{_lastDiversity=null;counts.overpass='fail';}
+    }catch(_){if(token===_nearbyReqToken){_lastDiversity=null;counts.overpass='fail';}}
+    if(token!==_nearbyReqToken)return;
+    _renderNearby(counts);
+  })();
+}
+// Land-use category counts within a bbox via Overpass → {food,health,parks,
+// retail,culture}, or null if every mirror fails (so callers can flag it).
+async function _nearbyDiversitySDI(bbox){
+  const groups={
+    food:[["amenity","restaurant"],["amenity","cafe"],["amenity","fast_food"],["amenity","bar"],["amenity","pub"],["shop","bakery"],["shop","supermarket"],["shop","convenience"],["shop","greengrocer"]],
+    health:[["amenity","hospital"],["amenity","clinic"],["amenity","pharmacy"],["amenity","doctors"],["amenity","dentist"]],
+    parks:[["leisure","park"],["leisure","garden"],["leisure","playground"],["leisure","nature_reserve"]],
+    retail:[["shop","clothes"],["shop","electronics"],["shop","mall"],["shop","market"],["shop","furniture"],["shop","shoes"]],
+    culture:[["amenity","theatre"],["amenity","cinema"],["amenity","museum"],["amenity","library"],["leisure","fitness_centre"]],
+  };
+  const keys=Object.keys(groups);
+  const lines=tags=>tags.map(([k,v])=>`node[${k}=${v}](${bbox});`).join("");
+  const q=`[out:json][timeout:20];`+keys.map(k=>`(${lines(groups[k])})->.${k};.${k} out count;`).join("");
+  for(const ep of (typeof OVERPASS_ENDPOINTS!=='undefined'?OVERPASS_ENDPOINTS:[])){
+    try{
+      const res=await fetch(ep,{method:"POST",body:"data="+encodeURIComponent(q),signal:AbortSignal.timeout(12000)});
+      if(!res.ok)continue;
+      const text=await res.text();
+      if(text.trimStart().startsWith("<"))continue;
+      const data=JSON.parse(text);
+      const arr=data.elements.filter(e=>e.type==="count").map(e=>parseInt(e.tags?.total||"0",10));
+      if(arr.length===keys.length){const cc={};keys.forEach((k,i)=>cc[k]=arr[i]);return cc;}
+    }catch(_){}
+  }
+  return null;
 }
 // Area transit reliability for the given stop ids — reuses the history-tab RPCs
 // (Pro). Weighted on-time share over the last 30 days → % + A–F grade, or null.
@@ -5919,15 +5970,19 @@ function _renderNearby(c){
   }
   const html=tile+items.join('');
   // Render directly (not via _setNearbyFloat) so the row + note stay visible even when nothing is found
-  const ti=document.getElementById('pfc-nearby-title');if(ti)ti.textContent=isKa?"ახლომდებარე · 250 მ ფეხით":"Nearby · 250 m walk";
+  const ti=document.getElementById('pfc-nearby-title');if(ti)ti.textContent=isKa?"ახლომდებარე":"Nearby";
   const list=document.getElementById('pfc-nearby-list');if(list)list.innerHTML=html;
   const rowEl=document.getElementById('pfc-nearby-row');if(rowEl)rowEl.style.display='block';
   const card=document.getElementById('parcel-float-card');if(card&&card.style.display==='none')card.style.display='block';
   const note=document.getElementById('pfc-nearby-note');
   if(note){
-    note.textContent=total===0
-      ? (isKa?"250 მ ფეხით სავალ მანძილში ვერაფერი მოიძებნა. გაუშვი მისაწვდომობის ანალიზი ფართო არეალის მოსაძებნად.":"Nothing found within a 250 m walk. Run the accessibility analysis to search a larger area.")
+    let msg=total===0
+      ? (isKa?"ახლომდებარე ვერაფერი მოიძებნა. გაუშვი მისაწვდომობის ანალიზი ფართო არეალის მოსაძებნად.":"Nothing found nearby. Run the accessibility analysis to search a larger area.")
       : (isKa?"გაუშვი მისაწვდომობის ანალიზი უფრო ფართო არეალის დასაფარად.":"Run the accessibility analysis to cover a larger area.");
+    if(c.overpass==='fail')
+      msg+=(isKa?" მიწათსარგებლობის (მრავალფეროვნების) მონაცემი ვერ ჩაიტვირთა — გაუშვი მისაწვდომობის ანალიზი მის ჩასართავად."
+              :" Land-use (diversity) data didn't respond — run the accessibility analysis to include it.");
+    note.textContent=msg;
     note.style.display='';
   }
 }
@@ -11116,6 +11171,9 @@ async function runAccessibilityAnalysis(){
     const iLngs=isoCoords.map(c=>c[0]),iLats=isoCoords.map(c=>c[1]);
     map.fitBounds([[Math.min(...iLngs),Math.min(...iLats)],[Math.max(...iLngs),Math.max(...iLats)]],{padding:60,duration:800});
     if(resultEl)resultEl.innerHTML=`<div style="font-size:0.7rem;color:rgba(255,255,255,0.35);padding:5px 0 2px">${modeIcon} ${_accMinutes} min · ${modeLabel} — ${isKa?"ზონა გენერირებულია":"Zone generated"}</div>`;
+    // Recompute the livability index over the (larger) isochrone; the panel
+    // already owns the map layers, so don't re-render them here.
+    runNearbyAnalysis({area:isoFeat.geometry,renderMap:false});
     logFeatureUse("accessibility_isochrone").catch(()=>{});
   }catch(e){
     console.error("Accessibility:",e);
@@ -11217,7 +11275,7 @@ async function loadParcel(lbl, code){
     setupProCard();
   }
   showParcelPopup(parcelCentroid);
-  if(!isLine)runNearbyAnalysis();
+  if(!isLine)runNearbyAnalysis(_isLargeParcel()?{area:_currentParcelGeoJSON}:{});
   setStatus(tr.found,"success");
   const htmlOwners=parseOwners(attrs.owners);
   // Full parcel record for the report (ownership can be multi-owner)
@@ -11381,7 +11439,7 @@ async function loadParcelFromDB(cadastral){
     setupProCard();
   }
   showParcelPopup(parcelCentroid);
-  if(!isLine)runNearbyAnalysis();
+  if(!isLine)runNearbyAnalysis(_isLargeParcel()?{area:_currentParcelGeoJSON}:{});
   setStatus(tr.found,"success");
   logFeatureUse("map_click").catch(()=>{});
 }
