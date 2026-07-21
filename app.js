@@ -5743,21 +5743,48 @@ function _updatePermitDevWarning(){
 
 function _esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 
-// ── Nearby (100 m walk) — auto summary appended to the parcel float card ───────
+// ── Nearby (250 m walk) — auto summary appended to the parcel float card ───────
 // Replaces the old "generate an isochrone first" gate for the nearby-data layers
 // (schools, kindergartens, transit, parking, road incidents): on parcel select
 // we build a 100 m WALKING-NETWORK polygon (Mapbox contours_meters, not crow-
 // flies) and count each layer within it. Running the full accessibility isochrone
 // still expands the search area via the existing panel toggles.
 let _nearbyReqToken=0;
-const NEARBY_WALK_M=100;
+const NEARBY_WALK_M=250;
+const UVI_NAME="Urban Vitality Index"; // composite location score (change here to rename)
+let _lastDiversity=null; // Shannon land-use diversity (0–100) from the last Urban Functions run, or null
+let _lastNearbyCounts=null; // last nearby result, so the composite can re-render when diversity arrives
+// Composite location score from the 250 m nearby variables (+ diversity when
+// available). Each sub-score is 0–1 via a saturating curve (diminishing
+// returns); weights: education/transit/diversity 1.0, parking 0.75. Weights are
+// renormalised over whichever components are available. → { score, grade, parts }.
+function _computeUVI(c){
+  const parts=[];
+  const eduN=(c.schools||0)+(c.kg||0);
+  parts.push({label:(lang==='ka'?'განათლება':'Education'),w:1.0,s:1-Math.exp(-eduN/2)});
+  const routeBase=(c.routes&&c.routes.length)||c.transit||0;
+  const relMult=c.reliability?({A:1,B:0.9,C:0.8,D:0.7,E:0.6,F:0.5}[c.reliability.grade]||0.8):1;
+  parts.push({label:(lang==='ka'?'ტრანსპორტი':'Transit'),w:1.0,s:(1-Math.exp(-routeBase/4))*relMult});
+  const pkCap=(c.pkCars||0)+(c.pkTaxi||0)+(c.pkLoad||0);
+  parts.push({label:(lang==='ka'?'პარკირება':'Parking'),w:0.75,s:1-Math.exp(-pkCap/80)});
+  if(_lastDiversity!=null)parts.push({label:(lang==='ka'?'მრავალფეროვნება':'Diversity'),w:1.0,s:Math.max(0,Math.min(1,_lastDiversity/100))});
+  const wsum=parts.reduce((a,p)=>a+p.w,0);
+  if(!wsum)return null;
+  const score=Math.round(parts.reduce((a,p)=>a+p.w*p.s,0)/wsum*100);
+  const grade=score>=80?'A':score>=70?'B':score>=60?'C':score>=50?'D':score>=40?'E':'F';
+  return {score,grade,parts};
+}
+function _refreshNearbyCompositeIfShown(){
+  const row=document.getElementById('pfc-nearby-row');
+  if(row&&row.style.display!=='none'&&_lastNearbyCounts)_renderNearby(_lastNearbyCounts);
+}
 async function _fetchWalkArea(lng,lat,meters){
   const url=`https://api.mapbox.com/isochrone/v1/mapbox/walking/${lng},${lat}?contours_meters=${meters}&polygons=true&access_token=${MAPBOX_TOKEN}`;
   const res=await fetch(url);if(!res.ok)throw new Error("walk_area_fail");
   const j=await res.json();return j.features?.[0]?.geometry||null;
 }
 function _setNearbyFloat(html){
-  const ti=document.getElementById('pfc-nearby-title');if(ti)ti.textContent=(lang==='ka')?"ახლომდებარე · 100 მ ფეხით":"Nearby · 100 m walk";
+  const ti=document.getElementById('pfc-nearby-title');if(ti)ti.textContent=(lang==='ka')?"ახლომდებარე · 250 მ ფეხით":"Nearby · 250 m walk";
   const list=document.getElementById('pfc-nearby-list');if(list)list.innerHTML=html||'';
   const row=document.getElementById('pfc-nearby-row');if(row)row.style.display=html?'block':'none';
   if(!html){const note=document.getElementById('pfc-nearby-note');if(note){note.style.display='none';note.textContent='';}}
@@ -5765,6 +5792,7 @@ function _setNearbyFloat(html){
 }
 function _hideNearbyRow(){
   _nearbyReqToken++;
+  _lastDiversity=null;_lastNearbyCounts=null;
   _setNearbyFloat('');
   // The map layers are the conventional ones (schools/kg/transit/parking) and are
   // cleared by resetAnalysis; nothing extra to clear here.
@@ -5773,7 +5801,7 @@ async function runNearbyAnalysis(){
   if(!parcelCentroid)return;
   const token=++_nearbyReqToken;
   const isKa=lang==='ka';
-  _setNearbyFloat(`<div class="zp-note"><span class="zp-spin"></span> ${isKa?"ახლომდებარე ობიექტების ძიება…":"Searching within a 100 m walk…"}</div>`);
+  _setNearbyFloat(`<div class="zp-note"><span class="zp-spin"></span> ${isKa?"ახლომდებარე ობიექტების ძიება…":"Searching within a 250 m walk…"}</div>`);
   let area=null;
   try{area=await _fetchWalkArea(parcelCentroid[0],parcelCentroid[1],NEARBY_WALK_M);}catch(_){}
   if(token!==_nearbyReqToken)return;
@@ -5856,6 +5884,7 @@ async function _nearbyReliability(stopIds){
 function _relColor(g){return g==='A'?'#34d399':g==='B'?'#a3e635':g==='C'?'#fbbf24':g==='D'?'#fb923c':'#f87171';}
 function _renderNearby(c){
   const isKa=lang==='ka';
+  _lastNearbyCounts=c;
   const parkingTotal=c.parkingFree+c.parkingPaid;
   // Main line + optional detail line beneath it
   const mainRow=(label,val)=>`<div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:1px"><span style="font-size:0.62rem;color:rgba(255,255,255,0.5)">${label}</span><span style="font-size:0.68rem;font-weight:600;color:rgba(255,255,255,0.85);white-space:nowrap">${val}</span></div>`;
@@ -5878,16 +5907,26 @@ function _renderNearby(c){
     items.push(mainRow(isKa?'ავტოსადგომები':'Parking areas',parkingTotal)+detail(det));
   }
   const total=c.schools+c.kg+c.transit+parkingTotal;
-  const html=items.join('');
+  // Composite headline tile (Urban Vitality Index)
+  let tile='';
+  const uvi=(total>0||_lastDiversity!=null)?_computeUVI(c):null;
+  if(uvi){
+    tile=`<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 9px;margin-bottom:7px;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.28);border-radius:7px">`
+      +`<div style="min-width:0"><div style="font-size:0.56rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:rgba(165,180,252,0.85)">${UVI_NAME}</div>`
+      +`<div style="font-size:0.5rem;color:rgba(255,255,255,0.35);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${uvi.parts.map(p=>p.label).join(' · ')}</div></div>`
+      +`<div style="text-align:right;white-space:nowrap"><span style="font-size:1.15rem;font-weight:800;color:${_relColor(uvi.grade)}">${uvi.score}</span><span style="font-size:0.72rem;font-weight:700;color:${_relColor(uvi.grade)};margin-left:3px">${uvi.grade}</span></div>`
+      +`</div>`;
+  }
+  const html=tile+items.join('');
   // Render directly (not via _setNearbyFloat) so the row + note stay visible even when nothing is found
-  const ti=document.getElementById('pfc-nearby-title');if(ti)ti.textContent=isKa?"ახლომდებარე · 100 მ ფეხით":"Nearby · 100 m walk";
+  const ti=document.getElementById('pfc-nearby-title');if(ti)ti.textContent=isKa?"ახლომდებარე · 250 მ ფეხით":"Nearby · 250 m walk";
   const list=document.getElementById('pfc-nearby-list');if(list)list.innerHTML=html;
   const rowEl=document.getElementById('pfc-nearby-row');if(rowEl)rowEl.style.display='block';
   const card=document.getElementById('parcel-float-card');if(card&&card.style.display==='none')card.style.display='block';
   const note=document.getElementById('pfc-nearby-note');
   if(note){
     note.textContent=total===0
-      ? (isKa?"100 მ ფეხით სავალ მანძილში ვერაფერი მოიძებნა. გაუშვი მისაწვდომობის ანალიზი ფართო არეალის მოსაძებნად.":"Nothing found within a 100 m walk. Run the accessibility analysis to search a larger area.")
+      ? (isKa?"250 მ ფეხით სავალ მანძილში ვერაფერი მოიძებნა. გაუშვი მისაწვდომობის ანალიზი ფართო არეალის მოსაძებნად.":"Nothing found within a 250 m walk. Run the accessibility analysis to search a larger area.")
       : (isKa?"გაუშვი მისაწვდომობის ანალიზი უფრო ფართო არეალის დასაფარად.":"Run the accessibility analysis to cover a larger area.");
     note.style.display='';
   }
@@ -7771,6 +7810,8 @@ async function toggleAccOSM(){
     }
     _osmActive=true;
     const sdi=shannonIndex(catCounts);
+    _lastDiversity=sdi; // feed the composite Urban Vitality Index
+    if(typeof _refreshNearbyCompositeIfShown==='function')_refreshNearbyCompositeIfShown();
     const verdict=verdictFor(sdi);
     const circ=169.65;
     const offset=(circ*(1-sdi/100)).toFixed(2);
