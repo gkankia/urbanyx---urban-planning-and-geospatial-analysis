@@ -5766,32 +5766,8 @@ function _setNearbyFloat(html){
 function _hideNearbyRow(){
   _nearbyReqToken++;
   _setNearbyFloat('');
-  _clearNearbyMap();
-}
-// ── Nearby map layers: the 100 m walk boundary + found points + parking polygons
-function _ensureNearbyMapSetup(){
-  if(!mapReady||map.getSource('nearby-pts'))return;
-  map.addSource('nearby-area',{type:'geojson',data:{type:'FeatureCollection',features:[]}});
-  map.addSource('nearby-parking',{type:'geojson',data:{type:'FeatureCollection',features:[]}});
-  map.addSource('nearby-pts',{type:'geojson',data:{type:'FeatureCollection',features:[]}});
-  map.addLayer({id:'nearby-area-line',type:'line',source:'nearby-area',slot:'top',paint:{'line-color':'#a5b4fc','line-width':1.5,'line-dasharray':[2,2],'line-opacity':0.7}});
-  map.addLayer({id:'nearby-parking-fill',type:'fill',source:'nearby-parking',slot:'top',paint:{'fill-color':['case',['get','paid'],'#fbbf24','#34d399'],'fill-opacity':0.18}});
-  map.addLayer({id:'nearby-parking-line',type:'line',source:'nearby-parking',slot:'top',paint:{'line-color':['case',['get','paid'],'#fbbf24','#34d399'],'line-width':1,'line-opacity':0.6}});
-  map.addLayer({id:'nearby-pts-dot',type:'circle',source:'nearby-pts',slot:'top',paint:{'circle-radius':5,'circle-color':['match',['get','kind'],'school','#60a5fa','kindergarten','#f472b6','transit','#a78bfa','incident','#ef4444','#ffffff'],'circle-stroke-color':'#0d0d0d','circle-stroke-width':1.5,'circle-opacity':0.95}});
-  map.addLayer({id:'nearby-pts-lbl',type:'symbol',source:'nearby-pts',slot:'top',minzoom:15,layout:{'text-field':['get','name'],'text-size':10,'text-offset':[0,1.1],'text-anchor':'top','text-optional':true,'text-allow-overlap':false},paint:{'text-color':'rgba(255,255,255,0.85)','text-halo-color':'#0d0d0d','text-halo-width':1.2}});
-}
-function _renderNearbyOnMap(area,pts,parking){
-  if(!mapReady)return;
-  _ensureNearbyMapSetup();
-  map.getSource('nearby-area')?.setData(area?{type:'Feature',geometry:area,properties:{}}:{type:'FeatureCollection',features:[]});
-  map.getSource('nearby-pts')?.setData({type:'FeatureCollection',features:pts||[]});
-  map.getSource('nearby-parking')?.setData({type:'FeatureCollection',features:parking||[]});
-}
-function _clearNearbyMap(){
-  if(!mapReady)return;
-  map.getSource('nearby-area')?.setData({type:'FeatureCollection',features:[]});
-  map.getSource('nearby-pts')?.setData({type:'FeatureCollection',features:[]});
-  map.getSource('nearby-parking')?.setData({type:'FeatureCollection',features:[]});
+  // The map layers are the conventional ones (schools/kg/transit/parking) and are
+  // cleared by resetAnalysis; nothing extra to clear here.
 }
 async function runNearbyAnalysis(){
   if(!parcelCentroid)return;
@@ -5801,29 +5777,41 @@ async function runNearbyAnalysis(){
   let area=null;
   try{area=await _fetchWalkArea(parcelCentroid[0],parcelCentroid[1],NEARBY_WALK_M);}catch(_){}
   if(token!==_nearbyReqToken)return;
-  if(!area){_setNearbyFloat(`<div class="zp-note">${isKa?"ვერ მოხერხდა არეალის დათვლა.":"Could not compute the walking area."}</div>`);_clearNearbyMap();return;}
-  const pts=[],parking=[];
-  const areaFeat={type:'Feature',geometry:area,properties:{}};
+  if(!area){_setNearbyFloat(`<div class="zp-note">${isKa?"ვერ მოხერხდა არეალის დათვლა.":"Could not compute the walking area."}</div>`);return;}
+  // Collect the raw features per layer so we can render them with the SAME
+  // conventional map symbology / tooltip / functionality (not custom markers).
+  const schoolFeats=[],kgFeats=[],stops=[],pkPoly=[],pkCent=[];
+  const _pkBuild=(wg,c,p,type)=>{
+    const cars=Math.round(p.manqanis_a)||0,taxi=Math.round(p.taxi_adgil)||0,handi=Math.round(p.ssm_adgili)||0,load=Math.round(p.distribuci)||0,ev=Math.round(p.el_damteni)||0;
+    const zoneCode=p.zone_code||p.senisvna||'';
+    const props={cars,taxi,handi,load,ev,zoneCode,type,name:p.parkirebis||'',_pkId:pkPoly.length};
+    pkPoly.push({type:'Feature',geometry:wg,properties:props});
+    pkCent.push({type:'Feature',geometry:{type:'Point',coordinates:[c[0],c[1]]},properties:{...props,label:zoneCode}});
+  };
   const tasks=[
-    (async()=>{try{if(!_schoolsGeoJSON){const r=await fetch("data/public_schools.geojson");if(r.ok)_schoolsGeoJSON=await r.json();}for(const f of(_schoolsGeoJSON?.features||[])){const g=f.geometry;if(!g)continue;const pt=g.type==='Point'?g.coordinates:(g.coordinates?.[0]?.[0]??null);if(pt&&pointInPolygon(pt[0],pt[1],area))pts.push({type:'Feature',geometry:{type:'Point',coordinates:[pt[0],pt[1]]},properties:{kind:'school',name:f.properties?.school_name||f.properties?.['სკოლა']||(isKa?'სკოლა':'School')}});}}catch(_){}})(),
-    (async()=>{try{if(!_kgGeoJSON){const r=await fetch("data/kindergartens_tbilisi_1.geojson");if(r.ok)_kgGeoJSON=await r.json();}for(const f of(_kgGeoJSON?.features||[])){const g=f.geometry;if(!g||g.type!=='Point')continue;if(pointInPolygon(g.coordinates[0],g.coordinates[1],area))pts.push({type:'Feature',geometry:{type:'Point',coordinates:[g.coordinates[0],g.coordinates[1]]},properties:{kind:'kindergarten',name:f.properties?.name||f.properties?.['დასახელება']||(isKa?'ბაღი':'Kindergarten')}});}}catch(_){}})(),
-    (async()=>{try{const stops=await _ttcLoadStops();for(const s of(stops||[])){if(s&&s.lon!=null&&pointInPolygon(s.lon,s.lat,area))pts.push({type:'Feature',geometry:{type:'Point',coordinates:[s.lon,s.lat]},properties:{kind:'transit',name:s.name||(isKa?'გაჩერება':'Stop')}});}}catch(_){}})(),
-    (async()=>{try{if(!_parkingPaidCache){const r=await fetch(PARKING_PAID_URL);if(r.ok)_parkingPaidCache=await r.json();}for(const f of(_parkingPaidCache?.features||[])){if(f.properties?.zone_id!=='A')continue;try{const wg=_parkingConvertGeom(f.geometry);const ring=wg.type==='MultiPolygon'?wg.coordinates[0][0]:wg.coordinates[0];const c=_parkingCentroidOfRing(ring);if(pointInPolygon(c[0],c[1],area))parking.push({type:'Feature',geometry:wg,properties:{paid:true}});}catch(_){}}}catch(_){}})(),
-    (async()=>{try{if(!_parkingFreeCache){const r=await fetch(PARKING_FREE_URL);if(r.ok)_parkingFreeCache=await r.json();}for(const f of(_parkingFreeCache?.features||[])){try{const wg=_parkingConvertGeom(f.geometry);const ring=wg.type==='MultiPolygon'?wg.coordinates[0][0]:wg.coordinates[0];const c=_parkingCentroidOfRing(ring);if(pointInPolygon(c[0],c[1],area))parking.push({type:'Feature',geometry:wg,properties:{paid:false}});}catch(_){}}}catch(_){}})(),
-    (async()=>{try{const bbox=isoBbox(areaFeat);const q=`[out:json][timeout:25];(node[accident](${bbox}););out;`;const data=await fetchOverpass(q,2);for(const el of(data?.elements||[])){if(el.lon!=null&&pointInPolygon(el.lon,el.lat,area))pts.push({type:'Feature',geometry:{type:'Point',coordinates:[el.lon,el.lat]},properties:{kind:'incident',name:isKa?'შემთხვევა':'Incident'}});}}catch(_){}})(),
+    (async()=>{try{if(!_schoolsGeoJSON){const r=await fetch("data/public_schools.geojson");if(r.ok)_schoolsGeoJSON=await r.json();}for(const f of(_schoolsGeoJSON?.features||[])){const g=f.geometry;if(!g)continue;const pt=g.type==='Point'?g.coordinates:(g.coordinates?.[0]?.[0]??null);if(pt&&pointInPolygon(pt[0],pt[1],area))schoolFeats.push(f);}}catch(_){}})(),
+    (async()=>{try{if(!_kgGeoJSON){const r=await fetch("data/kindergartens_tbilisi_1.geojson");if(r.ok)_kgGeoJSON=await r.json();}for(const f of(_kgGeoJSON?.features||[])){const g=f.geometry;if(!g||g.type!=='Point')continue;if(pointInPolygon(g.coordinates[0],g.coordinates[1],area))kgFeats.push(f);}}catch(_){}})(),
+    (async()=>{try{const all=await _ttcLoadStops();for(const s of(all||[])){if(s&&s.lon!=null&&pointInPolygon(s.lon,s.lat,area))stops.push(s);}}catch(_){}})(),
+    (async()=>{try{if(!_parkingPaidCache){const r=await fetch(PARKING_PAID_URL);if(r.ok)_parkingPaidCache=await r.json();}for(const f of(_parkingPaidCache?.features||[])){if(f.properties?.zone_id!=='A')continue;try{const wg=_parkingConvertGeom(f.geometry);const ring=wg.type==='MultiPolygon'?wg.coordinates[0][0]:wg.coordinates[0];const c=_parkingCentroidOfRing(ring);if(pointInPolygon(c[0],c[1],area))_pkBuild(wg,c,f.properties,'paid');}catch(_){}}}catch(_){}})(),
+    (async()=>{try{if(!_parkingFreeCache){const r=await fetch(PARKING_FREE_URL);if(r.ok)_parkingFreeCache=await r.json();}for(const f of(_parkingFreeCache?.features||[])){if(f.properties?.zone_id!=='ALL')continue;try{const wg=_parkingConvertGeom(f.geometry);const ring=wg.type==='MultiPolygon'?wg.coordinates[0][0]:wg.coordinates[0];const c=_parkingCentroidOfRing(ring);if(pointInPolygon(c[0],c[1],area))_pkBuild(wg,c,f.properties,'free');}catch(_){}}}catch(_){}})(),
   ];
   await Promise.allSettled(tasks);
   if(token!==_nearbyReqToken)return;
+  // Render on the map with the conventional layers (same icons/tooltips/behaviour)
+  if(mapReady){
+    if(schoolFeats.length)addSchoolsMapLayer(schoolFeats);else if(typeof clearSchoolsMapLayer==='function')clearSchoolsMapLayer();
+    if(kgFeats.length)addKgMapLayer(kgFeats);else if(typeof clearKgMapLayer==='function')clearKgMapLayer();
+    if(stops.length)_ttcShowOnMap(stops);else if(typeof _ttcRemoveFromMap==='function')_ttcRemoveFromMap();
+    if(pkPoly.length)_parkingRenderLayers(pkPoly,pkCent);else if(typeof _parkingRemoveLayer==='function')_parkingRemoveLayer();
+  }
   const counts={
-    schools:pts.filter(p=>p.properties.kind==='school').length,
-    kg:pts.filter(p=>p.properties.kind==='kindergarten').length,
-    transit:pts.filter(p=>p.properties.kind==='transit').length,
-    incidents:pts.filter(p=>p.properties.kind==='incident').length,
-    parkingPaid:parking.filter(p=>p.properties.paid).length,
-    parkingFree:parking.filter(p=>!p.properties.paid).length,
+    schools:schoolFeats.length,
+    kg:kgFeats.length,
+    transit:stops.length,
+    parkingPaid:pkPoly.filter(p=>p.properties.type==='paid').length,
+    parkingFree:pkPoly.filter(p=>p.properties.type==='free').length,
   };
   _renderNearby(counts);
-  _renderNearbyOnMap(area,pts,parking);
 }
 function _renderNearby(c){
   const isKa=lang==='ka';
@@ -5833,7 +5821,6 @@ function _renderNearby(c){
     {label:isKa?'ბაღები':'Kindergartens',n:c.kg},
     {label:isKa?'გაჩერებები':'Transit stops',n:c.transit},
     {label:isKa?'ავტოსადგომები':'Parking areas',n:parkingTotal,sub:parkingTotal?`${c.parkingFree} ${isKa?'უფასო':'free'} · ${c.parkingPaid} ${isKa?'ფასიანი':'paid'}`:''},
-    {label:isKa?'შემთხვევები':'Road incidents',n:c.incidents},
   ].filter(it=>it.n>0);  // hide zero-value categories
   const total=items.reduce((s,i)=>s+i.n,0);
   let html='';
@@ -5852,6 +5839,109 @@ function _renderNearby(c){
       : (isKa?"გაუშვი მისაწვდომობის ანალიზი უფრო ფართო არეალის დასაფარად.":"Run the accessibility analysis to cover a larger area.");
     note.style.display='';
   }
+}
+
+// Renders parking polygons + centroid icons + hover tooltip using the SAME
+// symbology/layers as the conventional accessibility parking layer. Shared by
+// the panel toggle and the nearby (100 m) auto-analysis.
+function _parkingRenderLayers(polyFeatures,centroidFeatures){
+  if(!mapReady)return;
+  _parkingRemoveLayer();
+  map.addSource('parking',{type:'geojson',data:{type:'FeatureCollection',features:polyFeatures}});
+  map.addLayer({id:'parking-fill',type:'fill',source:'parking',paint:{
+    'fill-color':['match',['get','type'],'free','#22c55e','#f97316'],
+    'fill-opacity':0.4
+  }});
+  map.addLayer({id:'parking-line',type:'line',source:'parking',paint:{
+    'line-color':['match',['get','type'],'free','#16a34a','#ea580c'],
+    'line-width':1,'line-opacity':0.85
+  }});
+  map.addSource('parking-centroids',{type:'geojson',data:{type:'FeatureCollection',features:centroidFeatures}});
+  const _pkIconDefs=[
+    ['pk-taxi', '🚕','taxi',  [-15,-15]],
+    ['pk-handi','♿', 'handi', [ 15,-15]],
+    ['pk-load', '🚚','load',  [-15,  15]],
+    ['pk-ev',   '⚡','ev',    [ 15,  15]],
+  ];
+  for(const [name,emoji] of _pkIconDefs){
+    if(!map.hasImage(name)){
+      const sz=24,cv=document.createElement('canvas');
+      cv.width=cv.height=sz;
+      const ctx=cv.getContext('2d');
+      ctx.font=`${sz-2}px serif`;
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText(emoji,sz/2,sz/2+1);
+      map.addImage(name,{width:sz,height:sz,data:new Uint8Array(ctx.getImageData(0,0,sz,sz).data.buffer)});
+    }
+  }
+  for(const [imgName,,key,offset] of _pkIconDefs){
+    map.addLayer({id:`parking-icon-${key}`,type:'symbol',source:'parking-centroids',
+      minzoom:14,
+      filter:['>',['get',key],0],
+      layout:{
+        'icon-image':imgName,'icon-size':0.65,
+        'icon-offset':offset,
+        'icon-allow-overlap':true,'icon-ignore-placement':true
+      }
+    });
+  }
+  map.addLayer({id:'parking-labels',type:'symbol',source:'parking-centroids',
+    minzoom:16,
+    layout:{
+      'text-field':['get','label'],'text-size':10,
+      'text-font':['DIN Pro Medium','Arial Unicode MS Regular'],
+      'text-anchor':'center','text-allow-overlap':false,'text-ignore-placement':false
+    },
+    paint:{
+      'text-color':['match',['get','type'],'free','#bbf7d0','#fed7aa'],
+      'text-halo-color':'rgba(0,0,0,0.7)','text-halo-width':1.2
+    }
+  });
+  map.addLayer({id:'parking-hover',type:'fill',source:'parking',
+    paint:{'fill-color':['match',['get','type'],'free','#86efac','#fdba74'],'fill-opacity':0.65},
+    filter:['==',['get','_pkId'],-1]
+  });
+  let pkTip=document.getElementById('parking-tip');
+  if(!pkTip){
+    pkTip=document.createElement('div');
+    pkTip.id='parking-tip';
+    pkTip.style.cssText='position:fixed;pointer-events:none;display:none;background:rgba(2,6,23,0.93);color:#e2e8f0;font-size:0.72rem;padding:9px 11px;border-radius:7px;box-shadow:0 4px 16px rgba(0,0,0,0.5);line-height:1.65;z-index:9999;border:1px solid rgba(255,255,255,0.1);min-width:140px';
+    document.body.appendChild(pkTip);
+  }
+  _pkHoverMove=e=>{
+    if(!e.features||!e.features.length){pkTip.style.display='none';return;}
+    const f=e.features[0].properties;
+    const isKa=lang==='ka';
+    map.setFilter('parking-hover',['==',['get','_pkId'],f._pkId]);
+    const isPaid=f.type==='paid';
+    let html='';
+    if(f.zoneCode) html+=`<div style="font-size:0.78rem;font-weight:700;color:#f8fafc;margin-bottom:5px">${escapeHtml(f.zoneCode)}</div>`;
+    html+=`<div style="margin-bottom:${f.name?4:6}px">${isPaid
+      ?`<span style="background:rgba(249,115,22,0.2);color:#fb923c;padding:1px 6px;border-radius:3px;font-size:0.67rem;font-weight:600">${isKa?'ფასიანი · Zone A':'Paid · Zone A'}</span>`
+      :`<span style="background:rgba(34,197,94,0.15);color:#4ade80;padding:1px 6px;border-radius:3px;font-size:0.67rem;font-weight:600">${isKa?'უფასო':'Free'}</span>`
+    }</div>`;
+    const displayName=f.name?_latinToKa(f.name):'';
+    if(displayName) html+=`<div style="color:rgba(255,255,255,0.4);font-size:0.63rem;margin-bottom:5px">${escapeHtml(displayName)}</div>`;
+    html+='<div style="border-top:1px solid rgba(255,255,255,0.08);padding-top:5px">';
+    if(f.cars>0) html+=`<div>🚗 <b>${f.cars}</b> ${isKa?'ავტომობილი':'cars'}</div>`;
+    if(f.taxi>0) html+=`<div>🚕 <b>${f.taxi}</b> ${isKa?'ტაქსი':'taxi'}</div>`;
+    if(f.handi>0) html+=`<div>♿ <b>${f.handi}</b> ${isKa?'შეზღ. შეს.':'accessible'}</div>`;
+    if(f.load>0) html+=`<div>🚚 <b>${f.load}</b> ${isKa?'დისტ.':'distribution'}</div>`;
+    if(f.ev>0) html+=`<div style="color:#fde68a">⚡ <b>${f.ev}</b> ${isKa?'EV დამტენი':'EV charger'}</div>`;
+    html+='</div>';
+    pkTip.innerHTML=html;
+    pkTip.style.display='block';
+    const mx=e.originalEvent.clientX,my=e.originalEvent.clientY;
+    const tw=pkTip.offsetWidth||160,th=pkTip.offsetHeight||120;
+    pkTip.style.left=(mx+16+tw>window.innerWidth?mx-tw-8:mx+16)+'px';
+    pkTip.style.top=(my+th+10>window.innerHeight?my-th-8:my+10)+'px';
+  };
+  _pkHoverLeave=()=>{
+    map.setFilter('parking-hover',['==',['get','_pkId'],-1]);
+    pkTip.style.display='none';
+  };
+  map.on('mousemove','parking-fill',_pkHoverMove);
+  map.on('mouseleave','parking-fill',_pkHoverLeave);
 }
 
 function clearParcelSelection(){
