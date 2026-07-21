@@ -4070,8 +4070,11 @@ async function onDrawCreate(){
   document.getElementById("info-card").style.display="none";
   document.getElementById("owner-results-card").style.display="none";
   logFeatureUse("map_click").catch(()=>{});
-  // Livability index over the drawn area of interest (behind the Run button)
-  _nearbyShowRunButton({area:poly});
+  // Livability index over the drawn area of interest (behind the Run button).
+  // Large AOIs (>5000 m²) also get the "internal" (within-boundary) option.
+  {const _aoiCtr=getCentroid(poly);
+   let _aoiBig=false;try{_aoiBig=turf.area({type:'Feature',geometry:poly,properties:{}})>=5000;}catch(_){}
+   _nearbyShowRunButton(_aoiBig?{center:_aoiCtr,internalGeom:poly}:{center:_aoiCtr});}
   // Walkability (free analysis) feature removed — #analyse-btn stays hidden
   setupProCard();
   // OSM analysis moved to Urban Functions accordion
@@ -5836,29 +5839,47 @@ async function _fetchWalkArea(lng,lat,meters){
   const res=await fetch(url);if(!res.ok)throw new Error("walk_area_fail");
   const j=await res.json();return j.features?.[0]?.geometry||null;
 }
-let _nearbyPendingOpts=null,_nearbyRan=false;
-// Show the "Run nearby analysis" button in the float card (does NOT run it). The
-// opts (e.g. the area for a large parcel) are stored for when the user clicks Run.
-function _nearbyShowRunButton(opts){
-  _nearbyPendingOpts=opts||{};
+let _nearbyWalkCenter=null,_nearbyInternalGeom=null,_nearbyRan=false;
+// Show the run button(s) in the float card (does NOT run anything yet).
+// cfg.center       — [lng,lat] for the walking-catchment ("nearby") analysis
+// cfg.internalGeom — parcel/AOI geometry; when present (large sites >5000 m²) a
+//                    second "Run internal analysis" button (within boundary) shows.
+function _nearbyShowRunButton(cfg){
+  cfg=cfg||{};
+  _nearbyWalkCenter=cfg.center||parcelCentroid||null;
+  _nearbyInternalGeom=cfg.internalGeom||null;
   _nearbyRan=false;
+  const isKa=lang==='ka';
   const isPro=!!(currentUser&&currentUser.plan==='pro');
+  const proTag=isPro?'':' <span style="font-size:0.5rem;letter-spacing:0.08em;background:rgba(165,180,252,0.2);color:#a5b4fc;border:1px solid rgba(165,180,252,0.4);border-radius:3px;padding:1px 4px;vertical-align:1px">PRO</span>';
   const row=document.getElementById('pfc-nearby-row');if(row)row.style.display='block';
   const btn=document.getElementById('pfc-nearby-run-btn');
-  if(btn){
-    btn.style.display='';btn.disabled=false;
-    const label=(lang==='ka')?'ახლომდებარე ანალიზის გაშვება':'Run nearby analysis';
-    btn.innerHTML=label+(isPro?'':' <span style="font-size:0.5rem;letter-spacing:0.08em;background:rgba(165,180,252,0.2);color:#a5b4fc;border:1px solid rgba(165,180,252,0.4);border-radius:3px;padding:1px 4px;vertical-align:1px">PRO</span>');
+  if(btn){btn.style.display='';btn.disabled=false;btn.innerHTML=(isKa?'ახლომდებარე ანალიზის გაშვება':'Run nearby analysis')+proTag;}
+  const ibtn=document.getElementById('pfc-nearby-internal-btn');
+  if(ibtn){
+    if(_nearbyInternalGeom){ibtn.style.display='';ibtn.innerHTML=(isKa?'შიდა ანალიზის გაშვება':'Run internal analysis')+proTag;}
+    else ibtn.style.display='none';
   }
   const body=document.getElementById('pfc-nearby-body');if(body)body.style.display='none';
   const card=document.getElementById('parcel-float-card');if(card&&card.style.display==='none')card.style.display='block';
 }
+function _nearbyHideButtons(){
+  const b=document.getElementById('pfc-nearby-run-btn');if(b)b.style.display='none';
+  const i=document.getElementById('pfc-nearby-internal-btn');if(i)i.style.display='none';
+  const body=document.getElementById('pfc-nearby-body');if(body)body.style.display='';
+}
 function _nearbyRunClicked(){
   if(!currentUser||currentUser.plan!=='pro'){openPaywall();return;} // Pro feature
-  const btn=document.getElementById('pfc-nearby-run-btn');if(btn)btn.style.display='none';
-  const body=document.getElementById('pfc-nearby-body');if(body)body.style.display='';
+  _nearbyHideButtons();
   _nearbyRan=true;
-  runNearbyAnalysis(_nearbyPendingOpts||{});
+  runNearbyAnalysis({center:_nearbyWalkCenter}); // walking catchment (beyond boundary)
+}
+function _nearbyRunInternalClicked(){
+  if(!currentUser||currentUser.plan!=='pro'){openPaywall();return;} // Pro feature
+  if(!_nearbyInternalGeom)return;
+  _nearbyHideButtons();
+  _nearbyRan=true;
+  runNearbyAnalysis({area:_nearbyInternalGeom,internal:true}); // within parcel/AOI boundary
 }
 // Clear ONLY the nearby analysis (map layers + card body); keep the parcel.
 function _nearbyClearClicked(){
@@ -5871,7 +5892,7 @@ function _nearbyClearClicked(){
   if(typeof clearOverpassLayers==='function')clearOverpassLayers();
   const list=document.getElementById('pfc-nearby-list');if(list)list.innerHTML='';
   const note=document.getElementById('pfc-nearby-note');if(note){note.style.display='none';note.textContent='';}
-  _nearbyShowRunButton(_nearbyPendingOpts); // back to the Run button, parcel intact
+  _nearbyShowRunButton({center:_nearbyWalkCenter,internalGeom:_nearbyInternalGeom}); // back to the button(s), parcel intact
 }
 function _setNearbyFloat(html){
   const list=document.getElementById('pfc-nearby-list');if(list)list.innerHTML=html||'';
@@ -5917,12 +5938,13 @@ function _pkOverlapsAnyPaid(freeGeom,fcx,fcy,paidWgs){
 async function runNearbyAnalysis(opts){
   opts=opts||{};
   const renderMap=opts.renderMap!==false;
-  if(!opts.area&&!parcelCentroid)return;
+  const ctr=opts.center||parcelCentroid||null; // walking-catchment origin
+  if(!opts.area&&!ctr)return;
   const token=++_nearbyReqToken;
   const isKa=lang==='ka';
-  _setNearbyFloat(`<div class="zp-note"><span class="zp-spin"></span> ${isKa?"ახლომდებარე ობიექტების ძიება…":"Searching nearby…"}</div>`);
+  _setNearbyFloat(`<div class="zp-note"><span class="zp-spin"></span> ${isKa?"ობიექტების ძიება…":"Searching…"}</div>`);
   let area=opts.area||null;
-  if(!area){try{area=await _fetchWalkArea(parcelCentroid[0],parcelCentroid[1],NEARBY_WALK_M);}catch(_){}}
+  if(!area){try{area=await _fetchWalkArea(ctr[0],ctr[1],NEARBY_WALK_M);}catch(_){}}
   if(token!==_nearbyReqToken)return;
   if(!area){_setNearbyFloat(`<div class="zp-note">${isKa?"ვერ მოხერხდა არეალის დათვლა.":"Could not compute the search area."}</div>`);return;}
   // Collect the raw features per layer so we can render them with the SAME
@@ -5977,6 +5999,7 @@ async function runNearbyAnalysis(opts){
     routes:null,        // filled in phase 2
     reliability:null,   // filled in phase 2 (Pro + data available)
     overpass:'pending', // land-use diversity fetch: 'pending' | 'ok' | 'fail'
+    internal:!!opts.internal, // true = analysis bounded to the parcel/AOI
   };
   _renderNearby(counts); // phase 1 — immediate
   // Phase 2 — enrich transit with the routes serving nearby stops + the
@@ -6099,7 +6122,7 @@ function _renderNearby(c){
   }
   const html=tile+items.join('');
   // Render directly (not via _setNearbyFloat) so the row + note stay visible even when nothing is found
-  const ti=document.getElementById('pfc-nearby-title');if(ti)ti.textContent=isKa?"ახლომდებარე":"Nearby";
+  const ti=document.getElementById('pfc-nearby-title');if(ti)ti.textContent=c.internal?(isKa?"შიგნით":"Within boundary"):(isKa?"ახლომდებარე":"Nearby");
   const clr=document.getElementById('pfc-nearby-clear-btn');if(clr)clr.textContent=isKa?'გასუფთავება':'Clear';
   const list=document.getElementById('pfc-nearby-list');if(list)list.innerHTML=html;
   const rowEl=document.getElementById('pfc-nearby-row');if(rowEl)rowEl.style.display='block';
@@ -6108,9 +6131,16 @@ function _renderNearby(c){
   const card=document.getElementById('parcel-float-card');if(card&&card.style.display==='none')card.style.display='block';
   const note=document.getElementById('pfc-nearby-note');
   if(note){
-    let msg=total===0
-      ? (isKa?"ახლომდებარე ვერაფერი მოიძებნა. გაუშვი მისაწვდომობის ანალიზი ფართო არეალის მოსაძებნად.":"Nothing found nearby. Run the accessibility analysis to search a larger area.")
-      : (isKa?"გაუშვი მისაწვდომობის ანალიზი უფრო ფართო არეალის დასაფარად.":"Run the accessibility analysis to cover a larger area.");
+    let msg;
+    if(c.internal){
+      msg=total===0
+        ? (isKa?"არჩეული საზღვრების შიგნით ვერაფერი მოიძებნა.":"Nothing found within the selected boundary.")
+        : (isKa?"ანალიზი შემოსაზღვრულია არჩეული ტერიტორიით.":"Analysis is limited to the selected boundary.");
+    }else{
+      msg=total===0
+        ? (isKa?"ახლომდებარე ვერაფერი მოიძებნა. გაუშვი მისაწვდომობის ანალიზი ფართო არეალის მოსაძებნად.":"Nothing found nearby. Run the accessibility analysis to search a larger area.")
+        : (isKa?"გაუშვი მისაწვდომობის ანალიზი უფრო ფართო არეალის დასაფარად.":"Run the accessibility analysis to cover a larger area.");
+    }
     if(c.overpass==='fail')
       msg+=(isKa?" მიწათსარგებლობის (მრავალფეროვნების) მონაცემი ვერ ჩაიტვირთა — გაუშვი მისაწვდომობის ანალიზი მის ჩასართავად."
               :" Land-use (diversity) data didn't respond — run the accessibility analysis to include it.");
@@ -11393,7 +11423,7 @@ async function loadParcel(lbl, code){
     setupProCard();
   }
   showParcelPopup(parcelCentroid);
-  if(!isLine)_nearbyShowRunButton(_isLargeParcel()?{area:_currentParcelGeoJSON}:{});
+  if(!isLine)_nearbyShowRunButton(_isLargeParcel()?{internalGeom:_currentParcelGeoJSON}:{});
   setStatus(tr.found,"success");
   const htmlOwners=parseOwners(attrs.owners);
   // Full parcel record for the report (ownership can be multi-owner)
@@ -11557,7 +11587,7 @@ async function loadParcelFromDB(cadastral){
     setupProCard();
   }
   showParcelPopup(parcelCentroid);
-  if(!isLine)_nearbyShowRunButton(_isLargeParcel()?{area:_currentParcelGeoJSON}:{});
+  if(!isLine)_nearbyShowRunButton(_isLargeParcel()?{internalGeom:_currentParcelGeoJSON}:{});
   setStatus(tr.found,"success");
   logFeatureUse("map_click").catch(()=>{});
 }
