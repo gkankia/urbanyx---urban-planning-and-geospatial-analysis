@@ -4117,21 +4117,85 @@ function _osmCat(tags){
   if(!tags)return null;
   const a=tags.amenity,s=tags.shop,o=tags.office,l=tags.leisure,t=tags.tourism;
   if(a){
+    // Schools & kindergartens are covered by their own analysis layers — exclude
+    // them from the land-use POI layer everywhere (map + diversity SDI).
+    if(a==='school'||a==='kindergarten')return null;
     if(['restaurant','cafe','bar','fast_food','food_court','pub','biergarten','ice_cream'].includes(a))return'food';
-    if(['school','university','college','kindergarten','library','language_school'].includes(a))return'education';
+    if(['university','college','library','language_school'].includes(a))return'education';
     if(['hospital','clinic','pharmacy','doctors','dentist','veterinary'].includes(a))return'health';
     if(['bank','post_office','police','fire_station','townhall','courthouse','embassy'].includes(a))return'public';
     if(['park','playground'].includes(a))return'leisure';
-    return'other';
+    return null; // uncategorised amenities → dropped (no grey symbols)
   }
   if(s)return'retail';if(o)return'office';if(l)return'leisure';if(t)return'tourism';
   return null;
 }
 let _osmActive=false,_syntaxActive=false;
+// POI category fill colors + a brighter tone used for the ring / hover pulse
+const _OSM_COL={food:'#f97316',retail:'#ec4899',education:'#6366f1',health:'#ef4444',public:'#14b8a6',leisure:'#22c55e',tourism:'#eab308',office:'#a855f7'};
+const _OSM_COL_BRIGHT={food:'#fdba74',retail:'#f9a8d4',education:'#a5b4fc',health:'#fca5a5',public:'#5eead4',leisure:'#86efac',tourism:'#fde047',office:'#d8b4fe'};
+function _osmColorExpr(m){const e=['match',['get','cat']];for(const k in m){e.push(k,m[k]);}e.push('rgba(255,255,255,0.5)');return e;}
+let _osmHoverMove=null,_osmHoverLeave=null,_osmHoverRAF=null;
+// Shared land-use POI renderer used platform-wide (Urban Functions layer + nearby).
+// Small dot in the category color with a brighter thin ring, no name labels;
+// names appear only on hover, with an animated pulsing ring.
+function _renderOverpassPOIs(gj){
+  if(!mapReady)return;
+  if(!map.getSource('overpass-pois'))map.addSource('overpass-pois',{type:'geojson',data:gj});
+  else map.getSource('overpass-pois').setData(gj);
+  if(!map.getSource('overpass-hover'))map.addSource('overpass-hover',{type:'geojson',data:{type:'FeatureCollection',features:[]}});
+  if(!map.getLayer('overpass-circles')){
+    map.addLayer({id:'overpass-circles',type:'circle',source:'overpass-pois',paint:{
+      'circle-radius':['interpolate',['linear'],['zoom'],13,2,17,4.5],
+      'circle-color':_osmColorExpr(_OSM_COL),
+      'circle-stroke-width':1.2,
+      'circle-stroke-color':_osmColorExpr(_OSM_COL_BRIGHT),
+      'circle-stroke-opacity':0.9,
+      'circle-opacity':0.95}});
+  }
+  if(!map.getLayer('overpass-hover-ring')){
+    map.addLayer({id:'overpass-hover-ring',type:'circle',source:'overpass-hover',paint:{
+      'circle-radius':6,'circle-color':'rgba(0,0,0,0)',
+      'circle-stroke-width':2,'circle-stroke-color':_osmColorExpr(_OSM_COL_BRIGHT),'circle-stroke-opacity':0.9}});
+  }
+  let tip=document.getElementById('overpass-tip');
+  if(!tip){tip=document.createElement('div');tip.id='overpass-tip';tip.style.cssText='position:fixed;pointer-events:none;display:none;background:rgba(2,6,23,0.92);color:#e2e8f0;font-size:0.7rem;padding:5px 9px;border-radius:6px;box-shadow:0 4px 14px rgba(0,0,0,0.5);z-index:9999;border:1px solid rgba(255,255,255,0.1);white-space:nowrap';document.body.appendChild(tip);}
+  const move=e=>{
+    if(!e.features||!e.features.length)return;
+    const f=e.features[0];
+    map.getCanvas().style.cursor='pointer';
+    map.getSource('overpass-hover')?.setData({type:'FeatureCollection',features:[{type:'Feature',geometry:f.geometry,properties:{cat:f.properties.cat}}]});
+    _osmStartHoverPulse();
+    const nm=f.properties.name||OSM_CATS[f.properties.cat]?.label||'';
+    if(nm){tip.textContent=nm;tip.style.display='block';const mx=e.originalEvent.clientX,my=e.originalEvent.clientY;const tw=tip.offsetWidth||120;tip.style.left=(mx+14+tw>window.innerWidth?mx-tw-8:mx+14)+'px';tip.style.top=(my+10)+'px';}
+    else tip.style.display='none';
+  };
+  const leave=()=>{map.getCanvas().style.cursor='';map.getSource('overpass-hover')?.setData({type:'FeatureCollection',features:[]});_osmStopHoverPulse();tip.style.display='none';};
+  try{map.off('mousemove','overpass-circles',_osmHoverMove);map.off('mouseleave','overpass-circles',_osmHoverLeave);}catch(_){}
+  _osmHoverMove=move;_osmHoverLeave=leave;
+  map.on('mousemove','overpass-circles',_osmHoverMove);
+  map.on('mouseleave','overpass-circles',_osmHoverLeave);
+}
+function _osmStartHoverPulse(){
+  if(_osmHoverRAF)return;
+  let t0=null;
+  const step=(ts)=>{
+    if(!mapReady||!map.getLayer('overpass-hover-ring')){_osmHoverRAF=null;return;}
+    if(t0==null)t0=ts;
+    const p=((ts-t0)%900)/900;
+    try{map.setPaintProperty('overpass-hover-ring','circle-radius',6+p*9);map.setPaintProperty('overpass-hover-ring','circle-stroke-opacity',0.9*(1-p));}catch(_){}
+    _osmHoverRAF=requestAnimationFrame(step);
+  };
+  _osmHoverRAF=requestAnimationFrame(step);
+}
+function _osmStopHoverPulse(){if(_osmHoverRAF){cancelAnimationFrame(_osmHoverRAF);_osmHoverRAF=null;}}
 function clearOverpassLayers(){
   if(!mapReady)return;
-  ['overpass-labels','overpass-circles'].forEach(id=>{try{if(map.getLayer(id))map.removeLayer(id);}catch{}});
-  try{if(map.getSource('overpass-pois'))map.removeSource('overpass-pois');}catch{}
+  _osmStopHoverPulse();
+  try{map.off('mousemove','overpass-circles',_osmHoverMove);map.off('mouseleave','overpass-circles',_osmHoverLeave);}catch{}
+  const tip=document.getElementById('overpass-tip');if(tip)tip.style.display='none';
+  ['overpass-labels','overpass-circles','overpass-hover-ring'].forEach(id=>{try{if(map.getLayer(id))map.removeLayer(id);}catch{}});
+  ['overpass-pois','overpass-hover'].forEach(id=>{try{if(map.getSource(id))map.removeSource(id);}catch{}});
   _osmActive=false;
 }
 function clearSyntaxLayers(){
@@ -4271,21 +4335,7 @@ async function runOverpassAnalysis(){
       return acc;
     },[]);
     const gj={type:'FeatureCollection',features};
-    if(!map.getSource('overpass-pois'))map.addSource('overpass-pois',{type:'geojson',data:gj});
-    else map.getSource('overpass-pois').setData(gj);
-    if(!map.getLayer('overpass-circles')){
-      map.addLayer({id:'overpass-circles',type:'circle',source:'overpass-pois',paint:{
-        'circle-radius':['interpolate',['linear'],['zoom'],13,3,17,7],
-        'circle-color':['match',['get','cat'],
-          'food','#f97316','retail','#ec4899','education','#6366f1',
-          'health','#ef4444','public','#14b8a6','leisure','#22c55e',
-          'tourism','#eab308','office','#a855f7','rgba(255,255,255,0.3)'],
-        'circle-stroke-width':1,'circle-stroke-color':'rgba(0,0,0,0.4)','circle-opacity':0.9}});
-      map.addLayer({id:'overpass-labels',type:'symbol',source:'overpass-pois',layout:{
-        'text-field':['case',['!=',['get','name'],''],['get','name'],''],'text-size':9,
-        'text-offset':[0,1.2],'text-optional':true,'text-max-width':8},
-        paint:{'text-color':'rgba(255,255,255,0.75)','text-halo-color':'rgba(0,0,0,0.7)','text-halo-width':1}});
-    }
+    _renderOverpassPOIs(gj);
     _osmActive=true;
     btn?.classList.add('active');
     if(btn){btn.disabled=false;btn.innerHTML='OSM';}
@@ -5949,21 +5999,7 @@ async function _nearbyLandUse(area){
   },[]);
   // Plot POIs — reuse the conventional overpass-pois source + layers (identical symbology)
   const gj={type:'FeatureCollection',features};
-  if(!map.getSource('overpass-pois'))map.addSource('overpass-pois',{type:'geojson',data:gj});
-  else map.getSource('overpass-pois').setData(gj);
-  if(!map.getLayer('overpass-circles')){
-    map.addLayer({id:'overpass-circles',type:'circle',source:'overpass-pois',paint:{
-      'circle-radius':['interpolate',['linear'],['zoom'],13,3,17,7],
-      'circle-color':['match',['get','cat'],
-        'food','#f97316','retail','#ec4899','education','#6366f1',
-        'health','#ef4444','public','#14b8a6','leisure','#22c55e',
-        'tourism','#eab308','office','#a855f7','rgba(255,255,255,0.3)'],
-      'circle-stroke-width':1,'circle-stroke-color':'rgba(0,0,0,0.4)','circle-opacity':0.9}});
-    map.addLayer({id:'overpass-labels',type:'symbol',source:'overpass-pois',layout:{
-      'text-field':['case',['!=',['get','name'],''],['get','name'],''],'text-size':9,
-      'text-offset':[0,1.2],'text-optional':true,'text-max-width':8},
-      paint:{'text-color':'rgba(255,255,255,0.75)','text-halo-color':'rgba(0,0,0,0.7)','text-halo-width':1}});
-  }
+  _renderOverpassPOIs(gj);
   return {sdi:shannonIndex(catCounts),catCounts};
 }
 // Area transit reliability for the given stop ids — reuses the history-tab RPCs
@@ -7900,21 +7936,7 @@ async function toggleAccOSM(){
       return acc;
     },[]);
     const gj={type:'FeatureCollection',features};
-    if(!map.getSource('overpass-pois'))map.addSource('overpass-pois',{type:'geojson',data:gj});
-    else map.getSource('overpass-pois').setData(gj);
-    if(!map.getLayer('overpass-circles')){
-      map.addLayer({id:'overpass-circles',type:'circle',source:'overpass-pois',paint:{
-        'circle-radius':['interpolate',['linear'],['zoom'],13,3,17,7],
-        'circle-color':['match',['get','cat'],
-          'food','#f97316','retail','#ec4899','education','#6366f1',
-          'health','#ef4444','public','#14b8a6','leisure','#22c55e',
-          'tourism','#eab308','office','#a855f7','rgba(255,255,255,0.3)'],
-        'circle-stroke-width':1,'circle-stroke-color':'rgba(0,0,0,0.4)','circle-opacity':0.9}});
-      map.addLayer({id:'overpass-labels',type:'symbol',source:'overpass-pois',layout:{
-        'text-field':['case',['!=',['get','name'],''],['get','name'],''],'text-size':9,
-        'text-offset':[0,1.2],'text-optional':true,'text-max-width':8},
-        paint:{'text-color':'rgba(255,255,255,0.75)','text-halo-color':'rgba(0,0,0,0.7)','text-halo-width':1}});
-    }
+    _renderOverpassPOIs(gj);
     _osmActive=true;
     const sdi=shannonIndex(catCounts);
     _lastDiversity=sdi; // feed the composite Urban Vitality Index
