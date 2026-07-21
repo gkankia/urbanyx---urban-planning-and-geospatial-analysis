@@ -5499,7 +5499,7 @@ function runZoningAnalysis(){
   });
 }
 // ── Zoning panel (Assessment + Construction permits) ──────────────────────────
-let _permitsActive=false, _permitsReqToken=0, _lastPermitFound=null, _lastPermitNomen='';
+let _permitsActive=false, _permitsReqToken=0, _lastPermitFound=null, _lastPermitNomen='', _lastPermitDetail=null, _lastPermitDecision=null;
 
 function _zpKa(){return lang==="ka";}
 
@@ -5570,7 +5570,7 @@ async function toggleConstructionPermits(){
     const permit=await _fetchLatestPermit(parcelCentroid[0],parcelCentroid[1]);
     if(token!==_permitsReqToken)return; // toggled off / re-toggled while loading
     if(!permit){
-      _lastPermitFound=null;_lastPermitNomen='';_updatePermitDevWarning();
+      _lastPermitFound=null;_lastPermitNomen='';_lastPermitDetail=null;_lastPermitDecision=null;_updatePermitDevWarning();
       _setPermitFloat(`<div class="zp-note">${isKa?"ამ ნაკვეთზე მშენებლობის ნებართვა ვერ მოიძებნა.":"No construction permits found for this parcel."}</div>`);
       return;
     }
@@ -5584,6 +5584,7 @@ async function toggleConstructionPermits(){
     ]);
     if(token!==_permitsReqToken)return;
     _lastPermitNomen=detail?.nomenclature||'';
+    _lastPermitDetail=detail||null;_lastPermitDecision=decision||null;
     _setPermitFloat(_buildPermitHTML(permit,detail,decision,false));
     _updatePermitDevWarning();
   }catch(e){
@@ -5706,7 +5707,7 @@ function _setPermitFloat(html){
 function _hidePermitFloatRow(){
   const pfcRow=document.getElementById('pfc-permits-row');if(pfcRow)pfcRow.style.display='none';
   const pfcList=document.getElementById('pfc-permits-list');if(pfcList)pfcList.innerHTML='';
-  _lastPermitFound=null;_lastPermitNomen='';
+  _lastPermitFound=null;_lastPermitNomen='';_lastPermitDetail=null;_lastPermitDecision=null;
   _updatePermitDevWarning();
 }
 
@@ -6414,7 +6415,7 @@ function resetAnalysis(){
   _noDevZone=false;_noDevZoneUnion=null;_maxFootprintM2=null;_maxFloorAreaM2=null;
   ["pfc-zone-row","pfc-setback-note","pfc-setback-warn","pfc-area-warn","pfc-nodev-warn","pfc-build-params-row","pfc-compliance-row"].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display="none";});
   // Zoning panel + construction permits reset
-  _permitsActive=false;_permitsReqToken=(typeof _permitsReqToken==="number"?_permitsReqToken+1:0);_lastPermitFound=null;_lastPermitNomen='';
+  _permitsActive=false;_permitsReqToken=(typeof _permitsReqToken==="number"?_permitsReqToken+1:0);_lastPermitFound=null;_lastPermitNomen='';_lastPermitDetail=null;_lastPermitDecision=null;
   {const _pw=document.getElementById("pfc-permit-warn");if(_pw)_pw.style.display="none";}
   {const _zpc=document.getElementById("zoning-panel-card");if(_zpc)_zpc.style.display="none";}
   {const _zas=document.getElementById("zoning-assess-sw");if(_zas)_zas.classList.remove("on");}
@@ -12996,6 +12997,36 @@ function _rptActive(){
   return a;
 }
 
+// Rule-based natural-language executive summary from the computed values.
+function _rptExecutiveSummary(uvi){
+  const parts=[];
+  const gLbl={A:'excellent',B:'good',C:'moderate',D:'limited',E:'poor',F:'very poor'};
+  if(uvi){
+    parts.push(`This ${_isDrawnArea?'area of interest':'parcel'} scores ${uvi.score} out of 100 (grade ${uvi.grade}) on the ${UVI_NAME}, indicating ${gLbl[uvi.grade]||''} overall livability based on the amenities, public transport, land-use mix and on-street parking reachable on foot.`);
+  }
+  const c=_lastNearbyCounts;
+  if(c){
+    const bits=[];
+    const edu=(c.schools||0)+(c.kg||0);
+    if(edu)bits.push(`${edu} education facilit${edu===1?'y':'ies'}`);
+    if(c.transit)bits.push(`${c.transit} transit stop${c.transit===1?'':'s'}${c.routes&&c.routes.length?` on ${c.routes.length} route${c.routes.length===1?'':'s'}`:''}${c.reliability?` (reliability ${c.reliability.grade}, ${c.reliability.pct}% on-time)`:''}`);
+    const pk=(c.parkingFree||0)+(c.parkingPaid||0);
+    if(pk)bits.push(`${pk} on-street parking area${pk===1?'':'s'} (~${(c.pkCars||0).toLocaleString()} cars)`);
+    if(_lastDiversity!=null)bits.push(`a land-use diversity index of ${_lastDiversity}/100`);
+    if(bits.length)parts.push('Within a short walk: '+bits.join('; ')+'.');
+  }
+  if(window._rptZones&&window._rptZones.length){
+    parts.push(`The dominant functional zone is ${_zoneNameEN(window._rptZones[0].kve_zona)}${_noDevZone?', which is not designated for development':''}.`);
+  }
+  if(_lastPermitFound){
+    const conf=(typeof _permitZoningConflict==='function')?_permitZoningConflict():null;
+    parts.push(conf
+      ? `A construction permit (${_lastPermitFound.docNo}) on record here appears to conflict with the Tbilisi 2019 Urban Masterplan for this zone.`
+      : `A construction permit (${_lastPermitFound.docNo}) is on record for this parcel.`);
+  }
+  return parts.join(' ');
+}
+
 async function exportReportPDF(){
   if(!currentUser||currentUser.plan!=='pro'){openPaywall(true);return;}
   const a=_rptActive();
@@ -13032,6 +13063,21 @@ async function exportReportPDF(){
     if(rp.code&&rp.code!=='—')ctx.push('Parcel '+rp.code);
     if(areaLbl)ctx.push(areaLbl);
     T(ctx.join('   ·   '),M,y);y+=8;
+
+    // ── Executive summary (natural language) + headline livability index ──
+    {
+      const uvi=_lastNearbyCounts?_computeUVI(_lastNearbyCounts):null;
+      const summary=_rptExecutiveSummary(uvi);
+      if(summary){
+        H2('Summary');
+        P(summary);
+        if(uvi){
+          H3(`${UVI_NAME}: ${uvi.score}/100 · grade ${uvi.grade}`);
+          P('Component scores (0–100, weighted mean): '+uvi.parts.map(p=>`${p.label} ${Math.round(p.s*100)}`).join('  ·  ')+'.');
+        }
+        P('How to read this: the index blends walkable access to amenities, public transport, land-use diversity and on-street parking into one 0–100 score (A best, F worst). Each component and its underlying figures are detailed in the sections below; see Methodology for definitions.',110);
+      }
+    }
 
     // ── Maps: area and parcel are two separate, independently captured maps ──
     H2('Maps');
@@ -13176,6 +13222,52 @@ async function exportReportPDF(){
         src('Zoning: Tbilisi Municipality functional-zone WFS; K-coefficient limits per zone.');
       }
     }
+    // Parcel compliance (Article 16 dimensions)
+    {
+      const reg=(typeof _zoneDominantRegs==='function')?_zoneDominantRegs():null;
+      if(reg&&(reg.minArea||reg.minWidth||reg.minDepth||reg.maxH)&&_currentParcelGeoJSON){
+        H3('Parcel compliance (Article 16)');
+        const dims=(typeof _parcelDims==='function')?_parcelDims(_currentParcelGeoJSON):null;
+        const pa=_currentParcelAreaM2||0;
+        const rows=[];
+        if(reg.minArea)rows.push(`min. area ${reg.minArea.toLocaleString()} m² vs parcel ${Math.round(pa).toLocaleString()} m² (${pa>=reg.minArea?'meets':'below minimum'})`);
+        if(reg.minWidth&&dims)rows.push(`min. width ${reg.minWidth} m vs ${dims.width.toFixed(1)} m (${dims.width>=reg.minWidth-0.5?'meets':'below'})`);
+        if(reg.minDepth&&dims)rows.push(`min. depth ${reg.minDepth} m vs ${dims.depth.toFixed(1)} m (${dims.depth>=reg.minDepth-0.5?'meets':'below'})`);
+        if(reg.maxH)rows.push(`max. building height ${reg.maxH} ${reg.maxHUnit==='floors'?'floors':'m'}`);
+        P('Requirements — '+rows.join('; ')+'.');
+        src('Parcel dimensions: minimum-area oriented bounding rectangle of the parcel geometry; requirements per Tbilisi Land-Use Master Plan, Article 16.');
+      }
+    }
+    // Construction permits
+    if(_lastPermitFound){
+      H3('Construction permits');
+      const p=_lastPermitFound,d=_lastPermitDecision||{};
+      const lines=[`latest application ${p.docNo}${p.count>1?` (of ${p.count} on this parcel)`:''}`];
+      if(p.address)lines.push(`address ${p.address}`);
+      if(_lastPermitNomen)lines.push(`nomenclature ${_lastPermitNomen}`);
+      if(d.registered)lines.push(`registered ${d.registered}`);
+      if(d.issued)lines.push(`issued ${d.issued}`);
+      if(d.result)lines.push(`result ${d.result}`);
+      P(lines.join('; ')+'.');
+      const conf=(typeof _permitZoningConflict==='function')?_permitZoningConflict():null;
+      if(conf)P('Flag: this permit appears to conflict with the Tbilisi 2019 Urban Masterplan — the permitted use is not among those allowed in this zone (or the area is not designated for development).',180);
+      src('Construction permits: Tbilisi Architecture Service (docs.tbilisi.gov.ge) and the ms.gov.ge spatial permit registry.');
+    }
+    // Nearby amenities (walkable catchment)
+    if(_lastNearbyCounts){
+      const c=_lastNearbyCounts;
+      const tot=(c.schools||0)+(c.kg||0)+(c.transit||0)+(c.parkingFree||0)+(c.parkingPaid||0);
+      if(tot>0||_lastDiversity!=null){
+        H3('Nearby amenities (walkable catchment)');
+        if(c.schools)P(`Schools: ${c.schools}.`);
+        if(c.kg)P(`Kindergartens: ${c.kg}.`);
+        if(c.transit){let tr=`Transit stops: ${c.transit}`;if(c.routes&&c.routes.length)tr+=` · ${c.routes.length} routes (${c.routes.join(', ')})`;if(c.reliability)tr+=` · reliability ${c.reliability.grade} (${c.reliability.pct}% on-time)`;P(tr+'.');}
+        const pk=(c.parkingFree||0)+(c.parkingPaid||0);
+        if(pk)P(`Parking areas: ${pk} (${c.parkingFree||0} free · ${c.parkingPaid||0} paid) — capacity ~${(c.pkCars||0).toLocaleString()} cars, ${(c.pkTaxi||0)} taxi, ${(c.pkLoad||0)} loading.`);
+        if(_lastDiversity!=null)P(`Land-use diversity (Shannon SDI): ${_lastDiversity}/100.`);
+        src('Amenities: public schools & kindergartens (municipal open data), transit stops & routes (Tbilisi Transport Company), on-street parking (Tbilisi Municipality), land-use POIs (© OpenStreetMap, Overpass API).');
+      }
+    }
     // Morphology
     if(a.syntax||a.orient){
       H3('Street network & morphology');
@@ -13230,6 +13322,15 @@ async function exportReportPDF(){
       if(a.schools||a.kg){P(`Education access: ${[a.schools&&'public schools',a.kg&&'kindergartens'].filter(Boolean).join(' and ')} shown on the area map.`);src('Education facilities: open municipal datasets.');}
     }
     if(a.isochrone)src(`Catchment: ${_accMinutes||10}-minute ${_accMode||'walking'} isochrone (Mapbox Isochrone API).`);
+
+    // ── Methodology ──
+    H2('Methodology');
+    P(`${UVI_NAME}: a 0–100 composite (graded A–F) of walkable-catchment access. Each component is scored 0–1 with a saturating curve (diminishing returns) and combined as a weighted mean, then scaled to 100. Components and weights — Education 1.0 (schools + kindergartens), Transit 1.0 (route count moderated by a reliability multiplier), Land-use diversity 1.0 (Shannon SDI), on-street Parking 0.75 (vehicle capacity). Weights are renormalised over whichever components have data. Grades: A ≥ 80, B ≥ 70, C ≥ 60, D ≥ 50, E ≥ 40, F below 40.`);
+    P(`Walkable catchment: a walking-network isochrone around the parcel (Mapbox Isochrone API) — real street-network distance, not a straight-line radius. Large parcels and drawn areas of interest are analysed over their own geometry; running the accessibility isochrone replaces the default catchment with the wider isochrone.`);
+    P(`Land-use diversity (Shannon SDI): H = -sum(p*ln p) over amenity-category shares p (food, health, parks, retail, culture, …), normalised to 0–100. Higher values indicate a more balanced land-use mix.`);
+    P(`Transit reliability: the share of arrivals within −60…+300 s of schedule across the catchment's stops, weighted by observation count, over roughly 30 days of archived vehicle positions (sampled every 2 min; stops with fewer than 30 matched observations are excluded). Graded A ≥ 80% … F < 40%.`);
+    P(`Zoning compliance: the parcel's minimum area, width and depth compared with the dominant functional zone's requirements (Tbilisi Land-Use Master Plan, Article 16). Width and depth are measured from the parcel's minimum-area oriented bounding rectangle.`);
+    P(`Data availability: amenity, land-use and transit-reliability layers rely on external services (OpenStreetMap / Overpass, Tbilisi Transport Company, and the archived transit history, the last being a Pro feature). When a service is unavailable the affected component is omitted and the index renormalises; such omissions are noted in the relevant section.`);
 
     // ── Sources (ordered by appearance) ──
     if(sources.length){
