@@ -4070,8 +4070,8 @@ async function onDrawCreate(){
   document.getElementById("info-card").style.display="none";
   document.getElementById("owner-results-card").style.display="none";
   logFeatureUse("map_click").catch(()=>{});
-  // Livability index over the drawn area of interest
-  runNearbyAnalysis({area:poly});
+  // Livability index over the drawn area of interest (behind the Run button)
+  _nearbyShowRunButton({area:poly});
   // Walkability (free analysis) feature removed — #analyse-btn stays hidden
   setupProCard();
   // OSM analysis moved to Urban Functions accordion
@@ -5836,19 +5836,53 @@ async function _fetchWalkArea(lng,lat,meters){
   const res=await fetch(url);if(!res.ok)throw new Error("walk_area_fail");
   const j=await res.json();return j.features?.[0]?.geometry||null;
 }
+let _nearbyPendingOpts=null,_nearbyRan=false;
+// Show the "Run nearby analysis" button in the float card (does NOT run it). The
+// opts (e.g. the area for a large parcel) are stored for when the user clicks Run.
+function _nearbyShowRunButton(opts){
+  _nearbyPendingOpts=opts||{};
+  _nearbyRan=false;
+  const row=document.getElementById('pfc-nearby-row');if(row)row.style.display='block';
+  const btn=document.getElementById('pfc-nearby-run-btn');if(btn){btn.style.display='';btn.disabled=false;btn.textContent=(lang==='ka')?'ახლომდებარე ანალიზის გაშვება':'Run nearby analysis';}
+  const body=document.getElementById('pfc-nearby-body');if(body)body.style.display='none';
+  const card=document.getElementById('parcel-float-card');if(card&&card.style.display==='none')card.style.display='block';
+}
+function _nearbyRunClicked(){
+  const btn=document.getElementById('pfc-nearby-run-btn');if(btn)btn.style.display='none';
+  const body=document.getElementById('pfc-nearby-body');if(body)body.style.display='';
+  _nearbyRan=true;
+  runNearbyAnalysis(_nearbyPendingOpts||{});
+}
+// Clear ONLY the nearby analysis (map layers + card body); keep the parcel.
+function _nearbyClearClicked(){
+  _nearbyReqToken++; // cancel any in-flight run
+  _lastDiversity=null;_lastNearbyCounts=null;_nearbyRan=false;
+  if(typeof clearSchoolsMapLayer==='function')clearSchoolsMapLayer();
+  if(typeof clearKgMapLayer==='function')clearKgMapLayer();
+  if(typeof _ttcRemoveFromMap==='function')_ttcRemoveFromMap();
+  if(typeof _parkingRemoveLayer==='function')_parkingRemoveLayer();
+  if(typeof clearOverpassLayers==='function')clearOverpassLayers();
+  const list=document.getElementById('pfc-nearby-list');if(list)list.innerHTML='';
+  const note=document.getElementById('pfc-nearby-note');if(note){note.style.display='none';note.textContent='';}
+  _nearbyShowRunButton(_nearbyPendingOpts); // back to the Run button, parcel intact
+}
 function _setNearbyFloat(html){
-  const ti=document.getElementById('pfc-nearby-title');if(ti)ti.textContent=(lang==='ka')?"ახლომდებარე":"Nearby";
   const list=document.getElementById('pfc-nearby-list');if(list)list.innerHTML=html||'';
-  const row=document.getElementById('pfc-nearby-row');if(row)row.style.display=html?'block':'none';
-  if(!html){const note=document.getElementById('pfc-nearby-note');if(note){note.style.display='none';note.textContent='';}}
-  if(html){const card=document.getElementById('parcel-float-card');if(card&&card.style.display==='none')card.style.display='block';}
+  if(html){
+    const row=document.getElementById('pfc-nearby-row');if(row)row.style.display='block';
+    const body=document.getElementById('pfc-nearby-body');if(body)body.style.display='';
+    const runBtn=document.getElementById('pfc-nearby-run-btn');if(runBtn)runBtn.style.display='none';
+    const card=document.getElementById('parcel-float-card');if(card&&card.style.display==='none')card.style.display='block';
+  }
 }
 function _hideNearbyRow(){
   _nearbyReqToken++;
-  _lastDiversity=null;_lastNearbyCounts=null;
-  _setNearbyFloat('');
-  // The map layers are the conventional ones (schools/kg/transit/parking) and are
-  // cleared by resetAnalysis; nothing extra to clear here.
+  _lastDiversity=null;_lastNearbyCounts=null;_nearbyRan=false;
+  const row=document.getElementById('pfc-nearby-row');if(row)row.style.display='none';
+  const body=document.getElementById('pfc-nearby-body');if(body)body.style.display='none';
+  const list=document.getElementById('pfc-nearby-list');if(list)list.innerHTML='';
+  const note=document.getElementById('pfc-nearby-note');if(note){note.style.display='none';note.textContent='';}
+  // Map layers (schools/kg/transit/parking/POIs) are cleared by resetAnalysis.
 }
 // Parking free/paid overlap helpers (module-level twins of the ones inside
 // toggleAccParking) so the nearby analysis dedupes free areas that overlap a
@@ -6059,8 +6093,11 @@ function _renderNearby(c){
   const html=tile+items.join('');
   // Render directly (not via _setNearbyFloat) so the row + note stay visible even when nothing is found
   const ti=document.getElementById('pfc-nearby-title');if(ti)ti.textContent=isKa?"ახლომდებარე":"Nearby";
+  const clr=document.getElementById('pfc-nearby-clear-btn');if(clr)clr.textContent=isKa?'გასუფთავება':'Clear';
   const list=document.getElementById('pfc-nearby-list');if(list)list.innerHTML=html;
   const rowEl=document.getElementById('pfc-nearby-row');if(rowEl)rowEl.style.display='block';
+  const bodyEl=document.getElementById('pfc-nearby-body');if(bodyEl)bodyEl.style.display='';
+  const runBtn=document.getElementById('pfc-nearby-run-btn');if(runBtn)runBtn.style.display='none';
   const card=document.getElementById('parcel-float-card');if(card&&card.style.display==='none')card.style.display='block';
   const note=document.getElementById('pfc-nearby-note');
   if(note){
@@ -11247,7 +11284,7 @@ async function runAccessibilityAnalysis(){
     if(resultEl)resultEl.innerHTML=`<div style="font-size:0.7rem;color:rgba(255,255,255,0.35);padding:5px 0 2px">${modeIcon} ${_accMinutes} min · ${modeLabel} — ${isKa?"ზონა გენერირებულია":"Zone generated"}</div>`;
     // Recompute the livability index over the (larger) isochrone; the panel
     // already owns the map layers, so don't re-render them here.
-    runNearbyAnalysis({area:isoFeat.geometry,renderMap:false});
+    if(_nearbyRan)runNearbyAnalysis({area:isoFeat.geometry,renderMap:false});
     logFeatureUse("accessibility_isochrone").catch(()=>{});
   }catch(e){
     console.error("Accessibility:",e);
@@ -11349,7 +11386,7 @@ async function loadParcel(lbl, code){
     setupProCard();
   }
   showParcelPopup(parcelCentroid);
-  if(!isLine)runNearbyAnalysis(_isLargeParcel()?{area:_currentParcelGeoJSON}:{});
+  if(!isLine)_nearbyShowRunButton(_isLargeParcel()?{area:_currentParcelGeoJSON}:{});
   setStatus(tr.found,"success");
   const htmlOwners=parseOwners(attrs.owners);
   // Full parcel record for the report (ownership can be multi-owner)
@@ -11513,7 +11550,7 @@ async function loadParcelFromDB(cadastral){
     setupProCard();
   }
   showParcelPopup(parcelCentroid);
-  if(!isLine)runNearbyAnalysis(_isLargeParcel()?{area:_currentParcelGeoJSON}:{});
+  if(!isLine)_nearbyShowRunButton(_isLargeParcel()?{area:_currentParcelGeoJSON}:{});
   setStatus(tr.found,"success");
   logFeatureUse("map_click").catch(()=>{});
 }
@@ -13361,17 +13398,17 @@ async function exportReportPDF(){
       sources.forEach((s,i)=>{const ls=doc.splitTextToSize(`${i+1}.  ${s}`,PW-M*2);ensure(ls.length*3.6+1);ls.forEach(l=>{setFor(l);doc.text(l,M,y);y+=3.6;});y+=1;});
     }
 
-    // ── Footer: logo (bottom-left) + page number (bottom-right) on every page ──
+    // ── Footer: page number + site on every page; logo top-right on page 1 only ──
     const logo=await _svgToPng('analysis-logos/urbanyx-zaxis-logo.svg',260).catch(()=>null);
     const n=doc.getNumberOfPages();
     for(let i=1;i<=n;i++){
       doc.setPage(i);
       doc.setDrawColor(225);doc.line(M,283,PW-M,283);
-      if(logo){const lw=20,lh=lw*(logo.h/logo.w);doc.addImage(logo.url,'PNG',M,285-lh+2,lw,lh);}
       doc.setFontSize(7);doc.setTextColor(150);setFor('Page');
       doc.text(`Page ${i} / ${n}`,PW-M,289,{align:'right'});
       doc.text('urbanyx.zaxis.ge',PW/2,289,{align:'center'});
     }
+    if(logo){const lw=24,lh=lw*(logo.h/logo.w);doc.setPage(1);doc.addImage(logo.url,'PNG',PW-M-lw,10,lw,lh);}
     logFeatureUse('pdf_export').catch(()=>{});
     doc.save('urbanyx_report.pdf');
   }catch(e){console.warn('report pdf:',e);showToast('PDF failed: '+(e.message||''));}
