@@ -5743,6 +5743,79 @@ function _updatePermitDevWarning(){
 
 function _esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 
+// ── Nearby (100 m walk) — auto summary appended to the parcel float card ───────
+// Replaces the old "generate an isochrone first" gate for the nearby-data layers
+// (schools, kindergartens, transit, parking, road incidents): on parcel select
+// we build a 100 m WALKING-NETWORK polygon (Mapbox contours_meters, not crow-
+// flies) and count each layer within it. Running the full accessibility isochrone
+// still expands the search area via the existing panel toggles.
+let _nearbyReqToken=0;
+const NEARBY_WALK_M=100;
+async function _fetchWalkArea(lng,lat,meters){
+  const url=`https://api.mapbox.com/isochrone/v1/mapbox/walking/${lng},${lat}?contours_meters=${meters}&polygons=true&access_token=${MAPBOX_TOKEN}`;
+  const res=await fetch(url);if(!res.ok)throw new Error("walk_area_fail");
+  const j=await res.json();return j.features?.[0]?.geometry||null;
+}
+function _setNearbyFloat(html){
+  const ti=document.getElementById('pfc-nearby-title');if(ti)ti.textContent=(lang==='ka')?"ახლომდებარე · 100 მ ფეხით":"Nearby · 100 m walk";
+  const list=document.getElementById('pfc-nearby-list');if(list)list.innerHTML=html||'';
+  const row=document.getElementById('pfc-nearby-row');if(row)row.style.display=html?'block':'none';
+  if(!html){const note=document.getElementById('pfc-nearby-note');if(note){note.style.display='none';note.textContent='';}}
+  if(html){const card=document.getElementById('parcel-float-card');if(card&&card.style.display==='none')card.style.display='block';}
+}
+function _hideNearbyRow(){
+  _nearbyReqToken++;
+  _setNearbyFloat('');
+}
+async function runNearbyAnalysis(){
+  if(!parcelCentroid)return;
+  const token=++_nearbyReqToken;
+  const isKa=lang==='ka';
+  _setNearbyFloat(`<div class="zp-note"><span class="zp-spin"></span> ${isKa?"ახლომდებარე ობიექტების ძიება…":"Searching within a 100 m walk…"}</div>`);
+  let area=null;
+  try{area=await _fetchWalkArea(parcelCentroid[0],parcelCentroid[1],NEARBY_WALK_M);}catch(_){}
+  if(token!==_nearbyReqToken)return;
+  if(!area){_setNearbyFloat(`<div class="zp-note">${isKa?"ვერ მოხერხდა არეალის დათვლა.":"Could not compute the walking area."}</div>`);return;}
+  const counts={schools:0,kg:0,transit:0,parkingFree:0,parkingPaid:0,incidents:0};
+  const areaFeat={type:'Feature',geometry:area,properties:{}};
+  const tasks=[
+    (async()=>{try{if(!_schoolsGeoJSON){const r=await fetch("data/public_schools.geojson");if(r.ok)_schoolsGeoJSON=await r.json();}counts.schools=(_schoolsGeoJSON?.features||[]).filter(f=>{const g=f.geometry;if(!g)return false;const pt=g.type==='Point'?g.coordinates:(g.coordinates?.[0]?.[0]??null);return pt&&pointInPolygon(pt[0],pt[1],area);}).length;}catch(_){}})(),
+    (async()=>{try{if(!_kgGeoJSON){const r=await fetch("data/kindergartens_tbilisi_1.geojson");if(r.ok)_kgGeoJSON=await r.json();}counts.kg=(_kgGeoJSON?.features||[]).filter(f=>{const g=f.geometry;if(!g||g.type!=='Point')return false;return pointInPolygon(g.coordinates[0],g.coordinates[1],area);}).length;}catch(_){}})(),
+    (async()=>{try{const stops=await _ttcLoadStops();counts.transit=(stops||[]).filter(s=>s&&s.lon!=null&&pointInPolygon(s.lon,s.lat,area)).length;}catch(_){}})(),
+    (async()=>{try{if(!_parkingPaidCache){const r=await fetch(PARKING_PAID_URL);if(r.ok)_parkingPaidCache=await r.json();}for(const f of(_parkingPaidCache?.features||[])){if(f.properties?.zone_id!=='A')continue;try{const wg=_parkingConvertGeom(f.geometry);const ring=wg.type==='MultiPolygon'?wg.coordinates[0][0]:wg.coordinates[0];const c=_parkingCentroidOfRing(ring);if(pointInPolygon(c[0],c[1],area))counts.parkingPaid++;}catch(_){}}}catch(_){}})(),
+    (async()=>{try{if(!_parkingFreeCache){const r=await fetch(PARKING_FREE_URL);if(r.ok)_parkingFreeCache=await r.json();}for(const f of(_parkingFreeCache?.features||[])){try{const wg=_parkingConvertGeom(f.geometry);const ring=wg.type==='MultiPolygon'?wg.coordinates[0][0]:wg.coordinates[0];const c=_parkingCentroidOfRing(ring);if(pointInPolygon(c[0],c[1],area))counts.parkingFree++;}catch(_){}}}catch(_){}})(),
+    (async()=>{try{const bbox=isoBbox(areaFeat);const q=`[out:json][timeout:25];(node[accident](${bbox}););out;`;const data=await fetchOverpass(q,2);if(data?.elements)counts.incidents=data.elements.filter(el=>el.lon!=null&&pointInPolygon(el.lon,el.lat,area)).length;}catch(_){}})(),
+  ];
+  await Promise.allSettled(tasks);
+  if(token!==_nearbyReqToken)return;
+  _renderNearby(counts);
+}
+function _renderNearby(c){
+  const isKa=lang==='ka';
+  const parkingTotal=c.parkingFree+c.parkingPaid;
+  const items=[
+    {icon:'🎓',label:isKa?'სკოლები':'Schools',n:c.schools},
+    {icon:'🧒',label:isKa?'ბაღები':'Kindergartens',n:c.kg},
+    {icon:'🚌',label:isKa?'გაჩერებები':'Transit stops',n:c.transit},
+    {icon:'🅿️',label:isKa?'ავტოსადგომები':'Parking areas',n:parkingTotal,sub:parkingTotal?`${c.parkingFree} ${isKa?'უფასო':'free'} · ${c.parkingPaid} ${isKa?'ფასიანი':'paid'}`:''},
+    {icon:'⚠️',label:isKa?'შემთხვევები':'Road incidents',n:c.incidents},
+  ];
+  const total=items.reduce((s,i)=>s+i.n,0);
+  let html='';
+  for(const it of items){
+    const dim=it.n?'':'opacity:0.4;';
+    html+=`<div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:2px;${dim}"><span style="font-size:0.62rem;color:rgba(255,255,255,0.5)">${it.icon} ${it.label}</span><span style="font-size:0.68rem;font-weight:600;color:rgba(255,255,255,0.85);white-space:nowrap">${it.n}${it.sub?` <span style="font-weight:400;font-size:0.55rem;color:rgba(255,255,255,0.4)">(${it.sub})</span>`:''}</span></div>`;
+  }
+  _setNearbyFloat(html);
+  const note=document.getElementById('pfc-nearby-note');
+  if(note){
+    note.textContent=total===0
+      ? (isKa?"100 მ ფეხით სავალ მანძილში ვერაფერი მოიძებნა. გაუშვი მისაწვდომობის ანალიზი ფართო არეალის მოსაძებნად.":"Nothing found within a 100 m walk. Run the accessibility analysis to search a larger area.")
+      : (isKa?"გაუშვი მისაწვდომობის ანალიზი უფრო ფართო არეალის დასაფარად.":"Run the accessibility analysis to cover a larger area.");
+    note.style.display='';
+  }
+}
+
 function clearParcelSelection(){
   if(_activeBldId){_deselectBuilding();return;}
   if(_isDrawnArea){clearPolygonSelect();return;}
@@ -6023,6 +6096,7 @@ function resetAnalysis(){
   {const _zps=document.getElementById("zoning-permits-sw");if(_zps)_zps.classList.remove("on");}
   {const _pfr=document.getElementById("pfc-permits-row");if(_pfr)_pfr.style.display="none";}
   {const _pfl=document.getElementById("pfc-permits-list");if(_pfl)_pfl.innerHTML="";}
+  if(typeof _hideNearbyRow==="function")_hideNearbyRow();
 }
 
 // ── WKT → GeoJSON ─────────────────────────────────────────────────────────────
@@ -10922,6 +10996,7 @@ async function loadParcel(lbl, code){
     setupProCard();
   }
   showParcelPopup(parcelCentroid);
+  if(!isLine)runNearbyAnalysis();
   setStatus(tr.found,"success");
   const htmlOwners=parseOwners(attrs.owners);
   // Full parcel record for the report (ownership can be multi-owner)
@@ -11085,6 +11160,7 @@ async function loadParcelFromDB(cadastral){
     setupProCard();
   }
   showParcelPopup(parcelCentroid);
+  if(!isLine)runNearbyAnalysis();
   setStatus(tr.found,"success");
   logFeatureUse("map_click").catch(()=>{});
 }
