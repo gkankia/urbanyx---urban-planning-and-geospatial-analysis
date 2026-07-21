@@ -5877,42 +5877,62 @@ async function runNearbyAnalysis(opts){
   // and flag it so the user knows to run the wider accessibility analysis.
   (async()=>{
     try{
-      const gb=getGeoBounds(area);
-      const bbox=[Math.min(...gb.lats),Math.min(...gb.lngs),Math.max(...gb.lats),Math.max(...gb.lngs)].join(',');
-      const dc=await _nearbyDiversitySDI(bbox);
+      const lu=await _nearbyLandUse(area); // fetches land-use POIs, plots them, returns the SDI
       if(token!==_nearbyReqToken)return;
-      if(dc){_lastDiversity=shannonIndex(dc);counts.overpass='ok';}
+      if(lu){_lastDiversity=lu.sdi;counts.overpass='ok';}
       else{_lastDiversity=null;counts.overpass='fail';}
     }catch(_){if(token===_nearbyReqToken){_lastDiversity=null;counts.overpass='fail';}}
     if(token!==_nearbyReqToken)return;
     _renderNearby(counts);
   })();
 }
-// Land-use category counts within a bbox via Overpass → {food,health,parks,
-// retail,culture}, or null if every mirror fails (so callers can flag it).
-async function _nearbyDiversitySDI(bbox){
-  const groups={
-    food:[["amenity","restaurant"],["amenity","cafe"],["amenity","fast_food"],["amenity","bar"],["amenity","pub"],["shop","bakery"],["shop","supermarket"],["shop","convenience"],["shop","greengrocer"]],
-    health:[["amenity","hospital"],["amenity","clinic"],["amenity","pharmacy"],["amenity","doctors"],["amenity","dentist"]],
-    parks:[["leisure","park"],["leisure","garden"],["leisure","playground"],["leisure","nature_reserve"]],
-    retail:[["shop","clothes"],["shop","electronics"],["shop","mall"],["shop","market"],["shop","furniture"],["shop","shoes"]],
-    culture:[["amenity","theatre"],["amenity","cinema"],["amenity","museum"],["amenity","library"],["leisure","fitness_centre"]],
-  };
-  const keys=Object.keys(groups);
-  const lines=tags=>tags.map(([k,v])=>`node[${k}=${v}](${bbox});`).join("");
-  const q=`[out:json][timeout:20];`+keys.map(k=>`(${lines(groups[k])})->.${k};.${k} out count;`).join("");
-  for(const ep of (typeof OVERPASS_ENDPOINTS!=='undefined'?OVERPASS_ENDPOINTS:[])){
+// Fetch land-use POIs within the area via Overpass, PLOT them on the map using
+// the same 'overpass-pois' layers/symbology as the Urban Functions layer, and
+// return the Shannon diversity index. Returns null if every mirror fails.
+async function _nearbyLandUse(area){
+  if(!mapReady||!area)return null;
+  const ring=area.type==='Polygon'?area.coordinates[0]:area.type==='MultiPolygon'?area.coordinates[0][0]:null;
+  if(!ring||!ring.length)return null;
+  const polyStr=ring.map(c=>`${c[1].toFixed(6)} ${c[0].toFixed(6)}`).join(' ');
+  const q=`[out:json][timeout:25];(node(poly:"${polyStr}");way(poly:"${polyStr}"););out center tags;`;
+  let json=null;
+  for(const ep of (typeof OVERPASS_ENDPOINTS!=='undefined'?OVERPASS_ENDPOINTS:['https://overpass-api.de/api/interpreter'])){
     try{
-      const res=await fetch(ep,{method:"POST",body:"data="+encodeURIComponent(q),signal:AbortSignal.timeout(12000)});
+      const res=await fetch(ep,{method:'POST',body:'data='+encodeURIComponent(q),signal:AbortSignal.timeout(15000)});
       if(!res.ok)continue;
       const text=await res.text();
-      if(text.trimStart().startsWith("<"))continue;
-      const data=JSON.parse(text);
-      const arr=data.elements.filter(e=>e.type==="count").map(e=>parseInt(e.tags?.total||"0",10));
-      if(arr.length===keys.length){const cc={};keys.forEach((k,i)=>cc[k]=arr[i]);return cc;}
+      if(text.trimStart().startsWith('<'))continue;
+      json=JSON.parse(text);break;
     }catch(_){}
   }
-  return null;
+  if(!json)return null; // every mirror failed
+  const catCounts={};
+  const features=(json.elements||[]).reduce((acc,el)=>{
+    const cat=_osmCat(el.tags);if(!cat)return acc;
+    const lat=el.lat??el.center?.lat,lng=el.lon??el.center?.lon;if(lat==null||lng==null)return acc;
+    acc.push({type:'Feature',geometry:{type:'Point',coordinates:[lng,lat]},
+      properties:{cat,name:el.tags?.name||'',type:el.tags?.amenity||el.tags?.shop||el.tags?.office||el.tags?.leisure||''}});
+    catCounts[cat]=(catCounts[cat]||0)+1;
+    return acc;
+  },[]);
+  // Plot POIs — reuse the conventional overpass-pois source + layers (identical symbology)
+  const gj={type:'FeatureCollection',features};
+  if(!map.getSource('overpass-pois'))map.addSource('overpass-pois',{type:'geojson',data:gj});
+  else map.getSource('overpass-pois').setData(gj);
+  if(!map.getLayer('overpass-circles')){
+    map.addLayer({id:'overpass-circles',type:'circle',source:'overpass-pois',paint:{
+      'circle-radius':['interpolate',['linear'],['zoom'],13,3,17,7],
+      'circle-color':['match',['get','cat'],
+        'food','#f97316','retail','#ec4899','education','#6366f1',
+        'health','#ef4444','public','#14b8a6','leisure','#22c55e',
+        'tourism','#eab308','office','#a855f7','rgba(255,255,255,0.3)'],
+      'circle-stroke-width':1,'circle-stroke-color':'rgba(0,0,0,0.4)','circle-opacity':0.9}});
+    map.addLayer({id:'overpass-labels',type:'symbol',source:'overpass-pois',layout:{
+      'text-field':['case',['!=',['get','name'],''],['get','name'],''],'text-size':9,
+      'text-offset':[0,1.2],'text-optional':true,'text-max-width':8},
+      paint:{'text-color':'rgba(255,255,255,0.75)','text-halo-color':'rgba(0,0,0,0.7)','text-halo-width':1}});
+  }
+  return {sdi:shannonIndex(catCounts),catCounts};
 }
 // Area transit reliability for the given stop ids — reuses the history-tab RPCs
 // (Pro). Weighted on-time share over the last 30 days → % + A–F grade, or null.
