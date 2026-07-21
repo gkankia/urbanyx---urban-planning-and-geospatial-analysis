@@ -5842,12 +5842,19 @@ let _nearbyPendingOpts=null,_nearbyRan=false;
 function _nearbyShowRunButton(opts){
   _nearbyPendingOpts=opts||{};
   _nearbyRan=false;
+  const isPro=!!(currentUser&&currentUser.plan==='pro');
   const row=document.getElementById('pfc-nearby-row');if(row)row.style.display='block';
-  const btn=document.getElementById('pfc-nearby-run-btn');if(btn){btn.style.display='';btn.disabled=false;btn.textContent=(lang==='ka')?'ახლომდებარე ანალიზის გაშვება':'Run nearby analysis';}
+  const btn=document.getElementById('pfc-nearby-run-btn');
+  if(btn){
+    btn.style.display='';btn.disabled=false;
+    const label=(lang==='ka')?'ახლომდებარე ანალიზის გაშვება':'Run nearby analysis';
+    btn.innerHTML=label+(isPro?'':' <span style="font-size:0.5rem;letter-spacing:0.08em;background:rgba(165,180,252,0.2);color:#a5b4fc;border:1px solid rgba(165,180,252,0.4);border-radius:3px;padding:1px 4px;vertical-align:1px">PRO</span>');
+  }
   const body=document.getElementById('pfc-nearby-body');if(body)body.style.display='none';
   const card=document.getElementById('parcel-float-card');if(card&&card.style.display==='none')card.style.display='block';
 }
 function _nearbyRunClicked(){
+  if(!currentUser||currentUser.plan!=='pro'){openPaywall();return;} // Pro feature
   const btn=document.getElementById('pfc-nearby-run-btn');if(btn)btn.style.display='none';
   const body=document.getElementById('pfc-nearby-body');if(body)body.style.display='';
   _nearbyRan=true;
