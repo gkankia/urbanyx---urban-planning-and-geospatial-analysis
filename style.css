@@ -691,9 +691,9 @@
   #cat-popover-close:hover { color:rgba(255,255,255,0.7); }
   #cat-popover-body { padding:10px 14px 14px; }
   /* Bottom geometry reshape toolbar — placeholder */
-  #geo-toolbar { position:absolute; bottom:28px; left:50%; transform:translateX(-50%); z-index:20; display:none; align-items:center; gap:3px; background:var(--glass-bg); backdrop-filter:var(--glass-blur); -webkit-backdrop-filter:var(--glass-blur); border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:5px; box-shadow:0 6px 24px rgba(0,0,0,0.45); }
-  .geo-tb-sep { width:1px; height:20px; background:rgba(255,255,255,0.08); margin:0 2px; flex-shrink:0; }
-  .geo-tb-btn { position:relative; width:42px; height:42px; display:flex; align-items:center; justify-content:center; border-radius:9px; border:1px solid transparent; background:none; cursor:default; color:rgba(255,255,255,0.22); font-size:15px; transition:all 0.15s; opacity:0.6; }
+  #geo-toolbar { position:absolute; bottom:28px; left:50%; transform:translateX(-50%); z-index:20; display:none; align-items:center; gap:1px; background:var(--glass-bg); backdrop-filter:var(--glass-blur); -webkit-backdrop-filter:var(--glass-blur); border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:2px; box-shadow:0 6px 24px rgba(0,0,0,0.45); }
+  .geo-tb-sep { width:1px; height:22px; background:rgba(255,255,255,0.08); margin:0 3px; flex-shrink:0; }
+  .geo-tb-btn { position:relative; width:46px; height:46px; display:flex; align-items:center; justify-content:center; border-radius:9px; border:1px solid transparent; background:none; cursor:default; color:rgba(255,255,255,0.22); font-size:15px; transition:all 0.15s; opacity:0.6; }
   .geo-tb-btn:not([disabled]):hover { background:rgba(255,255,255,0.07); border-color:rgba(255,255,255,0.14); color:rgba(255,255,255,0.65); opacity:1; cursor:pointer; }
   .geo-tb-btn.geo-tool-btn { opacity:1; cursor:pointer; }
   .geo-tb-btn.geo-tool-btn:hover { background:rgba(255,255,255,0.08); border-color:rgba(255,255,255,0.14); }
@@ -892,6 +892,11 @@
   #pfc-header button:hover { color: rgba(255,255,255,0.78); background: rgba(255,255,255,0.08); }
   #pfc-body { padding: 8px 12px 10px; }
   #parcel-float-card.minimized #pfc-body { display: none; }
+  .mini-card { position:absolute; z-index:19; display:flex; flex-direction:column; gap:1px; background:rgba(15,15,20,0.7); backdrop-filter:blur(9px); -webkit-backdrop-filter:blur(9px); border:1px solid rgba(255,255,255,0.14); border-radius:8px; padding:5px 9px; cursor:pointer; box-shadow:0 3px 14px rgba(0,0,0,0.4); opacity:0.7; transition:opacity 0.15s, border-color 0.15s, transform 0.12s; max-width:160px; }
+  .mini-card:hover { opacity:1; border-color:rgba(165,180,252,0.55); transform:scale(1.03); }
+  .mini-card .mini-card-kind { font-size:0.5rem; font-weight:700; letter-spacing:0.09em; text-transform:uppercase; color:rgba(165,180,252,0.7); }
+  .mini-card .mini-card-label { font-size:0.66rem; font-weight:600; color:rgba(255,255,255,0.9); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .mini-card .mini-card-area { font-size:0.58rem; color:rgba(255,255,255,0.45); }
   .pfc-row { display: flex; gap: 7px; margin-bottom: 3px; align-items: flex-start; }
   .pfc-row:last-child { margin-bottom: 0; }
   .pfc-lbl { color: rgba(255,255,255,0.38); flex-shrink: 0; min-width: 50px; }

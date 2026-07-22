@@ -1450,6 +1450,7 @@ function _activateBld(id){
   _update3DMetrics();
   _updateMetricsExtrusion();
   _updateCombinedMetrics();
+  _syncSelectionCards();
 }
 
 // Floating card for a user-drawn area of interest: Area, Perimeter, Type = User-added.
@@ -1663,7 +1664,9 @@ function removeActiveBuilding(){
     map.off('click','bld-fill-'+id);
   }
   _buildings=_buildings.filter(b=>b.id!==id);
-  if(_buildings.length){_activateBld(_buildings[_buildings.length-1].id);_checkSetbackViolation(_currentParcelGeoJSON);}else{const _sw=document.getElementById('pfc-setback-warn');if(_sw)_sw.style.display='none';}
+  if(_buildings.length){_activateBld(_buildings[_buildings.length-1].id);_checkSetbackViolation(_currentParcelGeoJSON);}
+  else if(_dbParcelGeoJSON){const _sw=document.getElementById('pfc-setback-warn');if(_sw)_sw.style.display='none';_activateParcel();}
+  else{const _sw=document.getElementById('pfc-setback-warn');if(_sw)_sw.style.display='none';_syncSelectionCards();}
 }
 
 function _selectFloor(fi){
@@ -2609,10 +2612,12 @@ function _removeBuildingById(id){
     const fc=document.getElementById('parcel-float-card');if(fc)fc.style.display='none';
     const pr=document.getElementById('pfc-perim-row');if(pr)pr.style.display='none';
     if(_buildings.length){_activateBld(_buildings[_buildings.length-1].id);}
+    else if(_dbParcelGeoJSON){_activateParcel();}
     else{const gtb=document.getElementById('geo-toolbar');if(gtb)gtb.style.display='none';}
   }
   if(!_buildings.length&&_geoTool==='erase')_clearGeoTools(null);
   _updateBldHighlights();
+  _syncSelectionCards();
 }
 
 // Paint — change fill + outline color of the active shape.
@@ -2814,6 +2819,7 @@ function _teardownAllBuildings(){
   });
   _threeEditor=null;
   _buildings=[];_activeBldId=null;_selectedBldIds.clear();_extrusionActive=false;_isDrawnArea=false;_floorOverrides={};_selectedFloors.clear();
+  _clearSelectionCards();
 }
 function _geoRestoreSnapshot(snap){
   if(!snap)return;
@@ -6789,6 +6795,9 @@ function clearParcelSelection(){
     return;
   }
   if(_isDrawnArea){clearPolygonSelect();return;}
+  // Closing the parcel card: if drawn shapes still exist, keep them and activate the
+  // most recent one; only fully reset when nothing else is selected.
+  const _keepBlds=_buildings.length>0;
   resetAnalysis();
   hideParcelPopup();
   document.getElementById("info-card").style.display="none";
@@ -6798,7 +6807,8 @@ function clearParcelSelection(){
   const inputEl=document.getElementById("input-center");
   if(inputEl)inputEl.value="";
   _updateMapInfoBadge();
-  if(mapReady)map.getSource("parcel")?.setData({type:"FeatureCollection",features:[]});
+  if(_keepBlds&&_bldById(_buildings[_buildings.length-1].id)){_activateBld(_buildings[_buildings.length-1].id);}
+  else{if(mapReady)map.getSource("parcel")?.setData({type:"FeatureCollection",features:[]});_clearSelectionCards();}
 }
 // Walkability (free analysis) feature removed. Kept as a no-op because old
 // saved projects and the hidden #analyse-btn onclick still reference it.
@@ -6966,6 +6976,7 @@ map.on("load",()=>{
   // Pointer cursor when hovering parcel
   map.on("moveend",function(){fetchDBParcelsIfEnabled();});
   map.on("move",_updateParcelCardPos);
+  map.on("move",_updateMiniCardPositions);
   map.on("mouseenter","parcel-fill",()=>{map.getCanvas().style.cursor="pointer";});
   map.on("mouseleave","parcel-fill",()=>{map.getCanvas().style.cursor="";});
   _initParcelCardDrag();
@@ -7194,6 +7205,7 @@ function showParcelPopup(lngLat){
   const ch=card.offsetHeight||118;
   card.style.left=(pt.x+88)+'px';
   card.style.top=(pt.y-ch/2)+'px';
+  _syncSelectionCards();
 }
 function hideParcelPopup(){
   const card=document.getElementById('parcel-float-card');
@@ -7214,6 +7226,76 @@ function hideParcelPopup(){
   if(zr)zr.style.display='none';
   if(kr)kr.style.display='none';
   if(pn)pn.style.display='none';
+  _syncSelectionCards();
+}
+
+// ── Multiple selection cards ──────────────────────────────────────────────────
+// The active entity (parcel or a drawn shape) keeps the full #parcel-float-card;
+// every other selected entity gets a compact "mini card". Click a mini card to
+// make it active (and demote the previous active one to a mini card).
+let _miniCards={};
+function _selEsc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function _entityGeom(id){return id==='parcel'?_dbParcelGeoJSON:(_bldById(id)?.geojson||null);}
+function _entityLabel(id){
+  if(id==='parcel')return document.getElementById('val-code')?.textContent||(lang==='ka'?'ნაკვეთი':'Parcel');
+  const b=_bldById(id);return b?(b.name||(lang==='ka'?'დახაზული არეალი':'Drawn area')):'';
+}
+function _entityAreaStr(id){
+  if(id==='parcel')return document.getElementById('val-area')?.textContent||'';
+  const b=_bldById(id);return b?b.areaStr:'';
+}
+function _activeEntityId(){return _activeBldId||(_dbParcelGeoJSON?'parcel':null);}
+function _activateEntity(id){
+  if(!id||id===_activeEntityId())return;
+  if(id==='parcel'){_activateParcel();return;}
+  if(_activeBldId!==id)_selectBuilding(id);
+  _syncSelectionCards();
+}
+function _activateParcel(){
+  if(!_dbParcelGeoJSON)return;
+  if(_activeBldId)_deselectBuilding();
+  _currentParcelGeoJSON=_dbParcelGeoJSON;
+  const c=getCentroid(_dbParcelGeoJSON);parcelCentroid=c;
+  showParcelPopup(c); // showParcelPopup calls _syncSelectionCards()
+}
+function _syncSelectionCards(){
+  if(!mapReady){return;}
+  const activeId=_activeEntityId();
+  const ids=[];
+  if(_dbParcelGeoJSON)ids.push('parcel');
+  _buildings.forEach(b=>ids.push(b.id));
+  // Drop mini cards that are now active or no longer exist
+  Object.keys(_miniCards).forEach(id=>{if(id===activeId||ids.indexOf(id)<0){_miniCards[id].remove();delete _miniCards[id];}});
+  const wrap=document.getElementById('map-wrap');if(!wrap)return;
+  ids.forEach(id=>{
+    if(id===activeId)return;
+    let el=_miniCards[id];
+    if(!el){
+      el=document.createElement('div');el.className='mini-card';el.dataset.id=id;
+      el.addEventListener('click',ev=>{ev.stopPropagation();_activateEntity(el.dataset.id);});
+      wrap.appendChild(el);_miniCards[id]=el;
+    }
+    const kind=id==='parcel'?(lang==='ka'?'ნაკვეთი':'Parcel'):(lang==='ka'?'ფიგურა':'Shape');
+    el.innerHTML='<span class="mini-card-kind">'+kind+'</span><span class="mini-card-label">'+_selEsc(_entityLabel(id))+'</span><span class="mini-card-area">'+_selEsc(_entityAreaStr(id))+'</span>';
+  });
+  _updateMiniCardPositions();
+}
+function _updateMiniCardPositions(){
+  if(!mapReady)return;
+  Object.keys(_miniCards).forEach((id,i)=>{
+    const el=_miniCards[id];const g=_entityGeom(id);
+    if(!g){el.style.display='none';return;}
+    let c;try{c=getCentroid(g);}catch(_){el.style.display='none';return;}
+    const pt=map.project(c);
+    const w=el.offsetWidth||130,h=el.offsetHeight||42;
+    el.style.display='';
+    // Mini cards sit to the LEFT of the centroid (the active full card sits to the right)
+    el.style.left=(pt.x-w-14)+'px';
+    el.style.top=(pt.y-h/2+i*(h+6))+'px';
+  });
+}
+function _clearSelectionCards(){
+  Object.keys(_miniCards).forEach(id=>{try{_miniCards[id].remove();}catch(_){}delete _miniCards[id];});
 }
 
 // ── Parse HTML ────────────────────────────────────────────────────────────────
