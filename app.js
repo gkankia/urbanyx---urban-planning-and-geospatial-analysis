@@ -1316,18 +1316,20 @@ function _updateBldHighlights(){
     const isActive=b.id===_activeBldId;
     const isSel=_selectedBldIds.has(b.id);
     const viol=zoningOn&&(b.violatesSetback||false);
-    try{map.setPaintProperty('bld-fill-'+b.id,'fill-color',viol?'#ef4444':'#6366f1');}catch(_){}
+    const fillC=viol?'#ef4444':(b.fillColor||'#6366f1');
+    const custLine=(b.lineColor&&!viol)?b.lineColor:null;
+    try{map.setPaintProperty('bld-fill-'+b.id,'fill-color',fillC);}catch(_){}
     if(isActive){
       try{map.setPaintProperty('bld-fill-'+b.id,'fill-opacity',viol?0.5:0.45);}catch(_){}
-      try{map.setPaintProperty('bld-line-'+b.id,'line-color',viol?'#fca5a5':'#c7d2fe');}catch(_){}
+      try{map.setPaintProperty('bld-line-'+b.id,'line-color',custLine||(viol?'#fca5a5':'#c7d2fe'));}catch(_){}
       try{map.setPaintProperty('bld-line-'+b.id,'line-width',3);}catch(_){}
     } else if(isSel){
       try{map.setPaintProperty('bld-fill-'+b.id,'fill-opacity',viol?0.4:0.35);}catch(_){}
-      try{map.setPaintProperty('bld-line-'+b.id,'line-color',viol?'#ef4444':'#818cf8');}catch(_){}
+      try{map.setPaintProperty('bld-line-'+b.id,'line-color',custLine||(viol?'#ef4444':'#818cf8'));}catch(_){}
       try{map.setPaintProperty('bld-line-'+b.id,'line-width',2.5);}catch(_){}
     } else {
       try{map.setPaintProperty('bld-fill-'+b.id,'fill-opacity',multiSel?0.15:0.3);}catch(_){}
-      try{map.setPaintProperty('bld-line-'+b.id,'line-color',viol?(multiSel?'#ef4444':'#fca5a5'):(multiSel?'#4338ca':'#a5b4fc'));}catch(_){}
+      try{map.setPaintProperty('bld-line-'+b.id,'line-color',custLine||(viol?(multiSel?'#ef4444':'#fca5a5'):(multiSel?'#4338ca':'#a5b4fc')));}catch(_){}
       try{map.setPaintProperty('bld-line-'+b.id,'line-width',1.5);}catch(_){}
     }
   });
@@ -1435,6 +1437,7 @@ function _showDrawnAreaCard(bld){
 }
 
 function _selectBuilding(id,shift=false){
+  if(_geoTool==='erase'){_removeBuildingById(id);return;}
   if(shift){
     if(id===_activeBldId){
       // Shift-click on active building: clear multi-select back to single
@@ -2364,12 +2367,15 @@ function _updateAnalysisBtn(){
 function _updateGeoToolbar(){
   const tb=document.getElementById('geo-toolbar');
   const canExtrude=_isDrawnArea&&['polygon','rectangle','circle'].includes(_drawShape);
-  if(tb)tb.style.display=(canExtrude||_extrusionActive)?'flex':'none';
-  const b3=document.getElementById('geo-3d-btn');if(b3)b3.classList.toggle('active',_extrusionActive);
-  // Shape editing only applies once 3D is on — dim the edit button until then
+  if(tb)tb.style.display=(_isDrawnArea||_extrusionActive)?'flex':'none';
+  const b3=document.getElementById('geo-3d-btn');
+  if(b3){b3.classList.toggle('active',_extrusionActive);b3.classList.toggle('disabled',!canExtrude&&!_extrusionActive);}
   const eb=document.getElementById('geo-edit-btn');
-  if(eb)eb.style.opacity=_extrusionActive?'1':'0.4';
-  if(!_extrusionActive){const g=document.getElementById('geo-edit-btn');if(g)g.classList.remove('active');}
+  if(eb)eb.classList.toggle('active',!!_editingBldId||(_extrusionActive&&_shapeEditMode));
+  const er=document.getElementById('geo-erase-btn');if(er)er.classList.toggle('active',_geoTool==='erase');
+  const ro=document.getElementById('geo-rotate-btn');if(ro)ro.classList.toggle('active',_geoTool==='rotate');
+  const sl=document.getElementById('geo-slice-btn');if(sl)sl.classList.toggle('active',_geoTool==='slice');
+  const pt=document.getElementById('geo-paint-btn');if(pt)pt.classList.toggle('active',_paintOpen);
 }
 
 function _setAnalysisPanel(open){
