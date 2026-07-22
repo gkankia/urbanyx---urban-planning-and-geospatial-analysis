@@ -105,7 +105,7 @@ let _editingOrigGeom=null;
 let _geoTool=null;      // 'move' | 'erase' | 'rotate' | 'slice' | null
 let _paintOpen=false;
 let _rotOrig=null,_rotPivot=null,_rotBearing0=0,_rotRadiusKm=0,_rotHandle=null,_rotPivotM=null;
-let _moveOrig=null,_moveStart=null,_moveDragging=false;
+let _moveOrig=null,_moveAnchor=null,_movePicked=false;
 let _sliceStart=null;
 // Clipboard + undo/redo history for drawn shapes
 let _geoClipboard=null;
@@ -1461,6 +1461,7 @@ function _showDrawnAreaCard(bld){
 
 function _selectBuilding(id,shift=false){
   if(_geoTool==='erase'){_removeBuildingById(id);_histCommit();return;}
+  if(_geoTool==='move')return; // clicks are pick-up/drop, not selection changes
   if(shift){
     if(id===_activeBldId){
       // Shift-click on active building: clear multi-select back to single
@@ -1666,6 +1667,7 @@ function _setFloorUse(fi,useId){
   if(_threeEditor)_threeEditor.rebuild();
   _refreshFloorPanel();
   _updateMetricsExtrusion();
+  _pfcUpdateExtrusionInfo();
 }
 function _applyUseToSelection(useId){
   const use=FLOOR_USES.find(u=>u.id===useId);
@@ -1678,6 +1680,7 @@ function _applyUseToSelection(useId){
   if(_threeEditor)_threeEditor.rebuild();
   _refreshFloorPanel();
   _updateMetricsExtrusion();
+  _pfcUpdateExtrusionInfo();
 }
 function _resetSelectedFloors(){
   _selectedFloors.forEach(fi=>_resetFloor(fi));
@@ -2519,28 +2522,59 @@ function selectToolClicked(){
 }
 
 // Move — drag the active shape anywhere on the map.
+// Move — click the shape to pick it up, the shape follows the cursor, click again to drop.
 function toggleMoveMode(){
   if(!_activeBldId){showToast(lang==='ka'?'ჯერ მონიშნე ფიგურა':'Select a shape first');return;}
   if(_geoTool==='move'){_clearGeoTools(null);return;}
   _clearGeoTools('move');_geoTool='move';
+  _movePicked=false;_moveOrig=null;_moveAnchor=null;
   _moveAttach();
   if(mapReady&&map.getCanvas())map.getCanvas().style.cursor='move';
-  showToast(lang==='ka'?'გადაათრიე ფიგურა გადასაადგილებლად':'Drag the shape to move it');
+  showToast(lang==='ka'?'დააჭირე ფიგურას ასაღებად, გადაიტანე მაუსით, დააჭირე დასაფიქსირებლად':'Click the shape to pick it up · move the mouse · click to drop');
   _updateGeoToolbar();
 }
-function _moveAttach(){if(!mapReady)return;map.dragPan.disable();map.on('mousedown',_moveDown);map.on('mousemove',_moveMove);map.on('mouseup',_moveUp);}
-function _moveDetach(){if(!mapReady)return;map.off('mousedown',_moveDown);map.off('mousemove',_moveMove);map.off('mouseup',_moveUp);map.dragPan.enable();_moveDragging=false;_moveOrig=null;_moveStart=null;}
-function _moveDown(e){const bld=_activeBld();if(!bld)return;_moveOrig=turf.feature(JSON.parse(JSON.stringify(bld.geojson)));_moveStart=[e.lngLat.lng,e.lngLat.lat];_moveDragging=true;if(map.getCanvas())map.getCanvas().style.cursor='grabbing';}
-function _moveMove(e){
-  if(!_moveDragging||!_moveOrig)return;
+function _moveAttach(){
+  if(!mapReady)return;
+  map.dragPan.disable();
+  // Suppress 3D floor/vertex interaction while moving an extruded shape
+  if(_threeEditor)try{_threeEditor._deactivateListeners();}catch(_){}
+  map.on('click',_moveClick);map.on('mousemove',_moveFollow);
+}
+function _moveDetach(){
+  if(!mapReady)return;
+  if(_movePicked)_histCommit();
+  map.off('click',_moveClick);map.off('mousemove',_moveFollow);
+  map.dragPan.enable();
+  if(_extrusionActive&&_threeEditor)try{_threeEditor._activateListeners();_threeEditor.setEditMode(_shapeEditMode);}catch(_){}
+  _movePicked=false;_moveOrig=null;_moveAnchor=null;
+  if(map.getCanvas())map.getCanvas().style.cursor='';
+}
+function _moveClick(e){
+  const bld=_activeBld();if(!bld)return;
+  if(!_movePicked){
+    // Pick up: anchor at the click point so the shape doesn't jump
+    _moveOrig=turf.feature(JSON.parse(JSON.stringify(bld.geojson)));
+    _moveAnchor=[e.lngLat.lng,e.lngLat.lat];
+    _movePicked=true;
+    if(map.getCanvas())map.getCanvas().style.cursor='grabbing';
+    showToast(lang==='ka'?'გადაიტანე მაუსი · დააჭირე დასაფიქსირებლად':'Move the mouse · click to drop');
+  } else {
+    // Drop
+    _movePicked=false;_moveOrig=null;_moveAnchor=null;
+    if(map.getCanvas())map.getCanvas().style.cursor='move';
+    _histCommit();
+    showToast(lang==='ka'?'გადაადგილდა':'Moved');
+  }
+}
+function _moveFollow(e){
+  if(!_movePicked||!_moveOrig)return;
   const cur=[e.lngLat.lng,e.lngLat.lat];
-  const dist=turf.distance(_moveStart,cur);
+  const dist=turf.distance(_moveAnchor,cur);
   if(dist===0)return;
-  const brg=turf.bearing(_moveStart,cur);
+  const brg=turf.bearing(_moveAnchor,cur);
   const moved=turf.transformTranslate(_moveOrig,dist,brg);
   _geoCommitGeom(_activeBld(),moved.geometry);
 }
-function _moveUp(){if(!_moveDragging)return;_moveDragging=false;_moveOrig=null;if(map.getCanvas())map.getCanvas().style.cursor='move';_histCommit();}
 
 // Floor custom color — apply a hex color to the selected floors' overrides.
 function _setFloorColorHex(hex){
