@@ -1243,6 +1243,7 @@ function toggleExtrusion(){
     }
     map.easeTo({pitch:55,duration:700});
   } else {
+    if(typeof _resetShapeEditMode==='function')_resetShapeEditMode(); // leaving 3D exits edit mode
     if(_threeEditor){const _tb=_activeBld();_threeEditor._deactivateListeners();try{map.removeLayer(_threeEditor.id);}catch(e){}_threeEditor.dispose();if(_tb)_tb.threeEditor=null;_threeEditor=null;}
     map.getSource('extrusion-floors')?.setData({type:'FeatureCollection',features:[]});
     if(map.getLayer('extrusion-layer'))map.setLayoutProperty('extrusion-layer','visibility','none');
@@ -1730,11 +1731,20 @@ function onDrawShapeUpdate(){
 let _threeEditor=null;
 
 function toggleShapeEditMode(){
-  if(!_isDrawnArea||!_extrusionActive)return;
+  if(!_isDrawnArea||!_extrusionActive){showToast(lang==='ka'?'ჯერ ჩართე 3D რეჟიმი':'Enable 3D first to edit the shape');return;}
   _shapeEditMode=!_shapeEditMode;
   document.getElementById('edit-shape-btn')?.classList.toggle('active',_shapeEditMode);
+  document.getElementById('geo-edit-btn')?.classList.toggle('active',_shapeEditMode);
+  const tip=document.getElementById('geo-edit-tip');if(tip)tip.textContent=_shapeEditMode?(lang==='ka'?'რედაქტირება: ჩართ.':'Editing: on'):(lang==='ka'?'ფორმის რედაქტირება':'Edit shape');
   // Three.js layer stays alive; just enable/disable drag interaction
   if(_threeEditor)_threeEditor.setEditMode(_shapeEditMode);
+  showToast(_shapeEditMode?(lang==='ka'?'დააჭირე და გადაათრიე წვეროები ფორმის შესაცვლელად':'Drag the corner points to reshape the building'):(lang==='ka'?'ფორმის რედაქტირება გამორთულია':'Shape editing off'));
+}
+function _resetShapeEditMode(){
+  _shapeEditMode=false;
+  document.getElementById('edit-shape-btn')?.classList.remove('active');
+  const g=document.getElementById('geo-edit-btn');if(g)g.classList.remove('active');
+  const tip=document.getElementById('geo-edit-tip');if(tip)tip.textContent=(lang==='ka'?'ფორმის რედაქტირება':'Edit shape');
 }
 
 class _BuildingEditorLayer{
