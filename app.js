@@ -2706,6 +2706,7 @@ function _histSnapshot(){
     activeIndex:_buildings.findIndex(b=>b.id===_activeBldId),
     buildings:_buildings.map(b=>({
       geojson:JSON.parse(JSON.stringify(b.geojson)),
+      name:b.name||'',
       extrusionActive:!!b.extrusionActive,
       extrusionHeight:b.extrusionHeight,
       floorOverrides:JSON.parse(JSON.stringify(b.floorOverrides||{})),
@@ -2722,8 +2723,8 @@ function _histCommit(){
   _hist.push(snap);_histPtr=_hist.length-1;
   if(_hist.length>60){_hist.shift();_histPtr--;}
 }
-function _histUndo(){if(_histPtr<=0)return false;_histPtr--;_histLock=true;_restoreBuildings(_hist[_histPtr]);_histLock=false;return true;}
-function _histRedo(){if(_histPtr>=_hist.length-1)return false;_histPtr++;_histLock=true;_restoreBuildings(_hist[_histPtr]);_histLock=false;return true;}
+function _histUndo(){if(_histPtr<=0)return false;_histPtr--;_histLock=true;_geoRestoreSnapshot(_hist[_histPtr]);_histLock=false;return true;}
+function _histRedo(){if(_histPtr>=_hist.length-1)return false;_histPtr++;_histLock=true;_geoRestoreSnapshot(_hist[_histPtr]);_histLock=false;return true;}
 function _teardownAllBuildings(){
   _buildings.forEach(b=>{
     if(b.threeEditor){try{map.removeLayer(b.threeEditor.id);}catch(_){}try{b.threeEditor.dispose();}catch(_){}b.threeEditor=null;}
@@ -2737,14 +2738,14 @@ function _teardownAllBuildings(){
   _threeEditor=null;
   _buildings=[];_activeBldId=null;_selectedBldIds.clear();_extrusionActive=false;_isDrawnArea=false;_floorOverrides={};_selectedFloors.clear();
 }
-function _restoreBuildings(snap){
+function _geoRestoreSnapshot(snap){
   if(!snap)return;
   // Leave any active edit / tool cleanly
   if(_editingBldId){try{_draw.deleteAll();_draw.changeMode('simple_select');}catch(_){}_editingBldId=null;_editingDrawId=null;_editingOrigGeom=null;}
   _teardownAllBuildings();
   snap.buildings.forEach(bs=>{
     const nb=_registerBuilding(bs.geojson,bs.extrusionActive?{extrusionActive:true,extrusionHeight:bs.extrusionHeight,floorOverrides:bs.floorOverrides}:null);
-    if(nb){if(bs.fillColor)nb.fillColor=bs.fillColor;if(bs.lineColor)nb.lineColor=bs.lineColor;}
+    if(nb){nb.name=bs.name||'';if(bs.fillColor)nb.fillColor=bs.fillColor;if(bs.lineColor)nb.lineColor=bs.lineColor;}
   });
   if(!_buildings.length){
     const fc=document.getElementById('parcel-float-card');if(fc)fc.style.display='none';
@@ -3396,9 +3397,11 @@ function _restoreBuildings(savedBuildings, activeBldId){
   // Reconstruct each building
   for(const sb of savedBuildings){
     const bld={id:sb.id,geojson:sb.geojson,ring:sb.ring,drawShape:sb.drawShape||'polygon',
+      name:sb.name||'',
       areaM2:sb.areaM2||0,perimM:sb.perimM||0,areaStr:sb.areaStr||'',perimStr:sb.perimStr||'',
       extrusionActive:sb.extrusionActive||false,extrusionHeight:sb.extrusionHeight||12,
-      floorOverrides:sb.floorOverrides||{},threeEditor:null};
+      floorOverrides:sb.floorOverrides||{},
+      fillColor:sb.fillColor||null,lineColor:sb.lineColor||null,threeEditor:null};
     _buildings.push(bld);
     // Keep the sequence counter above any restored ids so new buildings don't collide
     const n=parseInt(sb.id.replace('bld_',''),10);
@@ -3493,10 +3496,12 @@ function _collectProjectState(){
       if(_buildings.length){
         snap.buildings=_buildings.map(b=>({
           id:b.id,geojson:b.geojson,ring:b.ring,drawShape:b.drawShape||'polygon',
+          name:b.name||'',
           areaM2:b.areaM2,perimM:b.perimM,areaStr:b.areaStr,perimStr:b.perimStr,
           extrusionActive:b.extrusionActive||false,
           extrusionHeight:b.extrusionHeight||12,
-          floorOverrides:b.floorOverrides||{}
+          floorOverrides:b.floorOverrides||{},
+          fillColor:b.fillColor||null,lineColor:b.lineColor||null
         }));
         if(_activeBldId)snap.activeBldId=_activeBldId;
       }
