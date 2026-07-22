@@ -105,7 +105,6 @@ let _editingOrigGeom=null;
 let _geoTool=null;      // 'move' | 'erase' | 'rotate' | 'slice' | null
 let _paintOpen=false;
 let _rotOrig=null,_rotPivot=null,_rotBearing0=0,_rotRadiusKm=0,_rotHandle=null,_rotPivotM=null;
-let _moveOrig=null,_moveAnchor=null,_movePicked=false;
 let _sliceStart=null;
 // Clipboard + undo/redo history for drawn shapes
 let _geoClipboard=null;
@@ -1235,6 +1234,11 @@ function toggleExtrusion(){
   const canExtrude=_isDrawnArea&&['polygon','rectangle','circle'].includes(_drawShape);
   if(!canExtrude){showToast(lang==='ka'?'3D გასააქტიურებლად დახაზე პოლიგონი, წრე ან კვადრატი':'Draw a polygon, circle or square on the map to use 3D extrusion');return;}
   if(!_isDrawnArea)return;
+  // Advisory only: warn if the footprint extends past the 3 m setback, but still allow it
+  if(!_extrusionActive&&!_footprintWithinSetback()){
+    try{_updateSetbackLayer(_dbParcelGeoJSON);}catch(_){}
+    showToast(lang==='ka'?'შენიშვნა: შენობა სცილდება 3 მ დაშორების საზღვარს — საბოლოო პროექტი უნდა დაექვემდებაროს ამ მოთხოვნას':'Note: the footprint extends beyond the 3 m setback — the final project must comply with it',4800);
+  }
   _extrusionActive=!_extrusionActive;
   document.getElementById('geo-3d-btn')?.classList.toggle('active',_extrusionActive);
   _updateGeoToolbar();
@@ -1281,31 +1285,50 @@ function toggleExtrusion(){
 
 function setExtrusionHeight(val){
   _extrusionHeight=+val;
-  const _bldA=_activeBld()?.areaM2||_currentParcelAreaM2||0;
-  const _k2Cap=(_maxFloorAreaM2!=null&&_bldA>0)?Math.max(3,Math.floor(_maxFloorAreaM2/_bldA)*3):null;
-  const _zCap=_zoneMaxHeightM(); // absolute zone height limit (Article 16)
-  const _caps=[_k2Cap,_zCap].filter(v=>v!=null);
-  const _maxH=_caps.length?Math.min(..._caps):null;
-  if(_maxH!=null&&_extrusionHeight>_maxH)_extrusionHeight=_maxH;
+  const _maxH=_extrusionMaxHeightM(); // zone height limit (Article 16) ∧ K2 cap — advisory only
+  const _over=_maxH!=null&&_extrusionHeight>_maxH;
+  if(_over)_notifyHeightCap(_maxH);
   const floors=Math.max(1,Math.round(_extrusionHeight/3));
   const lbl=document.getElementById('extrusion-height-label');
-  if(lbl)lbl.textContent=_extrusionHeight+' m  ·  ~'+floors+' fl'+(_maxH!=null&&_extrusionHeight>=_maxH?' · max':'');
+  if(lbl)lbl.textContent=_extrusionHeight+' m  ·  ~'+floors+' fl'+(_over?(lang==='ka'?' · ლიმიტს ზევით':' · over limit'):'');
   const sl=document.getElementById('extrusion-height-slider');
-  if(sl){sl.value=_extrusionHeight;if(_maxH!=null)sl.setAttribute('max',String(_maxH));}
+  if(sl)sl.value=_extrusionHeight;
   if(_threeEditor)_threeEditor.rebuild();
   else if(mapReady&&_extrusionActive)_rebuildExtrusionFloors();
   _update3DMetrics();
 }
 
-function _applyExtrusionHeightCap(){
+// Combined max height for the active building: min of zone height limit (Article 16)
+// and the K2 floor-area cap. Returns null when no zoning limit applies.
+function _extrusionMaxHeightM(){
   const bldA=(_activeBld()?.areaM2)||_currentParcelAreaM2||0;
   const k2Cap=(_maxFloorAreaM2!=null&&bldA>0)?Math.max(3,Math.floor(_maxFloorAreaM2/bldA)*3):null;
   const zCap=_zoneMaxHeightM();
   const caps=[k2Cap,zCap].filter(v=>v!=null);
-  const maxH=caps.length?Math.min(...caps):null;
+  return caps.length?Math.min(...caps):null;
+}
+let _heightCapMsgAt=0;
+function _notifyHeightCap(maxH){
+  const now=Date.now();
+  if(now-_heightCapMsgAt<1400)return;
+  _heightCapMsgAt=now;
+  showToast((lang==='ka'?'შენიშვნა: სცილდება დაშვებულ სიმაღლეს ('+maxH+' მ) — საბოლოო პროექტი უნდა დაექვემდებაროს':'Note: beyond the permitted height ('+maxH+' m) — the final project must comply'),2800);
+}
+// True if the active footprint stays within the parcel's 3 m setback boundary
+// (only enforced when drawing on a specific parcel).
+function _footprintWithinSetback(){
+  if(!_dbParcelGeoJSON)return true;
+  const bld=_activeBld();if(!bld)return true;
+  try{
+    const inset=turf.buffer({type:'Feature',geometry:_dbParcelGeoJSON,properties:{}},-3,{units:'meters'});
+    if(!inset)return true;
+    return turf.booleanWithin({type:'Feature',geometry:bld.geojson,properties:{}},inset);
+  }catch(_){return true;}
+}
+function _applyExtrusionHeightCap(){
+  // Advisory only — the height limit no longer clamps the slider or the model.
   const sl=document.getElementById('extrusion-height-slider');
-  if(sl){if(maxH!=null)sl.setAttribute('max',String(maxH));else sl.removeAttribute('max');}
-  if(maxH!=null&&_extrusionHeight>maxH)setExtrusionHeight(maxH);
+  if(sl)sl.removeAttribute('max');
   if(_extrusionActive&&typeof _updateMetricsExtrusion==='function')_updateMetricsExtrusion();
 }
 function _clearExtrusion(){
@@ -1461,7 +1484,6 @@ function _showDrawnAreaCard(bld){
 
 function _selectBuilding(id,shift=false){
   if(_geoTool==='erase'){_removeBuildingById(id);_histCommit();return;}
-  if(_geoTool==='move')return; // clicks are pick-up/drop, not selection changes
   if(shift){
     if(id===_activeBldId){
       // Shift-click on active building: clear multi-select back to single
@@ -2225,6 +2247,9 @@ class _BuildingEditorLayer{
       // Free continuous height — 0.5 m precision, no floor snapping
       const rawH=this._dragH+(this._dragStartY-e.clientY)*0.5;
       const newH=Math.max(0.5,Math.round(rawH*2)/2);
+      // Advisory only: warn if past the zone height limit, but keep extruding
+      const maxH=_extrusionMaxHeightM();
+      if(maxH!=null&&newH>maxH)_notifyHeightCap(maxH);
       if(newH===_extrusionHeight)return;
       _extrusionHeight=newH;
       _update3DMetrics();
@@ -2471,7 +2496,6 @@ function _updateGeoToolbar(){
   const er=document.getElementById('geo-erase-btn');if(er)er.classList.toggle('active',_geoTool==='erase');
   const ro=document.getElementById('geo-rotate-btn');if(ro)ro.classList.toggle('active',_geoTool==='rotate');
   const sl=document.getElementById('geo-slice-btn');if(sl)sl.classList.toggle('active',_geoTool==='slice');
-  const mv=document.getElementById('geo-move-btn');if(mv)mv.classList.toggle('active',_geoTool==='move');
   const pt=document.getElementById('geo-paint-btn');if(pt)pt.classList.toggle('active',_paintOpen);
   // Select = default pointer mode: active when nothing else is
   const se=document.getElementById('geo-select-btn');
@@ -2505,11 +2529,10 @@ function _clearGeoTools(keep){
     const prev=_geoTool;_geoTool=null;
     if(prev==='rotate')_rotDetach();
     if(prev==='slice')_sliceDetach();
-    if(prev==='move')_moveDetach();
   }
   if(keep!=='paint')_closePaintPanel();
   if(keep!=='edit'&&_editingBldId)_exitBldEditMode(true);
-  if(mapReady&&map.getCanvas())map.getCanvas().style.cursor=(_geoTool==='erase'||_geoTool==='slice')?'crosshair':(_geoTool==='move'?'move':'');
+  if(mapReady&&map.getCanvas())map.getCanvas().style.cursor=(_geoTool==='erase'||_geoTool==='slice')?'crosshair':'';
   _updateGeoToolbar();
 }
 
@@ -2522,59 +2545,6 @@ function selectToolClicked(){
 }
 
 // Move — drag the active shape anywhere on the map.
-// Move — click the shape to pick it up, the shape follows the cursor, click again to drop.
-function toggleMoveMode(){
-  if(!_activeBldId){showToast(lang==='ka'?'ჯერ მონიშნე ფიგურა':'Select a shape first');return;}
-  if(_geoTool==='move'){_clearGeoTools(null);return;}
-  _clearGeoTools('move');_geoTool='move';
-  _movePicked=false;_moveOrig=null;_moveAnchor=null;
-  _moveAttach();
-  if(mapReady&&map.getCanvas())map.getCanvas().style.cursor='move';
-  showToast(lang==='ka'?'დააჭირე ფიგურას ასაღებად, გადაიტანე მაუსით, დააჭირე დასაფიქსირებლად':'Click the shape to pick it up · move the mouse · click to drop');
-  _updateGeoToolbar();
-}
-function _moveAttach(){
-  if(!mapReady)return;
-  map.dragPan.disable();
-  // Suppress 3D floor/vertex interaction while moving an extruded shape
-  if(_threeEditor)try{_threeEditor._deactivateListeners();}catch(_){}
-  map.on('click',_moveClick);map.on('mousemove',_moveFollow);
-}
-function _moveDetach(){
-  if(!mapReady)return;
-  if(_movePicked)_histCommit();
-  map.off('click',_moveClick);map.off('mousemove',_moveFollow);
-  map.dragPan.enable();
-  if(_extrusionActive&&_threeEditor)try{_threeEditor._activateListeners();_threeEditor.setEditMode(_shapeEditMode);}catch(_){}
-  _movePicked=false;_moveOrig=null;_moveAnchor=null;
-  if(map.getCanvas())map.getCanvas().style.cursor='';
-}
-function _moveClick(e){
-  const bld=_activeBld();if(!bld)return;
-  if(!_movePicked){
-    // Pick up: anchor at the click point so the shape doesn't jump
-    _moveOrig=turf.feature(JSON.parse(JSON.stringify(bld.geojson)));
-    _moveAnchor=[e.lngLat.lng,e.lngLat.lat];
-    _movePicked=true;
-    if(map.getCanvas())map.getCanvas().style.cursor='grabbing';
-    showToast(lang==='ka'?'გადაიტანე მაუსი · დააჭირე დასაფიქსირებლად':'Move the mouse · click to drop');
-  } else {
-    // Drop
-    _movePicked=false;_moveOrig=null;_moveAnchor=null;
-    if(map.getCanvas())map.getCanvas().style.cursor='move';
-    _histCommit();
-    showToast(lang==='ka'?'გადაადგილდა':'Moved');
-  }
-}
-function _moveFollow(e){
-  if(!_movePicked||!_moveOrig)return;
-  const cur=[e.lngLat.lng,e.lngLat.lat];
-  const dist=turf.distance(_moveAnchor,cur);
-  if(dist===0)return;
-  const brg=turf.bearing(_moveAnchor,cur);
-  const moved=turf.transformTranslate(_moveOrig,dist,brg);
-  _geoCommitGeom(_activeBld(),moved.geometry);
-}
 
 // Floor custom color — apply a hex color to the selected floors' overrides.
 function _setFloorColorHex(hex){
@@ -3009,6 +2979,8 @@ function startDraw(shape){
   _drawShape=shape;_polyDrawing=true;
   const hint=document.getElementById('draw-hint');
   const tr=t();
+  // Live zoning indicator: show the parcel's 3 m inner boundary while drawing on it
+  if(_dbParcelGeoJSON&&['polygon','rectangle','circle'].includes(shape)){try{_updateSetbackLayer(_dbParcelGeoJSON);}catch(_){}}
   // Deselect active building without deleting it
   if(_activeBldId){_saveBldState();const _pb=_activeBld();if(_pb?.extrusionActive)_freezeBld(_pb);_threeEditor=null;_extrusionActive=false;_activeBldId=null;_updateBldHighlights();}
   if(_isDrawnArea){_isDrawnArea=false;try{resetAnalysis();}catch(_){}if(mapReady){if(_dbParcelGeoJSON){map.getSource('parcel')?.setData({type:'FeatureCollection',features:[{type:'Feature',geometry:_dbParcelGeoJSON,properties:{}}]});}else{map.getSource('parcel')?.setData({type:'FeatureCollection',features:[]});}}}
