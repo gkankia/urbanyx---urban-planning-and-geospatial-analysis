@@ -1434,7 +1434,9 @@ function _showDrawnAreaCard(bld){
   const isKa=lang==='ka';
   const card=document.getElementById('parcel-float-card');
   if(!card)return;
-  const _hdr=document.getElementById('pfc-code');if(_hdr)_hdr.textContent=isKa?'დახაზული არეალი':'Drawn area';
+  _pfcRenameInit();
+  const _hdr=document.getElementById('pfc-code');
+  if(_hdr){_hdr.textContent=bld.name||(isKa?'დახაზული არეალი':'Drawn area');_hdr.classList.add('pfc-editable');_hdr.setAttribute('contenteditable','true');_hdr.setAttribute('title',isKa?'დააჭირე სახელის შესაცვლელად':'Click to rename');}
   document.getElementById('pfc-lbl-area').textContent=isKa?'ფართობი':'Area';
   document.getElementById('pfc-area').textContent=bld.areaStr;
   const prow=document.getElementById('pfc-perim-row');
@@ -2311,8 +2313,62 @@ function _update3DMetrics(){
   if(rowF)rowF.style.display=show?'flex':'none';
   if(_extrusionActive)_applyExtrusionHeightCap();
   _updateMetricsExtrusion();
+  _pfcUpdateExtrusionInfo();
   _updateAnalysisBtn();
   _updateGeoToolbar();
+}
+
+// Rename affordance for the floating-card header (drawn areas only)
+let _pfcRenameBound=false;
+function _pfcRenameInit(){
+  if(_pfcRenameBound)return;
+  const el=document.getElementById('pfc-code');if(!el)return;
+  _pfcRenameBound=true;
+  el.addEventListener('keydown',e=>{
+    if(!el.classList.contains('pfc-editable'))return;
+    if(e.key==='Enter'){e.preventDefault();el.blur();}
+    else if(e.key==='Escape'){e.preventDefault();const b=_activeBld();el.textContent=(b&&b.name)||(lang==='ka'?'დახაზული არეალი':'Drawn area');el.blur();}
+    e.stopPropagation(); // don't trigger geo shortcuts while typing a name
+  });
+  el.addEventListener('blur',()=>{if(el.classList.contains('pfc-editable'))_pfcSaveName();});
+}
+function _pfcSaveName(){
+  const el=document.getElementById('pfc-code');if(!el)return;
+  const bld=_activeBld();if(!bld||!_isDrawnArea)return;
+  const txt=el.textContent.replace(/\s+/g,' ').trim();
+  const def=lang==='ka'?'დახაზული არეალი':'Drawn area';
+  bld.name=txt;
+  el.textContent=txt||def;
+  _histCommit();
+  if(_openedProjectId&&typeof _autoSaveProject==='function')_autoSaveProject();
+}
+
+// Floating-card 3D summary: floors + per-use floor area, updated live while extruded.
+function _pfcUpdateExtrusionInfo(){
+  const row=document.getElementById('pfc-ext-row');if(!row)return;
+  const bld=_activeBld();
+  if(!_isDrawnArea||!_extrusionActive||!bld){row.style.display='none';row.innerHTML='';return;}
+  const isKa=lang==='ka';
+  const numFloors=Math.max(1,Math.round(_extrusionHeight/3));
+  const fmtM2=v=>v>=10000?(v/10000).toFixed(2)+' ha':Math.round(v).toLocaleString()+' m²';
+  let totalM2=0;const useArea={};
+  for(let f=0;f<numFloors;f++){
+    const ov=_floorOverrides[f];
+    const floorM2=ov?.ring?computePolygonAreaM2(ov.ring):(_currentParcelAreaM2||bld.areaM2||0);
+    totalM2+=floorM2;
+    const key=ov?.useType||'__none__';
+    useArea[key]=(useArea[key]||0)+floorM2;
+  }
+  let html=`<div class="pfc-ext-title">${isKa?'3D მოცულობა':'3D massing'}</div>`;
+  html+=`<div class="pfc-row"><span class="pfc-lbl">${isKa?'სართული':'Floors'}</span><span class="pfc-val">${numFloors}</span></div>`;
+  html+=`<div class="pfc-row"><span class="pfc-lbl">${isKa?'სიმაღლე':'Height'}</span><span class="pfc-val">${_extrusionHeight} m</span></div>`;
+  html+=`<div class="pfc-row"><span class="pfc-lbl">${isKa?'საერთო ფართი':'Floor area'}</span><span class="pfc-val">${fmtM2(totalM2)}</span></div>`;
+  const rows=[];
+  FLOOR_USES.forEach(u=>{const a=useArea[u.id];if(!a)return;const pct=totalM2?Math.round(a/totalM2*100):0;rows.push(`<div class="pfc-use-row"><span><span class="pfc-use-dot" style="background:${u.hex}"></span>${u.label}</span><span>${fmtM2(a)} · ${pct}%</span></div>`);});
+  const un=useArea['__none__'];
+  if(un&&rows.length){const pct=totalM2?Math.round(un/totalM2*100):0;rows.push(`<div class="pfc-use-row" style="opacity:0.55"><span><span class="pfc-use-dot" style="background:#64748b"></span>${isKa?'დაუსახელებელი':'Unassigned'}</span><span>${fmtM2(un)} · ${pct}%</span></div>`);}
+  if(rows.length)html+=`<div class="pfc-use-list">${rows.join('')}</div>`;
+  row.innerHTML=html;row.style.display='block';
 }
 
 function _updateMetricsExtrusion(){
@@ -7015,6 +7071,8 @@ function _initParcelCardDrag(){
   let dragging=false,ox=0,oy=0;
   header.addEventListener('mousedown',e=>{
     if(e.target.tagName==='BUTTON')return;
+    // Let the user place the caret / select text in the editable name instead of dragging
+    if(e.target.id==='pfc-code'&&e.target.getAttribute('contenteditable')==='true')return;
     dragging=true;
     const r=card.getBoundingClientRect();
     ox=e.clientX-r.left; oy=e.clientY-r.top;
@@ -7081,6 +7139,9 @@ function showParcelPopup(lngLat){
   const _ar2=document.getElementById('pfc-lbl-addr')?.closest('.pfc-row');if(_ar2)_ar2.style.display='';
   const _or2=document.getElementById('pfc-lbl-owner')?.closest('.pfc-row');if(_or2)_or2.style.display='';
   const _lt=document.getElementById('pfc-lbl-type');if(_lt)_lt.textContent=(tr.type||'Type');
+  // Parcels are not renamable; disable the editable header + hide the 3D summary
+  const _hd=document.getElementById('pfc-code');if(_hd){_hd.classList.remove('pfc-editable');_hd.removeAttribute('contenteditable');_hd.removeAttribute('title');}
+  const _er=document.getElementById('pfc-ext-row');if(_er){_er.style.display='none';_er.innerHTML='';}
   if(_geoTool||_paintOpen)_clearGeoTools(null);
   const _gtb2=document.getElementById('geo-toolbar');if(_gtb2)_gtb2.style.display='none';
   document.getElementById('nav-zoning-btn')?.classList.remove('active');
