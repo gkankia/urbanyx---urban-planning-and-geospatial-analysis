@@ -101,10 +101,11 @@ let _setbackRingAreaM2=null;
 let _editingBldId=null;
 let _editingDrawId=null;
 let _editingOrigGeom=null;
-// Geometry tools (erase / rotate / slice / paint)
-let _geoTool=null;      // 'erase' | 'rotate' | 'slice' | null
+// Geometry tools (select / move / erase / rotate / slice / paint)
+let _geoTool=null;      // 'move' | 'erase' | 'rotate' | 'slice' | null
 let _paintOpen=false;
-let _rotOrig=null,_rotPivot=null,_rotStartBearing=0,_rotDragging=false;
+let _rotOrig=null,_rotPivot=null,_rotBearing0=0,_rotRadiusKm=0,_rotHandle=null,_rotPivotM=null;
+let _moveOrig=null,_moveStart=null,_moveDragging=false;
 let _sliceStart=null;
 let _maxFootprintM2=null;
 let _maxFloorAreaM2=null;
@@ -1639,6 +1640,7 @@ function _setFloorUse(fi,useId){
   const use=FLOOR_USES.find(u=>u.id===useId);
   _floorOverrides[fi].useType=useId;
   _floorOverrides[fi].color=use?use.color:null;
+  _floorOverrides[fi].colorHex=use?use.hex:null;
   if(_threeEditor)_threeEditor.rebuild();
   _refreshFloorPanel();
   _updateMetricsExtrusion();
@@ -1649,6 +1651,7 @@ function _applyUseToSelection(useId){
     if(!_floorOverrides[fi])_floorOverrides[fi]={};
     _floorOverrides[fi].useType=useId;
     _floorOverrides[fi].color=use?use.color:null;
+    _floorOverrides[fi].colorHex=use?use.hex:null;
   });
   if(_threeEditor)_threeEditor.rebuild();
   _refreshFloorPanel();
@@ -1677,6 +1680,13 @@ function _refreshFloorPanel(){
     const activeUse=FLOOR_USES.find(u=>u.id===ov.useType);
     if(numEl)numEl.textContent='Floor '+(fi+1)+(activeUse?' · '+activeUse.label:'');
     if(swatchEl)swatchEl.style.background=activeUse?activeUse.hex:'#94a3b4';
+  }
+  // Reflect the current floor color in the custom-color picker
+  const colInput=document.getElementById('floor-color-input');
+  if(colInput){
+    const fi0=[..._selectedFloors][0];const ov0=_floorOverrides[fi0]||{};
+    const activeUse0=FLOOR_USES.find(u=>u.id===ov0.useType);
+    colInput.value=ov0.colorHex||(activeUse0?activeUse0.hex:'#94a3b8');
   }
   const useCounts={};
   _selectedFloors.forEach(f=>{const u=(_floorOverrides[f]||{}).useType;if(u)useCounts[u]=(useCounts[u]||0)+1;});
@@ -2382,7 +2392,11 @@ function _updateGeoToolbar(){
   const er=document.getElementById('geo-erase-btn');if(er)er.classList.toggle('active',_geoTool==='erase');
   const ro=document.getElementById('geo-rotate-btn');if(ro)ro.classList.toggle('active',_geoTool==='rotate');
   const sl=document.getElementById('geo-slice-btn');if(sl)sl.classList.toggle('active',_geoTool==='slice');
+  const mv=document.getElementById('geo-move-btn');if(mv)mv.classList.toggle('active',_geoTool==='move');
   const pt=document.getElementById('geo-paint-btn');if(pt)pt.classList.toggle('active',_paintOpen);
+  // Select = default pointer mode: active when nothing else is
+  const se=document.getElementById('geo-select-btn');
+  if(se)se.classList.toggle('active',!_geoTool&&!_paintOpen&&!_editingBldId&&!(_extrusionActive&&_shapeEditMode));
 }
 
 // ── Geometry tools ────────────────────────────────────────────────────────────
@@ -2412,11 +2426,53 @@ function _clearGeoTools(keep){
     const prev=_geoTool;_geoTool=null;
     if(prev==='rotate')_rotDetach();
     if(prev==='slice')_sliceDetach();
+    if(prev==='move')_moveDetach();
   }
   if(keep!=='paint')_closePaintPanel();
   if(keep!=='edit'&&_editingBldId)_exitBldEditMode(true);
-  if(mapReady&&map.getCanvas())map.getCanvas().style.cursor=(_geoTool==='erase')?'crosshair':(_geoTool==='rotate'?'grab':(_geoTool==='slice'?'crosshair':''));
+  if(mapReady&&map.getCanvas())map.getCanvas().style.cursor=(_geoTool==='erase'||_geoTool==='slice')?'crosshair':(_geoTool==='move'?'move':'');
   _updateGeoToolbar();
+}
+
+// Select — default pointer mode: cancel any active tool so clicking selects shapes
+// (and, in 3D, floors). Floor use/color is assigned from the floor panel.
+function selectToolClicked(){
+  _clearGeoTools(null);
+  showToast(_extrusionActive?(lang==='ka'?'მონიშვნა — დააჭირე სართულს ფერისა და ფუნქციის მისანიჭებლად':'Select mode — click a floor to assign its use & color'):(lang==='ka'?'მონიშვნა — დააჭირე ფიგურას':'Select mode — click a shape to select it'));
+  _updateGeoToolbar();
+}
+
+// Move — drag the active shape anywhere on the map.
+function toggleMoveMode(){
+  if(!_activeBldId){showToast(lang==='ka'?'ჯერ მონიშნე ფიგურა':'Select a shape first');return;}
+  if(_geoTool==='move'){_clearGeoTools(null);return;}
+  _clearGeoTools('move');_geoTool='move';
+  _moveAttach();
+  if(mapReady&&map.getCanvas())map.getCanvas().style.cursor='move';
+  showToast(lang==='ka'?'გადაათრიე ფიგურა გადასაადგილებლად':'Drag the shape to move it');
+  _updateGeoToolbar();
+}
+function _moveAttach(){if(!mapReady)return;map.dragPan.disable();map.on('mousedown',_moveDown);map.on('mousemove',_moveMove);map.on('mouseup',_moveUp);}
+function _moveDetach(){if(!mapReady)return;map.off('mousedown',_moveDown);map.off('mousemove',_moveMove);map.off('mouseup',_moveUp);map.dragPan.enable();_moveDragging=false;_moveOrig=null;_moveStart=null;}
+function _moveDown(e){const bld=_activeBld();if(!bld)return;_moveOrig=turf.feature(JSON.parse(JSON.stringify(bld.geojson)));_moveStart=[e.lngLat.lng,e.lngLat.lat];_moveDragging=true;if(map.getCanvas())map.getCanvas().style.cursor='grabbing';}
+function _moveMove(e){
+  if(!_moveDragging||!_moveOrig)return;
+  const cur=[e.lngLat.lng,e.lngLat.lat];
+  const dist=turf.distance(_moveStart,cur);
+  if(dist===0)return;
+  const brg=turf.bearing(_moveStart,cur);
+  const moved=turf.transformTranslate(_moveOrig,dist,brg);
+  _geoCommitGeom(_activeBld(),moved.geometry);
+}
+function _moveUp(){if(!_moveDragging)return;_moveDragging=false;_moveOrig=null;if(map.getCanvas())map.getCanvas().style.cursor='move';}
+
+// Floor custom color — apply a hex color to the selected floors' overrides.
+function _setFloorColorHex(hex){
+  if(!_selectedFloors.size)return;
+  const c=[parseInt(hex.slice(1,3),16)/255,parseInt(hex.slice(3,5),16)/255,parseInt(hex.slice(5,7),16)/255];
+  _selectedFloors.forEach(fi=>{if(!_floorOverrides[fi])_floorOverrides[fi]={};_floorOverrides[fi].color=c;_floorOverrides[fi].colorHex=hex;});
+  if(_threeEditor)_threeEditor.rebuild();
+  _refreshFloorPanel();
 }
 
 // Edit shape — 3D vertex drag when extruded, else 2D vertices + midpoints (direct_select).
@@ -2480,45 +2536,71 @@ function _closePaintPanel(){const pop=document.getElementById('geo-paint-popover
 function _geoApplyFill(color){const bld=_activeBld();if(!bld)return;bld.fillColor=color;try{map.setPaintProperty('bld-fill-'+bld.id,'fill-color',color);}catch(_){}}
 function _geoApplyLine(color){const bld=_activeBld();if(!bld)return;bld.lineColor=color;try{map.setPaintProperty('bld-line-'+bld.id,'line-color',color);}catch(_){}}
 
-// Rotate — drag on the map to spin the active shape about its centroid; shows degrees.
+// Rotate — a draggable handle orbits the shape's center point; drag it to rotate.
 function toggleRotateMode(){
   if(!_activeBldId){showToast(lang==='ka'?'ჯერ მონიშნე ფიგურა':'Select a shape first');return;}
   if(_geoTool==='rotate'){_clearGeoTools(null);return;}
   _clearGeoTools('rotate');_geoTool='rotate';
-  _rotAttach();
-  if(mapReady&&map.getCanvas())map.getCanvas().style.cursor='grab';
-  showToast(lang==='ka'?'გადაათრიე რუკაზე ფიგურის მოსატრიალებლად':'Drag on the map to rotate the shape');
+  _rotShowHandle();
+  showToast(lang==='ka'?'გადაათრიე სახელური ცენტრის გარშემო':'Drag the handle around the center point to rotate');
   _updateGeoToolbar();
 }
-function _rotAttach(){if(!mapReady)return;map.dragPan.disable();map.on('mousedown',_rotDown);map.on('mousemove',_rotMove);map.on('mouseup',_rotUp);}
-function _rotDetach(){
-  if(!mapReady)return;
-  map.off('mousedown',_rotDown);map.off('mousemove',_rotMove);map.off('mouseup',_rotUp);
-  map.dragPan.enable();
-  _rotDragging=false;_rotOrig=null;
-  const b=document.getElementById('geo-rotate-badge');if(b)b.style.display='none';
+function _rotShowHandle(){
+  const bld=_activeBld();if(!bld||!mapReady||typeof mapboxgl==='undefined')return;
+  const f=turf.feature(bld.geojson);
+  _rotPivot=turf.centroid(f).geometry.coordinates;
+  const bb=turf.bbox(f);
+  _rotRadiusKm=turf.distance([bb[0],bb[1]],[bb[2],bb[3]])/2+0.02;
+  _rotBearing0=0;
+  const hpos=turf.destination(_rotPivot,_rotRadiusKm,_rotBearing0).geometry.coordinates;
+  // Center pivot dot
+  const pel=document.createElement('div');pel.className='geo-rot-pivot';
+  _rotPivotM=new mapboxgl.Marker({element:pel}).setLngLat(_rotPivot).addTo(map);
+  // Rotate handle
+  const hel=document.createElement('div');hel.className='geo-rot-handle';
+  hel.innerHTML='<img src="analysis-logos/rotate.svg" width="20" height="20"><span class="geo-rot-deg"></span>';
+  _rotHandle=new mapboxgl.Marker({element:hel,draggable:true}).setLngLat(hpos).addTo(map);
+  _rotHandle.on('dragstart',_rotHStart);
+  _rotHandle.on('drag',_rotHDrag);
+  _rotHandle.on('dragend',_rotHEnd);
+  _rotEnsureLine();_rotUpdateLine(hpos);
 }
-function _rotDown(e){
+function _rotEnsureLine(){
+  if(!mapReady)return;
+  if(!map.getSource('geo-rot-line'))map.addSource('geo-rot-line',{type:'geojson',data:{type:'FeatureCollection',features:[]}});
+  if(!map.getLayer('geo-rot-line-lyr'))map.addLayer({id:'geo-rot-line-lyr',type:'line',source:'geo-rot-line',paint:{'line-color':'#c4b5fd','line-width':1.5,'line-dasharray':[2,2]}});
+  else map.setLayoutProperty('geo-rot-line-lyr','visibility','visible');
+}
+function _rotUpdateLine(hpos){map.getSource('geo-rot-line')?.setData({type:'Feature',geometry:{type:'LineString',coordinates:[_rotPivot,hpos]},properties:{}});}
+function _rotHStart(){
   const bld=_activeBld();if(!bld)return;
   _rotOrig=turf.feature(JSON.parse(JSON.stringify(bld.geojson)));
-  _rotPivot=turf.centroid(_rotOrig).geometry.coordinates;
-  _rotStartBearing=turf.bearing(_rotPivot,[e.lngLat.lng,e.lngLat.lat]);
-  _rotDragging=true;
-  if(map.getCanvas())map.getCanvas().style.cursor='grabbing';
+  const hl=_rotHandle.getLngLat();
+  _rotBearing0=turf.bearing(_rotPivot,[hl.lng,hl.lat]);
 }
-function _rotMove(e){
-  if(!_rotDragging||!_rotOrig)return;
-  const cur=turf.bearing(_rotPivot,[e.lngLat.lng,e.lngLat.lat]);
-  const delta=cur-_rotStartBearing;
+function _rotHDrag(){
+  if(!_rotOrig)return;
+  const hl=_rotHandle.getLngLat();const hpos=[hl.lng,hl.lat];
+  const cur=turf.bearing(_rotPivot,hpos);
+  const delta=cur-_rotBearing0;
   const rotated=turf.transformRotate(_rotOrig,delta,{pivot:_rotPivot});
   _geoCommitGeom(_activeBld(),rotated.geometry);
-  const badge=document.getElementById('geo-rotate-badge');
-  if(badge){let d=Math.round(delta)%360;if(d<0)d+=360;badge.textContent=d+'°';badge.style.display='block';}
+  _rotUpdateLine(hpos);
+  const deg=_rotHandle.getElement().querySelector('.geo-rot-deg');
+  if(deg){let d=Math.round(delta)%360;if(d<0)d+=360;deg.textContent=d+'°';deg.style.display='block';}
 }
-function _rotUp(){
-  if(!_rotDragging)return;_rotDragging=false;_rotOrig=null;
-  if(map.getCanvas())map.getCanvas().style.cursor='grab';
-  setTimeout(()=>{const b=document.getElementById('geo-rotate-badge');if(b&&!_rotDragging)b.style.display='none';},1000);
+function _rotHEnd(){
+  _rotOrig=null;
+  if(!_rotHandle)return;
+  const hl=_rotHandle.getLngLat();const cur=turf.bearing(_rotPivot,[hl.lng,hl.lat]);
+  const snapped=turf.destination(_rotPivot,_rotRadiusKm,cur).geometry.coordinates;
+  _rotHandle.setLngLat(snapped);_rotUpdateLine(snapped);
+}
+function _rotDetach(){
+  if(_rotHandle){try{_rotHandle.remove();}catch(_){}_rotHandle=null;}
+  if(_rotPivotM){try{_rotPivotM.remove();}catch(_){}_rotPivotM=null;}
+  if(mapReady){try{if(map.getLayer('geo-rot-line-lyr'))map.setLayoutProperty('geo-rot-line-lyr','visibility','none');}catch(_){}map.getSource('geo-rot-line')?.setData({type:'FeatureCollection',features:[]});}
+  _rotOrig=null;
 }
 
 // Slice — click two points across the shape to cut it into separate shapes.

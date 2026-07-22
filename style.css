@@ -693,7 +693,7 @@
   /* Bottom geometry reshape toolbar — placeholder */
   #geo-toolbar { position:absolute; bottom:28px; left:50%; transform:translateX(-50%); z-index:20; display:none; align-items:center; gap:3px; background:var(--glass-bg); backdrop-filter:var(--glass-blur); -webkit-backdrop-filter:var(--glass-blur); border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:5px; box-shadow:0 6px 24px rgba(0,0,0,0.45); }
   .geo-tb-sep { width:1px; height:20px; background:rgba(255,255,255,0.08); margin:0 2px; flex-shrink:0; }
-  .geo-tb-btn { position:relative; width:34px; height:34px; display:flex; align-items:center; justify-content:center; border-radius:8px; border:1px solid transparent; background:none; cursor:default; color:rgba(255,255,255,0.22); font-size:15px; transition:all 0.15s; opacity:0.6; }
+  .geo-tb-btn { position:relative; width:42px; height:42px; display:flex; align-items:center; justify-content:center; border-radius:9px; border:1px solid transparent; background:none; cursor:default; color:rgba(255,255,255,0.22); font-size:15px; transition:all 0.15s; opacity:0.6; }
   .geo-tb-btn:not([disabled]):hover { background:rgba(255,255,255,0.07); border-color:rgba(255,255,255,0.14); color:rgba(255,255,255,0.65); opacity:1; cursor:pointer; }
   .geo-tb-btn.geo-tool-btn { opacity:1; cursor:pointer; }
   .geo-tb-btn.geo-tool-btn:hover { background:rgba(255,255,255,0.08); border-color:rgba(255,255,255,0.14); }
@@ -708,7 +708,11 @@
   .geo-paint-row { display:flex; align-items:center; justify-content:space-between; gap:14px; }
   .geo-paint-row span { font-size:0.62rem; font-weight:600; letter-spacing:0.06em; text-transform:uppercase; color:rgba(255,255,255,0.55); }
   .geo-paint-row input[type=color] { width:34px; height:22px; border:1px solid rgba(255,255,255,0.15); border-radius:5px; background:none; padding:0; cursor:pointer; }
-  #geo-rotate-badge { position:absolute; bottom:calc(100% + 10px); left:50%; transform:translateX(-50%); background:rgba(167,139,250,0.9); color:#fff; font-size:0.7rem; font-weight:700; letter-spacing:0.04em; padding:4px 10px; border-radius:6px; box-shadow:0 4px 16px rgba(0,0,0,0.45); z-index:22; pointer-events:none; }
+  .geo-rot-handle { width:34px; height:34px; border-radius:50%; background:rgba(167,139,250,0.92); border:2px solid #fff; display:flex; align-items:center; justify-content:center; cursor:grab; box-shadow:0 3px 12px rgba(0,0,0,0.45); position:relative; }
+  .geo-rot-handle:active { cursor:grabbing; }
+  .geo-rot-handle img { display:block; }
+  .geo-rot-pivot { width:12px; height:12px; border-radius:50%; background:#fff; border:2px solid #a78bfa; box-shadow:0 0 0 4px rgba(167,139,250,0.28); }
+  .geo-rot-deg { position:absolute; top:-24px; left:50%; transform:translateX(-50%); background:rgba(15,15,15,0.92); color:#fff; font-size:0.64rem; font-weight:700; letter-spacing:0.03em; padding:2px 7px; border-radius:5px; white-space:nowrap; display:none; border:1px solid rgba(255,255,255,0.1); }
   #poly-result-panel { position:absolute; bottom:56px; right:16px; z-index:20; background:var(--glass-bg); backdrop-filter:var(--glass-blur); -webkit-backdrop-filter:var(--glass-blur); border:1px solid rgba(165,180,252,0.25); border-radius:var(--glass-radius); padding:14px 16px; color:white; font-size:0.8rem; width:230px; box-shadow:var(--glass-shadow); display:none; }
   #poly-result-panel .poly-count { font-size:1.6rem; font-weight:700; color:#a5b4fc; line-height:1; margin-bottom:2px; }
   #poly-result-panel .poly-sub { font-size:0.68rem; color:rgba(255,255,255,0.35); margin-bottom:12px; }

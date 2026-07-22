@@ -293,7 +293,11 @@
       <button onclick="_resetSelectedFloors()" style="background:none;border:none;color:rgba(255,255,255,0.25);font-size:0.68rem;cursor:pointer;font-family:inherit;padding:0;transition:color 0.15s" onmouseover="this.style.color='rgba(255,255,255,0.65)'" onmouseout="this.style.color='rgba(255,255,255,0.25)'">Reset</button>
     </div>
     <div id="floor-use-btns" style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:8px"></div>
-    <div style="font-size:0.58rem;color:rgba(255,255,255,0.2);line-height:1.5">Click any floor to select · then assign a use type above</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.07)">
+      <span style="font-size:0.62rem;font-weight:600;letter-spacing:0.05em;text-transform:uppercase;color:rgba(255,255,255,0.4)">Custom color</span>
+      <input type="color" id="floor-color-input" value="#94a3b8" oninput="_setFloorColorHex(this.value)" style="width:40px;height:24px;border:1px solid rgba(255,255,255,0.15);border-radius:5px;background:none;padding:0;cursor:pointer">
+    </div>
+    <div style="font-size:0.58rem;color:rgba(255,255,255,0.2);line-height:1.5">Click any floor to select · then assign a use type or custom color</div>
   </div>
 
   <button class="analyse-btn" id="analyse-btn" style="display:none" onclick="onAnalyseClick()">
@@ -448,38 +452,45 @@
 
 <!-- Geometry tools toolbar — shown when a drawn shape is selected -->
 <div id="geo-toolbar">
-  <button class="geo-tb-btn geo-tool-btn" id="geo-3d-btn" onclick="toggleExtrusion()" title="3D extrude">
-    <img src="analysis-logos/extrusion.svg" width="19" height="19" class="geo-tb-ico">
-    <span class="geo-tip" id="geo-3d-tip">3D extrude</span>
+  <button class="geo-tb-btn geo-tool-btn" id="geo-select-btn" onclick="selectToolClicked()" title="Select">
+    <img src="analysis-logos/select.svg" width="24" height="24" class="geo-tb-ico">
+    <span class="geo-tip" id="geo-select-tip">Select</span>
   </button>
   <div class="geo-tb-sep"></div>
+  <button class="geo-tb-btn geo-tool-btn" id="geo-3d-btn" onclick="toggleExtrusion()" title="3D extrude">
+    <img src="analysis-logos/extrusion.svg" width="24" height="24" class="geo-tb-ico">
+    <span class="geo-tip" id="geo-3d-tip">3D extrude</span>
+  </button>
   <button class="geo-tb-btn geo-tool-btn" id="geo-edit-btn" onclick="editShapeClicked()" title="Edit shape">
-    <img src="analysis-logos/edit-shape.svg" width="19" height="19" class="geo-tb-ico">
+    <img src="analysis-logos/edit-shape.svg" width="24" height="24" class="geo-tb-ico">
     <span class="geo-tip" id="geo-edit-tip">Edit shape</span>
   </button>
-  <button class="geo-tb-btn geo-tool-btn" id="geo-erase-btn" onclick="toggleEraseMode()" title="Erase shape">
-    <img src="analysis-logos/erase.svg" width="19" height="19" class="geo-tb-ico">
-    <span class="geo-tip" id="geo-erase-tip">Erase</span>
-  </button>
-  <button class="geo-tb-btn geo-tool-btn" id="geo-paint-btn" onclick="togglePaintPanel()" title="Fill & outline color">
-    <img src="analysis-logos/paint.svg" width="19" height="19" class="geo-tb-ico">
-    <span class="geo-tip" id="geo-paint-tip">Colors</span>
+  <button class="geo-tb-btn geo-tool-btn" id="geo-move-btn" onclick="toggleMoveMode()" title="Move shape">
+    <img src="analysis-logos/move.svg" width="24" height="24" class="geo-tb-ico">
+    <span class="geo-tip" id="geo-move-tip">Move</span>
   </button>
   <button class="geo-tb-btn geo-tool-btn" id="geo-rotate-btn" onclick="toggleRotateMode()" title="Rotate shape">
-    <img src="analysis-logos/rotate.svg" width="19" height="19" class="geo-tb-ico">
+    <img src="analysis-logos/rotate.svg" width="24" height="24" class="geo-tb-ico">
     <span class="geo-tip" id="geo-rotate-tip">Rotate</span>
   </button>
   <button class="geo-tb-btn geo-tool-btn" id="geo-slice-btn" onclick="toggleSliceMode()" title="Slice shape">
-    <img src="analysis-logos/slice.svg" width="19" height="19" class="geo-tb-ico">
+    <img src="analysis-logos/slice.svg" width="24" height="24" class="geo-tb-ico">
     <span class="geo-tip" id="geo-slice-tip">Slice</span>
+  </button>
+  <div class="geo-tb-sep"></div>
+  <button class="geo-tb-btn geo-tool-btn" id="geo-paint-btn" onclick="togglePaintPanel()" title="Fill & outline color">
+    <img src="analysis-logos/paint.svg" width="24" height="24" class="geo-tb-ico">
+    <span class="geo-tip" id="geo-paint-tip">Colors</span>
+  </button>
+  <button class="geo-tb-btn geo-tool-btn" id="geo-erase-btn" onclick="toggleEraseMode()" title="Erase shape">
+    <img src="analysis-logos/erase.svg" width="24" height="24" class="geo-tb-ico">
+    <span class="geo-tip" id="geo-erase-tip">Erase</span>
   </button>
   <!-- Paint popover -->
   <div id="geo-paint-popover" style="display:none">
     <div class="geo-paint-row"><span>Fill</span><input type="color" id="geo-fill-color" value="#6366f1" oninput="_geoApplyFill(this.value)"></div>
     <div class="geo-paint-row"><span>Outline</span><input type="color" id="geo-line-color" value="#a5b4fc" oninput="_geoApplyLine(this.value)"></div>
   </div>
-  <!-- Rotate degree badge -->
-  <div id="geo-rotate-badge" style="display:none">0°</div>
 </div>
 
 <!-- Auth modal -->
