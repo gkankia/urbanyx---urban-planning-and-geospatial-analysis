@@ -38,12 +38,14 @@
     <div id="pfc-header">
       <span id="pfc-code">—</span>
       <div style="display:flex;align-items:center;gap:2px">
+        <button id="pfc-del-btn" onclick="removeActiveBuilding()" title="Delete area" style="display:none;background:none;border:none;cursor:pointer;padding:0 3px;line-height:1;align-items:center" onmouseover="this.querySelector('img').style.opacity='0.9';this.querySelector('img').style.filter='sepia(1) saturate(8) hue-rotate(310deg) brightness(0.9)'" onmouseout="this.querySelector('img').style.opacity='0.4';this.querySelector('img').style.filter=''"><img src="analysis-logos/delete.svg" style="width:12px;height:12px;opacity:0.4;transition:opacity 0.15s,filter 0.15s"></button>
         <button id="pfc-min-btn" onclick="toggleParcelCardMin()" title="Minimize">−</button>
         <button class="inline-close-btn" onclick="clearParcelSelection()" title="Close">✕</button>
       </div>
     </div>
     <div id="pfc-body">
       <div class="pfc-row"><span class="pfc-lbl" id="pfc-lbl-area">Area</span><span class="pfc-val" id="pfc-area">—</span></div>
+      <div class="pfc-row" id="pfc-perim-row" style="display:none"><span class="pfc-lbl" id="pfc-lbl-perim">Perimeter</span><span class="pfc-val" id="pfc-perim">—</span></div>
       <div class="pfc-row"><span class="pfc-lbl" id="pfc-lbl-type">Type</span><span class="pfc-val" id="pfc-type">—</span></div>
       <div class="pfc-row"><span class="pfc-lbl" id="pfc-lbl-addr">Address</span><span class="pfc-val" id="pfc-addr">—</span></div>
       <div class="pfc-row"><span class="pfc-lbl" id="pfc-lbl-owner">Owner</span><span class="pfc-val" id="pfc-owner">—</span></div>

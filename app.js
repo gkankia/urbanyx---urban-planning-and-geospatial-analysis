@@ -1397,17 +1397,44 @@ function _activateBld(id){
   }
   _updateBldHighlights();
   const isKa=lang==='ka';
+  // Metrics card removed for drawn areas — show the same floating card as parcels
   const panel=document.getElementById('poly-result-panel');
-  if(panel)panel.style.display='block';
-  document.getElementById('lbl-poly-title').textContent=isKa?'ზომები':'Metrics';
-  document.getElementById('val-prp-footprint').textContent=bld.areaStr;
-  document.getElementById('lbl-prp-footprint').textContent=isKa?'ფართობი':'Footprint';
-  document.getElementById('val-prp-perimeter').textContent=bld.perimStr;
-  document.getElementById('lbl-prp-perimeter').textContent=isKa?'პერიმეტრი':'Perimeter';
+  if(panel)panel.style.display='none';
   const _pdb=document.getElementById('poly-dl-btn');if(_pdb)_pdb.disabled=false;
+  _showDrawnAreaCard(bld);
   _update3DMetrics();
   _updateMetricsExtrusion();
   _updateCombinedMetrics();
+}
+
+// Floating card for a user-drawn area of interest: Area, Perimeter, Type = User-added.
+function _showDrawnAreaCard(bld){
+  if(!bld)return;
+  const isKa=lang==='ka';
+  const card=document.getElementById('parcel-float-card');
+  if(!card)return;
+  const _hdr=document.getElementById('pfc-code');if(_hdr)_hdr.textContent=isKa?'დახაზული არეალი':'Drawn area';
+  document.getElementById('pfc-lbl-area').textContent=isKa?'ფართობი':'Area';
+  document.getElementById('pfc-area').textContent=bld.areaStr;
+  const prow=document.getElementById('pfc-perim-row');
+  if(prow){prow.style.display='flex';
+    document.getElementById('pfc-lbl-perim').textContent=isKa?'პერიმეტრი':'Perimeter';
+    document.getElementById('pfc-perim').textContent=bld.perimStr;}
+  document.getElementById('pfc-lbl-type').textContent=isKa?'ტიპი':'Type';
+  document.getElementById('pfc-type').textContent=isKa?'მომხმარებლის დამატებული':'User-added';
+  // Hide parcel-only + zoning/permit rows for drawn areas
+  const addrRow=document.getElementById('pfc-lbl-addr')?.closest('.pfc-row');if(addrRow)addrRow.style.display='none';
+  const ownerRow=document.getElementById('pfc-lbl-owner')?.closest('.pfc-row');if(ownerRow)ownerRow.style.display='none';
+  ['pfc-zone-row','pfc-kvals-row','pfc-setback-note','pfc-setback-warn','pfc-area-warn','pfc-nodev-warn','pfc-build-params-row','pfc-compliance-row','pfc-permits-row'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});
+  const _del=document.getElementById('pfc-del-btn');if(_del)_del.style.display='flex';
+  card.classList.remove('minimized');
+  const btn=document.getElementById('pfc-min-btn');if(btn)btn.textContent='−';
+  card.style.display='block';
+  const c=getCentroid(bld.geojson);
+  _parcelCardLngLat=c;_parcelCardDragged=false;
+  if(mapReady&&c){const pt=map.project(c);const ch=card.offsetHeight||118;card.style.left=(pt.x+88)+'px';card.style.top=(pt.y-ch/2)+'px';}
+  // Keep the "Run nearby analysis" affordance available for drawn areas
+  if(!_nearbyRan)_nearbyShowRunButton({center:c});
 }
 
 function _selectBuilding(id,shift=false){
@@ -1547,6 +1574,13 @@ function _deselectBuilding(){
   _activeBldId=null;_selectedBldIds.clear();_isDrawnArea=false;_currentParcelGeoJSON=null;_currentParcelAreaM2=0;
   _updateBldHighlights();
   document.getElementById('poly-result-panel').style.display='none';
+  // Hide the drawn-area floating card and restore parcel-only rows
+  const _fc=document.getElementById('parcel-float-card');if(_fc)_fc.style.display='none';
+  const _db=document.getElementById('pfc-del-btn');if(_db)_db.style.display='none';
+  const _pr=document.getElementById('pfc-perim-row');if(_pr)_pr.style.display='none';
+  const _ar=document.getElementById('pfc-lbl-addr')?.closest('.pfc-row');if(_ar)_ar.style.display='';
+  const _or=document.getElementById('pfc-lbl-owner')?.closest('.pfc-row');if(_or)_or.style.display='';
+  _parcelCardLngLat=null;
   const fpanel=document.getElementById('floor-detail-panel');if(fpanel)fpanel.style.display='none';
   document.getElementById('draw-3d-sw')?.classList.remove('on');
   const ctrl=document.getElementById('draw-3d-controls');if(ctrl)ctrl.style.display='none';
@@ -4509,6 +4543,10 @@ function clearPolygonSelect(){
   if(panel)panel.style.display="none";
   if(_isDrawnArea){
     _isDrawnArea=false;
+    const _fc2=document.getElementById('parcel-float-card');if(_fc2)_fc2.style.display='none';
+    const _pr3=document.getElementById('pfc-perim-row');if(_pr3)_pr3.style.display='none';
+    const _ar3=document.getElementById('pfc-lbl-addr')?.closest('.pfc-row');if(_ar3)_ar3.style.display='';
+    const _or3=document.getElementById('pfc-lbl-owner')?.closest('.pfc-row');if(_or3)_or3.style.display='';
     try{resetAnalysis();}catch(_){}
     if(mapReady){if(_dbParcelGeoJSON){map.getSource("parcel")?.setData({type:"FeatureCollection",features:[{type:"Feature",geometry:_dbParcelGeoJSON,properties:{}}]});}else{map.getSource("parcel")?.setData({type:"FeatureCollection",features:[]});}}
   }
@@ -6610,6 +6648,12 @@ function showParcelPopup(lngLat){
   document.getElementById('pfc-owner').textContent=owner;
   document.getElementById('pfc-lbl-area').textContent=tr.area||'Area';
   document.getElementById('pfc-lbl-addr').textContent=tr.addr||'Address';
+  // Restore parcel-only rows / hide the drawn-area perimeter row
+  const _pr2=document.getElementById('pfc-perim-row');if(_pr2)_pr2.style.display='none';
+  const _ar2=document.getElementById('pfc-lbl-addr')?.closest('.pfc-row');if(_ar2)_ar2.style.display='';
+  const _or2=document.getElementById('pfc-lbl-owner')?.closest('.pfc-row');if(_or2)_or2.style.display='';
+  const _lt=document.getElementById('pfc-lbl-type');if(_lt)_lt.textContent=(tr.type||'Type');
+  const _del2=document.getElementById('pfc-del-btn');if(_del2)_del2.style.display='none';
   document.getElementById('nav-zoning-btn')?.classList.remove('active');
   const _zrClr=document.getElementById('pfc-zone-row');
   const _pnClr=document.getElementById('pfc-setback-note');
