@@ -101,6 +101,11 @@ let _setbackRingAreaM2=null;
 let _editingBldId=null;
 let _editingDrawId=null;
 let _editingOrigGeom=null;
+// Geometry tools (erase / rotate / slice / paint)
+let _geoTool=null;      // 'erase' | 'rotate' | 'slice' | null
+let _paintOpen=false;
+let _rotOrig=null,_rotPivot=null,_rotStartBearing=0,_rotDragging=false;
+let _sliceStart=null;
 let _maxFootprintM2=null;
 let _maxFloorAreaM2=null;
 let _noDevZone=false;
