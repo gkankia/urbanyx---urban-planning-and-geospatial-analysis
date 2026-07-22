@@ -4545,7 +4545,6 @@ function _exitBldEditMode(commit){
   try{map.setLayoutProperty('bld-fill-'+id,'visibility','visible');}catch(_){}
   try{map.setLayoutProperty('bld-line-'+id,'visibility','visible');}catch(_){}
   _updateBldHighlights();
-  _hideCoordReadout();
   if(commit)_histCommit();
 }
 function _checkAreaViolation(bld){
