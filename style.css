@@ -904,8 +904,9 @@
   #pfc-header button:hover { color: rgba(255,255,255,0.78); background: rgba(255,255,255,0.08); }
   #pfc-body { padding: 8px 12px 10px; }
   #parcel-float-card.minimized #pfc-body { display: none; }
-  .mini-card { position:absolute; z-index:19; display:flex; flex-direction:column; gap:1px; background:rgba(15,15,20,0.7); backdrop-filter:blur(9px); -webkit-backdrop-filter:blur(9px); border:1px solid rgba(255,255,255,0.14); border-radius:8px; padding:5px 9px; cursor:pointer; box-shadow:0 3px 14px rgba(0,0,0,0.4); opacity:0.7; transition:opacity 0.15s, border-color 0.15s, transform 0.12s; max-width:160px; }
+  .mini-card { position:absolute; z-index:19; display:flex; flex-direction:column; gap:1px; background:rgba(15,15,20,0.7); backdrop-filter:blur(9px); -webkit-backdrop-filter:blur(9px); border:1px solid rgba(255,255,255,0.14); border-radius:8px; padding:5px 9px; cursor:grab; box-shadow:0 3px 14px rgba(0,0,0,0.4); opacity:0.7; transition:opacity 0.15s, border-color 0.15s, transform 0.12s; max-width:160px; user-select:none; }
   .mini-card:hover { opacity:1; border-color:rgba(165,180,252,0.55); transform:scale(1.03); }
+  .mini-card.dragging { cursor:grabbing; opacity:1; transform:none; transition:none; }
   .mini-card .mini-card-kind { font-size:0.5rem; font-weight:700; letter-spacing:0.09em; text-transform:uppercase; color:rgba(165,180,252,0.7); }
   .mini-card .mini-card-label { font-size:0.66rem; font-weight:600; color:rgba(255,255,255,0.9); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .mini-card .mini-card-area { font-size:0.58rem; color:rgba(255,255,255,0.45); }

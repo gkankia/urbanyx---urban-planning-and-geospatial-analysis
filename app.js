@@ -7278,7 +7278,8 @@ function _syncSelectionCards(){
     let el=_miniCards[id];
     if(!el){
       el=document.createElement('div');el.className='mini-card';el.dataset.id=id;
-      el.addEventListener('click',ev=>{ev.stopPropagation();_activateEntity(el.dataset.id);});
+      // Drag to reposition; a click without movement activates the entity
+      el.addEventListener('mousedown',ev=>{ev.stopPropagation();_miniCardDragStart(ev,el);});
       wrap.appendChild(el);_miniCards[id]=el;
     }
     const kind=id==='parcel'?(lang==='ka'?'ნაკვეთი':'Parcel'):(lang==='ka'?'ფიგურა':'Shape');
@@ -7286,10 +7287,37 @@ function _syncSelectionCards(){
   });
   _updateMiniCardPositions();
 }
+// Drag a mini card; a mousedown+up with no movement counts as a click (activate).
+function _miniCardDragStart(ev,el){
+  ev.preventDefault();
+  const wrap=document.getElementById('map-wrap');if(!wrap)return;
+  const wr=wrap.getBoundingClientRect();
+  const r=el.getBoundingClientRect();
+  const ox=ev.clientX-r.left, oy=ev.clientY-r.top;
+  const sx=ev.clientX, sy=ev.clientY;
+  let moved=false;
+  el.classList.add('dragging');
+  function onMove(e){
+    if(!moved&&(Math.abs(e.clientX-sx)>3||Math.abs(e.clientY-sy)>3))moved=true;
+    if(!moved)return;
+    el.dataset.dragged='1';
+    el.style.left=Math.max(2,Math.min(wr.width-el.offsetWidth-2,e.clientX-ox-wr.left))+'px';
+    el.style.top=Math.max(2,Math.min(wr.height-el.offsetHeight-2,e.clientY-oy-wr.top))+'px';
+  }
+  function onUp(){
+    document.removeEventListener('mousemove',onMove);
+    document.removeEventListener('mouseup',onUp);
+    el.classList.remove('dragging');
+    if(!moved)_activateEntity(el.dataset.id);
+  }
+  document.addEventListener('mousemove',onMove);
+  document.addEventListener('mouseup',onUp);
+}
 function _updateMiniCardPositions(){
   if(!mapReady)return;
   Object.keys(_miniCards).forEach(id=>{
     const el=_miniCards[id];const g=_entityGeom(id);
+    if(el.dataset.dragged==='1')return; // user moved it out of the way — leave it there
     if(!g){el.style.display='none';return;}
     let c;try{c=getCentroid(g);}catch(_){el.style.display='none';return;}
     const pt=map.project(c);
