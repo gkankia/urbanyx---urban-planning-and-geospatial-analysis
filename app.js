@@ -1426,7 +1426,6 @@ function _showDrawnAreaCard(bld){
   const addrRow=document.getElementById('pfc-lbl-addr')?.closest('.pfc-row');if(addrRow)addrRow.style.display='none';
   const ownerRow=document.getElementById('pfc-lbl-owner')?.closest('.pfc-row');if(ownerRow)ownerRow.style.display='none';
   ['pfc-zone-row','pfc-kvals-row','pfc-setback-note','pfc-setback-warn','pfc-area-warn','pfc-nodev-warn','pfc-build-params-row','pfc-compliance-row','pfc-permits-row'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});
-  const _del=document.getElementById('pfc-del-btn');if(_del)_del.style.display='flex';
   card.classList.remove('minimized');
   const btn=document.getElementById('pfc-min-btn');if(btn)btn.textContent='−';
   card.style.display='block';
@@ -1576,7 +1575,6 @@ function _deselectBuilding(){
   document.getElementById('poly-result-panel').style.display='none';
   // Hide the drawn-area floating card and restore parcel-only rows
   const _fc=document.getElementById('parcel-float-card');if(_fc)_fc.style.display='none';
-  const _db=document.getElementById('pfc-del-btn');if(_db)_db.style.display='none';
   const _pr=document.getElementById('pfc-perim-row');if(_pr)_pr.style.display='none';
   const _ar=document.getElementById('pfc-lbl-addr')?.closest('.pfc-row');if(_ar)_ar.style.display='';
   const _or=document.getElementById('pfc-lbl-owner')?.closest('.pfc-row');if(_or)_or.style.display='';
@@ -6273,7 +6271,20 @@ function _parkingRenderLayers(polyFeatures,centroidFeatures){
 }
 
 function clearParcelSelection(){
-  if(_activeBldId){_deselectBuilding();return;}
+  if(_activeBldId){
+    // Drawn area: remove the shape entirely along with any analysis results
+    _nearbyReqToken++;
+    _lastDiversity=null;_lastNearbyCounts=null;_nearbyRan=false;
+    if(typeof clearSchoolsMapLayer==='function')clearSchoolsMapLayer();
+    if(typeof clearKgMapLayer==='function')clearKgMapLayer();
+    if(typeof _ttcRemoveFromMap==='function')_ttcRemoveFromMap();
+    if(typeof _parkingRemoveLayer==='function')_parkingRemoveLayer();
+    if(typeof clearOverpassLayers==='function')clearOverpassLayers();
+    const _nl=document.getElementById('pfc-nearby-list');if(_nl)_nl.innerHTML='';
+    const _nn=document.getElementById('pfc-nearby-note');if(_nn){_nn.style.display='none';_nn.textContent='';}
+    removeActiveBuilding();
+    return;
+  }
   if(_isDrawnArea){clearPolygonSelect();return;}
   resetAnalysis();
   hideParcelPopup();
@@ -6653,7 +6664,6 @@ function showParcelPopup(lngLat){
   const _ar2=document.getElementById('pfc-lbl-addr')?.closest('.pfc-row');if(_ar2)_ar2.style.display='';
   const _or2=document.getElementById('pfc-lbl-owner')?.closest('.pfc-row');if(_or2)_or2.style.display='';
   const _lt=document.getElementById('pfc-lbl-type');if(_lt)_lt.textContent=(tr.type||'Type');
-  const _del2=document.getElementById('pfc-del-btn');if(_del2)_del2.style.display='none';
   document.getElementById('nav-zoning-btn')?.classList.remove('active');
   const _zrClr=document.getElementById('pfc-zone-row');
   const _pnClr=document.getElementById('pfc-setback-note');
