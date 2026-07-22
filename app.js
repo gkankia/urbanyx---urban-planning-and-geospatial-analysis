@@ -4736,6 +4736,7 @@ function clearPolygonSelect(){
   document.getElementById("acc-orientation-sw")?.classList.remove("on");
   _polyDrawing=false;_drawShape='polygon';
   _polyParcels=[];
+  if(_geoTool||_paintOpen)_clearGeoTools(null);
   _clearDrawBtnActive();
   const hint=document.getElementById("draw-hint");
   if(hint)hint.style.display="none";
