@@ -7282,16 +7282,16 @@ function _syncSelectionCards(){
 }
 function _updateMiniCardPositions(){
   if(!mapReady)return;
-  Object.keys(_miniCards).forEach((id,i)=>{
+  Object.keys(_miniCards).forEach(id=>{
     const el=_miniCards[id];const g=_entityGeom(id);
     if(!g){el.style.display='none';return;}
     let c;try{c=getCentroid(g);}catch(_){el.style.display='none';return;}
     const pt=map.project(c);
     const w=el.offsetWidth||130,h=el.offsetHeight||42;
     el.style.display='';
-    // Mini cards sit to the LEFT of the centroid (the active full card sits to the right)
+    // Mini cards sit to the LEFT of the entity centroid (the active full card sits to the right)
     el.style.left=(pt.x-w-14)+'px';
-    el.style.top=(pt.y-h/2+i*(h+6))+'px';
+    el.style.top=(pt.y-h/2)+'px';
   });
 }
 function _clearSelectionCards(){
