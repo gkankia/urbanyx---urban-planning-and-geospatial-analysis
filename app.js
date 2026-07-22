@@ -5997,6 +5997,10 @@ function _updateSetbackRing(parcelGeom){
     if(map.getLayer('parcel-fill'))map.setLayoutProperty('parcel-fill','visibility','visible');
   }
 }
+// Geometry the zoning analysis should run on: the underlying parcel if one is
+// selected (regs belong to the parcel), otherwise the drawn area of interest.
+function _zoningTargetGeom(){return _dbParcelGeoJSON||_currentParcelGeoJSON||null;}
+
 function runZoningAnalysis(){
   const btn=document.getElementById('nav-zoning-btn');
   const zr=document.getElementById('pfc-zone-row');
@@ -6013,7 +6017,10 @@ function runZoningAnalysis(){
     _maxFootprintM2=null;_maxFloorAreaM2=null;_noDevZone=false;_noDevZoneUnion=null;window._rptZones=null;document.getElementById('pfc-nodev-warn')?.style&&(document.getElementById('pfc-nodev-warn').style.display='none');document.getElementById('pfc-area-warn')?.style&&(document.getElementById('pfc-area-warn').style.display='none');_updatePermitDevWarning();_renderZoningCompliance(null);if(_extrusionActive&&typeof _updateMetricsExtrusion==='function')_updateMetricsExtrusion();
     return;
   }
-  if(!_currentParcelGeoJSON)return;
+  // Zoning regs belong to the parcel, not the drawn footprint — always analyze the
+  // underlying parcel when one is selected; fall back to the shape for freestanding areas.
+  const _zt=_zoningTargetGeom();
+  if(!_zt)return;
   // Usage limit for analysis
   if(!currentUser){openAuthModal("view-signup");return;}
   if(currentUser.plan==='pro'){
@@ -6027,8 +6034,8 @@ function runZoningAnalysis(){
   if(zr)zr.style.display='block';
   if(zList)zList.innerHTML='<span style="color:rgba(255,255,255,0.3);font-size:0.68rem">Analyzing…</span>';
   if(note)note.style.display='none';
-  _updateSetbackLayer(_currentParcelGeoJSON);
-  _fetchFunctionalZone(_currentParcelGeoJSON).then(zones=>{
+  _updateSetbackLayer(_zt);
+  _fetchFunctionalZone(_zt).then(zones=>{
     if(!zones.length){
       if(zr)zr.style.display='none';
       btn?.classList.remove('active');
@@ -6042,9 +6049,9 @@ function runZoningAnalysis(){
     _updateZoneLayer(zones);
     window._rptZones=zones; // active zone list, for the report's zoning legend
     // Zoning is a parcel-scale analysis — zoom in as tight as the parcel allows
-    if(mapReady&&_currentParcelGeoJSON){
+    if(mapReady&&_zt){
       try{
-        const _zb=getGeoBounds(_currentParcelGeoJSON);
+        const _zb=getGeoBounds(_zt);
         map.fitBounds([[Math.min(..._zb.lngs),Math.min(..._zb.lats)],[Math.max(..._zb.lngs),Math.max(..._zb.lats)]],{padding:36,duration:700,essential:true});
       }catch(_){}
     }
@@ -6052,7 +6059,7 @@ function runZoningAnalysis(){
     _updatePermitDevWarning();
     _renderZoningCompliance(zones);
     {const _ndF=zones.filter(z=>z.k1!=null&&z.k1==0&&z.geometry).map(z=>({type:'Feature',geometry:z.geometry,properties:{}}));if(_ndF.length>0){try{_noDevZoneUnion=_ndF.reduce((a,f)=>a?(turf.union(a,f)||a):f,null);}catch(_e){_noDevZoneUnion=_ndF[0]||null;}}else{_noDevZoneUnion=null;}}
-    _updateSetbackRing(_noDevZone?null:_currentParcelGeoJSON);
+    _updateSetbackRing(_noDevZone?null:_zt);
     {const _kz=zones.filter(z=>z.k1!=null&&z.k1>0);_maxFootprintM2=_kz.length?Math.round(_kz.reduce((s,z)=>s+z.area*z.k1,0)):null;}
     {const _kf=zones.filter(z=>z.k2!=null&&z.k2>0);_maxFloorAreaM2=_kf.length?Math.round(_kf.reduce((s,z)=>s+z.area*z.k2,0)):null;}
     _applyExtrusionHeightCap();
