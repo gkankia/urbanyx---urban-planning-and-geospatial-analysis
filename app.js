@@ -1261,9 +1261,8 @@ function toggleExtrusion(){
       if(_threeEditor)_threeEditor.setEditMode(_shapeEditMode);
       if(map.getLayer('extrusion-layer'))map.setLayoutProperty('extrusion-layer','visibility','none');
     });
-    // Hide flat parcel/building footprint so it doesn't compete with the 3D building
-    if(map.getLayer('parcel-fill'))map.setLayoutProperty('parcel-fill','visibility','none');
-    if(map.getLayer('parcel-line'))map.setLayoutProperty('parcel-line','visibility','none');
+    // Hide the drawn shape's own flat footprint (the 3D replaces it) — but keep the
+    // parcel outline visible so the land boundary stays on screen while extruding.
     if(_activeBldId){
       try{map.setLayoutProperty('bld-fill-'+_activeBldId,'visibility','none');}catch(_){}
       try{map.setLayoutProperty('bld-line-'+_activeBldId,'visibility','none');}catch(_){}
@@ -5563,8 +5562,6 @@ function switchBasemap(name){
             // DEM tiles may not be loaded yet — terrain elevation returns 0, placing the
             // building underground where it fails the depth test. Rebuild once tiles are ready.
             map.once('idle',()=>{if(_threeEditor){_threeEditor.rebuild();map.triggerRepaint();}});
-            if(map.getLayer('parcel-fill'))map.setLayoutProperty('parcel-fill','visibility','none');
-            if(map.getLayer('parcel-line'))map.setLayoutProperty('parcel-line','visibility','none');
           }catch(ex){console.error('building-3d restore failed:',ex);}
         });
       });
