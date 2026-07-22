@@ -1198,6 +1198,7 @@ function initDrawControl(){
     if(_editingBldId&&e.mode!=='direct_select')_exitBldEditMode(true);
   });
   document.addEventListener('keydown',e=>{
+    if(e.key==='Escape'&&_measureMode){e.preventDefault();stopMeasure();return;}
     if(e.key==='Escape'&&_editingBldId){e.preventDefault();_exitBldEditMode(false);return;}
     if(e.key==='Escape'&&_geoTool){e.preventDefault();_clearGeoTools(null);return;}
     // Copy / cut / paste / undo / redo for the selected drawn shape
@@ -1485,6 +1486,7 @@ function _showDrawnAreaCard(bld){
 }
 
 function _selectBuilding(id,shift=false){
+  if(_measureMode)return; // measuring — map clicks are measurement points
   if(_geoTool==='erase'){_removeBuildingById(id);_histCommit();return;}
   if(shift){
     if(id===_activeBldId){
@@ -1861,6 +1863,7 @@ function _resetShapeEditMode(){
   _shapeEditMode=false;
   const g=document.getElementById('geo-edit-btn');if(g)g.classList.remove('active');
   const tip=document.getElementById('geo-edit-tip');if(tip)tip.textContent=(lang==='ka'?'ფორმის რედაქტირება':'Edit shape');
+  _hideCoordReadout();
 }
 
 class _BuildingEditorLayer{
@@ -4543,6 +4546,7 @@ function _exitBldEditMode(commit){
   try{map.setLayoutProperty('bld-fill-'+id,'visibility','visible');}catch(_){}
   try{map.setLayoutProperty('bld-line-'+id,'visibility','visible');}catch(_){}
   _updateBldHighlights();
+  _hideCoordReadout();
   if(commit)_histCommit();
 }
 function _checkAreaViolation(bld){
@@ -6886,6 +6890,7 @@ map.on("load",()=>{
   });
 
   map.on("click",async(e)=>{
+    if(_measureMode)return; // measuring — ignore parcel selection
     if(_polyDrawing)return;
     if(_drawJustFinished)return;
     if(e.originalEvent?._ttcHandled)return;
@@ -6977,6 +6982,7 @@ map.on("load",()=>{
   map.on("moveend",function(){fetchDBParcelsIfEnabled();});
   map.on("move",_updateParcelCardPos);
   map.on("move",_updateMiniCardPositions);
+  map.on("mousemove",_updateCoordReadout);
   map.on("mouseenter","parcel-fill",()=>{map.getCanvas().style.cursor="pointer";});
   map.on("mouseleave","parcel-fill",()=>{map.getCanvas().style.cursor="";});
   _initParcelCardDrag();
@@ -7297,6 +7303,109 @@ function _updateMiniCardPositions(){
 function _clearSelectionCards(){
   Object.keys(_miniCards).forEach(id=>{try{_miniCards[id].remove();}catch(_){}delete _miniCards[id];});
 }
+
+// ── Measure tool (distance / area) ────────────────────────────────────────────
+let _measureMode=null,_measurePts=[],_measureMoveLL=null,_measureFinalized=false;
+function toggleMeasureFlyout(){
+  const fo=document.getElementById('measure-flyout');
+  const btn=document.getElementById('mzc-measure-btn');
+  if(!fo||!btn)return;
+  if(fo.classList.contains('open')){fo.classList.remove('open');if(!_measureMode)btn.classList.remove('active');return;}
+  const r=btn.getBoundingClientRect();
+  fo.style.top=r.top+'px';
+  fo.style.right=(window.innerWidth-r.left+8)+'px';
+  fo.classList.add('open');btn.classList.add('active');
+}
+function _measureBtnStates(){
+  document.getElementById('measure-dist-btn')?.classList.toggle('active',_measureMode==='distance');
+  document.getElementById('measure-area-btn')?.classList.toggle('active',_measureMode==='area');
+  document.getElementById('mzc-measure-btn')?.classList.toggle('active',!!_measureMode);
+}
+function startMeasure(mode){
+  document.getElementById('measure-flyout')?.classList.remove('open');
+  if(_measureMode===mode){stopMeasure();return;}
+  // starting fresh (possibly switching mode)
+  _measureMode=mode;_measurePts=[];_measureMoveLL=null;_measureFinalized=false;
+  _ensureMeasureLayers();_measureClearLayers();
+  _measureAttach();
+  if(mapReady&&map.getCanvas())map.getCanvas().style.cursor='crosshair';
+  _measureBtnStates();
+  showToast(mode==='distance'
+    ?(lang==='ka'?'დააჭირე წერტილებს მანძილის გასაზომად · ორმაგი დაწკაპუნება — დასრულება':'Click points to measure distance · double-click to finish')
+    :(lang==='ka'?'დააჭირე წერტილებს ფართობის გასაზომად · ორმაგი დაწკაპუნება — დასრულება':'Click points to measure area · double-click to finish'));
+}
+function stopMeasure(){
+  _measureMode=null;_measurePts=[];_measureMoveLL=null;_measureFinalized=false;
+  _measureDetach();
+  if(mapReady&&map.getCanvas())map.getCanvas().style.cursor='';
+  _measureClearLayers();
+  const tip=document.getElementById('measure-tip');if(tip)tip.style.display='none';
+  _measureBtnStates();
+}
+function _ensureMeasureLayers(){
+  if(!mapReady)return;
+  if(!map.getSource('measure'))map.addSource('measure',{type:'geojson',data:{type:'FeatureCollection',features:[]}});
+  if(!map.getSource('measure-vtx'))map.addSource('measure-vtx',{type:'geojson',data:{type:'FeatureCollection',features:[]}});
+  if(!map.getLayer('measure-fill-lyr'))map.addLayer({id:'measure-fill-lyr',type:'fill',source:'measure',filter:['==','$type','Polygon'],paint:{'fill-color':'#22d3ee','fill-opacity':0.14}});
+  if(!map.getLayer('measure-line-lyr'))map.addLayer({id:'measure-line-lyr',type:'line',source:'measure',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':'#22d3ee','line-width':2,'line-dasharray':[2,1.5]}});
+  if(!map.getLayer('measure-vtx-lyr'))map.addLayer({id:'measure-vtx-lyr',type:'circle',source:'measure-vtx',paint:{'circle-radius':4,'circle-color':'#0a1a1e','circle-stroke-color':'#22d3ee','circle-stroke-width':2}});
+}
+function _measureClearLayers(){
+  map.getSource('measure')?.setData({type:'FeatureCollection',features:[]});
+  map.getSource('measure-vtx')?.setData({type:'FeatureCollection',features:[]});
+}
+function _measureAttach(){
+  if(!mapReady)return;
+  map.on('click',_measureClick);map.on('mousemove',_measureMove);map.on('dblclick',_measureDblClick);
+  map.doubleClickZoom.disable();
+}
+function _measureDetach(){
+  if(!mapReady)return;
+  map.off('click',_measureClick);map.off('mousemove',_measureMove);map.off('dblclick',_measureDblClick);
+  map.doubleClickZoom.enable();
+}
+function _measureClick(e){if(_measureFinalized||!_measureMode)return;_measurePts.push([e.lngLat.lng,e.lngLat.lat]);_measureUpdate(e.originalEvent);}
+function _measureMove(e){if(!_measureMode)return;_measureMoveLL=[e.lngLat.lng,e.lngLat.lat];_measureUpdate(e.originalEvent);}
+function _measureDblClick(e){
+  if(!_measureMode)return;
+  if(e&&e.preventDefault)e.preventDefault();
+  // The double-click added a duplicate point via the two click events — drop it
+  if(_measurePts.length>1)_measurePts.pop();
+  _measureFinalized=true;_measureMoveLL=null;_measureUpdate();
+}
+function _measureUpdate(oe){
+  if(!mapReady||!_measureMode)return;
+  const pts=_measurePts.slice();
+  const preview=(!_measureFinalized&&_measureMoveLL&&pts.length>=1);
+  const linePts=preview?pts.concat([_measureMoveLL]):pts;
+  map.getSource('measure-vtx')?.setData({type:'FeatureCollection',features:pts.map(p=>({type:'Feature',geometry:{type:'Point',coordinates:p},properties:{}}))});
+  let readout='';
+  if(_measureMode==='distance'){
+    map.getSource('measure')?.setData(linePts.length>=2?{type:'Feature',geometry:{type:'LineString',coordinates:linePts},properties:{}}:{type:'FeatureCollection',features:[]});
+    let tot=0;for(let i=1;i<linePts.length;i++)tot+=turf.distance(linePts[i-1],linePts[i]);
+    readout=linePts.length>=2?(tot>=1?tot.toFixed(2)+' km':Math.round(tot*1000).toLocaleString()+' m'):(lang==='ka'?'დააჭირე წერტილს':'Click a point');
+  } else {
+    const closed=linePts.length>=3?linePts.concat([linePts[0]]):null;
+    if(closed){map.getSource('measure')?.setData({type:'Feature',geometry:{type:'Polygon',coordinates:[closed]},properties:{}});
+      const a=turf.area({type:'Feature',geometry:{type:'Polygon',coordinates:[closed]},properties:{}});
+      readout=a>=10000?(a/10000).toFixed(2)+' ha':Math.round(a).toLocaleString()+' m²';
+    } else {
+      map.getSource('measure')?.setData(linePts.length>=2?{type:'Feature',geometry:{type:'LineString',coordinates:linePts},properties:{}}:{type:'FeatureCollection',features:[]});
+      readout=lang==='ka'?'დააჭირე ≥3 წერტილს':'Click at least 3 points';
+    }
+  }
+  const tip=document.getElementById('measure-tip');
+  if(tip){tip.textContent=readout;tip.style.display=readout?'block':'none';if(oe){tip.style.left=(oe.clientX+14)+'px';tip.style.top=(oe.clientY+16)+'px';}}
+}
+
+// ── Cursor coordinate readout (shown during edit mode, below the geo toolbar) ──
+function _updateCoordReadout(e){
+  const el=document.getElementById('coord-readout');if(!el)return;
+  const editing=!!_editingBldId||(_extrusionActive&&_shapeEditMode);
+  if(editing&&e&&e.lngLat){el.style.display='block';el.textContent=e.lngLat.lat.toFixed(6)+', '+e.lngLat.lng.toFixed(6);}
+  else if(!editing&&el.style.display!=='none')el.style.display='none';
+}
+function _hideCoordReadout(){const el=document.getElementById('coord-readout');if(el)el.style.display='none';}
 
 // ── Parse HTML ────────────────────────────────────────────────────────────────
 function parseAttrs(html){

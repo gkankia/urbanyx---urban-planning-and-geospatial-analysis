@@ -175,7 +175,21 @@
   <button class="mzc-btn mzc-3d-btn" id="mzc-3d-btn" onclick="toggle3D()" title="Toggle 3D view">
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96" opacity="0.45"/><line x1="12" y1="22.08" x2="12" y2="12" opacity="0.45"/></svg>
   </button>
+  <div class="mzc-sep"></div>
+  <button class="mzc-btn mzc-measure-btn" id="mzc-measure-btn" onclick="toggleMeasureFlyout()" title="Measure">
+    <img src="analysis-logos/measure-tool.svg">
+  </button>
 </div>
+<div id="measure-flyout">
+  <button class="measure-fly-btn" id="measure-dist-btn" onclick="startMeasure('distance')" title="Measure distance">
+    <img src="analysis-logos/measure_distance.svg"><span id="measure-dist-lbl">Distance</span>
+  </button>
+  <button class="measure-fly-btn" id="measure-area-btn" onclick="startMeasure('area')" title="Measure area">
+    <img src="analysis-logos/measure-area.svg"><span id="measure-area-lbl">Area</span>
+  </button>
+</div>
+<div id="measure-tip" style="display:none"></div>
+<div id="coord-readout" style="display:none"></div>
 
 <div id="layers-btn" onclick="toggleLayersPanel()">
   <svg id="layers-btn-icon" width="13" height="11" viewBox="0 0 13 11" fill="none" style="flex-shrink:0"><rect x="0" y="0" width="13" height="2.2" rx="1.1" fill="currentColor" opacity="0.5"/><rect x="0" y="4.4" width="13" height="2.2" rx="1.1" fill="currentColor" opacity="0.5"/><rect x="0" y="8.8" width="13" height="2.2" rx="1.1" fill="currentColor" opacity="0.5"/></svg>
