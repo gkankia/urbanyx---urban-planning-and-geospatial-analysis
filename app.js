@@ -1193,6 +1193,7 @@ function initDrawControl(){
   map.addControl(_draw,"top-right");
   map.on("draw.create",onDrawCreate);
   map.on("draw.update",onDrawShapeUpdate);
+  map.on("draw.render",_liveEditCardUpdate);
   map.on("draw.modechange",e=>{
     if(_editingBldId&&e.mode!=='direct_select')_exitBldEditMode(true);
   });
@@ -1792,6 +1793,28 @@ function _rebuildExtrusionFloors(){
     properties:{floor_base:0,floor_top:_extrusionHeight}}]});
 }
 
+// Live (per-frame) refresh of the floating card's area/perimeter while dragging
+// vertices in edit mode. Lightweight — only touches the two text nodes; the full
+// commit (source/3D/metrics/state) happens in onDrawShapeUpdate on release.
+let _liveEditRaf=false;
+function _liveEditCardUpdate(){
+  if(!_editingBldId||_liveEditRaf)return;
+  _liveEditRaf=true;
+  requestAnimationFrame(()=>{
+    _liveEditRaf=false;
+    if(!_editingBldId||!_draw)return;
+    let data;try{data=_draw.getAll();}catch(_){return;}
+    if(!data||!data.features.length)return;
+    const g=data.features[0].geometry;
+    const coords=g.type==='Polygon'?g.coordinates[0]:(g.type==='MultiPolygon'?g.coordinates[0][0]:null);
+    if(!coords||coords.length<4)return;
+    const aM2=computePolygonAreaM2(coords),pM=computePolygonPerimeterM(coords);
+    const a=document.getElementById('pfc-area');
+    if(a)a.textContent=aM2>=10000?(aM2/10000).toFixed(2)+' ha':Math.round(aM2).toLocaleString()+' m²';
+    const p=document.getElementById('pfc-perim');
+    if(p)p.textContent=pM>=1000?(pM/1000).toFixed(2)+' km':Math.round(pM).toLocaleString()+' m';
+  });
+}
 function onDrawShapeUpdate(){
   const data=_draw.getAll();
   if(!data.features.length)return;
@@ -1799,14 +1822,8 @@ function onDrawShapeUpdate(){
   if(_editingBldId){
     const bld=_bldById(_editingBldId);
     if(bld){
-      const coords=poly.type==='Polygon'?poly.coordinates[0]:poly.coordinates[0][0];
-      bld.geojson=poly;bld.ring=coords;
-      const aM2=Math.round(computePolygonAreaM2(coords));
-      bld.areaM2=aM2;bld.areaStr=aM2>=10000?(aM2/10000).toFixed(2)+' ha':aM2.toLocaleString()+' m²';
-      _currentParcelGeoJSON=poly;_currentParcelAreaM2=aM2;
-      if(mapReady)map.getSource('bld-src-'+bld.id)?.setData({type:'FeatureCollection',features:[{type:'Feature',geometry:poly,properties:{}}]});
-      if(bld.extrusionActive)_rebuildExtrusionFloors();
-      _update3DMetrics();
+      // Recompute area + perimeter and refresh the floating card live while editing
+      _geoCommitGeom(bld,poly);
       _checkSetbackViolation(poly);
       _checkAreaViolation(bld);
     }
