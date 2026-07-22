@@ -107,6 +107,9 @@ let _paintOpen=false;
 let _rotOrig=null,_rotPivot=null,_rotBearing0=0,_rotRadiusKm=0,_rotHandle=null,_rotPivotM=null;
 let _moveOrig=null,_moveStart=null,_moveDragging=false;
 let _sliceStart=null;
+// Clipboard + undo/redo history for drawn shapes
+let _geoClipboard=null;
+let _hist=[],_histPtr=-1,_histLock=false;
 let _maxFootprintM2=null;
 let _maxFloorAreaM2=null;
 let _noDevZone=false;
@@ -1196,7 +1199,18 @@ function initDrawControl(){
   });
   document.addEventListener('keydown',e=>{
     if(e.key==='Escape'&&_editingBldId){e.preventDefault();_exitBldEditMode(false);return;}
-    if(e.key==='Escape'&&_geoTool){e.preventDefault();_clearGeoTools(null);}
+    if(e.key==='Escape'&&_geoTool){e.preventDefault();_clearGeoTools(null);return;}
+    // Copy / cut / paste / undo / redo for the selected drawn shape
+    if(!_geoShortcutsActive())return;
+    const el=document.activeElement,tag=(el&&el.tagName||'').toLowerCase();
+    if(tag==='input'||tag==='textarea'||(el&&el.isContentEditable))return;
+    if(!(e.metaKey||e.ctrlKey))return;
+    const k=e.key.toLowerCase();
+    if(k==='c'){e.preventDefault();_geoCopy();}
+    else if(k==='x'){e.preventDefault();_geoCut();}
+    else if(k==='v'){e.preventDefault();_geoPaste();}
+    else if(k==='z'&&!e.shiftKey){e.preventDefault();if(!_histUndo())showToast(lang==='ka'?'დასაბრუნებელი არაფერია':'Nothing to undo');}
+    else if((k==='z'&&e.shiftKey)||k==='y'){e.preventDefault();if(!_histRedo())showToast(lang==='ka'?'გასამეორებელი არაფერია':'Nothing to redo');}
   });
   // Right-click to finish polygon
   map.getCanvas().addEventListener("contextmenu",function(e){
@@ -1444,7 +1458,7 @@ function _showDrawnAreaCard(bld){
 }
 
 function _selectBuilding(id,shift=false){
-  if(_geoTool==='erase'){_removeBuildingById(id);return;}
+  if(_geoTool==='erase'){_removeBuildingById(id);_histCommit();return;}
   if(shift){
     if(id===_activeBldId){
       // Shift-click on active building: clear multi-select back to single
@@ -2470,7 +2484,7 @@ function _moveMove(e){
   const moved=turf.transformTranslate(_moveOrig,dist,brg);
   _geoCommitGeom(_activeBld(),moved.geometry);
 }
-function _moveUp(){if(!_moveDragging)return;_moveDragging=false;_moveOrig=null;if(map.getCanvas())map.getCanvas().style.cursor='move';}
+function _moveUp(){if(!_moveDragging)return;_moveDragging=false;_moveOrig=null;if(map.getCanvas())map.getCanvas().style.cursor='move';_histCommit();}
 
 // Floor custom color — apply a hex color to the selected floors' overrides.
 function _setFloorColorHex(hex){
@@ -2484,10 +2498,10 @@ function _setFloorColorHex(hex){
 // Edit shape — 3D vertex drag when extruded, else 2D vertices + midpoints (direct_select).
 function editShapeClicked(){
   if(!_isDrawnArea||!_activeBldId){showToast(lang==='ka'?'ჯერ მონიშნე ფიგურა':'Select a drawn shape first');return;}
-  if(_extrusionActive){toggleShapeEditMode();return;}
+  if(_extrusionActive){toggleShapeEditMode();if(_shapeEditMode)_geoEditHint();return;}
   _clearGeoTools('edit');
   if(_editingBldId)_exitBldEditMode(true);
-  else _enterBldEditMode(_activeBldId);
+  else {_enterBldEditMode(_activeBldId);if(_editingBldId)_geoEditHint();}
   _updateGeoToolbar();
 }
 
@@ -2601,6 +2615,7 @@ function _rotHEnd(){
   const hl=_rotHandle.getLngLat();const cur=turf.bearing(_rotPivot,[hl.lng,hl.lat]);
   const snapped=turf.destination(_rotPivot,_rotRadiusKm,cur).geometry.coordinates;
   _rotHandle.setLngLat(snapped);_rotUpdateLine(snapped);
+  _histCommit();
 }
 function _rotDetach(){
   if(_rotHandle){try{_rotHandle.remove();}catch(_){}_rotHandle=null;}
@@ -2673,7 +2688,104 @@ function _doSlice(cutLine){
   _removeBuildingById(bld.id);
   pieces.forEach(g=>{const nb=_registerBuilding(g,initExt);if(nb){if(fill)nb.fillColor=fill;if(lineC)nb.lineColor=lineC;}});
   _updateBldHighlights();
+  _histCommit();
   showToast((lang==='ka'?'ფიგურა გაიჭრა: ':'Sliced into ')+pieces.length+(lang==='ka'?' ნაწილად':' parts'));
+}
+
+// ── Clipboard + undo/redo (keyboard shortcuts, active while a drawn shape is selected) ──
+const _GEO_CMD=(typeof navigator!=='undefined'&&/Mac|iPhone|iPad/.test(navigator.userAgent||''))?'⌘':'Ctrl';
+function _geoShortcutsActive(){return !!_activeBldId||!!_geoClipboard||_hist.length>0;}
+function _geoEditHint(){
+  const C=_GEO_CMD;
+  showToast((lang==='ka'?'რედაქტირება ჩართულია · ':'Edit mode on · ')+`${C}C · ${C}X · ${C}V · ${C}Z · ⇧${C}Z`);
+}
+
+function _histSnapshot(){
+  _saveBldState();
+  return {
+    activeIndex:_buildings.findIndex(b=>b.id===_activeBldId),
+    buildings:_buildings.map(b=>({
+      geojson:JSON.parse(JSON.stringify(b.geojson)),
+      extrusionActive:!!b.extrusionActive,
+      extrusionHeight:b.extrusionHeight,
+      floorOverrides:JSON.parse(JSON.stringify(b.floorOverrides||{})),
+      fillColor:b.fillColor||null,lineColor:b.lineColor||null
+    }))
+  };
+}
+function _histCommit(){
+  if(_histLock)return;
+  const snap=_histSnapshot();
+  // Skip duplicate no-op commits
+  if(_histPtr>=0&&JSON.stringify(_hist[_histPtr])===JSON.stringify(snap))return;
+  _hist=_hist.slice(0,_histPtr+1);
+  _hist.push(snap);_histPtr=_hist.length-1;
+  if(_hist.length>60){_hist.shift();_histPtr--;}
+}
+function _histUndo(){if(_histPtr<=0)return false;_histPtr--;_histLock=true;_restoreBuildings(_hist[_histPtr]);_histLock=false;return true;}
+function _histRedo(){if(_histPtr>=_hist.length-1)return false;_histPtr++;_histLock=true;_restoreBuildings(_hist[_histPtr]);_histLock=false;return true;}
+function _teardownAllBuildings(){
+  _buildings.forEach(b=>{
+    if(b.threeEditor){try{map.removeLayer(b.threeEditor.id);}catch(_){}try{b.threeEditor.dispose();}catch(_){}b.threeEditor=null;}
+    if(mapReady){
+      if(b._extClickHandler){try{map.off('click','bld-ext-'+b.id,b._extClickHandler);}catch(_){}b._extClickHandler=null;}
+      ['bld-ext-','bld-line-','bld-fill-'].forEach(p=>{try{if(map.getLayer(p+b.id))map.removeLayer(p+b.id);}catch(_){}});
+      try{if(map.getSource('bld-src-'+b.id))map.removeSource('bld-src-'+b.id);}catch(_){}
+      try{map.off('click','bld-fill-'+b.id);}catch(_){}
+    }
+  });
+  _threeEditor=null;
+  _buildings=[];_activeBldId=null;_selectedBldIds.clear();_extrusionActive=false;_isDrawnArea=false;_floorOverrides={};_selectedFloors.clear();
+}
+function _restoreBuildings(snap){
+  if(!snap)return;
+  // Leave any active edit / tool cleanly
+  if(_editingBldId){try{_draw.deleteAll();_draw.changeMode('simple_select');}catch(_){}_editingBldId=null;_editingDrawId=null;_editingOrigGeom=null;}
+  _teardownAllBuildings();
+  snap.buildings.forEach(bs=>{
+    const nb=_registerBuilding(bs.geojson,bs.extrusionActive?{extrusionActive:true,extrusionHeight:bs.extrusionHeight,floorOverrides:bs.floorOverrides}:null);
+    if(nb){if(bs.fillColor)nb.fillColor=bs.fillColor;if(bs.lineColor)nb.lineColor=bs.lineColor;}
+  });
+  if(!_buildings.length){
+    const fc=document.getElementById('parcel-float-card');if(fc)fc.style.display='none';
+    const gtb=document.getElementById('geo-toolbar');if(gtb)gtb.style.display='none';
+    return;
+  }
+  const idx=(snap.activeIndex>=0&&snap.activeIndex<_buildings.length)?snap.activeIndex:_buildings.length-1;
+  const target=_buildings[idx];
+  if(target&&target.id!==_activeBldId){
+    _saveBldState();const prev=_activeBld();if(prev?.extrusionActive)_freezeBld(prev);
+    const _pte=_threeEditor;_threeEditor=null;if(_pte)_pte._deactivateListeners();
+    _extrusionActive=false;_activateBld(target.id);
+  }
+  _updateBldHighlights();
+}
+
+function _geoCopy(silent){
+  const b=_activeBld();if(!b)return;
+  _saveBldState();
+  _geoClipboard={geojson:JSON.parse(JSON.stringify(b.geojson)),extrusionActive:!!b.extrusionActive,extrusionHeight:b.extrusionHeight,floorOverrides:JSON.parse(JSON.stringify(b.floorOverrides||{})),fillColor:b.fillColor||null,lineColor:b.lineColor||null};
+  if(!silent)showToast(lang==='ka'?'დაკოპირდა':'Copied');
+}
+function _geoCut(){
+  const b=_activeBld();if(!b)return;
+  _geoCopy(true);
+  _removeBuildingById(b.id);
+  _histCommit();
+  showToast(lang==='ka'?'ამოიჭრა':'Cut');
+}
+function _geoPaste(){
+  if(!_geoClipboard){showToast(lang==='ka'?'ბუფერი ცარიელია':'Nothing to paste');return;}
+  const f=turf.feature(JSON.parse(JSON.stringify(_geoClipboard.geojson)));
+  const bb=turf.bbox(f);
+  const off=Math.max(0.008,turf.distance([bb[0],bb[1]],[bb[2],bb[3]])*0.25);
+  const moved=turf.transformTranslate(f,off,135).geometry;
+  const cb=_geoClipboard;
+  const nb=_registerBuilding(moved,cb.extrusionActive?{extrusionActive:true,extrusionHeight:cb.extrusionHeight,floorOverrides:cb.floorOverrides}:null);
+  if(nb){if(cb.fillColor)nb.fillColor=cb.fillColor;if(cb.lineColor)nb.lineColor=cb.lineColor;}
+  _updateBldHighlights();
+  _histCommit();
+  showToast(lang==='ka'?'ჩასმულია':'Pasted');
 }
 
 function _setAnalysisPanel(open){
@@ -4341,6 +4453,7 @@ function _exitBldEditMode(commit){
   try{map.setLayoutProperty('bld-fill-'+id,'visibility','visible');}catch(_){}
   try{map.setLayoutProperty('bld-line-'+id,'visibility','visible');}catch(_){}
   _updateBldHighlights();
+  if(commit)_histCommit();
 }
 function _checkAreaViolation(bld){
   const warnEl=document.getElementById('pfc-area-warn');if(!warnEl)return;
@@ -4415,7 +4528,7 @@ async function onDrawCreate(){
   // Walkability (free analysis) feature removed — #analyse-btn stays hidden
   setupProCard();
   // OSM analysis moved to Urban Functions accordion
-
+  _histCommit();
 }
 
 function computePolygonPerimeterM(coords){
