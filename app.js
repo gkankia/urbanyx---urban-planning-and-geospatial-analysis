@@ -1532,7 +1532,7 @@ function _updateCombinedMetrics(){
   }
 }
 
-function _registerBuilding(geojson){
+function _registerBuilding(geojson,initExt){
   _saveBldState();
   const prev=_activeBld();
   if(prev?.extrusionActive)_freezeBld(prev);
@@ -1549,6 +1549,12 @@ function _registerBuilding(geojson){
     areaStr:aM2>=10000?(aM2/10000).toFixed(2)+' ha':Math.round(aM2).toLocaleString()+' m²',
     perimStr:pM>=1000?(pM/1000).toFixed(2)+' km':Math.round(pM).toLocaleString()+' m',
     extrusionActive:false,extrusionHeight:12,floorOverrides:{}};
+  if(initExt){
+    // Carry an existing extrusion onto the new building (e.g. slicing an extruded shape).
+    bld.extrusionActive=!!initExt.extrusionActive;
+    bld.extrusionHeight=initExt.extrusionHeight||12;
+    bld.floorOverrides=initExt.floorOverrides?JSON.parse(JSON.stringify(initExt.floorOverrides)):{};
+  }
   _buildings.push(bld);
   if(mapReady){
     try{
@@ -2656,8 +2662,16 @@ function _doSlice(cutLine){
   }catch(err){showToast(lang==='ka'?'გაჭრა ვერ მოხერხდა':'Slice failed');return;}
   if(pieces.length<2){showToast(lang==='ka'?'ხაზი უნდა კვეთდეს ფიგურას':'The line must cross the shape');return;}
   const fill=bld.fillColor,lineC=bld.lineColor;
+  // Preserve extrusion so slicing a 3D building keeps both halves extruded.
+  const wasExt=bld.extrusionActive,extH=bld.extrusionHeight;
+  let carryFO=null;
+  if(wasExt){
+    carryFO={};const foSrc=bld.floorOverrides||{};
+    Object.keys(foSrc).forEach(k=>{const o=foSrc[k]||{};const n={};if(o.useType)n.useType=o.useType;if(o.color)n.color=o.color;if(o.colorHex)n.colorHex=o.colorHex;if(Object.keys(n).length)carryFO[k]=n;});
+  }
+  const initExt=wasExt?{extrusionActive:true,extrusionHeight:extH,floorOverrides:carryFO}:null;
   _removeBuildingById(bld.id);
-  pieces.forEach(g=>{const nb=_registerBuilding(g);if(nb){if(fill)nb.fillColor=fill;if(lineC)nb.lineColor=lineC;}});
+  pieces.forEach(g=>{const nb=_registerBuilding(g,initExt);if(nb){if(fill)nb.fillColor=fill;if(lineC)nb.lineColor=lineC;}});
   _updateBldHighlights();
   showToast((lang==='ka'?'ფიგურა გაიჭრა: ':'Sliced into ')+pieces.length+(lang==='ka'?' ნაწილად':' parts'));
 }
