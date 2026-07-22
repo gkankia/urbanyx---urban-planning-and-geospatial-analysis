@@ -479,7 +479,7 @@ function applyLang(){
     setTip("nav-tip-search",nt.search);
     setTip("nav-tip-import",nt.importLabel);
     setTip("nav-tip-draw",nt.draw);
-    setTip("nav-tip-extrude",nt.extrude3d);
+    setTip("geo-3d-tip",nt.extrude3d);
     setTip("nav-tip-report",nt.report);
     setTip("nav-tip-lang",nt.language);
     setTip("nav-tip-data",nt.data);
@@ -1215,8 +1215,8 @@ function toggleExtrusion(){
   if(!canExtrude){showToast(lang==='ka'?'3D გასააქტიურებლად დახაზე პოლიგონი, წრე ან კვადრატი':'Draw a polygon, circle or square on the map to use 3D extrusion');return;}
   if(!_isDrawnArea)return;
   _extrusionActive=!_extrusionActive;
-  document.getElementById('nav-extrusion-btn')?.classList.toggle('active',_extrusionActive);
-  const _extIco=document.getElementById('nav-extrusion-icon');if(_extIco)_extIco.style.opacity=_extrusionActive?'1':'0.55';
+  document.getElementById('geo-3d-btn')?.classList.toggle('active',_extrusionActive);
+  _updateGeoToolbar();
   if(!mapReady)return;
   if(_extrusionActive){
     // Always drawn area here (guarded above). Lazy-load Three.js on first use.
@@ -1386,13 +1386,11 @@ function _activateBld(id){
     }
     document.getElementById('draw-3d-sw')?.classList.add('on');
     const _ctrl=document.getElementById('draw-3d-controls');if(_ctrl)_ctrl.style.display='block';
-    document.getElementById('nav-extrusion-btn')?.classList.add('active');
-    const _ico=document.getElementById('nav-extrusion-icon');if(_ico)_ico.style.opacity='1';
+    document.getElementById('geo-3d-btn')?.classList.add('active');
   } else {
     document.getElementById('draw-3d-sw')?.classList.remove('on');
     const _ctrl2=document.getElementById('draw-3d-controls');if(_ctrl2)_ctrl2.style.display='none';
-    document.getElementById('nav-extrusion-btn')?.classList.remove('active');
-    const _ico2=document.getElementById('nav-extrusion-icon');if(_ico2)_ico2.style.opacity='0.55';
+    document.getElementById('geo-3d-btn')?.classList.remove('active');
     const _fpanel=document.getElementById('floor-detail-panel');if(_fpanel)_fpanel.style.display='none';
   }
   _updateBldHighlights();
@@ -1579,6 +1577,7 @@ function _deselectBuilding(){
   const _ar=document.getElementById('pfc-lbl-addr')?.closest('.pfc-row');if(_ar)_ar.style.display='';
   const _or=document.getElementById('pfc-lbl-owner')?.closest('.pfc-row');if(_or)_or.style.display='';
   _parcelCardLngLat=null;
+  const _gtb=document.getElementById('geo-toolbar');if(_gtb)_gtb.style.display='none';
   const fpanel=document.getElementById('floor-detail-panel');if(fpanel)fpanel.style.display='none';
   document.getElementById('draw-3d-sw')?.classList.remove('on');
   const ctrl=document.getElementById('draw-3d-controls');if(ctrl)ctrl.style.display='none';
@@ -1702,7 +1701,7 @@ function _resetExtrusionFull(){
   _selectedFloors.clear();_floorOverrides={};
   if(_threeEditor){const _rb=_activeBld();try{map.removeLayer(_threeEditor.id);}catch(e){}try{_threeEditor.dispose();}catch(e){}if(_rb)_rb.threeEditor=null;_threeEditor=null;}
   document.getElementById('draw-3d-sw')?.classList.remove('on');
-  document.getElementById('edit-shape-btn')?.classList.remove('active');
+  document.getElementById('geo-3d-btn')?.classList.remove('active');
   const ctrl=document.getElementById('draw-3d-controls');if(ctrl)ctrl.style.display='none';
   const panel=document.getElementById('floor-detail-panel');if(panel)panel.style.display='none';
   const sl=document.getElementById('extrusion-height-slider');if(sl)sl.value=12;
@@ -1765,7 +1764,6 @@ let _threeEditor=null;
 function toggleShapeEditMode(){
   if(!_isDrawnArea||!_extrusionActive){showToast(lang==='ka'?'ჯერ ჩართე 3D რეჟიმი':'Enable 3D first to edit the shape');return;}
   _shapeEditMode=!_shapeEditMode;
-  document.getElementById('edit-shape-btn')?.classList.toggle('active',_shapeEditMode);
   document.getElementById('geo-edit-btn')?.classList.toggle('active',_shapeEditMode);
   const tip=document.getElementById('geo-edit-tip');if(tip)tip.textContent=_shapeEditMode?(lang==='ka'?'რედაქტირება: ჩართ.':'Editing: on'):(lang==='ka'?'ფორმის რედაქტირება':'Edit shape');
   // Three.js layer stays alive; just enable/disable drag interaction
@@ -1774,7 +1772,6 @@ function toggleShapeEditMode(){
 }
 function _resetShapeEditMode(){
   _shapeEditMode=false;
-  document.getElementById('edit-shape-btn')?.classList.remove('active');
   const g=document.getElementById('geo-edit-btn');if(g)g.classList.remove('active');
   const tip=document.getElementById('geo-edit-tip');if(tip)tip.textContent=(lang==='ka'?'ფორმის რედაქტირება':'Edit shape');
 }
@@ -2272,15 +2269,6 @@ function _update3DMetrics(){
   const show=_isDrawnArea&&_extrusionActive;
   if(rowH)rowH.style.display=show?'flex':'none';
   if(rowF)rowF.style.display=show?'flex':'none';
-  const canExtrude=_isDrawnArea&&['polygon','rectangle','circle'].includes(_drawShape);
-  const extBtn=document.getElementById('nav-extrusion-btn');
-  const extIcon=document.getElementById('nav-extrusion-icon');
-  if(extBtn){
-    extBtn.classList.toggle('active',_extrusionActive);
-    if(extIcon)extIcon.style.opacity=canExtrude?(_extrusionActive?'1':'0.55'):'0.3';
-  }
-  const editBtn=document.getElementById('edit-shape-btn');
-  if(editBtn)editBtn.style.display=(show&&_drawnFeatureId)?'block':'none';
   if(_extrusionActive)_applyExtrusionHeightCap();
   _updateMetricsExtrusion();
   _updateAnalysisBtn();
@@ -2375,7 +2363,13 @@ function _updateAnalysisBtn(){
 
 function _updateGeoToolbar(){
   const tb=document.getElementById('geo-toolbar');
-  if(tb)tb.style.display=_extrusionActive?'flex':'none';
+  const canExtrude=_isDrawnArea&&['polygon','rectangle','circle'].includes(_drawShape);
+  if(tb)tb.style.display=(canExtrude||_extrusionActive)?'flex':'none';
+  const b3=document.getElementById('geo-3d-btn');if(b3)b3.classList.toggle('active',_extrusionActive);
+  // Shape editing only applies once 3D is on — dim the edit button until then
+  const eb=document.getElementById('geo-edit-btn');
+  if(eb)eb.style.opacity=_extrusionActive?'1':'0.4';
+  if(!_extrusionActive){const g=document.getElementById('geo-edit-btn');if(g)g.classList.remove('active');}
 }
 
 function _setAnalysisPanel(open){
@@ -6664,6 +6658,7 @@ function showParcelPopup(lngLat){
   const _ar2=document.getElementById('pfc-lbl-addr')?.closest('.pfc-row');if(_ar2)_ar2.style.display='';
   const _or2=document.getElementById('pfc-lbl-owner')?.closest('.pfc-row');if(_or2)_or2.style.display='';
   const _lt=document.getElementById('pfc-lbl-type');if(_lt)_lt.textContent=(tr.type||'Type');
+  const _gtb2=document.getElementById('geo-toolbar');if(_gtb2)_gtb2.style.display='none';
   document.getElementById('nav-zoning-btn')?.classList.remove('active');
   const _zrClr=document.getElementById('pfc-zone-row');
   const _pnClr=document.getElementById('pfc-setback-note');
