@@ -7434,7 +7434,7 @@ function _updateCoordReadout(e){
   const x=R*lng*Math.PI/180;
   const y=R*Math.log(Math.tan(Math.PI/4+(lat*Math.PI/180)/2));
   el.style.display='block';
-  el.textContent=lat.toFixed(6)+', '+lng.toFixed(6)+'  ('+Math.round(x).toLocaleString()+', '+Math.round(y).toLocaleString()+')';
+  el.textContent='long/x: '+lng.toFixed(6)+' ('+Math.round(x).toLocaleString()+')   lat/y: '+lat.toFixed(6)+' ('+Math.round(y).toLocaleString()+')';
 }
 function _hideCoordReadout(){const el=document.getElementById('coord-readout');if(el)el.style.display='none';}
 
