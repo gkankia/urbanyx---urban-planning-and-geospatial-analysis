@@ -1863,7 +1863,6 @@ function _resetShapeEditMode(){
   _shapeEditMode=false;
   const g=document.getElementById('geo-edit-btn');if(g)g.classList.remove('active');
   const tip=document.getElementById('geo-edit-tip');if(tip)tip.textContent=(lang==='ka'?'ფორმის რედაქტირება':'Edit shape');
-  _hideCoordReadout();
 }
 
 class _BuildingEditorLayer{
@@ -6983,6 +6982,7 @@ map.on("load",()=>{
   map.on("move",_updateParcelCardPos);
   map.on("move",_updateMiniCardPositions);
   map.on("mousemove",_updateCoordReadout);
+  map.on("mouseout",_hideCoordReadout);
   map.on("mouseenter","parcel-fill",()=>{map.getCanvas().style.cursor="pointer";});
   map.on("mouseleave","parcel-fill",()=>{map.getCanvas().style.cursor="";});
   _initParcelCardDrag();
@@ -7428,10 +7428,14 @@ function _measureUpdate(oe){
 
 // ── Cursor coordinate readout (shown during edit mode, below the geo toolbar) ──
 function _updateCoordReadout(e){
-  const el=document.getElementById('coord-readout');if(!el)return;
-  const editing=!!_editingBldId||(_extrusionActive&&_shapeEditMode);
-  if(editing&&e&&e.lngLat){el.style.display='block';el.textContent=e.lngLat.lat.toFixed(6)+', '+e.lngLat.lng.toFixed(6);}
-  else if(!editing&&el.style.display!=='none')el.style.display='none';
+  const el=document.getElementById('coord-readout');if(!el||!e||!e.lngLat)return;
+  const lat=e.lngLat.lat, lng=e.lngLat.lng;
+  // Projected x/y in Web Mercator metres (EPSG:3857)
+  const R=6378137.0;
+  const x=R*lng*Math.PI/180;
+  const y=R*Math.log(Math.tan(Math.PI/4+(lat*Math.PI/180)/2));
+  el.style.display='block';
+  el.textContent=lat.toFixed(6)+', '+lng.toFixed(6)+'  ('+Math.round(x).toLocaleString()+', '+Math.round(y).toLocaleString()+')';
 }
 function _hideCoordReadout(){const el=document.getElementById('coord-readout');if(el)el.style.display='none';}
 
