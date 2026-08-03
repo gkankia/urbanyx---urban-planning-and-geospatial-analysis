@@ -7423,14 +7423,71 @@ function _measureUpdate(oe){
 }
 
 // ── Cursor coordinate readout (shown during edit mode, below the geo toolbar) ──
+// Precise Tbilisi DEM (COG on R2) for the elevation readout inside its coverage;
+// Mapbox terrain is used everywhere else. Reuses the same source as the relief tool.
+let _demImg=null,_demMeta=null,_demLoading=false,_demBusy=false,_demPendingLL=null,_coordLL=null;
+async function _ensureDEM(){
+  if(_demImg||_demLoading)return;
+  _demLoading=true;
+  try{
+    if(!window.GeoTIFF){await new Promise((res,rej)=>{const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/geotiff@2.1.3/dist-browser/geotiff.js';s.onload=res;s.onerror=rej;document.head.appendChild(s);});}
+    const tiff=await GeoTIFF.fromUrl(`${PROXY}/lst?url=${encodeURIComponent(DTM_URL)}`,{allowFullFile:false});
+    const image=await tiff.getImage();
+    const bbox=image.getBoundingBox();
+    const fullW=image.getWidth(),fullH=image.getHeight();
+    _demMeta={bbox,fullW,fullH,pixW:(bbox[2]-bbox[0])/fullW,pixH:(bbox[3]-bbox[1])/fullH,
+      nodata:(image.fileDirectory&&image.fileDirectory.GDAL_NODATA!=null)?parseFloat(image.fileDirectory.GDAL_NODATA):null};
+    _demImg=image;
+  }catch(err){console.warn('[dem] load failed',err);}
+  _demLoading=false;
+}
+function _demInBounds(lng,lat){if(!_demMeta)return false;const b=_demMeta.bbox;return lng>=b[0]&&lng<=b[2]&&lat>=b[1]&&lat<=b[3];}
+async function _demElevation(lng,lat){
+  if(!_demImg||!_demMeta)return null;
+  const m=_demMeta;
+  const px=Math.floor((lng-m.bbox[0])/m.pixW);
+  const py=Math.floor((m.bbox[3]-lat)/m.pixH);
+  if(px<0||py<0||px>=m.fullW||py>=m.fullH)return null;
+  const r=await _demImg.readRasters({window:[px,py,Math.min(px+1,m.fullW),Math.min(py+1,m.fullH)],width:1,height:1});
+  const v=r&&r[0]?r[0][0]:null;
+  if(v==null||isNaN(v)||(m.nodata!=null&&v===m.nodata))return null;
+  return v;
+}
+function _mapboxElev(lng,lat){try{return map.queryTerrainElevation({lng,lat},{exaggerated:false});}catch(_){return null;}}
+function _renderCoord(el,lng,lat,elev){
+  const elevStr=(elev!=null&&isFinite(elev))?Math.round(elev)+' m':'—';
+  el.textContent='long/x: '+lng.toFixed(6)+'   lat/y: '+lat.toFixed(6)+'   elev: '+elevStr;
+}
+// Coalesced async sampling of the precise DEM — only resolves the latest position.
+function _sampleDEM(){
+  if(_demBusy)return;_demBusy=true;
+  (async()=>{
+    await _ensureDEM();
+    while(_demPendingLL){
+      const {lng,lat}=_demPendingLL;_demPendingLL=null;
+      let v=null;try{v=await _demElevation(lng,lat);}catch(_){}
+      if(v==null)v=_mapboxElev(lng,lat);
+      if(_coordLL&&Math.abs(_coordLL.lng-lng)<1e-9&&Math.abs(_coordLL.lat-lat)<1e-9){
+        const el=document.getElementById('coord-readout');
+        if(el&&el.style.display!=='none')_renderCoord(el,lng,lat,v);
+      }
+    }
+    _demBusy=false;
+  })();
+}
 function _updateCoordReadout(e){
   const el=document.getElementById('coord-readout');if(!el||!e||!e.lngLat)return;
   const lat=e.lngLat.lat, lng=e.lngLat.lng;
-  let elev=null;
-  try{elev=map.queryTerrainElevation(e.lngLat,{exaggerated:false});}catch(_){}
-  const elevStr=(elev!=null&&isFinite(elev))?Math.round(elev)+' m':'—';
+  _coordLL={lng,lat};
   el.style.display='block';
-  el.textContent='long/x: '+lng.toFixed(6)+'   lat/y: '+lat.toFixed(6)+'   elev: '+elevStr;
+  if(_demMeta&&_demInBounds(lng,lat)){
+    // Inside Tbilisi coverage — show Mapbox value immediately, refine with the precise DEM
+    _renderCoord(el,lng,lat,_mapboxElev(lng,lat));
+    _demPendingLL={lng,lat};_sampleDEM();
+  } else {
+    _renderCoord(el,lng,lat,_mapboxElev(lng,lat));
+    if(!_demMeta)_ensureDEM(); // preload so the DEM is ready when the cursor enters Tbilisi
+  }
 }
 function _hideCoordReadout(){const el=document.getElementById('coord-readout');if(el)el.style.display='none';}
 
