@@ -7426,12 +7426,11 @@ function _measureUpdate(oe){
 function _updateCoordReadout(e){
   const el=document.getElementById('coord-readout');if(!el||!e||!e.lngLat)return;
   const lat=e.lngLat.lat, lng=e.lngLat.lng;
-  // Projected x/y in Web Mercator metres (EPSG:3857)
-  const R=6378137.0;
-  const x=R*lng*Math.PI/180;
-  const y=R*Math.log(Math.tan(Math.PI/4+(lat*Math.PI/180)/2));
+  let elev=null;
+  try{elev=map.queryTerrainElevation(e.lngLat,{exaggerated:false});}catch(_){}
+  const elevStr=(elev!=null&&isFinite(elev))?Math.round(elev)+' m':'—';
   el.style.display='block';
-  el.textContent='long/x: '+lng.toFixed(6)+' ('+Math.round(x).toLocaleString()+')   lat/y: '+lat.toFixed(6)+' ('+Math.round(y).toLocaleString()+')';
+  el.textContent='long/x: '+lng.toFixed(6)+'   lat/y: '+lat.toFixed(6)+'   elev: '+elevStr;
 }
 function _hideCoordReadout(){const el=document.getElementById('coord-readout');if(el)el.style.display='none';}
 
