@@ -9431,37 +9431,68 @@ function renderEnergySection(){
 }
 
 
-async function fetchDTM(geojson){
+function _geojsonLLBBox(geojson){
   const coords=geojson.type==="Polygon"?geojson.coordinates.flat():
                 geojson.type==="MultiPolygon"?geojson.coordinates.flat(3):geojson.coordinates;
   const lngs=coords.map(c=>c[0]),lats=coords.map(c=>c[1]);
-  const minLng=Math.min(...lngs),maxLng=Math.max(...lngs);
-  const minLat=Math.min(...lats),maxLat=Math.max(...lats);
+  return {minLng:Math.min(...lngs),maxLng:Math.max(...lngs),minLat:Math.min(...lats),maxLat:Math.max(...lats)};
+}
 
-  const proxyUrl=`${PROXY}/lst?url=${encodeURIComponent(DTM_URL)}`;_rptRasterSrc.relief_dtm=proxyUrl;
-  const tiff=await GeoTIFF.fromUrl(proxyUrl,{allowFullFile:false});
-  const image=await tiff.getImage();
-  const imgBbox=image.getBoundingBox(); // [minX,minY,maxX,maxY]
-  const fullW=image.getWidth(),fullH=image.getHeight();
-  const pixW=(imgBbox[2]-imgBbox[0])/fullW, pixH=(imgBbox[3]-imgBbox[1])/fullH;
-
-  const x1=Math.max(0,Math.floor((minLng-imgBbox[0])/pixW));
-  const y1=Math.max(0,Math.floor((imgBbox[3]-maxLat)/pixH));
-  const x2=Math.min(fullW-1,Math.ceil((maxLng-imgBbox[0])/pixW));
-  const y2=Math.min(fullH-1,Math.ceil((imgBbox[3]-minLat)/pixH));
-
-  const rawW=Math.max(1,x2-x1), rawH=Math.max(1,y2-y1);
+// DTM grid for relief analysis: precise Tbilisi COG where it covers the area,
+// Mapbox terrain elsewhere. Both return the same {values,width,height,origin,res,nodata}.
+async function fetchDTM(geojson){
+  const bb=_geojsonLLBBox(geojson);
+  try{await _ensureDEM();}catch(_){}
+  const covered=_demMeta&&bb.minLng>=_demMeta.bbox[0]&&bb.maxLng<=_demMeta.bbox[2]&&bb.minLat>=_demMeta.bbox[1]&&bb.maxLat<=_demMeta.bbox[3];
+  if(covered){
+    try{
+      const dtm=await _cogDTM(bb);
+      const nd=dtm.nodata,v=dtm.values;
+      for(let i=0;i<v.length;i++){const x=v[i];if(x!=null&&!isNaN(x)&&x!==nd&&x>-9999)return dtm;} // has real data
+    }catch(err){console.warn('[relief] Tbilisi DEM failed, using Mapbox terrain',err);}
+  }
+  return _mapboxDTM(bb);
+}
+async function _cogDTM(bb){
+  await _ensureDEM();
+  const image=_demImg;if(!image||!_demMeta)throw new Error('DEM not loaded');
+  _rptRasterSrc.relief_dtm=`${PROXY}/lst?url=${encodeURIComponent(DTM_URL)}`;
+  const imgBbox=_demMeta.bbox,fullW=_demMeta.fullW,fullH=_demMeta.fullH,pixW=_demMeta.pixW,pixH=_demMeta.pixH;
+  const x1=Math.max(0,Math.floor((bb.minLng-imgBbox[0])/pixW));
+  const y1=Math.max(0,Math.floor((imgBbox[3]-bb.maxLat)/pixH));
+  const x2=Math.min(fullW-1,Math.ceil((bb.maxLng-imgBbox[0])/pixW));
+  const y2=Math.min(fullH-1,Math.ceil((imgBbox[3]-bb.minLat)/pixH));
+  const rawW=Math.max(1,x2-x1),rawH=Math.max(1,y2-y1);
   const MAX_PX=512;
   const fetchW=Math.min(rawW,MAX_PX);
   const fetchH=Math.min(rawH,Math.max(1,Math.round(rawH*fetchW/rawW)));
   const raster=await image.readRasters({window:[x1,y1,x2,y2],width:fetchW,height:fetchH});
-  const w=fetchW, h=fetchH;
-  const actualResX=pixW*rawW/w, actualResY=pixH*rawH/h;
-  const originX=imgBbox[0]+x1*pixW;
-  const originY=imgBbox[3]-y1*pixH;
-
-  const nd=image.fileDirectory?.GDAL_NODATA!=null?parseFloat(image.fileDirectory.GDAL_NODATA):null;
-  return { values:raster[0], width:w, height:h, originX, originY, resX:actualResX, resY:actualResY, nodata:nd };
+  const w=fetchW,h=fetchH;
+  const actualResX=pixW*rawW/w,actualResY=pixH*rawH/h;
+  const nd=(image.fileDirectory&&image.fileDirectory.GDAL_NODATA!=null)?parseFloat(image.fileDirectory.GDAL_NODATA):null;
+  return { values:raster[0], width:w, height:h, originX:imgBbox[0]+x1*pixW, originY:imgBbox[3]-y1*pixH, resX:actualResX, resY:actualResY, nodata:nd };
+}
+// Sample Mapbox terrain over the area's bbox to build a DTM grid (used outside Tbilisi).
+async function _mapboxDTM(bb){
+  if(mapReady&&map.isMoving())await new Promise(r=>map.once('idle',r));
+  _rptRasterSrc.relief_dtm=null; // Mapbox terrain — no COG to embed in the report
+  const NOD=-9999;
+  const spanLng=Math.max(1e-6,bb.maxLng-bb.minLng),spanLat=Math.max(1e-6,bb.maxLat-bb.minLat);
+  const MAXC=160,aspect=spanLng/spanLat;
+  let cols,rows;
+  if(aspect>=1){cols=MAXC;rows=Math.max(2,Math.round(MAXC/aspect));}
+  else{rows=MAXC;cols=Math.max(2,Math.round(MAXC*aspect));}
+  const resX=spanLng/cols,resY=spanLat/rows;
+  const values=new Float32Array(cols*rows);
+  for(let r=0;r<rows;r++){
+    const lat=bb.maxLat-(r+0.5)*resY;
+    for(let c=0;c<cols;c++){
+      const lng=bb.minLng+(c+0.5)*resX;
+      let e=null;try{e=map.queryTerrainElevation({lng,lat},{exaggerated:false});}catch(_){}
+      values[r*cols+c]=(e==null||!isFinite(e))?NOD:e;
+    }
+  }
+  return { values, width:cols, height:rows, originX:bb.minLng, originY:bb.maxLat, resX, resY, nodata:NOD };
 }
 
 function computeSlope(dtm){
