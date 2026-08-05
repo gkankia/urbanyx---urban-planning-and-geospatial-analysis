@@ -9385,6 +9385,7 @@ let _crashesGeoJSON = null;
 let _schoolsLayerActive = false;
 let _schoolHoverPopup = null;
 let _reliefActiveType = null;
+let _reliefDemSource = null; // 'tbilisi' (precise COG) | 'mapbox' (global terrain)
 let _reliefOverlayCache = null;
 let _dtmCache = null;
 let _reliefComputed = new Set();
@@ -9414,7 +9415,18 @@ function renderReliefButtons(){
         <button class="relief-dl-btn${_reliefComputed.has('slope')?'':' disabled'}" ${_reliefComputed.has('slope')?'onclick="exportReliefGeoTIFF(\'slope\')"':'disabled'}>↓ ${isKa?"დახრა":"Slope"}</button>
         <button class="relief-dl-btn${_reliefComputed.has('aspect')?'':' disabled'}" ${_reliefComputed.has('aspect')?'onclick="exportReliefGeoTIFF(\'aspect\')"':'disabled'}>↓ ${isKa?"ასპექტი":"Aspect"}</button>
       </div>
-    </div>`:'');
+    </div>`+_reliefDisclaimerHTML():'');
+}
+function _reliefDisclaimerHTML(){
+  const isKa=lang==="ka";
+  const src=_reliefDemSource==='mapbox'
+    ?(isKa?'წყარო: Mapbox გლობალური რელიეფი (~30 მ გარჩევადობა). შედეგები მიახლოებითია და მცირე ნაკვეთებზე ნაკლებ დეტალურია.'
+          :'Source: Mapbox global terrain (~30 m resolution). Results are approximate and less detailed over small parcels.')
+    :(isKa?'წყარო: თბილისის მაღალი გარჩევადობის ციფრული რელიეფის მოდელი.'
+          :'Source: Tbilisi high-resolution digital terrain model.');
+  const generic=isKa?'მნიშვნელობები ინდიკატიურია და არ ცვლის საველე აზომვას.'
+                    :'Values are indicative and not a substitute for a ground survey.';
+  return `<div id="relief-disclaimer" style="margin-top:9px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.07);font-size:0.56rem;line-height:1.55;color:rgba(255,255,255,0.32)">⚠ ${src} ${generic}</div>`;
 }
 
 function renderEnergySection(){
@@ -9448,9 +9460,10 @@ async function fetchDTM(geojson){
     try{
       const dtm=await _cogDTM(bb);
       const nd=dtm.nodata,v=dtm.values;
-      for(let i=0;i<v.length;i++){const x=v[i];if(x!=null&&!isNaN(x)&&x!==nd&&x>-9999)return dtm;} // has real data
+      for(let i=0;i<v.length;i++){const x=v[i];if(x!=null&&!isNaN(x)&&x!==nd&&x>-9999){_reliefDemSource='tbilisi';return dtm;}} // has real data
     }catch(err){console.warn('[relief] Tbilisi DEM failed, using Mapbox terrain',err);}
   }
+  _reliefDemSource='mapbox';
   return _mapboxDTM(bb);
 }
 async function _cogDTM(bb){
@@ -10487,16 +10500,15 @@ async function runReliefAnalysis(type){
         _drawnAreaProps.aspect_south_pct=extraStats.dirs[4];
       }
     }
-    renderReliefOverlay(dtm,displayValues,type,_currentParcelGeoJSON,extraStats);
-    logFeatureUse("relief_analysis").catch(()=>{});
     _reliefComputed.add(type);
-    statusEl.textContent="";
     document.getElementById("relief-sw")?.classList.add("on");
+    renderReliefButtons();   // rebuild the panel shell first (fresh, empty stats/legend + download btns)
+    renderReliefOverlay(dtm,displayValues,type,_currentParcelGeoJSON,extraStats); // then draw overlay + fill stats/legend
     _updateReliefProfileToggle();
-    renderReliefButtons();
+    logFeatureUse("relief_analysis").catch(()=>{});
   }catch(e){
     console.error("Relief:",e);
-    statusEl.textContent=t().analysisError;
+    const se=document.getElementById("relief-status");if(se)se.textContent=t().analysisError;
   }
 }
 
