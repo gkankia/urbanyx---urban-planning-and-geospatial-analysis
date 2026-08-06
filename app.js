@@ -259,7 +259,7 @@ const T = {
     projects:{navTip:"My Projects",panelTitle:"My Projects",saveBtn:"Save current analysis",emptyMsg:"No saved projects yet.",openBtn:"Open",deleteConfirm:"Delete this project?",loadingMsg:"Loading…",savingMsg:"Saving…",saveModalTitle:"Save Project",saveModalHint:"Saves map view, selected features, imported layers and analysis results.",cancelBtn:"Cancel",confirmBtn:"Save",savedToast:"Project saved",deletedToast:"Project deleted",loadedToast:"Project loaded",errorSave:"Failed to save project",errorLoad:"Failed to load project",errorDelete:"Delete failed",layers:"layer",layersPlural:"layers"},
     activityLabels:{map_click:"Clicks",free_analysis:"Free analysis",pro_analysis:"Pro analysis",relief_analysis:"Relief",pdf_export:"PDF export",geojson_export:"GeoJSON export"},
     activityIcons:{map_click:"—",free_analysis:"○",pro_analysis:"◆",relief_analysis:"△",pdf_export:"↓",geojson_export:"⬡"},
-    layers:{btn:"Layers",basemap:"Basemap",layers:"Layers",cadastral:"Parcels",lineObjects:"Lines",forestFund:"Forest",dark:"Dark",satellite:"Satellite",day:"Day",night:"Night"},
+    layers:{btn:"Layers",basemap:"Basemap",layers:"Layers",cadastral:"Parcels",lineObjects:"Lines",forestFund:"Forest",dark:"Dark",satellite:"Satellite",day:"Z.axis Hillshade",night:"Night"},
     searchesLeft:"searches left this month",
     viewPlans:"View plans",
     plansBtn:"Plans",
@@ -398,7 +398,7 @@ const T = {
     pdfProAnalysis:"Pro ანალიზი",
     pdfNoScore:"კოეფიციენტის საანგარიშოდ საჭიროა ანალიზის ბრძანება",
     pdfNoImage:"ქუჩის სურათები არ არის ხელმისაწვდომი",
-    layers:{btn:"ფენები",basemap:"საბაზო რუკა",layers:"ფენები",cadastral:"ნაკვეთები",lineObjects:"ხაზები",forestFund:"ტყე",dark:"მუქი",satellite:"სატელიტი",day:"დღე",night:"ღამე"},
+    layers:{btn:"ფენები",basemap:"საბაზო რუკა",layers:"ფენები",cadastral:"ნაკვეთები",lineObjects:"ხაზები",forestFund:"ტყე",dark:"მუქი",satellite:"სატელიტი",day:"Z.axis Hillshade",night:"ღამე"},
     searchesLeft:"ძიება დარჩა ამ თვეში",
     viewPlans:"ტარიფების ნახვა",
     plansBtn:"ტარიფები",
@@ -5521,7 +5521,7 @@ function navToggleLang(){
 const _BASEMAP_STYLES={
   dark:"mapbox://styles/mapbox/dark-v11",
   satellite:"mapbox://styles/mapbox/satellite-streets-v12",
-  day:"mapbox://styles/mapbox/standard",
+  day:"mapbox://styles/jorjone90/cmsg7wons00j701s879l50r8v", // Z.axis Hillshade
   night:"mapbox://styles/mapbox/standard"
 };
 function switchBasemap(name){
@@ -5543,8 +5543,8 @@ function switchBasemap(name){
     mapReady=true;
     map.setLanguage(lang==='ka'?'ka':'en');
     const _nll=document.getElementById('nav-lang-label');if(_nll)_nll.textContent=lang==='en'?'EN':'ქა';
-    if(name==="day"){map.setConfigProperty("basemap","lightPreset","day");map.setConfigProperty("basemap","show3dObjects",true);}
-    if(name==="night"){map.setConfigProperty("basemap","lightPreset","night");map.setConfigProperty("basemap","show3dObjects",true);}
+    // "day" is now the Z.axis Hillshade custom style — no Standard "basemap" config to set.
+    if(name==="night"){try{map.setConfigProperty("basemap","lightPreset","night");map.setConfigProperty("basemap","show3dObjects",true);}catch(_){}}
     if(_wasExtruding){
       const _swBld=_activeBld();
       if(_swBld?.threeEditor){try{map.removeLayer(_swBld.threeEditor.id);}catch(e){}try{_swBld.threeEditor.dispose();}catch(e){}  _swBld.threeEditor=null;}
