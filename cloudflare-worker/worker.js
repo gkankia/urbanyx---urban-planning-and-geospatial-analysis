@@ -291,6 +291,64 @@ export default {
       });
     }
 
+    // ── Photorealistic building render (Gemini 2.5 Flash Image) ─────────────────
+    // Body: { action:"render", image:<dataURL|base64 of the 3D massing>, prompt, lang }
+    if (action === "render") {
+      const jsonRes = (o, s = 200) => new Response(JSON.stringify(o), {
+        status: s, headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+      const key = env.GEMINI_API_KEY;
+      if (!key) return jsonRes({ error: "Rendering is not configured (missing GEMINI_API_KEY)." }, 500);
+      let { image, prompt, lang } = body;
+      if (!image || !prompt) return jsonRes({ error: "Missing image or prompt." }, 400);
+      prompt = String(prompt).slice(0, 1200).trim();
+      const b64 = image.includes(",") ? image.split(",")[1] : image;
+      const GLM = "https://generativelanguage.googleapis.com/v1beta/models";
+
+      // 1) Translate Georgian → English for reliable architectural rendering
+      let enPrompt = prompt;
+      if (lang === "ka" || /[Ⴀ-ჿ]/.test(prompt)) {
+        try {
+          const tr = await fetch(`${GLM}/gemini-2.5-flash:generateContent?key=${key}`, {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ contents: [{ parts: [{ text:
+              `Translate this architectural rendering instruction to concise, vivid English. Return ONLY the translation, no quotes or notes:\n\n${prompt}` }] }] })
+          });
+          if (tr.ok) {
+            const tj = await tr.json();
+            const t = (tj?.candidates?.[0]?.content?.parts || []).map(p => p.text || "").join("").trim();
+            if (t) enPrompt = t;
+          }
+        } catch (_) {}
+      }
+
+      // 2) Photorealistic render from the massing reference
+      const instruction =
+        "Transform this 3D massing model of a building into a photorealistic architectural visualization. " +
+        "Strictly preserve the building's footprint shape, proportions, number of floors and overall height as shown, and keep the same camera angle. " +
+        "Add realistic facade materials, windows and glazing, entrances, roof detail, natural daylight with soft shadows, and a plausible surrounding context. " +
+        "Design direction: " + enPrompt + ". " +
+        "High-detail, professional, photorealistic architectural render.";
+      try {
+        const gr = await fetch(`${GLM}/gemini-2.5-flash-image:generateContent?key=${key}`, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: instruction }, { inline_data: { mime_type: "image/png", data: b64 } }] }],
+            generationConfig: { responseModalities: ["IMAGE"] }
+          })
+        });
+        if (!gr.ok) { const et = await gr.text(); return jsonRes({ error: "Render failed", detail: et.slice(0, 400) }, 502); }
+        const gj = await gr.json();
+        const parts = gj?.candidates?.[0]?.content?.parts || [];
+        const imgPart = parts.find(p => p.inline_data || p.inlineData);
+        const outB64 = imgPart && (imgPart.inline_data?.data || imgPart.inlineData?.data);
+        if (!outB64) return jsonRes({ error: "No image returned by the model." }, 502);
+        return jsonRes({ image: `data:image/png;base64,${outB64}`, prompt: enPrompt });
+      } catch (e) {
+        return jsonRes({ error: "Render error", detail: String(e).slice(0, 200) }, 502);
+      }
+    }
+
     // ── PDF proxy ─────────────────────────────────────────────────────────────
     if (action === "pdf") {
       const { url: pdfUrl } = body;

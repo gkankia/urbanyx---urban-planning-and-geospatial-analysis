@@ -488,6 +488,10 @@
     <img src="analysis-logos/slice.svg" width="32" height="32" class="geo-tb-ico">
     <span class="geo-tip" id="geo-slice-tip">Slice</span>
   </button>
+  <button class="geo-tb-btn geo-tool-btn" id="geo-render-btn" onclick="openRenderModal()" title="Photorealistic render">
+    <img src="analysis-logos/render.svg" width="32" height="32" class="geo-tb-ico">
+    <span class="geo-tip" id="geo-render-tip">Render</span>
+  </button>
   <div class="geo-tb-sep"></div>
   <button class="geo-tb-btn geo-tool-btn" id="geo-paint-btn" onclick="togglePaintPanel()" title="Fill & outline color">
     <img src="analysis-logos/paint.svg" width="32" height="32" class="geo-tb-ico">
@@ -501,6 +505,27 @@
   <div id="geo-paint-popover" style="display:none">
     <div class="geo-paint-row"><span>Fill</span><input type="color" id="geo-fill-color" value="#6366f1" oninput="_geoApplyFill(this.value)"></div>
     <div class="geo-paint-row"><span>Outline</span><input type="color" id="geo-line-color" value="#a5b4fc" oninput="_geoApplyLine(this.value)"></div>
+  </div>
+</div>
+
+<!-- Photorealistic render modal -->
+<div class="modal-overlay" id="render-modal" onclick="if(event.target===this)closeRenderModal()">
+  <div class="modal-box" id="render-box">
+    <button class="modal-close" onclick="closeRenderModal()">✕</button>
+    <div class="modal-title" id="render-title">Photorealistic render</div>
+    <div id="render-sub">Describe the look — materials, style, era, surroundings.</div>
+    <textarea id="render-prompt" rows="3" placeholder="e.g. modern glass office, stone base, evening light, trees"></textarea>
+    <div id="render-actions">
+      <button id="render-go-btn" onclick="_renderGenerate()">Generate</button>
+    </div>
+    <div id="render-result" style="display:none">
+      <div id="render-canvas-wrap"><img id="render-img" alt=""></div>
+      <div id="render-result-actions">
+        <a id="render-dl-btn" download="urbanyx-render.png">Download</a>
+        <button id="render-again-btn" onclick="_renderGenerate()">Regenerate</button>
+      </div>
+    </div>
+    <div id="render-status"></div>
   </div>
 </div>
 

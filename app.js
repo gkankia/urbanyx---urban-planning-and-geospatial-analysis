@@ -7515,6 +7515,89 @@ function _updateCoordReadout(e){
 }
 function _hideCoordReadout(){const el=document.getElementById('coord-readout');if(el)el.style.display='none';}
 
+// ── Photorealistic AI render of the extruded building (Gemini via Worker) ─────
+function _renderI18n(){
+  const ka=lang==='ka';
+  return {
+    title: ka?'ფოტორეალისტური რენდერი':'Photorealistic render',
+    sub: ka?'აღწერე იერსახე — მასალები, სტილი, გარემო.':'Describe the look — materials, style, era, surroundings.',
+    ph: ka?'მაგ.: თანამედროვე შუშის ოფისი, ქვის ცოკოლი, საღამოს განათება, ხეები':'e.g. modern glass office, stone base, evening light, surrounding trees',
+    go: ka?'გენერაცია':'Generate', again: ka?'თავიდან':'Regenerate', dl: ka?'ჩამოტვირთვა':'Download',
+    need3d: ka?'ჯერ ჩართე 3D ექსტრუზია':'Extrude a building in 3D first',
+    needPrompt: ka?'შეიყვანე აღწერა':'Enter a description',
+    working: ka?'რენდერდება… (~10–20 წმ)':'Rendering… (~10–20s)',
+    err: ka?'რენდერი ვერ მოხერხდა':'Render failed'
+  };
+}
+function openRenderModal(){
+  if(!currentUser||currentUser.plan!=='pro'){openPaywall();return;}
+  if(!_isDrawnArea||!_extrusionActive){showToast(_renderI18n().need3d);return;}
+  const T=_renderI18n();
+  document.getElementById('render-title').textContent=T.title;
+  document.getElementById('render-sub').textContent=T.sub;
+  document.getElementById('render-prompt').placeholder=T.ph;
+  document.getElementById('render-go-btn').textContent=T.go;
+  document.getElementById('render-again-btn').textContent=T.again;
+  document.getElementById('render-dl-btn').textContent='↓ '+T.dl;
+  document.getElementById('render-result').style.display='none';
+  const st=document.getElementById('render-status');st.textContent='';st.classList.remove('err');
+  document.getElementById('render-modal').classList.add('open');
+  setTimeout(()=>document.getElementById('render-prompt').focus(),60);
+}
+function closeRenderModal(){document.getElementById('render-modal').classList.remove('open');}
+// Capture the active building region from the map canvas as a PNG reference.
+function _captureBuildingPNG(){
+  const src=map.getCanvas();
+  const rx=src.width/(src.clientWidth||src.width), ry=src.height/(src.clientHeight||src.height);
+  let sx=0,sy=0,sw=src.width,sh=src.height;
+  try{
+    const bld=_activeBld();
+    const ring=bld.geojson.type==='Polygon'?bld.geojson.coordinates[0]:bld.geojson.coordinates[0][0];
+    let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+    ring.forEach(pt=>{const p=map.project(pt);const x=p.x*rx,y=p.y*ry;if(x<minX)minX=x;if(y<minY)minY=y;if(x>maxX)maxX=x;if(y>maxY)maxY=y;});
+    const w=maxX-minX,h=maxY-minY;
+    const padX=w*0.4+50*rx, padTop=h*1.4+80*ry, padBot=h*0.4+50*ry; // extra room above for the extruded height
+    sx=Math.max(0,minX-padX); sy=Math.max(0,minY-padTop);
+    const ex=Math.min(src.width,maxX+padX), ey=Math.min(src.height,maxY+padBot);
+    sw=ex-sx; sh=ey-sy;
+    if(sw<60||sh<60){sx=0;sy=0;sw=src.width;sh=src.height;}
+  }catch(_){sx=0;sy=0;sw=src.width;sh=src.height;}
+  const outScale=Math.min(1,1280/sw);
+  const cw=Math.max(1,Math.round(sw*outScale)), ch=Math.max(1,Math.round(sh*outScale));
+  const c=document.createElement('canvas');c.width=cw;c.height=ch;
+  c.getContext('2d').drawImage(src,sx,sy,sw,sh,0,0,cw,ch);
+  return c.toDataURL('image/png');
+}
+async function _renderGenerate(){
+  if(!currentUser||currentUser.plan!=='pro'){openPaywall();return;}
+  const T=_renderI18n();
+  if(!_isDrawnArea||!_extrusionActive){showToast(T.need3d);return;}
+  const prompt=document.getElementById('render-prompt').value.trim();
+  if(!prompt){showToast(T.needPrompt);return;}
+  const status=document.getElementById('render-status');
+  const goBtn=document.getElementById('render-go-btn'), againBtn=document.getElementById('render-again-btn');
+  status.classList.remove('err');
+  status.innerHTML='<span class="spinner-sm"></span>'+T.working;
+  goBtn.disabled=true; againBtn.disabled=true;
+  try{
+    map.triggerRepaint();
+    await Promise.race([new Promise(r=>map.once('idle',r)), new Promise(r=>setTimeout(r,700))]);
+    const imgData=_captureBuildingPNG();
+    const res=await fetch(`${PROXY}/render`,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action:'render',image:imgData,prompt,lang})});
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok||!data.image){status.classList.add('err');status.textContent=(data&&data.error)?data.error:T.err;goBtn.disabled=false;againBtn.disabled=false;return;}
+    const outImg=document.getElementById('render-img');outImg.src=data.image;
+    document.getElementById('render-dl-btn').href=data.image;
+    document.getElementById('render-result').style.display='block';
+    status.textContent='';
+    if(typeof logFeatureUse==='function')logFeatureUse('ai_render').catch(()=>{});
+  }catch(e){
+    status.classList.add('err');status.textContent=T.err;
+  }
+  goBtn.disabled=false; againBtn.disabled=false;
+}
+
 // ── Parse HTML ────────────────────────────────────────────────────────────────
 function parseAttrs(html){
   const doc=new DOMParser().parseFromString(html,"text/html");
