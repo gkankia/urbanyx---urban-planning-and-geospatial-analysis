@@ -7591,7 +7591,9 @@ function _captureBuildingPNG(){
     let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
     ring.forEach(pt=>{const p=map.project(pt);const x=p.x*rx,y=p.y*ry;if(x<minX)minX=x;if(y<minY)minY=y;if(x>maxX)maxX=x;if(y>maxY)maxY=y;});
     const w=maxX-minX,h=maxY-minY;
-    const padX=w*0.4+50*rx, padTop=h*1.4+80*ry, padBot=h*0.4+50*ry; // extra room above for the extruded height
+    // Generous context around the building so the model has surroundings to keep;
+    // extra headroom above for the extruded height.
+    const padX=w*0.8+90*rx, padTop=h*1.5+90*ry, padBot=h*0.7+70*ry;
     sx=Math.max(0,minX-padX); sy=Math.max(0,minY-padTop);
     const ex=Math.min(src.width,maxX+padX), ey=Math.min(src.height,maxY+padBot);
     sw=ex-sx; sh=ey-sy;

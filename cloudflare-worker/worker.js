@@ -322,13 +322,16 @@ export default {
         } catch (_) {}
       }
 
-      // 2) Photorealistic render from the massing reference
+      // 2) LOCALIZED photorealistic edit — change only the extruded building + its
+      //    immediate ~5 m surroundings, and keep the rest of the scene untouched.
       const instruction =
-        "Transform this 3D massing model of a building into a photorealistic architectural visualization. " +
-        "Strictly preserve the building's footprint shape, proportions, number of floors and overall height as shown, and keep the same camera angle. " +
-        "Add realistic facade materials, windows and glazing, entrances, roof detail, natural daylight with soft shadows, and a plausible surrounding context. " +
-        "Design direction: " + enPrompt + ". " +
-        "High-detail, professional, photorealistic architectural render.";
+        "This is a localized image edit of an aerial/oblique map view. " +
+        "Edit ONLY the prominent extruded building massing in the centre of the image and the ground immediately around it (about 5 metres). " +
+        "Turn that single building into a photorealistic building, strictly preserving its footprint shape, proportions, number of floors, overall height and the exact camera angle — add realistic facade materials, windows and glazing, entrances, roof detail and soft natural shadows. " +
+        "CRITICAL: keep the ENTIRE rest of the image exactly as in the input — neighbouring buildings, roads, pavements, vegetation, cars, terrain, sky and overall lighting must remain pixel-for-pixel unchanged. Do NOT restyle, relight or regenerate the background or any other building. " +
+        "Blend the edited building naturally into the untouched surroundings (matching perspective, scale, shadows and light direction). " +
+        "Design direction for the building only: " + enPrompt + ". " +
+        "Photorealistic, high-detail architectural result.";
       try {
         const gr = await fetch(`${GLM}/gemini-2.5-flash-image:generateContent?key=${key}`, {
           method: "POST", headers: { "Content-Type": "application/json" },
