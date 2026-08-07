@@ -395,7 +395,12 @@
   .measure-fly-btn.active { background:rgba(34,211,238,0.2); border-color:rgba(34,211,238,0.55); color:#fff; }
   #measure-tip { position:fixed; z-index:9998; background:rgba(8,20,24,0.95); color:#a5f3fc; font-size:0.72rem; font-weight:700; letter-spacing:0.02em; padding:4px 9px; border-radius:6px; border:1px solid rgba(34,211,238,0.4); box-shadow:0 3px 14px rgba(0,0,0,0.5); pointer-events:none; white-space:nowrap; }
   #render-box { max-width:460px; width:92vw; }
-  #render-sub { font-size:0.72rem; color:rgba(255,255,255,0.5); margin:2px 0 12px; line-height:1.5; }
+  #render-sub { font-size:0.72rem; color:rgba(255,255,255,0.5); margin:2px 0 10px; line-height:1.5; }
+  #render-presets { margin:0 0 12px; }
+  .render-presets-lbl { font-size:0.56rem; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:rgba(255,255,255,0.28); margin-bottom:6px; }
+  .render-presets-row { display:flex; flex-wrap:wrap; gap:6px; }
+  .render-preset { background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.14); color:rgba(255,255,255,0.8); border-radius:14px; padding:5px 11px; font-size:0.68rem; font-family:inherit; cursor:pointer; transition:background 0.15s,border-color 0.15s,color 0.15s; }
+  .render-preset:hover { background:rgba(167,139,250,0.18); border-color:rgba(167,139,250,0.5); color:#fff; }
   #render-prompt { width:100%; box-sizing:border-box; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.14); border-radius:8px; color:#fff; font-family:inherit; font-size:0.8rem; padding:9px 11px; resize:vertical; min-height:62px; }
   #render-prompt:focus { outline:none; border-color:rgba(167,139,250,0.6); }
   #render-actions { margin-top:12px; }

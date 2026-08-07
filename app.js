@@ -7529,10 +7529,45 @@ function _renderI18n(){
     err: ka?'რენდერი ვერ მოხერხდა':'Render failed'
   };
 }
+// Prompt presets by project type — click to fill the box, then tweak & render.
+const _RENDER_PRESETS=[
+  {en:{l:"Residential",p:"Modern multi-apartment residential building, warm plaster and timber accents, generous balconies with greenery, landscaped courtyard, soft morning light."},
+   ka:{l:"საცხოვრებელი",p:"თანამედროვე მრავალბინიანი საცხოვრებელი კორპუსი, თბილი ბათქაშისა და ხის აქცენტებით, ფართო აივნები მცენარეებით, გამწვანებული ეზო, რბილი დილის განათება."}},
+  {en:{l:"House / Villa",p:"Contemporary private villa, natural stone and wood cladding, large glazing, garden with trees, warm sunset light."},
+   ka:{l:"კერძო სახლი",p:"თანამედროვე კერძო ვილა, ბუნებრივი ქვისა და ხის მოპირკეთებით, დიდი მინაპანელები, ბაღი და ხეები, თბილი ჩასვენების განათება."}},
+  {en:{l:"Office",p:"Modern glass office building, sleek curtain-wall facade, steel and concrete, reflective glazing, plaza with people, clear daylight."},
+   ka:{l:"საოფისე",p:"თანამედროვე მინის საოფისე შენობა, გლუვი ფასადი, ფოლადი და ბეტონი, ამრეკლავი მინა, მოედანი ადამიანებით, ნათელი დღის შუქი."}},
+  {en:{l:"Mixed-use",p:"Mixed-use development, retail at ground floor with large storefronts, residential above, brick and metal facade, lively street, evening lighting."},
+   ka:{l:"მრავალფუნქც.",p:"მრავალფუნქციური კომპლექსი, პირველ სართულზე კომერცია დიდი ვიტრინებით, ზემოთ საცხოვრებელი, აგურისა და ლითონის ფასადი, ცოცხალი ქუჩა, საღამოს განათება."}},
+  {en:{l:"Retail",p:"Contemporary retail centre, expansive glazing and signage, canopy entrance, busy pedestrian plaza, bright daylight."},
+   ka:{l:"სავაჭრო",p:"თანამედროვე სავაჭრო ცენტრი, დიდი მინაპანელები და ვიტრინები, შესასვლელის ტენტი, აქტიური საფეხმავლო მოედანი, კაშკაშა დღის შუქი."}},
+  {en:{l:"Hotel",p:"Boutique hotel, elegant facade with rhythmic windows, warm materials, entrance canopy, landscaped forecourt, dusk ambience with warm interior glow."},
+   ka:{l:"სასტუმრო",p:"ბუტიკ-სასტუმრო, ელეგანტური ფასადი რიტმული ფანჯრებით, თბილი მასალები, შესასვლელის ტენტი, გამწვანებული წინა ეზო, ბინდის ატმოსფერო თბილი შიდა შუქით."}},
+  {en:{l:"Civic / Cultural",p:"Civic cultural building, bold sculptural form, stone and glass, generous public steps and plaza, dramatic daylight."},
+   ka:{l:"საზოგადოებრივი",p:"საზოგადოებრივი კულტურული შენობა, გამომსახველი სკულპტურული ფორმა, ქვა და მინა, ფართო საჯარო კიბეები და მოედანი, დრამატული დღის შუქი."}},
+  {en:{l:"Education",p:"Modern educational building, warm brick and timber, large windows, open courtyard with trees, cheerful daytime setting."},
+   ka:{l:"საგანმანათ.",p:"თანამედროვე საგანმანათლებლო შენობა, თბილი აგური და ხე, დიდი ფანჯრები, ღია ეზო ხეებით, მხიარული დღის განწყობა."}},
+  {en:{l:"Industrial",p:"Industrial logistics facility, corrugated metal cladding, clean minimal facade, loading docks, wide access road, overcast daylight."},
+   ka:{l:"ინდუსტრიული",p:"ინდუსტრიული სალოგისტიკო ობიექტი, გოფრირებული ლითონის მოპირკეთება, მინიმალისტური ფასადი, დატვირთვის მოედნები, განიერი მისასვლელი, მოღრუბლული დღის შუქი."}},
+  {en:{l:"Old Tbilisi",p:"Building in traditional Tbilisi style, ornate carved wooden balconies, brick and plaster, tiled roof, narrow historic street, warm afternoon light."},
+   ka:{l:"ძველი თბილისი",p:"ტრადიციული თბილისური სტილის შენობა, მოჩუქურთმებული ხის აივნები, აგური და ბათქაში, კრამიტის სახურავი, ვიწრო ისტორიული ქუჩა, თბილი შუადღის შუქი."}}
+];
+function _renderBuildPresets(){
+  const wrap=document.getElementById('render-presets');if(!wrap)return;
+  const ka=lang==='ka';
+  wrap.innerHTML='<div class="render-presets-lbl">'+(ka?'შაბლონები — აირჩიე და შეასწორე':'Templates — pick one, then tweak')+'</div>'+
+    '<div class="render-presets-row">'+_RENDER_PRESETS.map((pr,i)=>`<button type="button" class="render-preset" onclick="_renderApplyPreset(${i})">${_selEsc((ka?pr.ka:pr.en).l)}</button>`).join('')+'</div>';
+}
+function _renderApplyPreset(i){
+  const pr=_RENDER_PRESETS[i];if(!pr)return;
+  const ta=document.getElementById('render-prompt');
+  if(ta){ta.value=(lang==='ka'?pr.ka:pr.en).p;ta.focus();}
+}
 function openRenderModal(){
   if(!currentUser||currentUser.plan!=='pro'){openPaywall();return;}
   if(!_isDrawnArea||!_extrusionActive){showToast(_renderI18n().need3d);return;}
   const T=_renderI18n();
+  _renderBuildPresets();
   document.getElementById('render-title').textContent=T.title;
   document.getElementById('render-sub').textContent=T.sub;
   document.getElementById('render-prompt').placeholder=T.ph;
