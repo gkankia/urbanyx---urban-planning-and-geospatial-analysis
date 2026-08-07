@@ -5537,9 +5537,11 @@ function switchBasemap(name){
   _reliefActiveType=null;
   mapReady=false;
   const _wasExtruding=_extrusionActive&&_isDrawnArea;
+  const _preserved=_captureAppLayers(); // keep analysis overlays across the style swap
   map.setStyle(_BASEMAP_STYLES[name]);
   map.once("style.load",()=>{
     try{initCustomLayers();}catch(err){console.error("initCustomLayers (switch) failed:",err);}
+    try{_restoreAppLayers(_preserved);}catch(err){console.warn("restore analysis layers failed:",err);}
     mapReady=true;
     map.setLanguage(lang==='ka'?'ka':'en');
     const _nll=document.getElementById('nav-lang-label');if(_nll)_nll.textContent=lang==='en'?'EN':'ქა';
@@ -6865,6 +6867,28 @@ function toggle3D() {
 // ── Map ───────────────────────────────────────────────────────────────────────
 mapboxgl.accessToken=MAPBOX_TOKEN;
 const map=new mapboxgl.Map({container:"map",style:"mapbox://styles/mapbox/dark-v11",center:[44.783,41.693],zoom:16,attributionControl:false,preserveDrawingBuffer:true});
+// Track app-added sources/layers so they survive a basemap (setStyle) switch.
+// (setStyle replaces the whole style, dropping everything the app added on top.)
+const _appSourceIds=new Set(), _appLayerIds=new Set();
+(function(){
+  const _as=map.addSource.bind(map), _al=map.addLayer.bind(map);
+  map.addSource=function(id,src){try{if(id&&!/^mapbox-gl-draw/.test(id))_appSourceIds.add(id);}catch(_){}return _as(id,src);};
+  map.addLayer=function(layer,before){try{const id=layer&&layer.id;if(id&&!/^gl-draw/.test(id))_appLayerIds.add(id);}catch(_){}return _al(layer,before);};
+})();
+function _captureAppLayers(){
+  let st;try{st=map.getStyle();}catch(_){return null;}
+  if(!st)return null;
+  const sources={};
+  Object.keys(st.sources||{}).forEach(id=>{if(_appSourceIds.has(id))sources[id]=st.sources[id];});
+  const layers=[];
+  (st.layers||[]).forEach(l=>{if(_appLayerIds.has(l.id)&&l.type!=='custom')layers.push(l);});
+  return {sources,layers};
+}
+function _restoreAppLayers(cap){
+  if(!cap)return;
+  Object.keys(cap.sources).forEach(id=>{if(!map.getSource(id)){try{map.addSource(id,cap.sources[id]);}catch(e){console.warn('[basemap] restore source',id,e);}}});
+  cap.layers.forEach(l=>{if(!map.getLayer(l.id)){try{map.addLayer(l);}catch(e){console.warn('[basemap] restore layer',l.id,e);}}});
+}
 map.on("load",()=>{
   mapReady=true;
   map.setLanguage(lang==='ka'?'ka':'en');
