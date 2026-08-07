@@ -329,10 +329,10 @@ export default {
       const isExtruded = body.extruded === true;
       const subject = isExtruded
         ? "the extruded building massing in the centre of the image"
-        : "the plot/area outlined in the centre of the image";
+        : "the plot marked with a bright pink outline in the image";
       const keepGeom = isExtruded
         ? "Preserve the building's footprint shape, proportions, number of floors, overall height and the exact camera angle. "
-        : "Fit the new design entirely within the outlined plot boundary — do not change or extend beyond it — and keep the exact camera angle. ";
+        : "The proposal must sit ENTIRELY within the pink outlined plot and match that footprint's exact size, shape, orientation and scale — do not extend beyond it and do not change its size. Keep the same scale and perspective as the surrounding streets and buildings so the result is realistically proportioned, and keep the exact camera angle. Do NOT draw the pink outline itself in the output. ";
       let instruction;
       if (style === "sketch") {
         instruction = "Redraw " + subject + " as a hand-drawn architectural sketch — confident pen and pencil line work, light hatching for shade, loose expressive style on a clean white paper background, with the immediate surroundings suggested in light sketch lines. " +

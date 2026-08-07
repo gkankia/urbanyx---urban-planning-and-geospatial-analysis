@@ -7211,7 +7211,7 @@ function showParcelPopup(lngLat){
   const _er=document.getElementById('pfc-ext-row');if(_er){_er.style.display='none';_er.innerHTML='';}
   // Parcel can be rendered/designed directly (no drawn shape needed)
   const _rr=document.getElementById('pfc-render-row');if(_rr)_rr.style.display='block';
-  const _rb=document.getElementById('pfc-render-btn');if(_rb)_rb.innerHTML='<img src="analysis-logos/render.svg" width="16" height="16" style="opacity:0.9">'+(lang==='ka'?'რენდერი / დიზაინი':'Render / design');
+  const _rb=document.getElementById('pfc-render-btn');if(_rb)_rb.textContent=(lang==='ka'?'რენდერი / დიზაინი':'Render / design');
   if(_geoTool||_paintOpen)_clearGeoTools(null);
   const _gtb2=document.getElementById('geo-toolbar');if(_gtb2)_gtb2.style.display='none';
   document.getElementById('nav-zoning-btn')?.classList.remove('active');
@@ -7617,25 +7617,36 @@ function closeRenderModal(){document.getElementById('render-modal').classList.re
 function _captureBuildingPNG(){
   const src=map.getCanvas();
   const rx=src.width/(src.clientWidth||src.width), ry=src.height/(src.clientHeight||src.height);
-  let sx=0,sy=0,sw=src.width,sh=src.height;
+  const extruded=!!_extrusionActive;
+  let sx=0,sy=0,sw=src.width,sh=src.height,pts=null;
   try{
     const geom=_renderTargetGeom();
     const ring=geom.type==='Polygon'?geom.coordinates[0]:geom.coordinates[0][0];
+    pts=ring.map(pt=>{const p=map.project(pt);return {x:p.x*rx,y:p.y*ry};});
     let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
-    ring.forEach(pt=>{const p=map.project(pt);const x=p.x*rx,y=p.y*ry;if(x<minX)minX=x;if(y<minY)minY=y;if(x>maxX)maxX=x;if(y>maxY)maxY=y;});
+    pts.forEach(p=>{if(p.x<minX)minX=p.x;if(p.y<minY)minY=p.y;if(p.x>maxX)maxX=p.x;if(p.y>maxY)maxY=p.y;});
     const w=maxX-minX,h=maxY-minY;
-    // Generous context around the building so the model has surroundings to keep;
-    // extra headroom above for the extruded height.
-    const padX=w*0.8+90*rx, padTop=h*1.5+90*ry, padBot=h*0.7+70*ry;
+    // Context around the target; extra headroom above only when it's an extruded 3D mass.
+    const padX=w*0.8+90*rx, padTop=(extruded?h*1.5:h*0.6)+90*ry, padBot=h*0.7+70*ry;
     sx=Math.max(0,minX-padX); sy=Math.max(0,minY-padTop);
     const ex=Math.min(src.width,maxX+padX), ey=Math.min(src.height,maxY+padBot);
     sw=ex-sx; sh=ey-sy;
-    if(sw<60||sh<60){sx=0;sy=0;sw=src.width;sh=src.height;}
-  }catch(_){sx=0;sy=0;sw=src.width;sh=src.height;}
+    if(sw<60||sh<60){sx=0;sy=0;sw=src.width;sh=src.height;pts=null;}
+  }catch(_){sx=0;sy=0;sw=src.width;sh=src.height;pts=null;}
   const outScale=Math.min(1,1280/sw);
   const cw=Math.max(1,Math.round(sw*outScale)), ch=Math.max(1,Math.round(sh*outScale));
   const c=document.createElement('canvas');c.width=cw;c.height=ch;
-  c.getContext('2d').drawImage(src,sx,sy,sw,sh,0,0,cw,ch);
+  const ctx=c.getContext('2d');
+  ctx.drawImage(src,sx,sy,sw,sh,0,0,cw,ch);
+  // Flat plot (parcel / un-extruded area): mark the exact boundary so the model
+  // designs WITHIN it at the correct footprint size and scale.
+  if(!extruded&&pts&&pts.length>2){
+    ctx.beginPath();
+    pts.forEach((p,i)=>{const X=(p.x-sx)*outScale,Y=(p.y-sy)*outScale;i?ctx.lineTo(X,Y):ctx.moveTo(X,Y);});
+    ctx.closePath();
+    ctx.fillStyle='rgba(255,0,122,0.16)';ctx.fill();
+    ctx.lineWidth=Math.max(2,3*outScale*rx);ctx.strokeStyle='rgba(255,0,122,0.95)';ctx.stroke();
+  }
   return c.toDataURL('image/png');
 }
 async function _renderGenerate(){
@@ -7649,10 +7660,18 @@ async function _renderGenerate(){
   status.classList.remove('err');
   status.innerHTML='<span class="spinner-sm"></span>'+T.working;
   goBtn.disabled=true; againBtn.disabled=true;
+  let prevCam=null;
   try{
-    map.triggerRepaint();
-    await Promise.race([new Promise(r=>map.once('idle',r)), new Promise(r=>setTimeout(r,700))]);
+    // Auto-frame the target so it fills the view — more pixels + correct scale reference.
+    try{
+      const geomF=_renderTargetGeom();
+      const bb=turf.bbox(turf.feature(geomF));
+      prevCam={center:map.getCenter(),zoom:map.getZoom(),bearing:map.getBearing(),pitch:map.getPitch()};
+      map.fitBounds([[bb[0],bb[1]],[bb[2],bb[3]]],{padding:_extrusionActive?{top:150,bottom:70,left:70,right:70}:60,bearing:map.getBearing(),pitch:map.getPitch(),duration:650,essential:true});
+    }catch(_){}
+    await Promise.race([new Promise(r=>map.once('idle',r)), new Promise(r=>setTimeout(r,1600))]);
     const imgData=_captureBuildingPNG();
+    if(prevCam)map.easeTo({...prevCam,duration:500,essential:true}); // return to the user's view
     const res=await fetch(`${PROXY}/render`,{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({action:'render',image:imgData,prompt,lang,style:_renderStyle,extruded:!!_extrusionActive})});
     const data=await res.json().catch(()=>({}));
@@ -7663,6 +7682,7 @@ async function _renderGenerate(){
     status.textContent='';
     if(typeof logFeatureUse==='function')logFeatureUse('ai_render').catch(()=>{});
   }catch(e){
+    if(prevCam)try{map.easeTo({...prevCam,duration:400,essential:true});}catch(_){}
     status.classList.add('err');status.textContent=T.err;
   }
   goBtn.disabled=false; againBtn.disabled=false;
