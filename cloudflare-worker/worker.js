@@ -335,8 +335,8 @@ export default {
       const keepGeom = isExtruded
         ? "Preserve the building's footprint shape, proportions, number of floors, overall height and the exact camera angle. "
         : (hasMask
-            ? "A second image is provided as a MASK: white marks the plot to design on, black marks areas to leave unchanged. Place the new design ONLY inside the white area, matching its exact size, shape, orientation and scale; do not extend beyond it. The mask is guidance only — do NOT reproduce the mask, any coloured region or any outline/boundary line in the output. Keep the same scale and perspective as the surrounding streets so the result is realistically proportioned, and keep the exact camera angle. "
-            : "Fit the new design entirely within the plot at the centre and match the surrounding scale and perspective; keep the exact camera angle. ");
+            ? "A second image is provided as a MASK: white marks the buildable area (it already reflects a 3 m setback inside the plot boundary), black marks areas to leave unchanged. Place the new design ONLY inside the white area, matching its exact size, shape, orientation and scale; do not extend beyond it or over the 3 m setback margin. The mask is guidance only — do NOT reproduce the mask, any coloured region or any outline/boundary line in the output. Respect the existing ground slope and terrain shown in the scene (sit the building naturally on the sloping ground, with correct grading), and integrate it with the surrounding buildings, streets and vegetation. Keep the same scale, perspective and camera angle as the scene so it is realistically proportioned. "
+            : "Fit the new design entirely within the plot at the centre, respect the ground slope, and match the surrounding scale and perspective; keep the exact camera angle. ");
       let instruction;
       if (style === "sketch") {
         instruction = "Redraw " + subject + " as a hand-drawn architectural sketch — confident pen and pencil line work, light hatching for shade, loose expressive style on a clean white paper background, with the immediate surroundings suggested in light sketch lines. " +

@@ -7639,17 +7639,28 @@ function _captureBuildingPNG(){
   const c=document.createElement('canvas');c.width=cw;c.height=ch;
   c.getContext('2d').drawImage(src,sx,sy,sw,sh,0,0,cw,ch);
   const image=c.toDataURL('image/png');
-  // Flat plot: build a SEPARATE mask (white = the plot to design, black = keep) so the
-  // model knows where/at what scale to design without a boundary being drawn on the scene.
+  // Flat plot: build a SEPARATE mask (white = buildable area, black = keep). The
+  // buildable area is the plot inset by the 3 m setback so the building respects it.
   let mask=null;
-  if(!extruded&&pts&&pts.length>2){
-    const mc=document.createElement('canvas');mc.width=cw;mc.height=ch;
-    const mx=mc.getContext('2d');
-    mx.fillStyle='#000';mx.fillRect(0,0,cw,ch);
-    mx.beginPath();
-    pts.forEach((p,i)=>{const X=(p.x-sx)*outScale,Y=(p.y-sy)*outScale;i?mx.lineTo(X,Y):mx.moveTo(X,Y);});
-    mx.closePath();mx.fillStyle='#fff';mx.fill();
-    mask=mc.toDataURL('image/png');
+  if(!extruded){
+    let mpts=null;
+    try{
+      const g=_renderTargetGeom();
+      const ins=turf.buffer(turf.feature(g),-3,{units:'meters'});
+      const ig=ins&&ins.geometry;
+      const mring=ig?(ig.type==='Polygon'?ig.coordinates[0]:ig.coordinates[0][0]):null;
+      if(mring&&mring.length>2)mpts=mring.map(pt=>{const p=map.project(pt);return {x:p.x*rx,y:p.y*ry};});
+    }catch(_){}
+    if(!mpts)mpts=pts; // setback collapsed (tiny plot) → use full plot
+    if(mpts&&mpts.length>2){
+      const mc=document.createElement('canvas');mc.width=cw;mc.height=ch;
+      const mx=mc.getContext('2d');
+      mx.fillStyle='#000';mx.fillRect(0,0,cw,ch);
+      mx.beginPath();
+      mpts.forEach((p,i)=>{const X=(p.x-sx)*outScale,Y=(p.y-sy)*outScale;i?mx.lineTo(X,Y):mx.moveTo(X,Y);});
+      mx.closePath();mx.fillStyle='#fff';mx.fill();
+      mask=mc.toDataURL('image/png');
+    }
   }
   return {image,mask};
 }
@@ -7671,7 +7682,9 @@ async function _renderGenerate(){
       const geomF=_renderTargetGeom();
       const bb=turf.bbox(turf.feature(geomF));
       prevCam={center:map.getCenter(),zoom:map.getZoom(),bearing:map.getBearing(),pitch:map.getPitch()};
-      map.fitBounds([[bb[0],bb[1]],[bb[2],bb[3]]],{padding:_extrusionActive?{top:150,bottom:70,left:70,right:70}:60,bearing:map.getBearing(),pitch:map.getPitch(),duration:650,essential:true});
+      // Oblique view for flat plots so terrain slope + surroundings read in the capture.
+      const framePitch=_extrusionActive?map.getPitch():55;
+      map.fitBounds([[bb[0],bb[1]],[bb[2],bb[3]]],{padding:_extrusionActive?{top:150,bottom:70,left:70,right:70}:{top:150,bottom:60,left:60,right:60},bearing:map.getBearing(),pitch:framePitch,duration:650,essential:true});
     }catch(_){}
     await Promise.race([new Promise(r=>map.once('idle',r)), new Promise(r=>setTimeout(r,1600))]);
     const cap=_captureBuildingPNG();
