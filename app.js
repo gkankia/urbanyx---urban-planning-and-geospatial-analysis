@@ -1,7 +1,7 @@
 const SUPABASE_URL      = "https://yikkligsbpzhznhkibow.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_Y0DUnurQBvQtZCUOQ-NAjg_Fux7jx_6";
 const PROXY             = "https://spring-recipe-402c.gkankia.workers.dev";
-const MAPBOX_TOKEN      = "pk.eyJ1Ijoiam9yam9uZTkwIiwiYSI6ImNtZDY5ZDZqbDA5MHUya3F2emJncXk0eXgifQ.U-XZt6e_Z-LeVuWx3hut_A";
+const MAPBOX_TOKEN      = "pk.eyJ1Ijoiam9yam9uZTkwIiwiYSI6ImNrZ3R6M2FvdTBwbmwycXBibGRqM2w2enYifQ.BxjvFSGqefuC9yFCrXC-nQ";
 const MAPILLARY_TOKEN   = "MLY|24314119614934772|574fb7a546cc6d61a240f83f11e151c2";
 const BACKEND_URL = "https://urbanyx-urban-planning-and-geospatial-analysis-production.up.railway.app";
 // ── Paddle ── set PADDLE_SANDBOX=true for testing, false for live
@@ -5524,6 +5524,18 @@ const _BASEMAP_STYLES={
   day:"mapbox://styles/jorjone90/cmsg7wons00j701s879l50r8v", // Z.axis Hillshade
   night:"mapbox://styles/mapbox/standard"
 };
+// Resolve a basemap style ref. Custom Studio styles are loaded via their full HTTPS
+// URL with a cache-buster so freshly-published edits (look, building config, etc.)
+// always show instead of a stale browser-cached copy. Mapbox's own styles are left as-is.
+function _resolveStyleURL(ref){
+  if(ref&&ref.startsWith('mapbox://styles/')){
+    const path=ref.slice('mapbox://styles/'.length);
+    if(!path.startsWith('mapbox/')){
+      return `https://api.mapbox.com/styles/v1/${path}?access_token=${MAPBOX_TOKEN}&fresh=${Date.now()}`;
+    }
+  }
+  return ref;
+}
 function switchBasemap(name){
   if(name===_currentBasemap||!mapReady)return;
   _currentBasemap=name;
@@ -5537,7 +5549,7 @@ function switchBasemap(name){
   _reliefActiveType=null;
   mapReady=false;
   const _wasExtruding=_extrusionActive&&_isDrawnArea;
-  map.setStyle(_BASEMAP_STYLES[name]);
+  map.setStyle(_resolveStyleURL(_BASEMAP_STYLES[name]));
   map.once("style.load",()=>{
     try{initCustomLayers();}catch(err){console.error("initCustomLayers (switch) failed:",err);}
     mapReady=true;

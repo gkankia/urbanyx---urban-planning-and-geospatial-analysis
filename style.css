@@ -425,10 +425,10 @@
   .bm-opt:hover { border-color: rgba(255,255,255,0.25); }
   .bm-opt.active { border-color: #a78bfa; }
   .bm-thumb { height: 42px; background-size: cover; }
-  .bm-thumb-dark { background: url("https://api.mapbox.com/styles/v1/mapbox/dark-v11/static/44.833,41.693,13/120x42@2x?access_token=pk.eyJ1Ijoiam9yam9uZTkwIiwiYSI6ImNtZDY5ZDZqbDA5MHUya3F2emJncXk0eXgifQ.U-XZt6e_Z-LeVuWx3hut_A&attribution=false&logo=false") center/cover no-repeat; }
-  .bm-thumb-satellite { background: url("https://api.mapbox.com/styles/v1/mapbox/satellite-streets-v12/static/44.833,41.693,13/120x42@2x?access_token=pk.eyJ1Ijoiam9yam9uZTkwIiwiYSI6ImNtZDY5ZDZqbDA5MHUya3F2emJncXk0eXgifQ.U-XZt6e_Z-LeVuWx3hut_A&attribution=false&logo=false") center/cover no-repeat; }
+  .bm-thumb-dark { background: url("https://api.mapbox.com/styles/v1/mapbox/dark-v11/static/44.833,41.693,13/120x42@2x?access_token=pk.eyJ1Ijoiam9yam9uZTkwIiwiYSI6ImNrZ3R6M2FvdTBwbmwycXBibGRqM2w2enYifQ.BxjvFSGqefuC9yFCrXC-nQ&attribution=false&logo=false") center/cover no-repeat; }
+  .bm-thumb-satellite { background: url("https://api.mapbox.com/styles/v1/mapbox/satellite-streets-v12/static/44.833,41.693,13/120x42@2x?access_token=pk.eyJ1Ijoiam9yam9uZTkwIiwiYSI6ImNrZ3R6M2FvdTBwbmwycXBibGRqM2w2enYifQ.BxjvFSGqefuC9yFCrXC-nQ&attribution=false&logo=false") center/cover no-repeat; }
   .bm-thumb-day { background: url("analysis-logos/zaxis-topo.svg") center/cover no-repeat; }
-  .bm-thumb-night { background: url("https://api.mapbox.com/styles/v1/mapbox/navigation-night-v1/static/44.833,41.693,13/120x42@2x?access_token=pk.eyJ1Ijoiam9yam9uZTkwIiwiYSI6ImNtZDY5ZDZqbDA5MHUya3F2emJncXk0eXgifQ.U-XZt6e_Z-LeVuWx3hut_A&attribution=false&logo=false") center/cover no-repeat; }
+  .bm-thumb-night { background: url("https://api.mapbox.com/styles/v1/mapbox/navigation-night-v1/static/44.833,41.693,13/120x42@2x?access_token=pk.eyJ1Ijoiam9yam9uZTkwIiwiYSI6ImNrZ3R6M2FvdTBwbmwycXBibGRqM2w2enYifQ.BxjvFSGqefuC9yFCrXC-nQ&attribution=false&logo=false") center/cover no-repeat; }
   .bm-label { font-size: 0.62rem; color: rgba(255,255,255,0.5); text-align: center; padding: 3px 4px 4px; background: rgba(0,0,0,0.55); }
   .bm-opt.active .bm-label { color: #a78bfa; }
   .lp-sep { height: 1px; background: rgba(255,255,255,0.07); margin: 10px 0 9px; }
