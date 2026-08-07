@@ -5524,18 +5524,6 @@ const _BASEMAP_STYLES={
   day:"mapbox://styles/jorjone90/cmsg7wons00j701s879l50r8v", // Z.axis Hillshade
   night:"mapbox://styles/mapbox/standard"
 };
-// Resolve a basemap style ref. Custom Studio styles are loaded via their full HTTPS
-// URL with a cache-buster so freshly-published edits (look, building config, etc.)
-// always show instead of a stale browser-cached copy. Mapbox's own styles are left as-is.
-function _resolveStyleURL(ref){
-  if(ref&&ref.startsWith('mapbox://styles/')){
-    const path=ref.slice('mapbox://styles/'.length);
-    if(!path.startsWith('mapbox/')){
-      return `https://api.mapbox.com/styles/v1/${path}?access_token=${MAPBOX_TOKEN}&fresh=${Date.now()}`;
-    }
-  }
-  return ref;
-}
 function switchBasemap(name){
   if(name===_currentBasemap||!mapReady)return;
   _currentBasemap=name;
@@ -5549,7 +5537,7 @@ function switchBasemap(name){
   _reliefActiveType=null;
   mapReady=false;
   const _wasExtruding=_extrusionActive&&_isDrawnArea;
-  map.setStyle(_resolveStyleURL(_BASEMAP_STYLES[name]));
+  map.setStyle(_BASEMAP_STYLES[name]);
   map.once("style.load",()=>{
     try{initCustomLayers();}catch(err){console.error("initCustomLayers (switch) failed:",err);}
     mapReady=true;
