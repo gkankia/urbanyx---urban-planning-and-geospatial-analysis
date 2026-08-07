@@ -7635,19 +7635,23 @@ function _captureBuildingPNG(){
   }catch(_){sx=0;sy=0;sw=src.width;sh=src.height;pts=null;}
   const outScale=Math.min(1,1280/sw);
   const cw=Math.max(1,Math.round(sw*outScale)), ch=Math.max(1,Math.round(sh*outScale));
+  // Clean scene image (no markings drawn on it, so nothing leaks into the output)
   const c=document.createElement('canvas');c.width=cw;c.height=ch;
-  const ctx=c.getContext('2d');
-  ctx.drawImage(src,sx,sy,sw,sh,0,0,cw,ch);
-  // Flat plot (parcel / un-extruded area): mark the exact boundary so the model
-  // designs WITHIN it at the correct footprint size and scale.
+  c.getContext('2d').drawImage(src,sx,sy,sw,sh,0,0,cw,ch);
+  const image=c.toDataURL('image/png');
+  // Flat plot: build a SEPARATE mask (white = the plot to design, black = keep) so the
+  // model knows where/at what scale to design without a boundary being drawn on the scene.
+  let mask=null;
   if(!extruded&&pts&&pts.length>2){
-    ctx.beginPath();
-    pts.forEach((p,i)=>{const X=(p.x-sx)*outScale,Y=(p.y-sy)*outScale;i?ctx.lineTo(X,Y):ctx.moveTo(X,Y);});
-    ctx.closePath();
-    ctx.fillStyle='rgba(255,0,122,0.16)';ctx.fill();
-    ctx.lineWidth=Math.max(2,3*outScale*rx);ctx.strokeStyle='rgba(255,0,122,0.95)';ctx.stroke();
+    const mc=document.createElement('canvas');mc.width=cw;mc.height=ch;
+    const mx=mc.getContext('2d');
+    mx.fillStyle='#000';mx.fillRect(0,0,cw,ch);
+    mx.beginPath();
+    pts.forEach((p,i)=>{const X=(p.x-sx)*outScale,Y=(p.y-sy)*outScale;i?mx.lineTo(X,Y):mx.moveTo(X,Y);});
+    mx.closePath();mx.fillStyle='#fff';mx.fill();
+    mask=mc.toDataURL('image/png');
   }
-  return c.toDataURL('image/png');
+  return {image,mask};
 }
 async function _renderGenerate(){
   if(!currentUser||currentUser.plan!=='pro'){openPaywall();return;}
@@ -7670,10 +7674,10 @@ async function _renderGenerate(){
       map.fitBounds([[bb[0],bb[1]],[bb[2],bb[3]]],{padding:_extrusionActive?{top:150,bottom:70,left:70,right:70}:60,bearing:map.getBearing(),pitch:map.getPitch(),duration:650,essential:true});
     }catch(_){}
     await Promise.race([new Promise(r=>map.once('idle',r)), new Promise(r=>setTimeout(r,1600))]);
-    const imgData=_captureBuildingPNG();
+    const cap=_captureBuildingPNG();
     if(prevCam)map.easeTo({...prevCam,duration:500,essential:true}); // return to the user's view
     const res=await fetch(`${PROXY}/render`,{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({action:'render',image:imgData,prompt,lang,style:_renderStyle,extruded:!!_extrusionActive})});
+      body:JSON.stringify({action:'render',image:cap.image,mask:cap.mask,prompt,lang,style:_renderStyle,extruded:!!_extrusionActive})});
     const data=await res.json().catch(()=>({}));
     if(!res.ok||!data.image){status.classList.add('err');status.textContent=(data&&data.error)?data.error:T.err;goBtn.disabled=false;againBtn.disabled=false;return;}
     const outImg=document.getElementById('render-img');outImg.src=data.image;

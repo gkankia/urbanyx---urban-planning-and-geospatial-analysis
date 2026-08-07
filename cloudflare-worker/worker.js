@@ -299,10 +299,11 @@ export default {
       });
       const key = env.GEMINI_API_KEY;
       if (!key) return jsonRes({ error: "Rendering is not configured (missing GEMINI_API_KEY)." }, 500);
-      let { image, prompt, lang, style } = body;
+      let { image, mask, prompt, lang, style } = body;
       if (!image || !prompt) return jsonRes({ error: "Missing image or prompt." }, 400);
       prompt = String(prompt).slice(0, 1200).trim();
       const b64 = image.includes(",") ? image.split(",")[1] : image;
+      const maskB64 = mask ? (mask.includes(",") ? mask.split(",")[1] : mask) : null;
       const GLM = "https://generativelanguage.googleapis.com/v1beta/models";
 
       // 1) Translate Georgian → English for reliable architectural rendering
@@ -327,12 +328,15 @@ export default {
       //    is a LOCALIZED edit (subject + ~5 m, surroundings preserved); the artistic
       //    styles restyle the whole view in that medium while keeping the geometry.
       const isExtruded = body.extruded === true;
+      const hasMask = !!maskB64;
       const subject = isExtruded
         ? "the extruded building massing in the centre of the image"
-        : "the plot marked with a bright pink outline in the image";
+        : (hasMask ? "the plot indicated by the WHITE area of the second (mask) image" : "the plot in the centre of the image");
       const keepGeom = isExtruded
         ? "Preserve the building's footprint shape, proportions, number of floors, overall height and the exact camera angle. "
-        : "The proposal must sit ENTIRELY within the pink outlined plot and match that footprint's exact size, shape, orientation and scale — do not extend beyond it and do not change its size. Keep the same scale and perspective as the surrounding streets and buildings so the result is realistically proportioned, and keep the exact camera angle. Do NOT draw the pink outline itself in the output. ";
+        : (hasMask
+            ? "A second image is provided as a MASK: white marks the plot to design on, black marks areas to leave unchanged. Place the new design ONLY inside the white area, matching its exact size, shape, orientation and scale; do not extend beyond it. The mask is guidance only — do NOT reproduce the mask, any coloured region or any outline/boundary line in the output. Keep the same scale and perspective as the surrounding streets so the result is realistically proportioned, and keep the exact camera angle. "
+            : "Fit the new design entirely within the plot at the centre and match the surrounding scale and perspective; keep the exact camera angle. ");
       let instruction;
       if (style === "sketch") {
         instruction = "Redraw " + subject + " as a hand-drawn architectural sketch — confident pen and pencil line work, light hatching for shade, loose expressive style on a clean white paper background, with the immediate surroundings suggested in light sketch lines. " +
@@ -355,10 +359,12 @@ export default {
           "Design direction: " + enPrompt + ". Photorealistic, high-detail architectural/landscape result.";
       }
       try {
+        const reqParts = [{ text: instruction }, { inline_data: { mime_type: "image/png", data: b64 } }];
+        if (maskB64) reqParts.push({ inline_data: { mime_type: "image/png", data: maskB64 } });
         const gr = await fetch(`${GLM}/gemini-2.5-flash-image:generateContent?key=${key}`, {
           method: "POST", headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            contents: [{ parts: [{ text: instruction }, { inline_data: { mime_type: "image/png", data: b64 } }] }],
+            contents: [{ parts: reqParts }],
             generationConfig: { responseModalities: ["IMAGE"] }
           })
         });
