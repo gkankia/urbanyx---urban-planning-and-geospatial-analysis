@@ -427,15 +427,7 @@
   .bm-thumb { height: 42px; background-size: cover; }
   .bm-thumb-dark { background: url("https://api.mapbox.com/styles/v1/mapbox/dark-v11/static/44.833,41.693,13/120x42@2x?access_token=pk.eyJ1Ijoiam9yam9uZTkwIiwiYSI6ImNtZDY5ZDZqbDA5MHUya3F2emJncXk0eXgifQ.U-XZt6e_Z-LeVuWx3hut_A&attribution=false&logo=false") center/cover no-repeat; }
   .bm-thumb-satellite { background: url("https://api.mapbox.com/styles/v1/mapbox/satellite-streets-v12/static/44.833,41.693,13/120x42@2x?access_token=pk.eyJ1Ijoiam9yam9uZTkwIiwiYSI6ImNtZDY5ZDZqbDA5MHUya3F2emJncXk0eXgifQ.U-XZt6e_Z-LeVuWx3hut_A&attribution=false&logo=false") center/cover no-repeat; }
-  /* Imhof-style hillshade: warm lit slopes (NW light), cool cast shadows, soft aerial haze */
-  .bm-thumb-day {
-    background:
-      radial-gradient(ellipse 50% 75% at 28% 28%, rgba(246,241,222,0.75), transparent 60%),
-      radial-gradient(ellipse 46% 72% at 74% 70%, rgba(116,129,150,0.58), transparent 58%),
-      radial-gradient(ellipse 40% 64% at 50% 54%, rgba(150,168,128,0.42), transparent 62%),
-      radial-gradient(ellipse 30% 55% at 88% 26%, rgba(210,214,222,0.5), transparent 60%),
-      linear-gradient(135deg, #efe9d6 0%, #ddd3b4 33%, #b6b291 54%, #8f9aa4 80%, #737f8e 100%);
-  }
+  .bm-thumb-day { background: url("analysis-logos/zaxis-topo.svg") center/cover no-repeat; }
   .bm-thumb-night { background: url("https://api.mapbox.com/styles/v1/mapbox/navigation-night-v1/static/44.833,41.693,13/120x42@2x?access_token=pk.eyJ1Ijoiam9yam9uZTkwIiwiYSI6ImNtZDY5ZDZqbDA5MHUya3F2emJncXk0eXgifQ.U-XZt6e_Z-LeVuWx3hut_A&attribution=false&logo=false") center/cover no-repeat; }
   .bm-label { font-size: 0.62rem; color: rgba(255,255,255,0.5); text-align: center; padding: 3px 4px 4px; background: rgba(0,0,0,0.55); }
   .bm-opt.active .bm-label { color: #a78bfa; }
