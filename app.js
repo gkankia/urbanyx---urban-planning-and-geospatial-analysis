@@ -7529,6 +7529,24 @@ function _renderI18n(){
     err: ka?'რენდერი ვერ მოხერხდა':'Render failed'
   };
 }
+// Output styles for the render.
+let _renderStyle='photoreal';
+const _RENDER_STYLES=[
+  {id:'photoreal', en:'Photorealistic', ka:'ფოტორეალისტური'},
+  {id:'sketch',    en:'Sketch',         ka:'ესკიზი'},
+  {id:'watercolor',en:'Watercolor',     ka:'აკვარელი'},
+  {id:'plan',      en:'Architectural',  ka:'არქიტ. ნახაზი'}
+];
+function _renderBuildStyles(){
+  const wrap=document.getElementById('render-styles');if(!wrap)return;
+  const ka=lang==='ka';
+  wrap.innerHTML='<div class="render-presets-lbl">'+(ka?'სტილი':'Style')+'</div>'+
+    '<div class="render-styles-row">'+_RENDER_STYLES.map(s=>`<button type="button" class="render-style${s.id===_renderStyle?' active':''}" data-sid="${s.id}" onclick="_renderPickStyle('${s.id}')">${_selEsc(ka?s.ka:s.en)}</button>`).join('')+'</div>';
+}
+function _renderPickStyle(id){
+  _renderStyle=id;
+  document.querySelectorAll('#render-styles .render-style').forEach(b=>b.classList.toggle('active',b.dataset.sid===id));
+}
 // Prompt presets by project type — click to fill the box, then tweak & render.
 const _RENDER_PRESETS=[
   {en:{l:"Residential",p:"Modern multi-apartment residential building, warm plaster and timber accents, generous balconies with greenery, landscaped courtyard, soft morning light."},
@@ -7567,6 +7585,7 @@ function openRenderModal(){
   if(!currentUser||currentUser.plan!=='pro'){openPaywall();return;}
   if(!_isDrawnArea||!_extrusionActive){showToast(_renderI18n().need3d);return;}
   const T=_renderI18n();
+  _renderBuildStyles();
   _renderBuildPresets();
   document.getElementById('render-title').textContent=T.title;
   document.getElementById('render-sub').textContent=T.sub;
@@ -7621,7 +7640,7 @@ async function _renderGenerate(){
     await Promise.race([new Promise(r=>map.once('idle',r)), new Promise(r=>setTimeout(r,700))]);
     const imgData=_captureBuildingPNG();
     const res=await fetch(`${PROXY}/render`,{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({action:'render',image:imgData,prompt,lang})});
+      body:JSON.stringify({action:'render',image:imgData,prompt,lang,style:_renderStyle})});
     const data=await res.json().catch(()=>({}));
     if(!res.ok||!data.image){status.classList.add('err');status.textContent=(data&&data.error)?data.error:T.err;goBtn.disabled=false;againBtn.disabled=false;return;}
     const outImg=document.getElementById('render-img');outImg.src=data.image;

@@ -396,6 +396,11 @@
   #measure-tip { position:fixed; z-index:9998; background:rgba(8,20,24,0.95); color:#a5f3fc; font-size:0.72rem; font-weight:700; letter-spacing:0.02em; padding:4px 9px; border-radius:6px; border:1px solid rgba(34,211,238,0.4); box-shadow:0 3px 14px rgba(0,0,0,0.5); pointer-events:none; white-space:nowrap; }
   #render-box { max-width:460px; width:92vw; }
   #render-sub { font-size:0.72rem; color:rgba(255,255,255,0.5); margin:2px 0 10px; line-height:1.5; }
+  #render-styles { margin:0 0 12px; }
+  .render-styles-row { display:flex; flex-wrap:wrap; gap:6px; }
+  .render-style { background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.14); color:rgba(255,255,255,0.7); border-radius:8px; padding:6px 12px; font-size:0.7rem; font-weight:600; font-family:inherit; cursor:pointer; transition:background 0.15s,border-color 0.15s,color 0.15s; }
+  .render-style:hover { background:rgba(255,255,255,0.1); color:rgba(255,255,255,0.9); }
+  .render-style.active { background:rgba(167,139,250,0.22); border-color:rgba(167,139,250,0.6); color:#fff; }
   #render-presets { margin:0 0 12px; }
   .render-presets-lbl { font-size:0.56rem; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:rgba(255,255,255,0.28); margin-bottom:6px; }
   .render-presets-row { display:flex; flex-wrap:wrap; gap:6px; }

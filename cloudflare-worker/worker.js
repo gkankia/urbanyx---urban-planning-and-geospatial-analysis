@@ -299,7 +299,7 @@ export default {
       });
       const key = env.GEMINI_API_KEY;
       if (!key) return jsonRes({ error: "Rendering is not configured (missing GEMINI_API_KEY)." }, 500);
-      let { image, prompt, lang } = body;
+      let { image, prompt, lang, style } = body;
       if (!image || !prompt) return jsonRes({ error: "Missing image or prompt." }, 400);
       prompt = String(prompt).slice(0, 1200).trim();
       const b64 = image.includes(",") ? image.split(",")[1] : image;
@@ -322,16 +322,31 @@ export default {
         } catch (_) {}
       }
 
-      // 2) LOCALIZED photorealistic edit — change only the extruded building + its
-      //    immediate ~5 m surroundings, and keep the rest of the scene untouched.
-      const instruction =
-        "This is a localized image edit of an aerial/oblique map view. " +
-        "Edit ONLY the prominent extruded building massing in the centre of the image and the ground immediately around it (about 5 metres). " +
-        "Turn that single building into a photorealistic building, strictly preserving its footprint shape, proportions, number of floors, overall height and the exact camera angle — add realistic facade materials, windows and glazing, entrances, roof detail and soft natural shadows. " +
-        "CRITICAL: keep the ENTIRE rest of the image exactly as in the input — neighbouring buildings, roads, pavements, vegetation, cars, terrain, sky and overall lighting must remain pixel-for-pixel unchanged. Do NOT restyle, relight or regenerate the background or any other building. " +
-        "Blend the edited building naturally into the untouched surroundings (matching perspective, scale, shadows and light direction). " +
-        "Design direction for the building only: " + enPrompt + ". " +
-        "Photorealistic, high-detail architectural result.";
+      // 2) Build the instruction for the chosen style. The photorealistic style is a
+      //    LOCALIZED edit (building + ~5 m only, surroundings preserved); the artistic
+      //    styles restyle the whole view in that medium while keeping the geometry.
+      const keepGeom = "Strictly preserve the building's footprint shape, proportions, number of floors, overall height and the exact camera angle. ";
+      let instruction;
+      if (style === "sketch") {
+        instruction = "Redraw this 3D building massing as a hand-drawn architectural sketch — confident pen and pencil line work, light hatching for shade, loose expressive style on a clean white paper background, with the immediate surroundings suggested in light sketch lines. " +
+          keepGeom + "Building design direction: " + enPrompt + ". Architectural concept sketch, not photorealistic.";
+      } else if (style === "watercolor") {
+        instruction = "Render this 3D building massing as a loose architectural watercolour illustration — soft washes, gentle colour bleeds, visible paper texture, light pencil under-drawing, airy background with the immediate context suggested softly. " +
+          keepGeom + "Building design direction: " + enPrompt + ". Architectural watercolour painting.";
+      } else if (style === "plan" || style === "drawing") {
+        instruction = "Render this 3D building massing as a clean architectural line drawing / technical elevation — precise dark line work on a white background, subtle tonal shading, drafting/blueprint style, no photographic textures, minimal context. " +
+          keepGeom + "Building design direction: " + enPrompt + ". Technical architectural drawing.";
+      } else {
+        // photoreal (default) — localized edit, surroundings untouched
+        instruction =
+          "This is a localized image edit of an aerial/oblique map view. " +
+          "Edit ONLY the prominent extruded building massing in the centre of the image and the ground immediately around it (about 5 metres). " +
+          "Turn that single building into a photorealistic building, " + keepGeom.toLowerCase() +
+          "Add realistic facade materials, windows and glazing, entrances, roof detail and soft natural shadows. " +
+          "CRITICAL: keep the ENTIRE rest of the image exactly as in the input — neighbouring buildings, roads, pavements, vegetation, cars, terrain, sky and overall lighting must remain pixel-for-pixel unchanged. Do NOT restyle, relight or regenerate the background or any other building. " +
+          "Blend the edited building naturally into the untouched surroundings (matching perspective, scale, shadows and light direction). " +
+          "Design direction for the building only: " + enPrompt + ". Photorealistic, high-detail architectural result.";
+      }
       try {
         const gr = await fetch(`${GLM}/gemini-2.5-flash-image:generateContent?key=${key}`, {
           method: "POST", headers: { "Content-Type": "application/json" },
