@@ -1473,7 +1473,7 @@ function _showDrawnAreaCard(bld){
   // Hide parcel-only + zoning/permit rows for drawn areas
   const addrRow=document.getElementById('pfc-lbl-addr')?.closest('.pfc-row');if(addrRow)addrRow.style.display='none';
   const ownerRow=document.getElementById('pfc-lbl-owner')?.closest('.pfc-row');if(ownerRow)ownerRow.style.display='none';
-  ['pfc-zone-row','pfc-kvals-row','pfc-setback-note','pfc-setback-warn','pfc-area-warn','pfc-nodev-warn','pfc-build-params-row','pfc-compliance-row','pfc-permits-row'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});
+  ['pfc-zone-row','pfc-kvals-row','pfc-setback-note','pfc-setback-warn','pfc-area-warn','pfc-nodev-warn','pfc-build-params-row','pfc-compliance-row','pfc-permits-row','pfc-render-row'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});
   card.classList.remove('minimized');
   const btn=document.getElementById('pfc-min-btn');if(btn)btn.textContent='−';
   card.style.display='block';
@@ -7209,6 +7209,9 @@ function showParcelPopup(lngLat){
   // Parcels are not renamable; disable the editable header + hide the 3D summary
   const _hd=document.getElementById('pfc-code');if(_hd){_hd.classList.remove('pfc-editable');_hd.removeAttribute('contenteditable');_hd.removeAttribute('title');}
   const _er=document.getElementById('pfc-ext-row');if(_er){_er.style.display='none';_er.innerHTML='';}
+  // Parcel can be rendered/designed directly (no drawn shape needed)
+  const _rr=document.getElementById('pfc-render-row');if(_rr)_rr.style.display='block';
+  const _rb=document.getElementById('pfc-render-btn');if(_rb)_rb.innerHTML='<img src="analysis-logos/render.svg" width="16" height="16" style="opacity:0.9">'+(lang==='ka'?'რენდერი / დიზაინი':'Render / design');
   if(_geoTool||_paintOpen)_clearGeoTools(null);
   const _gtb2=document.getElementById('geo-toolbar');if(_gtb2)_gtb2.style.display='none';
   document.getElementById('nav-zoning-btn')?.classList.remove('active');
@@ -7523,7 +7526,7 @@ function _renderI18n(){
     sub: ka?'აღწერე იერსახე — მასალები, სტილი, გარემო.':'Describe the look — materials, style, era, surroundings.',
     ph: ka?'მაგ.: თანამედროვე შუშის ოფისი, ქვის ცოკოლი, საღამოს განათება, ხეები':'e.g. modern glass office, stone base, evening light, surrounding trees',
     go: ka?'გენერაცია':'Generate', again: ka?'თავიდან':'Regenerate', dl: ka?'ჩამოტვირთვა':'Download',
-    need3d: ka?'ჯერ ჩართე 3D ექსტრუზია':'Extrude a building in 3D first',
+    needsel: ka?'ჯერ აირჩიე ნაკვეთი ან დახაზე არეალი':'Select a parcel or draw an area first',
     needPrompt: ka?'შეიყვანე აღწერა':'Enter a description',
     working: ka?'რენდერდება… (~10–20 წმ)':'Rendering… (~10–20s)',
     err: ka?'რენდერი ვერ მოხერხდა':'Render failed'
@@ -7568,7 +7571,17 @@ const _RENDER_PRESETS=[
   {en:{l:"Industrial",p:"Industrial logistics facility, corrugated metal cladding, clean minimal facade, loading docks, wide access road, overcast daylight."},
    ka:{l:"ინდუსტრიული",p:"ინდუსტრიული სალოგისტიკო ობიექტი, გოფრირებული ლითონის მოპირკეთება, მინიმალისტური ფასადი, დატვირთვის მოედნები, განიერი მისასვლელი, მოღრუბლული დღის შუქი."}},
   {en:{l:"Old Tbilisi",p:"Building in traditional Tbilisi style, ornate carved wooden balconies, brick and plaster, tiled roof, narrow historic street, warm afternoon light."},
-   ka:{l:"ძველი თბილისი",p:"ტრადიციული თბილისური სტილის შენობა, მოჩუქურთმებული ხის აივნები, აგური და ბათქაში, კრამიტის სახურავი, ვიწრო ისტორიული ქუჩა, თბილი შუადღის შუქი."}}
+   ka:{l:"ძველი თბილისი",p:"ტრადიციული თბილისური სტილის შენობა, მოჩუქურთმებული ხის აივნები, აგური და ბათქაში, კრამიტის სახურავი, ვიწრო ისტორიული ქუჩა, თბილი შუადღის შუქი."}},
+  {en:{l:"Public park",p:"A landscaped public park within the plot — winding paths, lawns, mature trees, flower beds, benches and lighting, people relaxing, bright daylight."},
+   ka:{l:"საჯარო პარკი",p:"გამწვანებული საჯარო პარკი ნაკვეთის ფარგლებში — კლაკნილი ბილიკები, გაზონები, ხეები, ყვავილნარი, სკამები და განათება, დამსვენებელი ხალხი, ნათელი დღის შუქი."}},
+  {en:{l:"Plaza / Square",p:"An urban plaza / pocket square, paved surfaces with greenery, seating, a water feature, shade trees, lively pedestrians, clear daylight."},
+   ka:{l:"მოედანი / სკვერი",p:"ურბანული მოედანი/სკვერი, მოკირწყლული ზედაპირი გამწვანებით, დასაჯდომი ადგილები, შადრევანი, ჩრდილის ხეები, აქტიური ფეხით მოსიარულეები, ნათელი დღის შუქი."}},
+  {en:{l:"Green courtyard",p:"A green residential courtyard, lawn and planting, paths, a small play area, benches, soft daylight."},
+   ka:{l:"მწვანე ეზო",p:"მწვანე საცხოვრებელი ეზო, გაზონი და მცენარეები, ბილიკები, პატარა სათამაშო მოედანი, სკამები, რბილი დღის შუქი."}},
+  {en:{l:"Playground",p:"A children's playground with colourful play equipment, soft safety surfacing, trees and benches, families, sunny day."},
+   ka:{l:"სათამაშო მოედანი",p:"ბავშვთა სათამაშო მოედანი ფერადი აღჭურვილობით, რბილი უსაფრთხო საფარით, ხეები და სკამები, ოჯახები, მზიანი დღე."}},
+  {en:{l:"Riverside walk",p:"A riverside promenade with a boardwalk, benches, trees, lawns and lighting, people walking, golden-hour light."},
+   ka:{l:"სანაპირო",p:"მდინარისპირა სასეირნო ბილიკი, ხის საფარი, სკამები, ხეები, გაზონები და განათება, მოსეირნე ხალხი, ოქროსფერი განათება."}}
 ];
 function _renderBuildPresets(){
   const wrap=document.getElementById('render-presets');if(!wrap)return;
@@ -7581,9 +7594,10 @@ function _renderApplyPreset(i){
   const ta=document.getElementById('render-prompt');
   if(ta){ta.value=(lang==='ka'?pr.ka:pr.en).p;ta.focus();}
 }
+function _renderTargetGeom(){ return (_activeBld()&&_activeBld().geojson)||_currentParcelGeoJSON||_dbParcelGeoJSON||null; }
 function openRenderModal(){
   if(!currentUser||currentUser.plan!=='pro'){openPaywall();return;}
-  if(!_isDrawnArea||!_extrusionActive){showToast(_renderI18n().need3d);return;}
+  if(!_renderTargetGeom()){showToast(_renderI18n().needsel);return;}
   const T=_renderI18n();
   _renderBuildStyles();
   _renderBuildPresets();
@@ -7605,8 +7619,8 @@ function _captureBuildingPNG(){
   const rx=src.width/(src.clientWidth||src.width), ry=src.height/(src.clientHeight||src.height);
   let sx=0,sy=0,sw=src.width,sh=src.height;
   try{
-    const bld=_activeBld();
-    const ring=bld.geojson.type==='Polygon'?bld.geojson.coordinates[0]:bld.geojson.coordinates[0][0];
+    const geom=_renderTargetGeom();
+    const ring=geom.type==='Polygon'?geom.coordinates[0]:geom.coordinates[0][0];
     let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
     ring.forEach(pt=>{const p=map.project(pt);const x=p.x*rx,y=p.y*ry;if(x<minX)minX=x;if(y<minY)minY=y;if(x>maxX)maxX=x;if(y>maxY)maxY=y;});
     const w=maxX-minX,h=maxY-minY;
@@ -7627,7 +7641,7 @@ function _captureBuildingPNG(){
 async function _renderGenerate(){
   if(!currentUser||currentUser.plan!=='pro'){openPaywall();return;}
   const T=_renderI18n();
-  if(!_isDrawnArea||!_extrusionActive){showToast(T.need3d);return;}
+  if(!_renderTargetGeom()){showToast(T.needsel);return;}
   const prompt=document.getElementById('render-prompt').value.trim();
   if(!prompt){showToast(T.needPrompt);return;}
   const status=document.getElementById('render-status');
@@ -7640,7 +7654,7 @@ async function _renderGenerate(){
     await Promise.race([new Promise(r=>map.once('idle',r)), new Promise(r=>setTimeout(r,700))]);
     const imgData=_captureBuildingPNG();
     const res=await fetch(`${PROXY}/render`,{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({action:'render',image:imgData,prompt,lang,style:_renderStyle})});
+      body:JSON.stringify({action:'render',image:imgData,prompt,lang,style:_renderStyle,extruded:!!_extrusionActive})});
     const data=await res.json().catch(()=>({}));
     if(!res.ok||!data.image){status.classList.add('err');status.textContent=(data&&data.error)?data.error:T.err;goBtn.disabled=false;againBtn.disabled=false;return;}
     const outImg=document.getElementById('render-img');outImg.src=data.image;
