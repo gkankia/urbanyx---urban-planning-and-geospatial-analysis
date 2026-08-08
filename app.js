@@ -7843,6 +7843,7 @@ function _clearConcept(){
   _conceptBldIds=[];
   _conceptTreeData={type:'FeatureCollection',features:[]};
   _conceptOn=false; _conceptSummary=''; _conceptParcel=null;
+  const _cl=document.getElementById('concept-legend');if(_cl)_cl.style.display='none';
   if(mapReady){
     map.getSource('concept-green')?.setData({type:'FeatureCollection',features:[]});
     map.getSource('concept-areas')?.setData({type:'FeatureCollection',features:[]});
@@ -7869,9 +7870,11 @@ async function _conceptGenerate(){
       body:JSON.stringify({action:'concept',prompt,lang,constraints})});
     const data=await res.json().catch(()=>({}));
     if(!res.ok||(!Array.isArray(data.buildings)&&!Array.isArray(data.areas))){status.classList.add('err');status.textContent=(data&&data.error)?data.error:T.err;goBtn.disabled=false;return;}
-    _renderConcept(data,parcel,bb,spanLng,spanLat);
     closeConceptModal();
-    showToast(T.done,4500);
+    // Preload Three.js FIRST so every concept building builds its 3D mesh synchronously
+    // with the correct per-building state — otherwise the async first-load races the
+    // loop and buildings only appear extruded after a later map event.
+    _ensureThreeJs(()=>{_renderConcept(data,parcel,bb,spanLng,spanLat);showToast(T.done,4500);});
     if(typeof logFeatureUse==='function')logFeatureUse('ai_concept').catch(()=>{});
   }catch(e){status.classList.add('err');status.textContent=T.err;}
   goBtn.disabled=false;
@@ -7891,30 +7894,48 @@ function _renderConcept(concept,parcel,bb,spanLng,spanLat){
   const insetHm=turf.distance([ib[0],ib[1]],[ib[0],ib[3]])*1000; // m
   const maxH=(typeof _zoneMaxHeightM==='function'&&_zoneMaxHeightM())||null;
   const latMid=(ib[1]+ib[3])/2;
-  // Build a footprint rectangle from an AI element, clamped fully inside the buildable bbox.
+  // Pick the largest single polygon out of a Polygon/MultiPolygon feature.
+  const _largestPoly=f=>{
+    const g=f&&f.geometry;if(!g)return null;
+    if(g.type==='Polygon')return f;
+    if(g.type==='MultiPolygon'){let best=null,ba=-1;g.coordinates.forEach(c=>{try{const p=turf.polygon(c);const a=turf.area(p);if(a>ba){ba=a;best=p;}}catch(_){}});return best;}
+    return null;
+  };
+  // Build a rectangle for an AI element, clamp its centre to the buildable bbox, then
+  // CLIP it to the real 3 m-inset parcel polygon so nothing ever spills past the boundary.
   const mkRect=(el,defW,defD)=>{
-    let wM=Math.max(4,Math.min(+el.w||defW,insetWm*0.92));
-    let dM=Math.max(4,Math.min(+el.d||defD,insetHm*0.92));
-    const halfWkm=wM/2/1000, halfDkm=dM/2/1000;
-    const halfWdeg=halfWkm/(111.32*Math.cos(latMid*Math.PI/180)), halfDdeg=halfDkm/110.57;
-    let cx=nx2lng(+el.cx), cy=ny2lat(+el.cy);
-    cx=Math.min(Math.max(cx,ib[0]+halfWdeg),ib[2]-halfWdeg);
-    cy=Math.min(Math.max(cy,ib[1]+halfDdeg),ib[3]-halfDdeg);
-    const N=turf.destination([cx,cy],halfDkm,0), S=turf.destination([cx,cy],halfDkm,180);
-    const ring=[
-      turf.destination(N,halfWkm,270).geometry.coordinates,
-      turf.destination(N,halfWkm,90).geometry.coordinates,
-      turf.destination(S,halfWkm,90).geometry.coordinates,
-      turf.destination(S,halfWkm,270).geometry.coordinates
-    ];ring.push(ring[0]);
-    let rect=turf.polygon([ring]);
-    if(el.rot)rect=turf.transformRotate(rect,+el.rot,{pivot:[cx,cy]});
-    return rect;
+    const wM=Math.max(4,Math.min(+el.w||defW,insetWm*0.92));
+    const dM=Math.max(4,Math.min(+el.d||defD,insetHm*0.92));
+    const buildAt=(cx,cy)=>{
+      const halfWkm=wM/2/1000, halfDkm=dM/2/1000;
+      const N=turf.destination([cx,cy],halfDkm,0), S=turf.destination([cx,cy],halfDkm,180);
+      const ring=[
+        turf.destination(N,halfWkm,270).geometry.coordinates,
+        turf.destination(N,halfWkm,90).geometry.coordinates,
+        turf.destination(S,halfWkm,90).geometry.coordinates,
+        turf.destination(S,halfWkm,270).geometry.coordinates
+      ];ring.push(ring[0]);
+      let r=turf.polygon([ring]);
+      if(el.rot)r=turf.transformRotate(r,+el.rot,{pivot:[cx,cy]});
+      return r;
+    };
+    const clip=r=>{try{const it=turf.intersect(r,insetGeom);return it&&it.geometry?_largestPoly(it):null;}catch(_){return null;}};
+    const halfWdeg=(wM/2/1000)/(111.32*Math.cos(latMid*Math.PI/180)), halfDdeg=(dM/2/1000)/110.57;
+    let cx=Math.min(Math.max(nx2lng(+el.cx),ib[0]+halfWdeg),ib[2]-halfWdeg);
+    let cy=Math.min(Math.max(ny2lat(+el.cy),ib[1]+halfDdeg),ib[3]-halfDdeg);
+    const intended=wM*dM;
+    let out=clip(buildAt(cx,cy));
+    // Irregular parcel: if it fell (mostly) outside, retry from a point guaranteed inside.
+    if(!out||turf.area(out)<intended*0.35){
+      try{const p=turf.pointOnFeature(insetGeom).geometry.coordinates;const o2=clip(buildAt(p[0],p[1]));
+        if(o2&&(!out||turf.area(o2)>turf.area(out)))out=o2;}catch(_){}
+    }
+    return out; // Feature<Polygon> clipped to the parcel, or null if it can't fit
   };
   const footprints=[];
   (concept.buildings||[]).slice(0,8).forEach(b=>{
     try{
-      const rect=mkRect(b,18,14);const geom=rect.geometry;
+      const rect=mkRect(b,18,14);if(!rect)return;const geom=rect.geometry;
       let floors=Math.max(1,Math.round(+b.floors||3));
       if(maxH)floors=Math.min(floors,Math.max(1,Math.floor(maxH/3)));
       const col=_conceptUseColor(b.use);
@@ -7928,7 +7949,7 @@ function _renderConcept(concept,parcel,bb,spanLng,spanLat){
   const areaFeats=[];
   (concept.areas||[]).slice(0,10).forEach(a=>{
     try{
-      const rect=mkRect(a,10,8);
+      const rect=mkRect(a,10,8);if(!rect)return;
       rect.properties={color:_conceptUseColor(a.use),use:String(a.use||'')};
       areaFeats.push(rect);
     }catch(_){}
@@ -7955,6 +7976,26 @@ function _renderConcept(concept,parcel,bb,spanLng,spanLat){
   });
   _conceptTreeData={type:'FeatureCollection',features:treeFeats};
   map.getSource('concept-trees')?.setData(_conceptTreeData);
+  _showConceptLegend(concept,treeFeats.length);
+}
+// Floating legend: colour → use for the current concept, plus a Render call-to-action.
+function _showConceptLegend(concept,treeCount){
+  const el=document.getElementById('concept-legend');if(!el)return;
+  const items=document.getElementById('concept-legend-items');if(!items)return;
+  const ka=lang==='ka';
+  const seen=new Set(),rows=[];
+  const add=use=>{const k=String(use||'').toLowerCase();if(!k||seen.has(k))return;seen.add(k);
+    const e=_CONCEPT_USE[k];const col=e?e[0]:_conceptUseColor(k);const lbl=e?e[1]:(k.charAt(0).toUpperCase()+k.slice(1));
+    rows.push({col,lbl});};
+  (concept.buildings||[]).forEach(b=>add(b.use));
+  (concept.areas||[]).forEach(a=>add(a.use));
+  rows.push({col:'#4ade80',lbl:ka?'გამწვანება':'Greenery'});
+  if(treeCount>0)rows.push({col:'#16a34a',lbl:ka?'ხეები':'Trees'});
+  const esc=s=>String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+  items.innerHTML=rows.map(r=>`<div class="cl-item"><span class="cl-sw" style="background:${r.col}"></span>${esc(r.lbl)}</div>`).join('');
+  const t=document.getElementById('concept-legend-title');if(t)t.textContent=ka?'კონცეფცია':'Concept';
+  const rb=document.getElementById('concept-legend-render');if(rb)rb.textContent=(ka?'🖼️ დაარენდერე კონცეფცია':'🖼️ Render this concept');
+  el.style.display='block';
 }
 
 // ── Parse HTML ────────────────────────────────────────────────────────────────

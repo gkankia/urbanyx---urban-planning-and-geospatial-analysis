@@ -527,6 +527,11 @@
 </div>
 
 <!-- Photorealistic render modal -->
+<div id="concept-legend" style="display:none">
+  <div class="cl-head"><span id="concept-legend-title">Concept</span><button id="concept-clear-btn" onclick="_clearConcept()" title="Clear concept">✕</button></div>
+  <div id="concept-legend-items"></div>
+  <button id="concept-legend-render" onclick="openRenderModal()">🖼️ Render this concept</button>
+</div>
 <div class="modal-overlay" id="render-modal" onclick="if(event.target===this)closeRenderModal()">
   <div class="modal-box" id="render-box">
     <button class="modal-close" onclick="closeRenderModal()">✕</button>

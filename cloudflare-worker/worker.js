@@ -416,14 +416,15 @@ export default {
       const fpBudget = cs.maxFootprintM2 || (cs.areaM2 ? Math.round(cs.areaM2 * 0.45) : null);
       const instruction =
         "You are an urban / landscape design assistant proposing a concept site layout for one parcel. " +
-        "Read the brief and translate EACH item into an element with its own use and an appropriate share of the parcel area, all within the zoning limits. " +
+        "STRICT: include ONLY the structures and uses the user explicitly names in the brief — do NOT invent, add or assume any extra building, structure or use. If the brief names one house, output exactly ONE building with use \"house\" and nothing else; if it lists a house, a pool and a shed, output exactly those three and no more. The only thing you may add on your own is landscaping (grass and a few trees) in the leftover open space. " +
+        "Read the brief and translate EACH named item into an element with its own use and an appropriate share of the parcel area, all within the zoning limits. " +
         "Coordinate space: normalized 0..1 within the parcel's bounding box, where x=0 is west, x=1 east, y=0 south, y=1 north. " +
         `The parcel is roughly ${Math.round(cs.widthM||60)} m (E–W) by ${Math.round(cs.heightM||60)} m (N–S)${cs.areaM2?`, about ${Math.round(cs.areaM2)} m²`:""}. ` +
         (fpBudget ? `Total building footprint must not exceed ${Math.round(fpBudget)} m². ` : "") +
         (cs.maxFloorAreaM2 ? `Total floor area should not exceed ${Math.round(cs.maxFloorAreaM2)} m² (K2). ` : "") +
         `Maximum building height is about ${Math.round(cs.maxHeightM||maxFloors*3)} m (~${maxFloors} floors). ` +
         "Size every element realistically for its use (e.g. a house ~80–200 m², a pool ~20–50 m², a shed/garage ~15–40 m²) and keep them from overlapping. " +
-        "Keep ALL elements within the central ~85% of the parcel; leave open space; add 4–16 trees in the open areas, never on top of buildings. " +
+        "Keep ALL elements within the central ~80% of the parcel; leave open space; add a few trees (roughly 4–12) in the open areas only, never on top of buildings. " +
         (enPrompt ? `Design brief: ${enPrompt}. ` : "Design a sensible small development. ") +
         "Respond ONLY as JSON with this shape: " +
         `{"summary": string, "buildings": [{"cx": number, "cy": number, "w": number, "d": number, "rot": number, "floors": integer, "use": string}], "areas": [{"cx": number, "cy": number, "w": number, "d": number, "rot": number, "use": string}], "trees": [{"x": number, "y": number}]}. ` +
