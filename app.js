@@ -7662,7 +7662,39 @@ function _captureBuildingPNG(){
       mask=mc.toDataURL('image/png');
     }
   }
-  return {image,mask};
+  // Clip polygon (full plot, in output-canvas coords) — used to composite the render
+  // strictly inside the parcel so the outside stays untouched (flat plots only).
+  let clip=null;
+  if(!extruded&&pts&&pts.length>2){
+    clip={w:cw,h:ch,pts:pts.map(p=>({x:(p.x-sx)*outScale,y:(p.y-sy)*outScale}))};
+  }
+  return {image,mask,clip};
+}
+// Composite the model output strictly inside the parcel polygon; everything outside
+// is the untouched original capture. Returns a data URL.
+function _renderCompositeInside(origUrl,genUrl,clip){
+  return new Promise(res=>{
+    const orig=new Image(), gen=new Image(); let n=0; let failed=false;
+    const done=()=>{
+      if(failed)return res(genUrl);
+      try{
+        const c=document.createElement('canvas');c.width=clip.w;c.height=clip.h;
+        const ctx=c.getContext('2d');
+        ctx.drawImage(orig,0,0,clip.w,clip.h);        // untouched original everywhere
+        ctx.save();
+        ctx.beginPath();
+        clip.pts.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));
+        ctx.closePath();ctx.clip();                   // …only inside the parcel…
+        ctx.drawImage(gen,0,0,clip.w,clip.h);         // …paste the render
+        ctx.restore();
+        res(c.toDataURL('image/png'));
+      }catch(_){res(genUrl);}
+    };
+    orig.onload=()=>{if(++n===2)done();};
+    gen.onload=()=>{if(++n===2)done();};
+    orig.onerror=gen.onerror=()=>{failed=true;if(++n===2)done();};
+    orig.src=origUrl; gen.src=genUrl;
+  });
 }
 async function _renderGenerate(){
   if(!currentUser||currentUser.plan!=='pro'){openPaywall();return;}
@@ -7693,8 +7725,11 @@ async function _renderGenerate(){
       body:JSON.stringify({action:'render',image:cap.image,mask:cap.mask,prompt,lang,style:_renderStyle,extruded:!!_extrusionActive})});
     const data=await res.json().catch(()=>({}));
     if(!res.ok||!data.image){status.classList.add('err');status.textContent=(data&&data.error)?data.error:T.err;goBtn.disabled=false;againBtn.disabled=false;return;}
-    const outImg=document.getElementById('render-img');outImg.src=data.image;
-    document.getElementById('render-dl-btn').href=data.image;
+    // Photorealistic on a flat plot: keep the render strictly inside the parcel; leave outside untouched.
+    let finalImage=data.image;
+    if(_renderStyle==='photoreal'&&cap.clip){finalImage=await _renderCompositeInside(cap.image,data.image,cap.clip);}
+    const outImg=document.getElementById('render-img');outImg.src=finalImage;
+    document.getElementById('render-dl-btn').href=finalImage;
     document.getElementById('render-result').style.display='block';
     status.textContent='';
     if(typeof logFeatureUse==='function')logFeatureUse('ai_render').catch(()=>{});
