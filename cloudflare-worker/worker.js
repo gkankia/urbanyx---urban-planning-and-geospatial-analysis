@@ -310,7 +310,7 @@ export default {
       let enPrompt = prompt;
       if (lang === "ka" || /[Ⴀ-ჿ]/.test(prompt)) {
         try {
-          const tr = await fetch(`${GLM}/gemini-2.5-flash:generateContent?key=${key}`, {
+          const tr = await fetch(`${GLM}/gemini-flash-latest:generateContent?key=${key}`, {
             method: "POST", headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ contents: [{ parts: [{ text:
               `Translate this architectural rendering instruction to concise, vivid English. Return ONLY the translation, no quotes or notes:\n\n${prompt}` }] }] })
@@ -399,7 +399,7 @@ export default {
       let enPrompt = prompt;
       if (prompt && (lang === "ka" || /[Ⴀ-ჿ]/.test(prompt))) {
         try {
-          const tr = await fetch(`${GLM}/gemini-2.5-flash:generateContent?key=${key}`, {
+          const tr = await fetch(`${GLM}/gemini-flash-latest:generateContent?key=${key}`, {
             method: "POST", headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ contents: [{ parts: [{ text: `Translate to concise English, return only the translation:\n\n${prompt}` }] }] })
           });
@@ -422,7 +422,7 @@ export default {
         `{"summary": string, "buildings": [{"cx": number, "cy": number, "w": number, "d": number, "rot": number, "floors": integer, "use": "residential"|"commercial"|"office"|"mixed"|"amenity"}], "trees": [{"x": number, "y": number}]}. ` +
         "cx/cy are the building centre (normalized 0..1); w and d are width and depth in metres; rot is rotation in degrees; x/y are normalized tree positions.";
       try {
-        const gr = await fetch(`${GLM}/gemini-2.5-flash:generateContent?key=${key}`, {
+        const gr = await fetch(`${GLM}/gemini-flash-latest:generateContent?key=${key}`, {
           method: "POST", headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             contents: [{ parts: [{ text: instruction }] }],
