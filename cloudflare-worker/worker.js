@@ -408,19 +408,23 @@ export default {
       }
 
       const maxFloors = cs.maxHeightM ? Math.max(1, Math.floor(cs.maxHeightM / 3)) : 12;
+      const fpBudget = cs.maxFootprintM2 || (cs.areaM2 ? Math.round(cs.areaM2 * 0.45) : null);
       const instruction =
-        "You are an urban design assistant proposing a concept site layout for one parcel. " +
+        "You are an urban / landscape design assistant proposing a concept site layout for one parcel. " +
+        "Read the brief and translate EACH item into an element with its own use and an appropriate share of the parcel area, all within the zoning limits. " +
         "Coordinate space: normalized 0..1 within the parcel's bounding box, where x=0 is west, x=1 east, y=0 south, y=1 north. " +
-        `The parcel is roughly ${Math.round(cs.widthM||60)} m (E–W) by ${Math.round(cs.heightM||60)} m (N–S). ` +
-        (cs.maxFootprintM2 ? `Total building footprint must not exceed ${Math.round(cs.maxFootprintM2)} m² (K1). ` : "") +
+        `The parcel is roughly ${Math.round(cs.widthM||60)} m (E–W) by ${Math.round(cs.heightM||60)} m (N–S)${cs.areaM2?`, about ${Math.round(cs.areaM2)} m²`:""}. ` +
+        (fpBudget ? `Total building footprint must not exceed ${Math.round(fpBudget)} m². ` : "") +
         (cs.maxFloorAreaM2 ? `Total floor area should not exceed ${Math.round(cs.maxFloorAreaM2)} m² (K2). ` : "") +
         `Maximum building height is about ${Math.round(cs.maxHeightM||maxFloors*3)} m (~${maxFloors} floors). ` +
-        "Keep ALL buildings within the central ~85% of the parcel (leave a setback margin for landscaping). " +
-        "Leave generous open space and place 6–20 trees in the open areas, never on top of buildings. " +
-        (enPrompt ? `Design brief: ${enPrompt}. ` : "Design a sensible mixed development. ") +
+        "Size every element realistically for its use (e.g. a house ~80–200 m², a pool ~20–50 m², a shed/garage ~15–40 m²) and keep them from overlapping. " +
+        "Keep ALL elements within the central ~85% of the parcel; leave open space; add 4–16 trees in the open areas, never on top of buildings. " +
+        (enPrompt ? `Design brief: ${enPrompt}. ` : "Design a sensible small development. ") +
         "Respond ONLY as JSON with this shape: " +
-        `{"summary": string, "buildings": [{"cx": number, "cy": number, "w": number, "d": number, "rot": number, "floors": integer, "use": "residential"|"commercial"|"office"|"mixed"|"amenity"}], "trees": [{"x": number, "y": number}]}. ` +
-        "cx/cy are the building centre (normalized 0..1); w and d are width and depth in metres; rot is rotation in degrees; x/y are normalized tree positions.";
+        `{"summary": string, "buildings": [{"cx": number, "cy": number, "w": number, "d": number, "rot": number, "floors": integer, "use": string}], "areas": [{"cx": number, "cy": number, "w": number, "d": number, "rot": number, "use": string}], "trees": [{"x": number, "y": number}]}. ` +
+        "buildings = enclosed structures to be EXTRUDED; use one of: house, apartment, residential, office, commercial, mixed, shed, garage, pavilion, amenity (floors >= 1). " +
+        "areas = FLAT ground features; use one of: pool, terrace, patio, driveway, parking, playground, garden, lawn, sport, plaza. " +
+        "cx/cy are the element centre (normalized 0..1); w and d are width and depth in metres; rot is rotation in degrees; x/y are normalized tree positions. Include only elements the brief implies; omit empty arrays as [].";
       try {
         const gr = await fetch(`${GLM}/gemini-flash-latest:generateContent?key=${key}`, {
           method: "POST", headers: { "Content-Type": "application/json" },
@@ -435,7 +439,7 @@ export default {
         let concept;
         try { concept = JSON.parse(txt); }
         catch (_) { const m = txt.match(/\{[\s\S]*\}/); concept = m ? JSON.parse(m[0]) : null; }
-        if (!concept || !Array.isArray(concept.buildings)) return jsonRes({ error: "Model returned no usable layout." }, 502);
+        if (!concept || (!Array.isArray(concept.buildings) && !Array.isArray(concept.areas))) return jsonRes({ error: "Model returned no usable layout." }, 502);
         return jsonRes(concept);
       } catch (e) {
         return jsonRes({ error: "Concept error", detail: String(e).slice(0, 200) }, 502);

@@ -7761,6 +7761,16 @@ async function _renderGenerate(){
 // ── Generative concept site plan (editable 3D masses + greenery + trees) ──────
 let _conceptBldIds=[]; // extruded buildings created by the last concept
 let _conceptTreeData={type:'FeatureCollection',features:[]};
+const _CONCEPT_USE={
+  house:['#f59e0b','House'],residential:['#e89630','Residential'],apartment:['#e89630','Apartment'],
+  office:['#60a5fa','Office'],commercial:['#34d399','Commercial'],mixed:['#a78bfa','Mixed'],
+  amenity:['#c084fc','Amenity'],pavilion:['#c084fc','Pavilion'],shed:['#94a3b8','Shed'],garage:['#9ca3af','Garage'],
+  parking:['#9ca3af','Parking'],pool:['#38bdf8','Pool'],terrace:['#d6bfa3','Terrace'],patio:['#d6bfa3','Patio'],
+  driveway:['#a8a29e','Driveway'],playground:['#fb923c','Playground'],garden:['#4ade80','Garden'],lawn:['#4ade80','Lawn'],
+  sport:['#f97316','Sport'],plaza:['#cbd5e1','Plaza']
+};
+function _conceptUseColor(u){const e=_CONCEPT_USE[String(u||'').toLowerCase()];return e?e[0]:'#6366f1';}
+function _hexToRgb01(h){h=String(h).replace('#','');return [parseInt(h.slice(0,2),16)/255,parseInt(h.slice(2,4),16)/255,parseInt(h.slice(4,6),16)/255];}
 function _conceptI18n(){
   const ka=lang==='ka';
   return {
@@ -7791,7 +7801,9 @@ function closeConceptModal(){document.getElementById('concept-modal').classList.
 function _conceptEnsureLayers(){
   if(!mapReady)return;
   if(!map.getSource('concept-green'))map.addSource('concept-green',{type:'geojson',data:{type:'FeatureCollection',features:[]}});
-  if(!map.getLayer('concept-green-lyr'))map.addLayer({id:'concept-green-lyr',type:'fill',source:'concept-green',paint:{'fill-color':'#4ade80','fill-opacity':0.32}});
+  if(!map.getLayer('concept-green-lyr'))map.addLayer({id:'concept-green-lyr',type:'fill',source:'concept-green',paint:{'fill-color':'#4ade80','fill-opacity':0.28}});
+  if(!map.getSource('concept-areas'))map.addSource('concept-areas',{type:'geojson',data:{type:'FeatureCollection',features:[]}});
+  if(!map.getLayer('concept-areas-lyr'))map.addLayer({id:'concept-areas-lyr',type:'fill',source:'concept-areas',paint:{'fill-color':['coalesce',['get','color'],'#38bdf8'],'fill-opacity':0.6,'fill-outline-color':'rgba(0,0,0,0.28)'}});
   if(!map.getSource('concept-trees'))map.addSource('concept-trees',{type:'geojson',data:{type:'FeatureCollection',features:[]}});
   if(!map.getLayer('concept-trees-lyr')){
     map.addLayer({id:'concept-trees-lyr',type:'fill-extrusion',source:'concept-trees',paint:{'fill-extrusion-color':'#16a34a','fill-extrusion-height':['coalesce',['get','h'],6],'fill-extrusion-base':0,'fill-extrusion-opacity':0.9}});
@@ -7815,6 +7827,7 @@ function _clearConcept(){
   _conceptTreeData={type:'FeatureCollection',features:[]};
   if(mapReady){
     map.getSource('concept-green')?.setData({type:'FeatureCollection',features:[]});
+    map.getSource('concept-areas')?.setData({type:'FeatureCollection',features:[]});
     map.getSource('concept-trees')?.setData(_conceptTreeData);
   }
 }
@@ -7832,7 +7845,8 @@ async function _conceptGenerate(){
     const spanLng=bb[2]-bb[0], spanLat=bb[3]-bb[1];
     const widthM=turf.distance([bb[0],bb[1]],[bb[2],bb[1]])*1000;
     const heightM=turf.distance([bb[0],bb[1]],[bb[0],bb[3]])*1000;
-    const constraints={widthM,heightM,maxFootprintM2:(typeof _maxFootprintM2==='number'?_maxFootprintM2:null),maxFloorAreaM2:(typeof _maxFloorAreaM2==='number'?_maxFloorAreaM2:null),maxHeightM:(typeof _zoneMaxHeightM==='function'?_zoneMaxHeightM():null)};
+    const areaM2=(typeof _currentParcelAreaM2==='number'&&_currentParcelAreaM2)?_currentParcelAreaM2:Math.round(turf.area(turf.feature(parcel)));
+    const constraints={widthM,heightM,areaM2,maxFootprintM2:(typeof _maxFootprintM2==='number'?_maxFootprintM2:null),maxFloorAreaM2:(typeof _maxFloorAreaM2==='number'?_maxFloorAreaM2:null),maxHeightM:(typeof _zoneMaxHeightM==='function'?_zoneMaxHeightM():null)};
     const res=await fetch(`${PROXY}/concept`,{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({action:'concept',prompt,lang,constraints})});
     const data=await res.json().catch(()=>({}));
@@ -7849,47 +7863,72 @@ function _renderConcept(concept,parcel,bb,spanLng,spanLat){
   _conceptEnsureLayers();
   const nx2lng=nx=>bb[0]+Math.min(1,Math.max(0,nx))*spanLng;
   const ny2lat=ny=>bb[1]+Math.min(1,Math.max(0,ny))*spanLat;
-  // Buildable area = parcel inset 3 m (clip buildings to it so they respect the setback)
+  // Buildable area = parcel inset 3 m. We keep buildings INSIDE it by clamping their
+  // position/size to the inset bounding box (no sliver-clipping, which shrank/moved them).
   let inset=null;try{inset=turf.buffer(turf.feature(parcel),-3,{units:'meters'});}catch(_){}
-  const clipTo=inset&&inset.geometry?inset:turf.feature(parcel);
+  const insetGeom=inset&&inset.geometry?inset:turf.feature(parcel);
+  const ib=turf.bbox(insetGeom); // [minLng,minLat,maxLng,maxLat]
+  const insetWm=turf.distance([ib[0],ib[1]],[ib[2],ib[1]])*1000; // m
+  const insetHm=turf.distance([ib[0],ib[1]],[ib[0],ib[3]])*1000; // m
   const maxH=(typeof _zoneMaxHeightM==='function'&&_zoneMaxHeightM())||null;
+  const latMid=(ib[1]+ib[3])/2;
+  // Build a footprint rectangle from an AI element, clamped fully inside the buildable bbox.
+  const mkRect=(el,defW,defD)=>{
+    let wM=Math.max(4,Math.min(+el.w||defW,insetWm*0.92));
+    let dM=Math.max(4,Math.min(+el.d||defD,insetHm*0.92));
+    const halfWkm=wM/2/1000, halfDkm=dM/2/1000;
+    const halfWdeg=halfWkm/(111.32*Math.cos(latMid*Math.PI/180)), halfDdeg=halfDkm/110.57;
+    let cx=nx2lng(+el.cx), cy=ny2lat(+el.cy);
+    cx=Math.min(Math.max(cx,ib[0]+halfWdeg),ib[2]-halfWdeg);
+    cy=Math.min(Math.max(cy,ib[1]+halfDdeg),ib[3]-halfDdeg);
+    const N=turf.destination([cx,cy],halfDkm,0), S=turf.destination([cx,cy],halfDkm,180);
+    const ring=[
+      turf.destination(N,halfWkm,270).geometry.coordinates,
+      turf.destination(N,halfWkm,90).geometry.coordinates,
+      turf.destination(S,halfWkm,90).geometry.coordinates,
+      turf.destination(S,halfWkm,270).geometry.coordinates
+    ];ring.push(ring[0]);
+    let rect=turf.polygon([ring]);
+    if(el.rot)rect=turf.transformRotate(rect,+el.rot,{pivot:[cx,cy]});
+    return rect;
+  };
   const footprints=[];
-  (concept.buildings||[]).slice(0,12).forEach(b=>{
+  (concept.buildings||[]).slice(0,8).forEach(b=>{
     try{
-      const cx=nx2lng(+b.cx), cy=ny2lat(+b.cy);
-      const halfW=Math.max(3,(+b.w||12))/2/1000, halfD=Math.max(3,(+b.d||12))/2/1000; // km
-      const N=turf.destination([cx,cy],halfD,0), S=turf.destination([cx,cy],halfD,180);
-      const ring=[
-        turf.destination(N,halfW,270).geometry.coordinates,
-        turf.destination(N,halfW,90).geometry.coordinates,
-        turf.destination(S,halfW,90).geometry.coordinates,
-        turf.destination(S,halfW,270).geometry.coordinates
-      ];ring.push(ring[0]);
-      let rect=turf.polygon([ring]);
-      if(b.rot)rect=turf.transformRotate(rect,+b.rot,{pivot:[cx,cy]});
-      let fit=rect;try{const cl=turf.intersect(rect,clipTo);if(cl)fit=cl;else return;}catch(_){}
-      const geom=fit.geometry.type==='MultiPolygon'?{type:'Polygon',coordinates:fit.geometry.coordinates[0]}:fit.geometry;
+      const rect=mkRect(b,18,14);const geom=rect.geometry;
       let floors=Math.max(1,Math.round(+b.floors||3));
       if(maxH)floors=Math.min(floors,Math.max(1,Math.floor(maxH/3)));
-      const use=['residential','commercial','office','parking','amenity'].includes(b.use)?b.use:null;
-      const fo=use?{0:{useType:use}}:{};
+      const col=_conceptUseColor(b.use);
+      const useId=FLOOR_USES.find(u=>u.id===String(b.use).toLowerCase())?String(b.use).toLowerCase():null;
+      const fo={0:{color:_hexToRgb01(col),colorHex:col}};if(useId)fo[0].useType=useId;
       const nb=_registerBuilding(geom,{extrusionActive:true,extrusionHeight:floors*3,floorOverrides:fo});
-      if(nb){_conceptBldIds.push(nb.id);footprints.push(turf.feature(geom));}
+      if(nb){nb.fillColor=col;_conceptBldIds.push(nb.id);footprints.push(rect);}
     }catch(_){}
   });
-  // Green = parcel minus the building footprints (auto-filled open space)
+  // Flat ground features (pool, terrace, driveway, garden…) as coloured polygons
+  const areaFeats=[];
+  (concept.areas||[]).slice(0,10).forEach(a=>{
+    try{
+      const rect=mkRect(a,10,8);
+      rect.properties={color:_conceptUseColor(a.use),use:String(a.use||'')};
+      areaFeats.push(rect);
+    }catch(_){}
+  });
+  map.getSource('concept-areas')?.setData({type:'FeatureCollection',features:areaFeats});
+  // Green = parcel minus buildings and flat areas (auto-filled open landscaping)
   try{
     let green=turf.feature(parcel);
-    footprints.forEach(f=>{try{const d=turf.difference(green,f);if(d)green=d;}catch(_){}});
+    footprints.concat(areaFeats).forEach(f=>{try{const d=turf.difference(green,f);if(d)green=d;}catch(_){}});
     map.getSource('concept-green')?.setData(green);
   }catch(_){}
-  // Trees → small 3D green cylinders, kept inside the parcel and off the buildings
+  // Trees → small 3D green cylinders, kept inside the parcel and off buildings/areas
+  const blockers=footprints.concat(areaFeats);
   const treeFeats=[];let tid=0;
   (concept.trees||[]).slice(0,24).forEach(t=>{
     try{
       const pt=[nx2lng(+t.x),ny2lat(+t.y)];
       if(!turf.booleanPointInPolygon(pt,turf.feature(parcel)))return;
-      if(footprints.some(f=>{try{return turf.booleanPointInPolygon(pt,f);}catch(_){return false;}}))return;
+      if(blockers.some(f=>{try{return turf.booleanPointInPolygon(pt,f);}catch(_){return false;}}))return;
       const circ=turf.circle(pt,0.0028,{steps:10,units:'kilometers'}); // ~2.8 m radius
       circ.properties={tid:tid++,h:6};
       treeFeats.push(circ);
