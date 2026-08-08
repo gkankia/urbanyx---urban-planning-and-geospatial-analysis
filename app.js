@@ -7608,6 +7608,12 @@ function openRenderModal(){
   document.getElementById('render-again-btn').textContent=T.again;
   document.getElementById('render-dl-btn').textContent='↓ '+T.dl;
   document.getElementById('render-result').style.display='none';
+  // Concept-driven flow: prefill the prompt from the concept summary so the render
+  // depicts exactly what the user just laid out (they can still edit it).
+  const pEl=document.getElementById('render-prompt');
+  if(_conceptOn&&_conceptSummary&&!(pEl.value||'').trim())pEl.value=_conceptSummary;
+  const cn=document.getElementById('render-concept-note');
+  if(cn)cn.style.display=_conceptOn?'block':'none';
   const st=document.getElementById('render-status');st.textContent='';st.classList.remove('err');
   document.getElementById('render-modal').classList.add('open');
   setTimeout(()=>document.getElementById('render-prompt').focus(),60);
@@ -7635,19 +7641,28 @@ function _estBldPixelHeight(cenLL,H){
 function _captureBuildingPNG(){
   const src=map.getCanvas();
   const rx=src.width/(src.clientWidth||src.width), ry=src.height/(src.clientHeight||src.height);
-  const extruded=!!_extrusionActive;
-  const plotGeom=_dbParcelGeoJSON||_renderTargetGeom();   // the plot (parcel or drawn area)
-  const bldGeom=_renderTargetGeom();                       // the building/design footprint
+  // Which 3D volumes to enclose in the clip? A whole concept (all its masses), or the
+  // single active extruded building, otherwise none (flat plot).
+  let volGeoms=[];
+  if(_conceptOn&&_conceptBldIds.length){
+    volGeoms=_conceptBldIds.map(id=>{const b=_bldById(id);return b?{ring:_ringOf(b.geojson),h:b.extrusionHeight||12}:null;}).filter(Boolean);
+  }else if(_extrusionActive){
+    volGeoms=[{ring:_ringOf(_renderTargetGeom()),h:_extrusionHeight||12}];
+  }
+  const extruded=volGeoms.length>0;
+  // Concept renders frame the whole parcel; single-building renders use the parcel too.
+  const plotGeom=(_conceptOn&&_conceptParcel)||_dbParcelGeoJSON||_renderTargetGeom();
   let sx=0,sy=0,sw=src.width,sh=src.height,clipSrc=null;
   try{
     const plotPts=_ringOf(plotGeom).map(pt=>{const p=map.project(pt);return {x:p.x*rx,y:p.y*ry};});
     clipSrc=plotPts.slice();
-    let topDy=0;
-    if(extruded){
-      const cen=turf.centroid(turf.feature(bldGeom)).geometry.coordinates;
-      topDy=_estBldPixelHeight(cen,(_extrusionHeight||12))*1.35+18*ry;
-      _ringOf(bldGeom).forEach(pt=>{const p=map.project(pt);clipSrc.push({x:p.x*rx,y:p.y*ry-topDy});});
-    }
+    volGeoms.forEach(v=>{
+      try{
+        const cen=turf.centroid(turf.polygon([v.ring])).geometry.coordinates;
+        const topDy=_estBldPixelHeight(cen,v.h)*1.35+18*ry;
+        v.ring.forEach(pt=>{const p=map.project(pt);clipSrc.push({x:p.x*rx,y:p.y*ry-topDy});});
+      }catch(_){}
+    });
     let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
     clipSrc.forEach(p=>{if(p.x<minX)minX=p.x;if(p.y<minY)minY=p.y;if(p.x>maxX)maxX=p.x;if(p.y>maxY)maxY=p.y;});
     const w=maxX-minX,h=maxY-minY;
@@ -7729,18 +7744,19 @@ async function _renderGenerate(){
   try{
     // Auto-frame the target so it fills the view — more pixels + correct scale reference.
     try{
-      const geomF=_renderTargetGeom();
+      const geomF=(_conceptOn&&_conceptParcel)||_renderTargetGeom();
       const bb=turf.bbox(turf.feature(geomF));
       prevCam={center:map.getCenter(),zoom:map.getZoom(),bearing:map.getBearing(),pitch:map.getPitch()};
       // Oblique view for flat plots so terrain slope + surroundings read in the capture.
-      const framePitch=_extrusionActive?map.getPitch():55;
-      map.fitBounds([[bb[0],bb[1]],[bb[2],bb[3]]],{padding:_extrusionActive?{top:150,bottom:70,left:70,right:70}:{top:150,bottom:60,left:60,right:60},bearing:map.getBearing(),pitch:framePitch,duration:650,essential:true});
+      const anyExtruded=_extrusionActive||_conceptOn;
+      const framePitch=anyExtruded?Math.max(map.getPitch(),50):55;
+      map.fitBounds([[bb[0],bb[1]],[bb[2],bb[3]]],{padding:anyExtruded?{top:150,bottom:70,left:70,right:70}:{top:150,bottom:60,left:60,right:60},bearing:map.getBearing(),pitch:framePitch,duration:650,essential:true});
     }catch(_){}
     await Promise.race([new Promise(r=>map.once('idle',r)), new Promise(r=>setTimeout(r,1600))]);
     const cap=_captureBuildingPNG();
     if(prevCam)map.easeTo({...prevCam,duration:500,essential:true}); // return to the user's view
     const res=await fetch(`${PROXY}/render`,{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({action:'render',image:cap.image,mask:cap.mask,prompt,lang,style:_renderStyle,extruded:!!_extrusionActive})});
+      body:JSON.stringify({action:'render',image:cap.image,mask:cap.mask,prompt,lang,style:_renderStyle,extruded:(!!_extrusionActive||_conceptOn),concept:_conceptOn})});
     const data=await res.json().catch(()=>({}));
     if(!res.ok||!data.image){status.classList.add('err');status.textContent=(data&&data.error)?data.error:T.err;goBtn.disabled=false;againBtn.disabled=false;return;}
     // All styles: keep the render strictly inside the plot (+3D volume); outside stays untouched original.
@@ -7761,6 +7777,7 @@ async function _renderGenerate(){
 // ── Generative concept site plan (editable 3D masses + greenery + trees) ──────
 let _conceptBldIds=[]; // extruded buildings created by the last concept
 let _conceptTreeData={type:'FeatureCollection',features:[]};
+let _conceptOn=false, _conceptSummary='', _conceptParcel=null;
 const _CONCEPT_USE={
   house:['#f59e0b','House'],residential:['#e89630','Residential'],apartment:['#e89630','Apartment'],
   office:['#60a5fa','Office'],commercial:['#34d399','Commercial'],mixed:['#a78bfa','Mixed'],
@@ -7781,7 +7798,7 @@ function _conceptI18n(){
     needsel: ka?'ჯერ აირჩიე ნაკვეთი':'Select a parcel first',
     working: ka?'იგეგმება… (~5–10 წმ)':'Planning… (~5–10s)',
     err: ka?'კონცეფცია ვერ შეიქმნა':'Could not generate a concept',
-    done: ka?'კონცეფცია დამატებულია — შენობები რედაქტირებადია, ხეზე დაჭერით წაშლი':'Concept added — buildings are editable; click a tree to remove it'
+    done: ka?'კონცეფცია დამატებულია — რედაქტირებადია. შემდეგ დააჭირე „Render“-ს ფოტორეალისტური/აკვარელის ვიზუალისთვის':'Concept added — editable. Next, hit “Render” for a photorealistic / watercolour visual of it'
   };
 }
 function openConceptModal(){
@@ -7825,6 +7842,7 @@ function _clearConcept(){
   _conceptBldIds.forEach(id=>{try{if(typeof _removeBuildingById==='function')_removeBuildingById(id);}catch(_){}});
   _conceptBldIds=[];
   _conceptTreeData={type:'FeatureCollection',features:[]};
+  _conceptOn=false; _conceptSummary=''; _conceptParcel=null;
   if(mapReady){
     map.getSource('concept-green')?.setData({type:'FeatureCollection',features:[]});
     map.getSource('concept-areas')?.setData({type:'FeatureCollection',features:[]});
@@ -7850,7 +7868,7 @@ async function _conceptGenerate(){
     const res=await fetch(`${PROXY}/concept`,{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({action:'concept',prompt,lang,constraints})});
     const data=await res.json().catch(()=>({}));
-    if(!res.ok||!Array.isArray(data.buildings)){status.classList.add('err');status.textContent=(data&&data.error)?data.error:T.err;goBtn.disabled=false;return;}
+    if(!res.ok||(!Array.isArray(data.buildings)&&!Array.isArray(data.areas))){status.classList.add('err');status.textContent=(data&&data.error)?data.error:T.err;goBtn.disabled=false;return;}
     _renderConcept(data,parcel,bb,spanLng,spanLat);
     closeConceptModal();
     showToast(T.done,4500);
@@ -7861,6 +7879,7 @@ async function _conceptGenerate(){
 function _renderConcept(concept,parcel,bb,spanLng,spanLat){
   _clearConcept();
   _conceptEnsureLayers();
+  _conceptOn=true; _conceptSummary=String(concept.summary||''); _conceptParcel=parcel;
   const nx2lng=nx=>bb[0]+Math.min(1,Math.max(0,nx))*spanLng;
   const ny2lat=ny=>bb[1]+Math.min(1,Math.max(0,ny))*spanLat;
   // Buildable area = parcel inset 3 m. We keep buildings INSIDE it by clamping their

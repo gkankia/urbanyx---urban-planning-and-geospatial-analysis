@@ -328,15 +328,20 @@ export default {
       //    is a LOCALIZED edit (subject + ~5 m, surroundings preserved); the artistic
       //    styles restyle the whole view in that medium while keeping the geometry.
       const isExtruded = body.extruded === true;
+      const isConcept = body.concept === true;
       const hasMask = !!maskB64;
-      const subject = isExtruded
+      const subject = isConcept
+        ? "the proposed development shown within the plot — the coloured 3D building masses, the flat coloured ground areas (pool, terrace, driveway, garden, etc.) and the green tree cylinders"
+        : (isExtruded
         ? "the extruded building massing in the centre of the image"
-        : (hasMask ? "the plot indicated by the WHITE area of the second (mask) image" : "the plot in the centre of the image");
-      const keepGeom = isExtruded
+        : (hasMask ? "the plot indicated by the WHITE area of the second (mask) image" : "the plot in the centre of the image"));
+      const keepGeom = isConcept
+        ? "The coloured shapes are a schematic massing model, not the final look: turn each coloured 3D mass into a realistic building of the SAME footprint, height, number of floors, position and orientation (colours encode use — amber/orange = houses & residential, blue = offices, green tones = commercial/gardens, cyan = pool/water, grey = sheds/garages/parking/paving); turn each flat coloured area into its real ground surface (pool→water, terrace/patio→paving/decking, driveway/parking→paved, garden/lawn→planting) and each green cylinder into a real tree of similar size and position. Do NOT add, remove, move or resize any element, and do NOT change the plot outline. Fill remaining open space with grass and low planting, keep the exact camera angle, respect the ground slope, and integrate with the surroundings. "
+        : (isExtruded
         ? "Preserve the building's footprint shape, proportions, number of floors, overall height and the exact camera angle — do not distort its proportions. Use the 3 m setback strip between the building and the plot boundary for landscaping only — lawn, trees, bushes, hedges and a fence. Respect the ground slope and integrate with the surroundings. "
         : (hasMask
             ? "A second image is provided as a MASK: white marks the buildable area (it already reflects a 3 m setback inside the plot boundary), black marks areas to leave unchanged. Place the new design ONLY inside the white area, matching its exact size, shape, orientation and scale; do not extend beyond it. Fill the 3 m setback ring between the white area and the plot boundary with landscaping only — lawn, trees, bushes, hedges and a fence. The mask is guidance only — do NOT reproduce the mask, any coloured region or any outline/boundary line in the output. Respect the existing ground slope and terrain (sit the design naturally on the sloping ground with correct grading), and integrate it with the surrounding buildings, streets and vegetation. Keep the same scale, perspective and camera angle so it is realistically proportioned. "
-            : "Fit the new design entirely within the plot, use its 3 m perimeter for landscaping, respect the ground slope, and match the surrounding scale and perspective; keep the exact camera angle. ");
+            : "Fit the new design entirely within the plot, use its 3 m perimeter for landscaping, respect the ground slope, and match the surrounding scale and perspective; keep the exact camera angle. "));
       let instruction;
       if (style === "sketch") {
         instruction = "Redraw " + subject + " as a hand-drawn architectural sketch — confident pen and pencil line work, light hatching for shade, loose expressive style on a clean white paper background, with the immediate surroundings suggested in light sketch lines. " +
