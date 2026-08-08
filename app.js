@@ -7782,8 +7782,8 @@ const _CONCEPT_USE={
   house:['#f59e0b','House'],residential:['#e89630','Residential'],apartment:['#e89630','Apartment'],
   office:['#60a5fa','Office'],commercial:['#34d399','Commercial'],mixed:['#a78bfa','Mixed'],
   amenity:['#c084fc','Amenity'],pavilion:['#c084fc','Pavilion'],shed:['#94a3b8','Shed'],garage:['#9ca3af','Garage'],
-  parking:['#9ca3af','Parking'],pool:['#38bdf8','Pool'],terrace:['#d6bfa3','Terrace'],patio:['#d6bfa3','Patio'],
-  driveway:['#a8a29e','Driveway'],playground:['#fb923c','Playground'],garden:['#4ade80','Garden'],lawn:['#4ade80','Lawn'],
+  parking:['#9ca3af','Parking'],pool:['#1ca3e0','Pool'],terrace:['#c9a97e','Terrace'],patio:['#c9a97e','Patio'],
+  driveway:['#8b8681','Driveway'],playground:['#fb923c','Playground'],garden:['#5cb85c','Garden'],lawn:['#5cb85c','Lawn'],
   sport:['#f97316','Sport'],plaza:['#cbd5e1','Plaza']
 };
 function _conceptUseColor(u){const e=_CONCEPT_USE[String(u||'').toLowerCase()];return e?e[0]:'#6366f1';}
@@ -7818,24 +7818,129 @@ function closeConceptModal(){document.getElementById('concept-modal').classList.
 function _conceptEnsureLayers(){
   if(!mapReady)return;
   if(!map.getSource('concept-green'))map.addSource('concept-green',{type:'geojson',data:{type:'FeatureCollection',features:[]}});
-  if(!map.getLayer('concept-green-lyr'))map.addLayer({id:'concept-green-lyr',type:'fill',source:'concept-green',paint:{'fill-color':'#4ade80','fill-opacity':0.28}});
+  if(!map.getLayer('concept-green-lyr'))map.addLayer({id:'concept-green-lyr',type:'fill',source:'concept-green',paint:{'fill-color':'#5cb85c','fill-opacity':0.4}});
   if(!map.getSource('concept-areas'))map.addSource('concept-areas',{type:'geojson',data:{type:'FeatureCollection',features:[]}});
-  if(!map.getLayer('concept-areas-lyr'))map.addLayer({id:'concept-areas-lyr',type:'fill',source:'concept-areas',paint:{'fill-color':['coalesce',['get','color'],'#38bdf8'],'fill-opacity':0.6,'fill-outline-color':'rgba(0,0,0,0.28)'}});
-  if(!map.getSource('concept-trees'))map.addSource('concept-trees',{type:'geojson',data:{type:'FeatureCollection',features:[]}});
-  if(!map.getLayer('concept-trees-lyr')){
-    map.addLayer({id:'concept-trees-lyr',type:'fill-extrusion',source:'concept-trees',paint:{'fill-extrusion-color':'#16a34a','fill-extrusion-height':['coalesce',['get','h'],6],'fill-extrusion-base':0,'fill-extrusion-opacity':0.9}});
-    map.on('click','concept-trees-lyr',_conceptTreeClick);
-    map.on('mouseenter','concept-trees-lyr',()=>{if(map.getCanvas())map.getCanvas().style.cursor='pointer';});
-    map.on('mouseleave','concept-trees-lyr',()=>{if(map.getCanvas())map.getCanvas().style.cursor='';});
+  if(!map.getLayer('concept-areas-lyr'))map.addLayer({id:'concept-areas-lyr',type:'fill',source:'concept-areas',paint:{'fill-color':['coalesce',['get','color'],'#38bdf8'],'fill-opacity':0.82,'fill-outline-color':'rgba(0,0,0,0.35)'}});
+  // Trees + roofs are rendered as real 3D geometry by _ConceptDecoLayer (below),
+  // not as flat cylinders. We keep only a lightweight click handler to remove trees.
+  if(!_conceptDecoClickBound){map.on('click',_conceptDecoClick);_conceptDecoClickBound=true;}
+}
+// Remove the nearest concept tree to a click (screen-space hit test, ~16 px).
+let _conceptDecoClickBound=false;
+function _conceptDecoClick(e){
+  if(!_conceptOn)return;
+  if(e.originalEvent&&e.originalEvent._bldHandled)return;
+  const feats=_conceptTreeData.features||[];if(!feats.length)return;
+  let bestTid=null,bd=16;
+  feats.forEach(f=>{const p=f.properties||{};if(p.cx==null)return;
+    const pt=map.project([p.cx,p.cy]);const d=Math.hypot(pt.x-e.point.x,pt.y-e.point.y);
+    if(d<bd){bd=d;bestTid=p.tid;}});
+  if(bestTid!=null){
+    _conceptTreeData.features=feats.filter(f=>(f.properties||{}).tid!==bestTid);
+    map.getSource('concept-trees')?.setData(_conceptTreeData);
+    if(_conceptDeco)_conceptDeco.rebuild();
+    e.originalEvent&&(e.originalEvent._bldHandled=true);
   }
 }
-function _conceptTreeClick(e){
-  if(!e.features||!e.features.length)return;
-  e.originalEvent&&(e.originalEvent._bldHandled=true);
-  const id=e.features[0].properties&&e.features[0].properties.tid;
-  if(id==null)return;
-  _conceptTreeData.features=_conceptTreeData.features.filter(f=>f.properties.tid!==id);
-  map.getSource('concept-trees')?.setData(_conceptTreeData);
+// ── Rich in-map 3D decoration for the concept: real low-poly trees + pitched roofs ──
+let _conceptDeco=null;
+class _ConceptDecoLayer{
+  constructor(){this.id='concept-deco';this.type='custom';this.renderingMode='3d';}
+  onAdd(map,gl){
+    this._map=map;
+    this._cam=new THREE.Camera();
+    this._scene=new THREE.Scene();
+    this._rdr=new THREE.WebGLRenderer({canvas:map.getCanvas(),context:gl,antialias:true});
+    this._rdr.autoClear=false;
+    this._scene.add(new THREE.AmbientLight(0xffffff,0.9));
+    const sun=new THREE.DirectionalLight(0xffffff,0.55);sun.position.set(0.6,-1,1.4);this._scene.add(sun);
+    this.rebuild();
+  }
+  onRemove(){this.dispose();}
+  _clearScene(){
+    if(!this._scene)return;
+    for(let i=this._scene.children.length-1;i>=0;i--){
+      const c=this._scene.children[i];if(c.isLight)continue;
+      this._scene.remove(c);
+      c.traverse&&c.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material){(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>m.dispose());}});
+    }
+  }
+  rebuild(){
+    if(!this._scene)return; // not added to the map yet
+    this._clearScene();
+    const parcel=_conceptParcel;
+    let c=null;try{if(parcel)c=turf.centroid(turf.feature(parcel)).geometry.coordinates;}catch(_){}
+    if(!c){if(this._map)this._map.triggerRepaint();return;}
+    const baseElev=map.queryTerrainElevation({lng:c[0],lat:c[1]})||0;
+    const om=mapboxgl.MercatorCoordinate.fromLngLat([c[0],c[1]],baseElev);
+    const s=om.meterInMercatorCoordinateUnits();
+    this._modelMx=new THREE.Matrix4().set(s,0,0,om.x, 0,-s,0,om.y, 0,0,s,om.z, 0,0,0,1);
+    const toLocal=(lng,lat)=>{const m=mapboxgl.MercatorCoordinate.fromLngLat([lng,lat],0);return [(m.x-om.x)/s,-(m.y-om.y)/s];};
+    const elevAt=(lng,lat)=>(map.queryTerrainElevation({lng,lat})||0)-baseElev;
+    // Trees
+    (_conceptTreeData.features||[]).forEach(f=>{
+      const p=f.properties||{};if(p.cx==null)return;
+      const [lx,ly]=toLocal(p.cx,p.cy);const g=this._makeTree(p.tid||0);
+      g.position.set(lx,ly,elevAt(p.cx,p.cy));this._scene.add(g);
+    });
+    // Pitched roofs on low-rise concept dwellings
+    (_conceptBldIds||[]).forEach(id=>{
+      const b=_bldById(id);if(!b||!b.geojson)return;
+      const ring=b.geojson.type==='Polygon'?b.geojson.coordinates[0]:b.geojson.coordinates[0][0];
+      const roof=this._makeRoof(ring,b.extrusionHeight||6,String(b.conceptUse||'').toLowerCase(),toLocal,elevAt);
+      if(roof)this._scene.add(roof);
+    });
+    if(this._map)this._map.triggerRepaint();
+  }
+  _makeTree(seed){
+    const g=new THREE.Group();
+    const r=Math.abs((Math.sin((seed+1)*12.9898)*43758.5453)%1);
+    const sc=0.75+r*0.7;
+    const trunk=new THREE.Mesh(new THREE.CylinderGeometry(0.16,0.22,2.0*sc,6),new THREE.MeshPhongMaterial({color:0x6b4a2b}));
+    trunk.rotation.x=Math.PI/2;trunk.position.z=1.0*sc;g.add(trunk);
+    const foli=new THREE.MeshPhongMaterial({color:(r>0.6?0x3aa055:0x2f8f3e),flatShading:true});
+    const f1=new THREE.Mesh(new THREE.ConeGeometry(1.9*sc,3.0*sc,7),foli);f1.rotation.x=Math.PI/2;f1.position.z=3.4*sc;g.add(f1);
+    const f2=new THREE.Mesh(new THREE.ConeGeometry(1.35*sc,2.2*sc,7),foli);f2.rotation.x=Math.PI/2;f2.position.z=4.9*sc;g.add(f2);
+    return g;
+  }
+  _makeRoof(ring,h,use,toLocal,elevAt){
+    const floors=Math.max(1,Math.round(h/3));
+    const pitched=['house','residential','shed','garage','pavilion','cottage','villa'].includes(use)&&floors<=2;
+    if(!pitched)return null;
+    const pts=ring.slice(0,ring.length-1).map(v=>toLocal(v[0],v[1]));
+    if(pts.length<3)return null;
+    // Match the building editor's base (min terrain over the ring) so the roof sits on the walls.
+    const bz=Math.min(...ring.map(v=>elevAt(v[0],v[1])));
+    const cx=pts.reduce((s,p)=>s+p[0],0)/pts.length, cy=pts.reduce((s,p)=>s+p[1],0)/pts.length;
+    let span=0;pts.forEach(p=>{span=Math.max(span,Math.hypot(p[0]-cx,p[1]-cy));});
+    const roofH=Math.min(3.2,Math.max(1.5,span*0.5));
+    const apexZ=bz+h+roofH, eaveZ=bz+h;
+    const pos=[],norm=[];
+    for(let i=0;i<pts.length;i++){
+      const a=pts[i],b=pts[(i+1)%pts.length];
+      pos.push(a[0],a[1],eaveZ, b[0],b[1],eaveZ, cx,cy,apexZ);
+      const ux=b[0]-a[0],uy=b[1]-a[1],vx=cx-a[0],vy=cy-a[1],vz=apexZ-eaveZ;
+      let nx=uy*vz-0*vy, ny=0*vx-ux*vz, nz=ux*vy-uy*vx;const ln=Math.hypot(nx,ny,nz)||1;
+      for(let k=0;k<3;k++)norm.push(nx/ln,ny/ln,nz/ln);
+    }
+    const geo=new THREE.BufferGeometry();
+    geo.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
+    geo.setAttribute('normal',new THREE.Float32BufferAttribute(norm,3));
+    const col=(use==='shed'||use==='garage')?0x64748b:0x9b4a2f;
+    return new THREE.Mesh(geo,new THREE.MeshPhongMaterial({color:col,flatShading:true,side:THREE.DoubleSide}));
+  }
+  render(gl,matrix){
+    if(!this._modelMx)return;
+    this._cam.projectionMatrix=new THREE.Matrix4().fromArray(matrix).multiply(this._modelMx);
+    this._rdr.resetState();
+    this._rdr.render(this._scene,this._cam);
+  }
+  dispose(){this._clearScene();try{this._rdr&&this._rdr.dispose&&this._rdr.dispose();}catch(_){}}
+}
+function _ensureConceptDeco(){
+  if(!mapReady||typeof THREE==='undefined')return;
+  if(!_conceptDeco){_conceptDeco=new _ConceptDecoLayer();try{map.addLayer(_conceptDeco);}catch(_){}}
+  else _conceptDeco.rebuild();
 }
 function _clearConcept(){
   // Remove concept buildings (created as extruded buildings)
@@ -7849,6 +7954,7 @@ function _clearConcept(){
     map.getSource('concept-areas')?.setData({type:'FeatureCollection',features:[]});
     map.getSource('concept-trees')?.setData(_conceptTreeData);
   }
+  if(_conceptDeco)_conceptDeco.rebuild();
 }
 async function _conceptGenerate(){
   if(!currentUser||currentUser.plan!=='pro'){openPaywall();return;}
@@ -7942,7 +8048,7 @@ function _renderConcept(concept,parcel,bb,spanLng,spanLat){
       const useId=FLOOR_USES.find(u=>u.id===String(b.use).toLowerCase())?String(b.use).toLowerCase():null;
       const fo={0:{color:_hexToRgb01(col),colorHex:col}};if(useId)fo[0].useType=useId;
       const nb=_registerBuilding(geom,{extrusionActive:true,extrusionHeight:floors*3,floorOverrides:fo});
-      if(nb){nb.fillColor=col;_conceptBldIds.push(nb.id);footprints.push(rect);}
+      if(nb){nb.fillColor=col;nb.conceptUse=b.use;_conceptBldIds.push(nb.id);footprints.push(rect);}
     }catch(_){}
   });
   // Flat ground features (pool, terrace, driveway, garden…) as coloured polygons
@@ -7970,17 +8076,48 @@ function _renderConcept(concept,parcel,bb,spanLng,spanLat){
       if(!turf.booleanPointInPolygon(pt,turf.feature(parcel)))return;
       if(blockers.some(f=>{try{return turf.booleanPointInPolygon(pt,f);}catch(_){return false;}}))return;
       const circ=turf.circle(pt,0.0028,{steps:10,units:'kilometers'}); // ~2.8 m radius
-      circ.properties={tid:tid++,h:6};
+      circ.properties={tid:tid++,h:6,cx:pt[0],cy:pt[1]};
       treeFeats.push(circ);
     }catch(_){}
   });
   _conceptTreeData={type:'FeatureCollection',features:treeFeats};
   map.getSource('concept-trees')?.setData(_conceptTreeData);
+  _ensureConceptDeco(); // real 3D trees + pitched roofs
   _showConceptLegend(concept,treeFeats.length);
+}
+let _conceptLegendDragInit=false;
+function _initConceptLegendDrag(){
+  if(_conceptLegendDragInit)return;
+  const card=document.getElementById('concept-legend');
+  const header=card&&card.querySelector('.cl-head');
+  if(!card||!header)return;
+  _conceptLegendDragInit=true;
+  let dragging=false,ox=0,oy=0;
+  header.style.cursor='move';
+  header.addEventListener('mousedown',e=>{
+    if(e.target.tagName==='BUTTON')return;
+    dragging=true;
+    const r=card.getBoundingClientRect();
+    ox=e.clientX-r.left; oy=e.clientY-r.top;
+    // Switch to left/top positioning so drag works regardless of the CSS anchor.
+    card.style.left=r.left+'px'; card.style.top=r.top+'px'; card.style.right='auto'; card.style.bottom='auto';
+    document.addEventListener('mousemove',onDM);
+    document.addEventListener('mouseup',onDU);
+    e.preventDefault();
+  });
+  function onDM(e){
+    if(!dragging)return;
+    const cw=card.offsetWidth||200, ch=card.offsetHeight||140;
+    let nx=Math.max(4,Math.min(window.innerWidth-cw-4,e.clientX-ox));
+    let ny=Math.max(4,Math.min(window.innerHeight-ch-4,e.clientY-oy));
+    card.style.left=nx+'px'; card.style.top=ny+'px';
+  }
+  function onDU(){dragging=false;document.removeEventListener('mousemove',onDM);document.removeEventListener('mouseup',onDU);}
 }
 // Floating legend: colour → use for the current concept, plus a Render call-to-action.
 function _showConceptLegend(concept,treeCount){
   const el=document.getElementById('concept-legend');if(!el)return;
+  _initConceptLegendDrag();
   const items=document.getElementById('concept-legend-items');if(!items)return;
   const ka=lang==='ka';
   const seen=new Set(),rows=[];
