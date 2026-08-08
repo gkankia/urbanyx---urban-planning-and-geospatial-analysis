@@ -7591,6 +7591,7 @@ function _renderI18n(){
 // Output styles for the render.
 let _renderStyle='photoreal';
 const _RENDER_STYLES=[
+  {id:'aerial',    en:'Aerial masterplan', ka:'აეროხედი (მასტერპლანი)'},
   {id:'photoreal', en:'Photorealistic', ka:'ფოტორეალისტური'},
   {id:'sketch',    en:'Sketch',         ka:'ესკიზი'},
   {id:'watercolor',en:'Watercolor',     ka:'აკვარელი'},
@@ -7608,6 +7609,8 @@ function _renderPickStyle(id){
 }
 // Prompt presets by project type — click to fill the box, then tweak & render.
 const _RENDER_PRESETS=[
+  {en:{l:"Housing estate",p:"Photorealistic aerial masterplan of a low-rise housing estate — rows of pitched-roof family houses with brick and light-render facades, curved asphalt streets, driveways and parking, neatly landscaped front gardens, a central green with footpaths and mature trees, tree-lined edges, warm golden-hour light with long soft shadows."},
+   ka:{l:"საცხოვრებელი დასახლება",p:"ფოტორეალისტური აეროხედი დაბალსართულიანი საცხოვრებელი დასახლების — ორქანობიანი (ცოცხი) სახურავებიანი კოტეჯების რიგები, აგურისა და ღია ბათქაშის ფასადებით, კლაკნილი ასფალტის ქუჩები, ავტოსადგომები, გამწვანებული წინა ეზოები, ცენტრალური მწვანე ბილიკებითა და ხეებით, ხემცენარეებით შემოსაზღვრული, თბილი ოქროსფერი განათება გრძელი რბილი ჩრდილებით."}},
   {en:{l:"Residential",p:"Modern multi-apartment residential building, warm plaster and timber accents, generous balconies with greenery, landscaped courtyard, soft morning light."},
    ka:{l:"საცხოვრებელი",p:"თანამედროვე მრავალბინიანი საცხოვრებელი კორპუსი, თბილი ბათქაშისა და ხის აქცენტებით, ფართო აივნები მცენარეებით, გამწვანებული ეზო, რბილი დილის განათება."}},
   {en:{l:"House / Villa",p:"Contemporary private villa, natural stone and wood cladding, large glazing, garden with trees, warm sunset light."},
@@ -7655,6 +7658,7 @@ function openRenderModal(){
   if(!currentUser||currentUser.plan!=='pro'){openPaywall();return;}
   if(!_renderTargetGeom()){showToast(_renderI18n().needsel);return;}
   const T=_renderI18n();
+  if(_conceptOn)_renderStyle='aerial'; // concepts default to the masterplan aesthetic
   _renderBuildStyles();
   _renderBuildPresets();
   document.getElementById('render-title').textContent=T.title;
@@ -7805,7 +7809,8 @@ async function _renderGenerate(){
       prevCam={center:map.getCenter(),zoom:map.getZoom(),bearing:map.getBearing(),pitch:map.getPitch()};
       // Oblique view for flat plots so terrain slope + surroundings read in the capture.
       const anyExtruded=_extrusionActive||_conceptOn;
-      const framePitch=anyExtruded?Math.max(map.getPitch(),50):55;
+      // Aerial masterplan wants a clean high-oblique bird's-eye framing.
+      const framePitch=(_renderStyle==='aerial')?58:(anyExtruded?Math.max(map.getPitch(),50):55);
       map.fitBounds([[bb[0],bb[1]],[bb[2],bb[3]]],{padding:anyExtruded?{top:150,bottom:70,left:70,right:70}:{top:150,bottom:60,left:60,right:60},bearing:map.getBearing(),pitch:framePitch,duration:650,essential:true});
     }catch(_){}
     await Promise.race([new Promise(r=>map.once('idle',r)), new Promise(r=>setTimeout(r,1600))]);

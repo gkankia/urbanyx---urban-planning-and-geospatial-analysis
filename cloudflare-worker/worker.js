@@ -343,7 +343,17 @@ export default {
             ? "A second image is provided as a MASK: white marks the buildable area (it already reflects a 3 m setback inside the plot boundary), black marks areas to leave unchanged. Place the new design ONLY inside the white area, matching its exact size, shape, orientation and scale; do not extend beyond it. Fill the 3 m setback ring between the white area and the plot boundary with landscaping only — lawn, trees, bushes, hedges and a fence. The mask is guidance only — do NOT reproduce the mask, any coloured region or any outline/boundary line in the output. Respect the existing ground slope and terrain (sit the design naturally on the sloping ground with correct grading), and integrate it with the surrounding buildings, streets and vegetation. Keep the same scale, perspective and camera angle so it is realistically proportioned. "
             : "Fit the new design entirely within the plot, use its 3 m perimeter for landscaping, respect the ground slope, and match the surrounding scale and perspective; keep the exact camera angle. "));
       let instruction;
-      if (style === "sketch") {
+      if (style === "aerial") {
+        // Premium real-estate aerial masterplan look, but still a LOCALIZED edit so the
+        // real surroundings stay untouched (the client also hard-clips to the plot).
+        instruction =
+          "This is a localized edit of an oblique aerial map view. Apply changes ONLY to " + subject + " and the plot's own 3 m landscaping setback. " +
+          "Within that area, produce a PREMIUM REAL-ESTATE AERIAL MASTERPLAN VISUALIZATION — the quality of a high-end property marketing render: warm golden-hour sunlight with long soft shadows, crisp high detail and photorealistic materials. " +
+          "Render the buildings as finished homes with pitched tiled or slate roofs and brick / light-render facades; add neat asphalt access roads, driveways and parking bays where appropriate, landscaped front gardens, a central lawn / green with footpaths, and clusters of mature trees and hedges. " +
+          keepGeom +
+          "CRITICAL: keep the ENTIRE area OUTSIDE the plot exactly as in the input — neighbouring buildings, roads, terrain, vegetation and lighting must remain pixel-for-pixel unchanged. Only match their perspective, scale, shadow direction and light so the plot blends in seamlessly. " +
+          "Design direction: " + enPrompt + ". Photorealistic, high-resolution professional aerial masterplan rendering.";
+      } else if (style === "sketch") {
         instruction = "Redraw " + subject + " as a hand-drawn architectural sketch — confident pen and pencil line work, light hatching for shade, loose expressive style on a clean white paper background, with the immediate surroundings suggested in light sketch lines. " +
           keepGeom + "Design direction: " + enPrompt + ". Architectural concept sketch, not photorealistic.";
       } else if (style === "watercolor") {
