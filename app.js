@@ -7776,6 +7776,7 @@ async function _renderGenerate(){
 
 // ── Generative concept site plan (editable 3D masses + greenery + trees) ──────
 let _conceptBldIds=[]; // extruded buildings created by the last concept
+let _conceptAreaIds=[]; // flat editable ground areas (pool, terrace, …) created by the concept
 let _conceptTreeData={type:'FeatureCollection',features:[]};
 let _conceptOn=false, _conceptSummary='', _conceptParcel=null;
 const _CONCEPT_USE={
@@ -7943,9 +7944,9 @@ function _ensureConceptDeco(){
   else _conceptDeco.rebuild();
 }
 function _clearConcept(){
-  // Remove concept buildings (created as extruded buildings)
-  _conceptBldIds.forEach(id=>{try{if(typeof _removeBuildingById==='function')_removeBuildingById(id);}catch(_){}});
-  _conceptBldIds=[];
+  // Remove concept buildings + area shapes (both created as registered shapes)
+  _conceptBldIds.concat(_conceptAreaIds).forEach(id=>{try{if(typeof _removeBuildingById==='function')_removeBuildingById(id);}catch(_){}});
+  _conceptBldIds=[]; _conceptAreaIds=[];
   _conceptTreeData={type:'FeatureCollection',features:[]};
   _conceptOn=false; _conceptSummary=''; _conceptParcel=null;
   const _cl=document.getElementById('concept-legend');if(_cl)_cl.style.display='none';
@@ -8051,16 +8052,27 @@ function _renderConcept(concept,parcel,bb,spanLng,spanLat){
       if(nb){nb.fillColor=col;nb.conceptUse=b.use;_conceptBldIds.push(nb.id);footprints.push(rect);}
     }catch(_){}
   });
-  // Flat ground features (pool, terrace, driveway, garden…) as coloured polygons
+  // Flat ground features (pool, terrace, driveway, garden…) — each registered as its own
+  // editable shape so the user can select / move / rotate it exactly like a building.
   const areaFeats=[];
   (concept.areas||[]).slice(0,10).forEach(a=>{
     try{
       const rect=mkRect(a,10,8);if(!rect)return;
-      rect.properties={color:_conceptUseColor(a.use),use:String(a.use||'')};
-      areaFeats.push(rect);
+      const use=String(a.use||'').toLowerCase();
+      const col=_conceptUseColor(use);
+      const nb=_registerBuilding(rect.geometry,{}); // flat, selectable/movable/rotatable
+      if(nb){
+        nb.fillColor=col;
+        nb.lineColor='rgba(0,0,0,0.45)';
+        nb.name=(_CONCEPT_USE[use]||[])[1]||'Area';
+        nb.conceptArea=use;
+        _conceptAreaIds.push(nb.id);
+        areaFeats.push(rect); // keep the geometry for the greenery cut-out
+      }
     }catch(_){}
   });
-  map.getSource('concept-areas')?.setData({type:'FeatureCollection',features:areaFeats});
+  _updateBldHighlights(); // paint the areas with their use colours
+  map.getSource('concept-areas')?.setData({type:'FeatureCollection',features:[]}); // now drawn as shapes
   // Green = parcel minus buildings and flat areas (auto-filled open landscaping)
   try{
     let green=turf.feature(parcel);
