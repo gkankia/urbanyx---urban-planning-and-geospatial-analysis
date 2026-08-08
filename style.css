@@ -771,6 +771,8 @@
   .geo-rot-handle:active { cursor:grabbing; }
   .geo-rot-handle img { display:block; }
   .geo-rot-pivot { width:12px; height:12px; border-radius:50%; background:#fff; border:2px solid #a78bfa; box-shadow:0 0 0 4px rgba(167,139,250,0.28); }
+  .geo-mov-handle { width:36px; height:36px; border-radius:50%; background:rgba(99,102,241,0.94); border:2px solid #fff; display:flex; align-items:center; justify-content:center; cursor:move; box-shadow:0 3px 12px rgba(0,0,0,0.45); }
+  .geo-mov-handle img { display:block; filter:brightness(0) invert(1); pointer-events:none; }
   .geo-rot-deg { position:absolute; top:-24px; left:50%; transform:translateX(-50%); background:rgba(15,15,15,0.92); color:#fff; font-size:0.64rem; font-weight:700; letter-spacing:0.03em; padding:2px 7px; border-radius:5px; white-space:nowrap; display:none; border:1px solid rgba(255,255,255,0.1); }
   #poly-result-panel { position:absolute; bottom:56px; right:16px; z-index:20; background:var(--glass-bg); backdrop-filter:var(--glass-blur); -webkit-backdrop-filter:var(--glass-blur); border:1px solid rgba(165,180,252,0.25); border-radius:var(--glass-radius); padding:14px 16px; color:white; font-size:0.8rem; width:230px; box-shadow:var(--glass-shadow); display:none; }
   #poly-result-panel .poly-count { font-size:1.6rem; font-weight:700; color:#a5b4fc; line-height:1; margin-bottom:2px; }

@@ -105,6 +105,7 @@ let _editingOrigGeom=null;
 let _geoTool=null;      // 'move' | 'erase' | 'rotate' | 'slice' | null
 let _paintOpen=false;
 let _rotOrig=null,_rotPivot=null,_rotBearing0=0,_rotRadiusKm=0,_rotHandle=null,_rotPivotM=null;
+let _movOrig=null,_movStart=null,_movHandle=null;
 let _sliceStart=null;
 // Clipboard + undo/redo history for drawn shapes
 let _geoClipboard=null;
@@ -1451,6 +1452,9 @@ function _activateBld(id){
   _updateMetricsExtrusion();
   _updateCombinedMetrics();
   _syncSelectionCards();
+  // If a transform tool is active, move its handle onto the newly-selected shape
+  if(_geoTool==='move'){_movDetach();_movShowHandle();}
+  else if(_geoTool==='rotate'){_rotDetach();_rotShowHandle();}
 }
 
 // Floating card for a user-drawn area of interest: Area, Perimeter, Type = User-added.
@@ -2515,6 +2519,7 @@ function _updateGeoToolbar(){
   const eb=document.getElementById('geo-edit-btn');
   if(eb)eb.classList.toggle('active',!!_editingBldId||(_extrusionActive&&_shapeEditMode));
   const er=document.getElementById('geo-erase-btn');if(er)er.classList.toggle('active',_geoTool==='erase');
+  const mv=document.getElementById('geo-move-btn');if(mv)mv.classList.toggle('active',_geoTool==='move');
   const ro=document.getElementById('geo-rotate-btn');if(ro)ro.classList.toggle('active',_geoTool==='rotate');
   const sl=document.getElementById('geo-slice-btn');if(sl)sl.classList.toggle('active',_geoTool==='slice');
   const pt=document.getElementById('geo-paint-btn');if(pt)pt.classList.toggle('active',_paintOpen);
@@ -2548,6 +2553,7 @@ function _geoCommitGeom(bld,geom){
 function _clearGeoTools(keep){
   if(_geoTool&&_geoTool!==keep){
     const prev=_geoTool;_geoTool=null;
+    if(prev==='move')_movDetach();
     if(prev==='rotate')_rotDetach();
     if(prev==='slice')_sliceDetach();
   }
@@ -2565,7 +2571,56 @@ function selectToolClicked(){
   _updateGeoToolbar();
 }
 
-// Move — drag the active shape anywhere on the map.
+// Move — drag a handle at the shape's centre to reposition the WHOLE shape. Works for
+// drawn areas, extruded buildings (the 3D rebuilds live) and concept buildings/areas —
+// anything registered as a shape. A centre handle avoids fighting the map pan gesture.
+function _translateGeom(geom,dLng,dLat){
+  const shift=ring=>ring.map(pt=>[pt[0]+dLng,pt[1]+dLat]);
+  if(geom.type==='Polygon')return {type:'Polygon',coordinates:geom.coordinates.map(shift)};
+  if(geom.type==='MultiPolygon')return {type:'MultiPolygon',coordinates:geom.coordinates.map(p=>p.map(shift))};
+  return geom;
+}
+function toggleMoveMode(){
+  if(!_activeBldId){showToast(lang==='ka'?'ჯერ მონიშნე ფიგურა':'Select a shape first');return;}
+  if(_geoTool==='move'){_clearGeoTools(null);return;}
+  _clearGeoTools('move');_geoTool='move';
+  _movShowHandle();
+  showToast(lang==='ka'?'გადაათრიე ცენტრალური სახელური ფიგურის გადასაადგილებლად':'Drag the centre handle to move the shape');
+  _updateGeoToolbar();
+}
+function _movShowHandle(){
+  const bld=_activeBld();if(!bld||!mapReady||typeof mapboxgl==='undefined')return;
+  const c=turf.centroid(turf.feature(bld.geojson)).geometry.coordinates;
+  const hel=document.createElement('div');hel.className='geo-mov-handle';
+  hel.innerHTML='<img src="analysis-logos/move.svg" width="22" height="22" draggable="false">';
+  _movHandle=new mapboxgl.Marker({element:hel,draggable:true}).setLngLat(c).addTo(map);
+  _movHandle.on('dragstart',_movHStart);
+  _movHandle.on('drag',_movHDrag);
+  _movHandle.on('dragend',_movHEnd);
+}
+function _movHStart(){
+  const bld=_activeBld();if(!bld)return;
+  _movOrig=JSON.parse(JSON.stringify(bld.geojson));
+  const hl=_movHandle.getLngLat();_movStart=[hl.lng,hl.lat];
+}
+function _movHDrag(){
+  if(!_movOrig||!_movStart)return;
+  const hl=_movHandle.getLngLat();
+  const moved=_translateGeom(_movOrig,hl.lng-_movStart[0],hl.lat-_movStart[1]);
+  _geoCommitGeom(_activeBld(),moved);
+}
+function _movHEnd(){
+  _movOrig=null;_movStart=null;
+  _histCommit();
+  // Keep the handle centred on the shape's new position.
+  const bld=_activeBld();if(bld&&_movHandle){try{_movHandle.setLngLat(turf.centroid(turf.feature(bld.geojson)).geometry.coordinates);}catch(_){}}
+  // A concept building's pitched roof lives in the deco layer — resync it after the move.
+  if(_conceptOn&&_conceptDeco)_conceptDeco.rebuild();
+}
+function _movDetach(){
+  if(_movHandle){try{_movHandle.remove();}catch(_){}_movHandle=null;}
+  _movOrig=null;_movStart=null;
+}
 
 // Floor custom color — apply a hex color to the selected floors' overrides.
 function _setFloorColorHex(hex){
@@ -2699,6 +2754,7 @@ function _rotHEnd(){
   const snapped=turf.destination(_rotPivot,_rotRadiusKm,cur).geometry.coordinates;
   _rotHandle.setLngLat(snapped);_rotUpdateLine(snapped);
   _histCommit();
+  if(_conceptOn&&_conceptDeco)_conceptDeco.rebuild();
 }
 function _rotDetach(){
   if(_rotHandle){try{_rotHandle.remove();}catch(_){}_rotHandle=null;}
