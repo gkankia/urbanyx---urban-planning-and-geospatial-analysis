@@ -7613,60 +7613,78 @@ function openRenderModal(){
   setTimeout(()=>document.getElementById('render-prompt').focus(),60);
 }
 function closeRenderModal(){document.getElementById('render-modal').classList.remove('open');}
-// Capture the active building region from the map canvas as a PNG reference.
+function _ringOf(geom){return geom.type==='Polygon'?geom.coordinates[0]:geom.coordinates[0][0];}
+function _convexHull(ps){
+  if(ps.length<3)return ps.slice();
+  const p=ps.slice().sort((a,b)=>a.x-b.x||a.y-b.y);
+  const cr=(o,a,b)=>(a.x-o.x)*(b.y-o.y)-(a.y-o.y)*(b.x-o.x);
+  const lo=[];for(const q of p){while(lo.length>=2&&cr(lo[lo.length-2],lo[lo.length-1],q)<=0)lo.pop();lo.push(q);}
+  const up=[];for(let i=p.length-1;i>=0;i--){const q=p[i];while(up.length>=2&&cr(up[up.length-2],up[up.length-1],q)<=0)up.pop();up.push(q);}
+  lo.pop();up.pop();return lo.concat(up);
+}
+// Approx on-screen pixel height of a vertical H-metre line at the current camera.
+function _estBldPixelHeight(cenLL,H){
+  try{const lat=cenLL[1],z=map.getZoom();
+    const mpp=40075016.686*Math.cos(lat*Math.PI/180)/(512*Math.pow(2,z));
+    return Math.max(0,(H/mpp)*Math.sin(map.getPitch()*Math.PI/180));
+  }catch(_){return 0;}
+}
+// Capture the target region as a PNG + a design mask + a clip polygon that encloses
+// the plot AND (when extruded) the 3D volume, so the render can be composited strictly
+// inside it while everything outside stays the untouched original.
 function _captureBuildingPNG(){
   const src=map.getCanvas();
   const rx=src.width/(src.clientWidth||src.width), ry=src.height/(src.clientHeight||src.height);
   const extruded=!!_extrusionActive;
-  let sx=0,sy=0,sw=src.width,sh=src.height,pts=null;
+  const plotGeom=_dbParcelGeoJSON||_renderTargetGeom();   // the plot (parcel or drawn area)
+  const bldGeom=_renderTargetGeom();                       // the building/design footprint
+  let sx=0,sy=0,sw=src.width,sh=src.height,clipSrc=null;
   try{
-    const geom=_renderTargetGeom();
-    const ring=geom.type==='Polygon'?geom.coordinates[0]:geom.coordinates[0][0];
-    pts=ring.map(pt=>{const p=map.project(pt);return {x:p.x*rx,y:p.y*ry};});
+    const plotPts=_ringOf(plotGeom).map(pt=>{const p=map.project(pt);return {x:p.x*rx,y:p.y*ry};});
+    clipSrc=plotPts.slice();
+    let topDy=0;
+    if(extruded){
+      const cen=turf.centroid(turf.feature(bldGeom)).geometry.coordinates;
+      topDy=_estBldPixelHeight(cen,(_extrusionHeight||12))*1.35+18*ry;
+      _ringOf(bldGeom).forEach(pt=>{const p=map.project(pt);clipSrc.push({x:p.x*rx,y:p.y*ry-topDy});});
+    }
     let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
-    pts.forEach(p=>{if(p.x<minX)minX=p.x;if(p.y<minY)minY=p.y;if(p.x>maxX)maxX=p.x;if(p.y>maxY)maxY=p.y;});
+    clipSrc.forEach(p=>{if(p.x<minX)minX=p.x;if(p.y<minY)minY=p.y;if(p.x>maxX)maxX=p.x;if(p.y>maxY)maxY=p.y;});
     const w=maxX-minX,h=maxY-minY;
-    // Context around the target; extra headroom above only when it's an extruded 3D mass.
-    const padX=w*0.8+90*rx, padTop=(extruded?h*1.5:h*0.6)+90*ry, padBot=h*0.7+70*ry;
+    const padX=w*0.5+80*rx, padTop=h*0.35+70*ry, padBot=h*0.4+70*ry;
     sx=Math.max(0,minX-padX); sy=Math.max(0,minY-padTop);
     const ex=Math.min(src.width,maxX+padX), ey=Math.min(src.height,maxY+padBot);
     sw=ex-sx; sh=ey-sy;
-    if(sw<60||sh<60){sx=0;sy=0;sw=src.width;sh=src.height;pts=null;}
-  }catch(_){sx=0;sy=0;sw=src.width;sh=src.height;pts=null;}
+    if(sw<60||sh<60){sx=0;sy=0;sw=src.width;sh=src.height;clipSrc=null;}
+  }catch(_){sx=0;sy=0;sw=src.width;sh=src.height;clipSrc=null;}
   const outScale=Math.min(1,1280/sw);
   const cw=Math.max(1,Math.round(sw*outScale)), ch=Math.max(1,Math.round(sh*outScale));
-  // Clean scene image (no markings drawn on it, so nothing leaks into the output)
+  // Clean scene image (nothing drawn on it → nothing leaks into the output)
   const c=document.createElement('canvas');c.width=cw;c.height=ch;
   c.getContext('2d').drawImage(src,sx,sy,sw,sh,0,0,cw,ch);
   const image=c.toDataURL('image/png');
-  // Flat plot: build a SEPARATE mask (white = buildable area, black = keep). The
-  // buildable area is the plot inset by the 3 m setback so the building respects it.
+  // Design mask (white = buildable area = plot inset 3 m). Guides where the building goes;
+  // the 3 m setback ring is left for landscaping. Sent only for flat plots.
   let mask=null;
   if(!extruded){
     let mpts=null;
     try{
-      const g=_renderTargetGeom();
-      const ins=turf.buffer(turf.feature(g),-3,{units:'meters'});
-      const ig=ins&&ins.geometry;
-      const mring=ig?(ig.type==='Polygon'?ig.coordinates[0]:ig.coordinates[0][0]):null;
-      if(mring&&mring.length>2)mpts=mring.map(pt=>{const p=map.project(pt);return {x:p.x*rx,y:p.y*ry};});
+      const ins=turf.buffer(turf.feature(plotGeom),-3,{units:'meters'});
+      const ig=ins&&ins.geometry; const mring=ig?_ringOf(ig):null;
+      if(mring&&mring.length>2)mpts=mring.map(pt=>{const p=map.project(pt);return {x:(p.x*rx-sx)*outScale,y:(p.y*ry-sy)*outScale};});
     }catch(_){}
-    if(!mpts)mpts=pts; // setback collapsed (tiny plot) → use full plot
     if(mpts&&mpts.length>2){
-      const mc=document.createElement('canvas');mc.width=cw;mc.height=ch;
-      const mx=mc.getContext('2d');
+      const mc=document.createElement('canvas');mc.width=cw;mc.height=ch;const mx=mc.getContext('2d');
       mx.fillStyle='#000';mx.fillRect(0,0,cw,ch);
-      mx.beginPath();
-      mpts.forEach((p,i)=>{const X=(p.x-sx)*outScale,Y=(p.y-sy)*outScale;i?mx.lineTo(X,Y):mx.moveTo(X,Y);});
-      mx.closePath();mx.fillStyle='#fff';mx.fill();
-      mask=mc.toDataURL('image/png');
+      mx.beginPath();mpts.forEach((p,i)=>i?mx.lineTo(p.x,p.y):mx.moveTo(p.x,p.y));mx.closePath();
+      mx.fillStyle='#fff';mx.fill();mask=mc.toDataURL('image/png');
     }
   }
-  // Clip polygon (full plot, in output-canvas coords) — used to composite the render
-  // strictly inside the parcel so the outside stays untouched (flat plots only).
+  // Composite clip: plot polygon (+ 3D volume silhouette when extruded), in output coords.
   let clip=null;
-  if(!extruded&&pts&&pts.length>2){
-    clip={w:cw,h:ch,pts:pts.map(p=>({x:(p.x-sx)*outScale,y:(p.y-sy)*outScale}))};
+  if(clipSrc&&clipSrc.length>2){
+    const hull=_convexHull(clipSrc);
+    clip={w:cw,h:ch,pts:hull.map(p=>({x:(p.x-sx)*outScale,y:(p.y-sy)*outScale}))};
   }
   return {image,mask,clip};
 }
@@ -7725,9 +7743,9 @@ async function _renderGenerate(){
       body:JSON.stringify({action:'render',image:cap.image,mask:cap.mask,prompt,lang,style:_renderStyle,extruded:!!_extrusionActive})});
     const data=await res.json().catch(()=>({}));
     if(!res.ok||!data.image){status.classList.add('err');status.textContent=(data&&data.error)?data.error:T.err;goBtn.disabled=false;againBtn.disabled=false;return;}
-    // Photorealistic on a flat plot: keep the render strictly inside the parcel; leave outside untouched.
+    // All styles: keep the render strictly inside the plot (+3D volume); outside stays untouched original.
     let finalImage=data.image;
-    if(_renderStyle==='photoreal'&&cap.clip){finalImage=await _renderCompositeInside(cap.image,data.image,cap.clip);}
+    if(cap.clip){finalImage=await _renderCompositeInside(cap.image,data.image,cap.clip);}
     const outImg=document.getElementById('render-img');outImg.src=finalImage;
     document.getElementById('render-dl-btn').href=finalImage;
     document.getElementById('render-result').style.display='block';
@@ -7738,6 +7756,147 @@ async function _renderGenerate(){
     status.classList.add('err');status.textContent=T.err;
   }
   goBtn.disabled=false; againBtn.disabled=false;
+}
+
+// ── Generative concept site plan (editable 3D masses + greenery + trees) ──────
+let _conceptBldIds=[]; // extruded buildings created by the last concept
+let _conceptTreeData={type:'FeatureCollection',features:[]};
+function _conceptI18n(){
+  const ka=lang==='ka';
+  return {
+    title: ka?'კონცეფციის გენერაცია':'Generate concept',
+    sub: ka?'აღწერე განაშენიანება — აპლიკაცია განათავსებს რედაქტირებად 3D მოცულობებს, გამწვანებასა და ხეებს ნაკვეთში, ზონირების ლიმიტების დაცვით.':'Describe the development — the app places editable 3D masses, greenery and trees within the parcel, respecting the zoning limits.',
+    ph: ka?'მაგ.: ორი საცხოვრებელი კორპუსი, 6 სართული, ცენტრალური მწვანე ეზო ხეებით':'e.g. two residential blocks, 6 floors, central green courtyard with trees',
+    go: ka?'გენერაცია':'Generate',
+    needsel: ka?'ჯერ აირჩიე ნაკვეთი':'Select a parcel first',
+    working: ka?'იგეგმება… (~5–10 წმ)':'Planning… (~5–10s)',
+    err: ka?'კონცეფცია ვერ შეიქმნა':'Could not generate a concept',
+    done: ka?'კონცეფცია დამატებულია — შენობები რედაქტირებადია, ხეზე დაჭერით წაშლი':'Concept added — buildings are editable; click a tree to remove it'
+  };
+}
+function openConceptModal(){
+  if(!currentUser||currentUser.plan!=='pro'){openPaywall();return;}
+  const g=_dbParcelGeoJSON||_currentParcelGeoJSON;
+  if(!g){showToast(_conceptI18n().needsel);return;}
+  const T=_conceptI18n();
+  document.getElementById('concept-title').textContent=T.title;
+  document.getElementById('concept-sub').textContent=T.sub;
+  document.getElementById('concept-prompt').placeholder=T.ph;
+  document.getElementById('concept-go-btn').textContent=T.go;
+  const st=document.getElementById('concept-status');st.textContent='';st.classList.remove('err');
+  document.getElementById('concept-modal').classList.add('open');
+  setTimeout(()=>document.getElementById('concept-prompt').focus(),60);
+}
+function closeConceptModal(){document.getElementById('concept-modal').classList.remove('open');}
+function _conceptEnsureLayers(){
+  if(!mapReady)return;
+  if(!map.getSource('concept-green'))map.addSource('concept-green',{type:'geojson',data:{type:'FeatureCollection',features:[]}});
+  if(!map.getLayer('concept-green-lyr'))map.addLayer({id:'concept-green-lyr',type:'fill',source:'concept-green',paint:{'fill-color':'#4ade80','fill-opacity':0.32}});
+  if(!map.getSource('concept-trees'))map.addSource('concept-trees',{type:'geojson',data:{type:'FeatureCollection',features:[]}});
+  if(!map.getLayer('concept-trees-lyr')){
+    map.addLayer({id:'concept-trees-lyr',type:'fill-extrusion',source:'concept-trees',paint:{'fill-extrusion-color':'#16a34a','fill-extrusion-height':['coalesce',['get','h'],6],'fill-extrusion-base':0,'fill-extrusion-opacity':0.9}});
+    map.on('click','concept-trees-lyr',_conceptTreeClick);
+    map.on('mouseenter','concept-trees-lyr',()=>{if(map.getCanvas())map.getCanvas().style.cursor='pointer';});
+    map.on('mouseleave','concept-trees-lyr',()=>{if(map.getCanvas())map.getCanvas().style.cursor='';});
+  }
+}
+function _conceptTreeClick(e){
+  if(!e.features||!e.features.length)return;
+  e.originalEvent&&(e.originalEvent._bldHandled=true);
+  const id=e.features[0].properties&&e.features[0].properties.tid;
+  if(id==null)return;
+  _conceptTreeData.features=_conceptTreeData.features.filter(f=>f.properties.tid!==id);
+  map.getSource('concept-trees')?.setData(_conceptTreeData);
+}
+function _clearConcept(){
+  // Remove concept buildings (created as extruded buildings)
+  _conceptBldIds.forEach(id=>{try{if(typeof _removeBuildingById==='function')_removeBuildingById(id);}catch(_){}});
+  _conceptBldIds=[];
+  _conceptTreeData={type:'FeatureCollection',features:[]};
+  if(mapReady){
+    map.getSource('concept-green')?.setData({type:'FeatureCollection',features:[]});
+    map.getSource('concept-trees')?.setData(_conceptTreeData);
+  }
+}
+async function _conceptGenerate(){
+  if(!currentUser||currentUser.plan!=='pro'){openPaywall();return;}
+  const T=_conceptI18n();
+  const parcel=_dbParcelGeoJSON||_currentParcelGeoJSON;
+  if(!parcel){showToast(T.needsel);return;}
+  const prompt=document.getElementById('concept-prompt').value.trim();
+  const status=document.getElementById('concept-status');
+  const goBtn=document.getElementById('concept-go-btn');
+  status.classList.remove('err');status.innerHTML='<span class="spinner-sm"></span>'+T.working;goBtn.disabled=true;
+  try{
+    const bb=turf.bbox(turf.feature(parcel)); // [minLng,minLat,maxLng,maxLat]
+    const spanLng=bb[2]-bb[0], spanLat=bb[3]-bb[1];
+    const widthM=turf.distance([bb[0],bb[1]],[bb[2],bb[1]])*1000;
+    const heightM=turf.distance([bb[0],bb[1]],[bb[0],bb[3]])*1000;
+    const constraints={widthM,heightM,maxFootprintM2:(typeof _maxFootprintM2==='number'?_maxFootprintM2:null),maxFloorAreaM2:(typeof _maxFloorAreaM2==='number'?_maxFloorAreaM2:null),maxHeightM:(typeof _zoneMaxHeightM==='function'?_zoneMaxHeightM():null)};
+    const res=await fetch(`${PROXY}/concept`,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action:'concept',prompt,lang,constraints})});
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok||!Array.isArray(data.buildings)){status.classList.add('err');status.textContent=(data&&data.error)?data.error:T.err;goBtn.disabled=false;return;}
+    _renderConcept(data,parcel,bb,spanLng,spanLat);
+    closeConceptModal();
+    showToast(T.done,4500);
+    if(typeof logFeatureUse==='function')logFeatureUse('ai_concept').catch(()=>{});
+  }catch(e){status.classList.add('err');status.textContent=T.err;}
+  goBtn.disabled=false;
+}
+function _renderConcept(concept,parcel,bb,spanLng,spanLat){
+  _clearConcept();
+  _conceptEnsureLayers();
+  const nx2lng=nx=>bb[0]+Math.min(1,Math.max(0,nx))*spanLng;
+  const ny2lat=ny=>bb[1]+Math.min(1,Math.max(0,ny))*spanLat;
+  // Buildable area = parcel inset 3 m (clip buildings to it so they respect the setback)
+  let inset=null;try{inset=turf.buffer(turf.feature(parcel),-3,{units:'meters'});}catch(_){}
+  const clipTo=inset&&inset.geometry?inset:turf.feature(parcel);
+  const maxH=(typeof _zoneMaxHeightM==='function'&&_zoneMaxHeightM())||null;
+  const footprints=[];
+  (concept.buildings||[]).slice(0,12).forEach(b=>{
+    try{
+      const cx=nx2lng(+b.cx), cy=ny2lat(+b.cy);
+      const halfW=Math.max(3,(+b.w||12))/2/1000, halfD=Math.max(3,(+b.d||12))/2/1000; // km
+      const N=turf.destination([cx,cy],halfD,0), S=turf.destination([cx,cy],halfD,180);
+      const ring=[
+        turf.destination(N,halfW,270).geometry.coordinates,
+        turf.destination(N,halfW,90).geometry.coordinates,
+        turf.destination(S,halfW,90).geometry.coordinates,
+        turf.destination(S,halfW,270).geometry.coordinates
+      ];ring.push(ring[0]);
+      let rect=turf.polygon([ring]);
+      if(b.rot)rect=turf.transformRotate(rect,+b.rot,{pivot:[cx,cy]});
+      let fit=rect;try{const cl=turf.intersect(rect,clipTo);if(cl)fit=cl;else return;}catch(_){}
+      const geom=fit.geometry.type==='MultiPolygon'?{type:'Polygon',coordinates:fit.geometry.coordinates[0]}:fit.geometry;
+      let floors=Math.max(1,Math.round(+b.floors||3));
+      if(maxH)floors=Math.min(floors,Math.max(1,Math.floor(maxH/3)));
+      const use=['residential','commercial','office','parking','amenity'].includes(b.use)?b.use:null;
+      const fo=use?{0:{useType:use}}:{};
+      const nb=_registerBuilding(geom,{extrusionActive:true,extrusionHeight:floors*3,floorOverrides:fo});
+      if(nb){_conceptBldIds.push(nb.id);footprints.push(turf.feature(geom));}
+    }catch(_){}
+  });
+  // Green = parcel minus the building footprints (auto-filled open space)
+  try{
+    let green=turf.feature(parcel);
+    footprints.forEach(f=>{try{const d=turf.difference(green,f);if(d)green=d;}catch(_){}});
+    map.getSource('concept-green')?.setData(green);
+  }catch(_){}
+  // Trees → small 3D green cylinders, kept inside the parcel and off the buildings
+  const treeFeats=[];let tid=0;
+  (concept.trees||[]).slice(0,24).forEach(t=>{
+    try{
+      const pt=[nx2lng(+t.x),ny2lat(+t.y)];
+      if(!turf.booleanPointInPolygon(pt,turf.feature(parcel)))return;
+      if(footprints.some(f=>{try{return turf.booleanPointInPolygon(pt,f);}catch(_){return false;}}))return;
+      const circ=turf.circle(pt,0.0028,{steps:10,units:'kilometers'}); // ~2.8 m radius
+      circ.properties={tid:tid++,h:6};
+      treeFeats.push(circ);
+    }catch(_){}
+  });
+  _conceptTreeData={type:'FeatureCollection',features:treeFeats};
+  map.getSource('concept-trees')?.setData(_conceptTreeData);
 }
 
 // ── Parse HTML ────────────────────────────────────────────────────────────────

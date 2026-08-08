@@ -50,7 +50,10 @@
       <div class="pfc-row"><span class="pfc-lbl" id="pfc-lbl-owner">Owner</span><span class="pfc-val" id="pfc-owner">—</span></div>
       <div id="pfc-ext-row" style="display:none;margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.07)"></div>
       <div id="pfc-render-row" style="display:none;margin-top:6px">
-        <button id="pfc-render-btn" onclick="openRenderModal()" style="width:100%;padding:6px;border-radius:6px;border:1px solid rgba(167,139,250,0.35);background:rgba(167,139,250,0.14);color:#c4b5fd;font-size:0.7rem;font-weight:600;font-family:inherit;cursor:pointer">Render / design</button>
+        <div style="display:flex;gap:6px">
+          <button id="pfc-render-btn" onclick="openRenderModal()" style="flex:1;padding:6px;border-radius:6px;border:1px solid rgba(167,139,250,0.35);background:rgba(167,139,250,0.14);color:#c4b5fd;font-size:0.7rem;font-weight:600;font-family:inherit;cursor:pointer">Render / design</button>
+          <button id="pfc-concept-btn" onclick="openConceptModal()" style="flex:1;padding:6px;border-radius:6px;border:1px solid rgba(52,211,153,0.35);background:rgba(52,211,153,0.14);color:#6ee7b7;font-size:0.7rem;font-weight:600;font-family:inherit;cursor:pointer">Generate concept</button>
+        </div>
       </div>
       <div id="pfc-nearby-row" style="display:none;margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.07)">
         <button id="pfc-nearby-run-btn" onclick="_nearbyRunClicked()" style="width:100%;padding:6px;border-radius:6px;border:1px solid rgba(99,102,241,0.3);background:rgba(99,102,241,0.12);color:#a5b4fc;font-size:0.7rem;font-weight:600;font-family:inherit;cursor:pointer">Run nearby analysis</button>
@@ -508,6 +511,18 @@
   <div id="geo-paint-popover" style="display:none">
     <div class="geo-paint-row"><span>Fill</span><input type="color" id="geo-fill-color" value="#6366f1" oninput="_geoApplyFill(this.value)"></div>
     <div class="geo-paint-row"><span>Outline</span><input type="color" id="geo-line-color" value="#a5b4fc" oninput="_geoApplyLine(this.value)"></div>
+  </div>
+</div>
+
+<!-- Generative concept modal -->
+<div class="modal-overlay" id="concept-modal" onclick="if(event.target===this)closeConceptModal()">
+  <div class="modal-box" id="concept-box">
+    <button class="modal-close" onclick="closeConceptModal()">✕</button>
+    <div class="modal-title" id="concept-title">Generate concept</div>
+    <div id="concept-sub">Describe the development — the app places editable 3D masses, greenery and trees within the parcel, respecting the zoning limits.</div>
+    <textarea id="concept-prompt" rows="3" placeholder="e.g. two residential blocks, 6 floors, central green courtyard with trees"></textarea>
+    <div id="concept-actions"><button id="concept-go-btn" onclick="_conceptGenerate()">Generate</button></div>
+    <div id="concept-status"></div>
   </div>
 </div>
 

@@ -333,10 +333,10 @@ export default {
         ? "the extruded building massing in the centre of the image"
         : (hasMask ? "the plot indicated by the WHITE area of the second (mask) image" : "the plot in the centre of the image");
       const keepGeom = isExtruded
-        ? "Preserve the building's footprint shape, proportions, number of floors, overall height and the exact camera angle. "
+        ? "Preserve the building's footprint shape, proportions, number of floors, overall height and the exact camera angle — do not distort its proportions. Use the 3 m setback strip between the building and the plot boundary for landscaping only — lawn, trees, bushes, hedges and a fence. Respect the ground slope and integrate with the surroundings. "
         : (hasMask
-            ? "A second image is provided as a MASK: white marks the buildable area (it already reflects a 3 m setback inside the plot boundary), black marks areas to leave unchanged. Place the new design ONLY inside the white area, matching its exact size, shape, orientation and scale; do not extend beyond it or over the 3 m setback margin. The mask is guidance only — do NOT reproduce the mask, any coloured region or any outline/boundary line in the output. Respect the existing ground slope and terrain shown in the scene (sit the building naturally on the sloping ground, with correct grading), and integrate it with the surrounding buildings, streets and vegetation. Keep the same scale, perspective and camera angle as the scene so it is realistically proportioned. "
-            : "Fit the new design entirely within the plot at the centre, respect the ground slope, and match the surrounding scale and perspective; keep the exact camera angle. ");
+            ? "A second image is provided as a MASK: white marks the buildable area (it already reflects a 3 m setback inside the plot boundary), black marks areas to leave unchanged. Place the new design ONLY inside the white area, matching its exact size, shape, orientation and scale; do not extend beyond it. Fill the 3 m setback ring between the white area and the plot boundary with landscaping only — lawn, trees, bushes, hedges and a fence. The mask is guidance only — do NOT reproduce the mask, any coloured region or any outline/boundary line in the output. Respect the existing ground slope and terrain (sit the design naturally on the sloping ground with correct grading), and integrate it with the surrounding buildings, streets and vegetation. Keep the same scale, perspective and camera angle so it is realistically proportioned. "
+            : "Fit the new design entirely within the plot, use its 3 m perimeter for landscaping, respect the ground slope, and match the surrounding scale and perspective; keep the exact camera angle. ");
       let instruction;
       if (style === "sketch") {
         instruction = "Redraw " + subject + " as a hand-drawn architectural sketch — confident pen and pencil line work, light hatching for shade, loose expressive style on a clean white paper background, with the immediate surroundings suggested in light sketch lines. " +
@@ -351,7 +351,7 @@ export default {
         // photoreal (default) — localized edit, surroundings untouched
         instruction =
           "This is a localized image edit of an aerial/oblique map view. " +
-          "Apply changes ONLY to " + subject + " and the ground immediately around it (about 5 metres). " +
+          "Apply changes ONLY to " + subject + " and the plot's own 3 m landscaping setback. " +
           "Create a photorealistic result there following the design direction — realistic materials, planting, paving, lighting and soft natural shadows as appropriate. " +
           keepGeom +
           "CRITICAL: keep the ENTIRE rest of the image exactly as in the input — neighbouring buildings, roads, pavements, vegetation, cars, terrain, sky and overall lighting must remain pixel-for-pixel unchanged. Do NOT restyle, relight or regenerate the background. " +
@@ -377,6 +377,68 @@ export default {
         return jsonRes({ image: `data:image/png;base64,${outB64}`, prompt: enPrompt });
       } catch (e) {
         return jsonRes({ error: "Render error", detail: String(e).slice(0, 200) }, 502);
+      }
+    }
+
+    // ── Generative concept site plan (Gemini structured JSON) ─────────────────
+    // Body: { action:"concept", prompt, lang, constraints:{ widthM, heightM, maxFootprintM2,
+    //   maxFloorAreaM2, maxHeightM } }  → returns { summary, buildings:[...], trees:[...] }
+    // Coordinates are normalized 0..1 in the parcel bbox (x: west→east, y: south→north).
+    if (action === "concept") {
+      const jsonRes = (o, s = 200) => new Response(JSON.stringify(o), {
+        status: s, headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+      const key = env.GEMINI_API_KEY;
+      if (!key) return jsonRes({ error: "Concept generation is not configured (missing GEMINI_API_KEY)." }, 500);
+      let { prompt, lang, constraints } = body;
+      prompt = String(prompt || "").slice(0, 800).trim();
+      const cs = constraints || {};
+      const GLM = "https://generativelanguage.googleapis.com/v1beta/models";
+
+      // Translate Georgian brief → English
+      let enPrompt = prompt;
+      if (prompt && (lang === "ka" || /[Ⴀ-ჿ]/.test(prompt))) {
+        try {
+          const tr = await fetch(`${GLM}/gemini-2.5-flash:generateContent?key=${key}`, {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ contents: [{ parts: [{ text: `Translate to concise English, return only the translation:\n\n${prompt}` }] }] })
+          });
+          if (tr.ok) { const tj = await tr.json(); const t = (tj?.candidates?.[0]?.content?.parts || []).map(p => p.text || "").join("").trim(); if (t) enPrompt = t; }
+        } catch (_) {}
+      }
+
+      const maxFloors = cs.maxHeightM ? Math.max(1, Math.floor(cs.maxHeightM / 3)) : 12;
+      const instruction =
+        "You are an urban design assistant proposing a concept site layout for one parcel. " +
+        "Coordinate space: normalized 0..1 within the parcel's bounding box, where x=0 is west, x=1 east, y=0 south, y=1 north. " +
+        `The parcel is roughly ${Math.round(cs.widthM||60)} m (E–W) by ${Math.round(cs.heightM||60)} m (N–S). ` +
+        (cs.maxFootprintM2 ? `Total building footprint must not exceed ${Math.round(cs.maxFootprintM2)} m² (K1). ` : "") +
+        (cs.maxFloorAreaM2 ? `Total floor area should not exceed ${Math.round(cs.maxFloorAreaM2)} m² (K2). ` : "") +
+        `Maximum building height is about ${Math.round(cs.maxHeightM||maxFloors*3)} m (~${maxFloors} floors). ` +
+        "Keep ALL buildings within the central ~85% of the parcel (leave a setback margin for landscaping). " +
+        "Leave generous open space and place 6–20 trees in the open areas, never on top of buildings. " +
+        (enPrompt ? `Design brief: ${enPrompt}. ` : "Design a sensible mixed development. ") +
+        "Respond ONLY as JSON with this shape: " +
+        `{"summary": string, "buildings": [{"cx": number, "cy": number, "w": number, "d": number, "rot": number, "floors": integer, "use": "residential"|"commercial"|"office"|"mixed"|"amenity"}], "trees": [{"x": number, "y": number}]}. ` +
+        "cx/cy are the building centre (normalized 0..1); w and d are width and depth in metres; rot is rotation in degrees; x/y are normalized tree positions.";
+      try {
+        const gr = await fetch(`${GLM}/gemini-2.5-flash:generateContent?key=${key}`, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: instruction }] }],
+            generationConfig: { responseMimeType: "application/json", temperature: 0.7 }
+          })
+        });
+        if (!gr.ok) { const et = await gr.text(); return jsonRes({ error: "Concept failed", detail: et.slice(0, 400) }, 502); }
+        const gj = await gr.json();
+        const txt = (gj?.candidates?.[0]?.content?.parts || []).map(p => p.text || "").join("").trim();
+        let concept;
+        try { concept = JSON.parse(txt); }
+        catch (_) { const m = txt.match(/\{[\s\S]*\}/); concept = m ? JSON.parse(m[0]) : null; }
+        if (!concept || !Array.isArray(concept.buildings)) return jsonRes({ error: "Model returned no usable layout." }, 502);
+        return jsonRes(concept);
+      } catch (e) {
+        return jsonRes({ error: "Concept error", detail: String(e).slice(0, 200) }, 502);
       }
     }
 

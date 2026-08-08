@@ -394,6 +394,16 @@
   .measure-fly-btn:hover { background:rgba(34,211,238,0.14); border-color:rgba(34,211,238,0.4); }
   .measure-fly-btn.active { background:rgba(34,211,238,0.2); border-color:rgba(34,211,238,0.55); color:#fff; }
   #measure-tip { position:fixed; z-index:9998; background:rgba(8,20,24,0.95); color:#a5f3fc; font-size:0.72rem; font-weight:700; letter-spacing:0.02em; padding:4px 9px; border-radius:6px; border:1px solid rgba(34,211,238,0.4); box-shadow:0 3px 14px rgba(0,0,0,0.5); pointer-events:none; white-space:nowrap; }
+  #concept-box { max-width:460px; width:92vw; }
+  #concept-sub { font-size:0.72rem; color:rgba(255,255,255,0.5); margin:2px 0 12px; line-height:1.5; }
+  #concept-prompt { width:100%; box-sizing:border-box; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.14); border-radius:8px; color:#fff; font-family:inherit; font-size:0.8rem; padding:9px 11px; resize:vertical; min-height:62px; }
+  #concept-prompt:focus { outline:none; border-color:rgba(52,211,153,0.6); }
+  #concept-actions { margin-top:12px; }
+  #concept-go-btn { background:rgba(52,211,153,0.9); color:#062018; border:none; border-radius:8px; padding:9px 16px; font-size:0.78rem; font-weight:700; font-family:inherit; cursor:pointer; transition:background 0.15s; }
+  #concept-go-btn:hover { background:#34d399; }
+  #concept-go-btn:disabled { opacity:0.5; cursor:default; }
+  #concept-status { margin-top:12px; font-size:0.74rem; color:rgba(255,255,255,0.6); min-height:16px; display:flex; align-items:center; gap:8px; }
+  #concept-status.err { color:rgba(248,140,140,0.95); }
   #render-box { max-width:460px; width:92vw; }
   #render-sub { font-size:0.72rem; color:rgba(255,255,255,0.5); margin:2px 0 10px; line-height:1.5; }
   #render-styles { margin:0 0 12px; }
