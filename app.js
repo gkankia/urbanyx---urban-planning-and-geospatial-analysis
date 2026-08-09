@@ -133,6 +133,13 @@ function _analysisPanelPos(width){
   }
   return {left:68,top:90};
 }
+// Keep an already-open sub-analysis panel glued to the floating card (e.g. while dragging).
+function _repositionOpenAnalysisPanels(){
+  const pro=document.getElementById('pro-analysis-card');
+  if(pro&&pro.style.display==='block'){const p=_analysisPanelPos(262);pro.style.left=p.left+'px';pro.style.top=p.top+'px';pro.style.maxHeight='calc(100vh - '+p.top+'px - 12px)';}
+  const zon=document.getElementById('zoning-panel-card');
+  if(zon&&zon.style.display==='block'){const z=_analysisPanelPos(280);zon.style.left=z.left+'px';zon.style.top=z.top+'px';}
+}
 // Unified click for the in-card analysis buttons — blocks locked ones with a hint.
 function _pfcCatClick(key,el){
   if(el&&el.classList.contains('pfc-cat-locked')){
@@ -7326,6 +7333,7 @@ function _initParcelCardDrag(){
     ny=Math.max(4,Math.min(mr.height-ch-4,ny));
     card.style.left=nx+'px'; card.style.top=ny+'px';
     _parcelCardDragged=true;
+    _repositionOpenAnalysisPanels(); // keep any open sub-analysis panel next to the card
   }
   function onDU(){
     dragging=false;
@@ -7341,6 +7349,7 @@ function _updateParcelCardPos(){
   const cw=card.offsetWidth||200, ch=card.offsetHeight||120;
   card.style.left=(pt.x+88)+'px';
   card.style.top=(pt.y-ch/2)+'px';
+  _repositionOpenAnalysisPanels();
 }
 function toggleParcelCardMin(){
   const card=document.getElementById('parcel-float-card');
