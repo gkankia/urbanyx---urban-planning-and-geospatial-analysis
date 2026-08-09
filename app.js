@@ -71,6 +71,19 @@ function _saveProCounts(uid){
   localStorage.setItem("prA_"+uid,String(_proAnalysisCount));
 }
 function _isLargeParcel(){return(_currentParcelAreaM2||0)>=5000;}
+// Format a date as "9 აგვისტო 2026" (KA) / "9 August 2026" (EN) without relying on the
+// browser's ka-GE Intl support (which is missing in some embedded webviews).
+const _KA_MONTHS=['იანვარი','თებერვალი','მარტი','აპრილი','მაისი','ივნისი','ივლისი','აგვისტო','სექტემბერი','ოქტომბერი','ნოემბერი','დეკემბერი'];
+const _EN_MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+function _fmtDateLocalized(input){
+  if(!input&&input!==0)return '';
+  let y,m,day;
+  const iso=String(input).match(/^(\d{4})-(\d{1,2})-(\d{1,2})/); // avoid TZ shift for date-only strings
+  if(iso){y=+iso[1];m=+iso[2]-1;day=+iso[3];}
+  else{const d=new Date(input);if(isNaN(d))return String(input);y=d.getFullYear();m=d.getMonth();day=d.getDate();}
+  if(m<0||m>11)return String(input);
+  return lang==='ka'?`${day} ${_KA_MONTHS[m]} ${y}`:`${day} ${_EN_MONTHS[m]} ${y}`;
+}
 // Has the accessibility isochrone been generated?
 function _hasIsochrone(){return !!(_isoData&&_isoData.features&&_isoData.features.length);}
 // In-card analysis grid. ≥5,000 m² → everything active. <5,000 m² → only the Isochrone
@@ -7382,9 +7395,7 @@ function showParcelPopup(lngLat){
   const _regRow=document.getElementById('pfc-reg-row'), _regVal=document.getElementById('pfc-reg'), _regLbl=document.getElementById('pfc-lbl-reg');
   if(_regRow&&_regVal){
     if(_currentParcelRegDate){
-      let _rd=_currentParcelRegDate;
-      try{const d=new Date(_currentParcelRegDate);if(!isNaN(d))_rd=d.toLocaleDateString(lang==='ka'?'ka-GE':'en-GB',{day:'numeric',month:'long',year:'numeric'});}catch(_){}
-      _regVal.textContent=_rd; _regRow.style.display='flex';
+      _regVal.textContent=_fmtDateLocalized(_currentParcelRegDate)||_currentParcelRegDate; _regRow.style.display='flex';
       if(_regLbl)_regLbl.textContent=(lang==='ka'?'რეგისტრაციის თარიღი':'Registered');
     } else _regRow.style.display='none';
   }
