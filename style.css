@@ -435,14 +435,18 @@
   .mzc-btn.mzc-locate-btn:hover img { opacity:0.85; }
   .pfc-cat-lbl { font-size:0.55rem; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:rgba(255,255,255,0.28); margin-bottom:5px; }
   .pfc-cat-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:4px; }
-  .pfc-cat-btn { display:flex; align-items:center; justify-content:center; padding:4px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:7px; cursor:pointer; transition:background 0.13s,border-color 0.13s; }
+  .pfc-cat-btn { position:relative; display:flex; align-items:center; justify-content:center; padding:4px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:7px; cursor:pointer; transition:background 0.13s,border-color 0.13s,box-shadow 0.2s; }
   .pfc-cat-btn img { width:39px; height:39px; opacity:0.72; transition:opacity 0.13s; pointer-events:none; }
   .pfc-cat-btn:hover { background:rgba(255,255,255,0.09); border-color:rgba(255,255,255,0.16); }
   .pfc-cat-btn:hover img { opacity:1; }
   .pfc-cat-btn.active { background:rgba(99,102,241,0.22); border-color:rgba(165,180,252,0.5); }
   .pfc-cat-btn.active img { opacity:1; }
-  .pfc-cat-btn:disabled { opacity:0.3; cursor:not-allowed; }
-  .pfc-cat-btn:disabled:hover { background:rgba(255,255,255,0.04); border-color:rgba(255,255,255,0.08); }
+  .pfc-cat-btn.pfc-cat-locked { opacity:0.34; cursor:not-allowed; }
+  .pfc-cat-btn.pfc-cat-locked:hover { background:rgba(255,255,255,0.04); border-color:rgba(255,255,255,0.08); }
+  .pfc-cat-btn.pfc-cat-locked:hover img { opacity:0.5; }
+  .pfc-cat-btn.pfc-cat-pulse { box-shadow:0 0 0 3px rgba(165,180,252,0.65); }
+  .pfc-pro-badge { position:absolute; top:-5px; right:-5px; background:#a78bfa; color:#15151f; font-size:0.42rem; font-weight:800; letter-spacing:0.04em; padding:1px 3px; border-radius:4px; line-height:1; pointer-events:none; box-shadow:0 1px 3px rgba(0,0,0,0.4); }
+  .pfc-lock-tip { position:fixed; z-index:60; background:rgba(0,0,0,0.92); color:#fff; font-size:0.6rem; line-height:1.35; padding:4px 8px; border-radius:6px; max-width:150px; text-align:center; pointer-events:none; box-shadow:0 4px 14px rgba(0,0,0,0.45); }
   #pfc-concept-items .cl-item { display:flex; align-items:center; gap:8px; font-size:0.62rem; color:rgba(255,255,255,0.78); }
   #pfc-concept-items .cl-sw { width:11px; height:11px; border-radius:3px; flex:0 0 auto; border:1px solid rgba(255,255,255,0.22); }
   #pfc-concept-render-btn:hover { background:rgba(167,139,250,0.26); }

@@ -71,8 +71,11 @@ function _saveProCounts(uid){
   localStorage.setItem("prA_"+uid,String(_proAnalysisCount));
 }
 function _isLargeParcel(){return(_currentParcelAreaM2||0)>=5000;}
-// In-card analysis grid: parcel-based always active; accessibility-based active only
-// for parcels/areas ≥ 5,000 m² (the 5000 rule). Labels localize; a note explains the gate.
+// Has the accessibility isochrone been generated?
+function _hasIsochrone(){return !!(_isoData&&_isoData.features&&_isoData.features.length);}
+// In-card analysis grid. ≥5,000 m² → everything active. <5,000 m² → only the Isochrone
+// (accessibility) button is active; all other analyses are locked until the isochrone is
+// run (they operate on that walking area). Pro-only analyses keep a PRO badge for free users.
 function _updateAnalysisGrid(show){
   const g=document.getElementById('pfc-analysis-grid');if(!g)return;
   if(!show){g.style.display='none';return;}
@@ -81,16 +84,72 @@ function _updateAnalysisGrid(show){
   const lp=document.getElementById('pfc-cat-lbl-parcel');if(lp)lp.textContent=ka?'ნაკვეთის ანალიზი':'Parcel analysis';
   const la=document.getElementById('pfc-cat-lbl-acc');if(la)la.textContent=ka?'მისაწვდომობის ანალიზი':'Accessibility analysis';
   // Localized native tooltips (the nav-tip spans were removed with the old nav buttons).
-  const _TT={'nav-zoning-btn':['Zoning','ზონირება'],'cat-btn-relief':['Relief','რელიეფი'],'cat-btn-climate':['Climate','კლიმატი'],'cat-btn-energy':['Clean Energy','სუფთა ენერგია'],'cat-btn-accessibility':['Accessibility','მისაწვდომობა'],'cat-btn-education':['Education','განათლება'],'cat-btn-mobility':['Mobility','მობილურობა'],'cat-btn-morphology':['Morphology','მორფოლოგია']};
+  const _TT={'nav-zoning-btn':['Zoning','ზონირება'],'cat-btn-relief':['Relief','რელიეფი'],'cat-btn-climate':['Climate','კლიმატი'],'cat-btn-energy':['Clean Energy','სუფთა ენერგია'],'cat-btn-accessibility':['Isochrone','იზოქრონა'],'cat-btn-education':['Education','განათლება'],'cat-btn-mobility':['Mobility','მობილურობა'],'cat-btn-morphology':['Morphology','მორფოლოგია']};
   Object.keys(_TT).forEach(id=>{const b=document.getElementById(id);if(b)b.title=_TT[id][ka?1:0];});
-  const large=_isLargeParcel();
-  ['cat-btn-accessibility','cat-btn-education','cat-btn-mobility','cat-btn-morphology'].forEach(id=>{
-    const b=document.getElementById(id);if(b)b.disabled=!large;
+  // Lock everything except the Isochrone button when the parcel is small and no isochrone yet.
+  const locked=!_isLargeParcel()&&!_hasIsochrone();
+  const lockTip=ka?'ჯერ გაუშვით იზოქრონის ანალიზი':'Run the Isochrone analysis first';
+  ['nav-zoning-btn','cat-btn-relief','cat-btn-climate','cat-btn-energy','cat-btn-education','cat-btn-mobility','cat-btn-morphology'].forEach(id=>{
+    const b=document.getElementById(id);if(!b)return;
+    b.classList.toggle('pfc-cat-locked',locked);
+    b.setAttribute('data-lock-tip',lockTip);
   });
+  const accBtn=document.getElementById('cat-btn-accessibility');if(accBtn)accBtn.classList.remove('pfc-cat-locked'); // Isochrone always active
   const note=document.getElementById('pfc-acc-note');
-  if(note){note.style.display=large?'none':'block';
-    note.textContent=ka?'მისაწვდომობის ანალიზი საჭიროებს მინიმუმ 5000 მ² ფართობის ნაკვეთს ან არეალს.':'Accessibility analysis needs a parcel or area of at least 5,000 m².';}
+  if(note){note.style.display=locked?'block':'none';
+    note.textContent=ka?'პატარა ნაკვეთი — ჯერ გაუშვით იზოქრონის ანალიზი, დანარჩენი ანალიზები გააქტიურდება.':'Small parcel — run the Isochrone analysis first to unlock the other analyses.';}
+  // PRO badge on Pro-only analyses for free-tier users.
+  const free=!currentUser||currentUser.plan!=='pro';
+  ['cat-btn-climate','cat-btn-energy','cat-btn-relief'].forEach(id=>{
+    const b=document.getElementById(id);if(!b)return;
+    let badge=b.querySelector('.pfc-pro-badge');
+    if(free){if(!badge){badge=document.createElement('span');badge.className='pfc-pro-badge';badge.textContent='PRO';b.appendChild(badge);}}
+    else if(badge)badge.remove();
+  });
+  _pfcInitLockTips();
 }
+function _refreshAnalysisGrid(){const g=document.getElementById('pfc-analysis-grid');if(g&&g.style.display!=='none')_updateAnalysisGrid(true);}
+// Position an analysis result panel right next to the floating card (to its left, or to
+// the right if there isn't room). Falls back to the old left-edge slot if no card is shown.
+function _analysisPanelPos(width){
+  width=width||262;const gap=8;
+  const card=document.getElementById('parcel-float-card');
+  if(card&&card.style.display!=='none'){
+    const r=card.getBoundingClientRect();
+    let left=r.left-gap-width;
+    if(left<8){left=r.right+gap;if(left+width>window.innerWidth-8)left=Math.max(8,window.innerWidth-width-8);}
+    const top=Math.max(8,Math.min(r.top,window.innerHeight-60));
+    return {left:Math.round(left),top:Math.round(top)};
+  }
+  return {left:68,top:90};
+}
+// Unified click for the in-card analysis buttons — blocks locked ones with a hint.
+function _pfcCatClick(key,el){
+  if(el&&el.classList.contains('pfc-cat-locked')){
+    showToast(lang==='ka'?'ჯერ გაუშვით იზოქრონის ანალიზი':'Run the Isochrone analysis first');
+    const acc=document.getElementById('cat-btn-accessibility');
+    if(acc){acc.classList.add('pfc-cat-pulse');setTimeout(()=>acc.classList.remove('pfc-cat-pulse'),1300);}
+    return;
+  }
+  if(key==='zoning')toggleZoningPanel();
+  else showCatInPanel(key,el);
+}
+// Floating hint over a locked button (the card clips overflow, so tooltip lives on <body>).
+let _pfcLockTipInit=false,_pfcLockTipEl=null;
+function _pfcInitLockTips(){
+  if(_pfcLockTipInit)return;const grid=document.getElementById('pfc-analysis-grid');if(!grid)return;_pfcLockTipInit=true;
+  grid.addEventListener('mouseover',e=>{const b=e.target.closest('.pfc-cat-btn.pfc-cat-locked');if(b)_pfcShowLockTip(b);});
+  grid.addEventListener('mouseout',e=>{if(e.target.closest('.pfc-cat-btn.pfc-cat-locked'))_pfcHideLockTip();});
+}
+function _pfcShowLockTip(b){
+  _pfcHideLockTip();
+  const tip=document.createElement('div');tip.className='pfc-lock-tip';tip.textContent=b.getAttribute('data-lock-tip')||'';
+  document.body.appendChild(tip);_pfcLockTipEl=tip;
+  const r=b.getBoundingClientRect(),tr=tip.getBoundingClientRect();
+  let left=r.left+r.width/2-tr.width/2;left=Math.max(6,Math.min(window.innerWidth-tr.width-6,left));
+  tip.style.left=left+'px';tip.style.top=Math.max(6,r.top-tr.height-6)+'px';
+}
+function _pfcHideLockTip(){if(_pfcLockTipEl){_pfcLockTipEl.remove();_pfcLockTipEl=null;}}
 let parcelCentroid = null, _parcelCardLngLat = null, _parcelCardDragged = false, _statusTimer = null, currentUser = null, _afterAuthCb = null, _pendingLogs = [], _marketingConsent = false;
 let _currentBasemap = 'day', _layersPanelOpen = false;
 const _pulseSize=64;
@@ -117,6 +176,7 @@ let _ownerParcels = [];
 let _currentParcelGeoJSON=null;
 let _dbParcelGeoJSON=null;
 let _currentParcelAreaM2=null;
+let _currentParcelRegDate=null;
 let _setbackRingAreaM2=null;
 let _editingBldId=null;
 let _editingDrawId=null;
@@ -1497,6 +1557,7 @@ function _showDrawnAreaCard(bld){
   // Hide parcel-only + zoning/permit rows for drawn areas
   const addrRow=document.getElementById('pfc-lbl-addr')?.closest('.pfc-row');if(addrRow)addrRow.style.display='none';
   const ownerRow=document.getElementById('pfc-lbl-owner')?.closest('.pfc-row');if(ownerRow)ownerRow.style.display='none';
+  const _regRowD=document.getElementById('pfc-reg-row');if(_regRowD)_regRowD.style.display='none';
   ['pfc-zone-row','pfc-kvals-row','pfc-setback-note','pfc-setback-warn','pfc-area-warn','pfc-nodev-warn','pfc-build-params-row','pfc-compliance-row','pfc-permits-row','pfc-render-row','pfc-concept-info'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});
   card.classList.remove('minimized');
   const btn=document.getElementById('pfc-min-btn');if(btn)btn.textContent='−';
@@ -6225,8 +6286,8 @@ function toggleZoningPanel(){
   _closeOtherNavPanels('zoning');
   if(_wasActive)btn?.classList.add('active');
   _syncZoningPanel();
-  // Align the panel vertically with the zoning nav button (same gap as other panels)
-  if(btn){const r=btn.getBoundingClientRect();card.style.top=Math.max(12,Math.min(r.top,window.innerHeight-120))+'px';}
+  // Slide out next to the parcel floating card (matches the other analysis panels).
+  const _zp=_analysisPanelPos(280);card.style.left=_zp.left+'px';card.style.top=_zp.top+'px';
   card.style.display='block';
   btn?.classList.add('zoning-panel-open');
 }
@@ -7297,6 +7358,17 @@ function showParcelPopup(lngLat){
   document.getElementById('pfc-owner').textContent=owner;
   document.getElementById('pfc-lbl-area').textContent=tr.area||'Area';
   document.getElementById('pfc-lbl-addr').textContent=tr.addr||'Address';
+  const _lo=document.getElementById('pfc-lbl-owner');if(_lo)_lo.textContent=(lang==='ka'?'მეპატრონე':'Owner');
+  // Registration date (NAPR) — show when available
+  const _regRow=document.getElementById('pfc-reg-row'), _regVal=document.getElementById('pfc-reg'), _regLbl=document.getElementById('pfc-lbl-reg');
+  if(_regRow&&_regVal){
+    if(_currentParcelRegDate){
+      let _rd=_currentParcelRegDate;
+      try{const d=new Date(_currentParcelRegDate);if(!isNaN(d))_rd=d.toLocaleDateString(lang==='ka'?'ka-GE':'en-GB',{day:'numeric',month:'long',year:'numeric'});}catch(_){}
+      _regVal.textContent=_rd; _regRow.style.display='flex';
+      if(_regLbl)_regLbl.textContent=(lang==='ka'?'რეგისტრაციის თარიღი':'Registered');
+    } else _regRow.style.display='none';
+  }
   // Restore parcel-only rows / hide the drawn-area perimeter row
   const _pr2=document.getElementById('pfc-perim-row');if(_pr2)_pr2.style.display='none';
   const _ar2=document.getElementById('pfc-lbl-addr')?.closest('.pfc-row');if(_ar2)_ar2.style.display='';
@@ -8605,11 +8677,11 @@ function showCatInPanel(catKey,btnEl){
     _activeCatKey=null;
     return;
   }
-  if(proCard&&btnEl){
-    const r=btnEl.getBoundingClientRect();
-    const topPx=Math.min(r.top,window.innerHeight-40);
-    proCard.style.cssText='display:block;position:fixed;left:68px;top:'+topPx+'px;margin:0;width:262px;max-height:calc(100vh - '+topPx+'px - 12px);overflow-y:auto;scrollbar-width:none;background:var(--glass-bg);backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);border:1px solid var(--glass-border);border-radius:var(--glass-radius);box-shadow:var(--glass-shadow);padding:14px 14px 10px;z-index:28;color:white;font-size:0.8rem;';
-  }else if(proCard){proCard.style.display='block';}
+  if(proCard){
+    // Slide out next to the parcel/drawn-area floating card (falls back to left edge).
+    const pos=_analysisPanelPos(262);
+    proCard.style.cssText='display:block;position:fixed;left:'+pos.left+'px;top:'+pos.top+'px;margin:0;width:262px;max-height:calc(100vh - '+pos.top+'px - 12px);overflow-y:auto;scrollbar-width:none;background:var(--glass-bg);backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);border:1px solid var(--glass-border);border-radius:var(--glass-radius);box-shadow:var(--glass-shadow);padding:14px 14px 10px;z-index:28;color:white;font-size:0.8rem;';
+  }
   if(catEl)catEl.classList.add('open');
   const catBtn=document.getElementById('cat-btn-'+catKey);
   if(catBtn)catBtn.classList.add('active');
@@ -12877,6 +12949,7 @@ function toggleAccIsochrone(){
     _clearBusStopRoute();
     const res=document.getElementById("acc-iso-result");if(res)res.innerHTML="";
   }
+  _refreshAnalysisGrid();
 }
 
 function setAccMode(mode){
@@ -12901,6 +12974,7 @@ async function runAccessibilityAnalysis(){
     const isoFeat=isoData.features?.[0];
     if(!isoFeat)throw new Error("no_isochrone");
     _isoData=isoData;
+    _refreshAnalysisGrid(); // unlock the other analyses now the isochrone exists
     map.getSource("isochrone").setData(isoData);
     _clearBusStopRoute();
     // Re-run every active isochrone-dependent layer with the new isochrone
@@ -12945,6 +13019,7 @@ async function runProAnalysis(){
     const isoFeat=isoData.features?.[0];
     if(!isoFeat)throw new Error("no_isochrone");
     _isoData=isoData;
+    _refreshAnalysisGrid();
     map.getSource("isochrone").setData(isoData);
     const isoCoords=isoFeat.geometry.coordinates[0];
     const iLngs=isoCoords.map(c=>c[0]),iLats=isoCoords.map(c=>c[1]);
@@ -13024,6 +13099,7 @@ async function loadParcel(lbl, code){
   document.getElementById("info-card").style.display="none";
   document.getElementById("analyse-btn").style.display="none"; // walkability (free analysis) removed
   _updateMapInfoBadge();
+  _currentParcelRegDate=isLine?null:(attrs.regDate||null);
   if(!isLine){
     setupProCard();
   }
@@ -13188,6 +13264,7 @@ async function loadParcelFromDB(cadastral){
   document.getElementById("owner-results-card").style.display="none";
   document.getElementById("analyse-btn").style.display="none"; // walkability (free analysis) removed
   _updateMapInfoBadge();
+  _currentParcelRegDate=isLine?null:(attrs.regDate||null);
   if(!isLine){
     setupProCard();
   }
