@@ -399,7 +399,7 @@ const T = {
     pdfProAnalysis:"Pro ანალიზი",
     pdfNoScore:"კოეფიციენტის საანგარიშოდ საჭიროა ანალიზის ბრძანება",
     pdfNoImage:"ქუჩის სურათები არ არის ხელმისაწვდომი",
-    layers:{btn:"ფენები",basemap:"საბაზო რუკა",layers:"ფენები",cadastral:"ნაკვეთები",lineObjects:"ხაზები",forestFund:"ტყე",dark:"მუქი",satellite:"სატელიტი",day:"Z.axis Hillshade",night:"ტრაფიკი"},
+    layers:{btn:"ფენები",basemap:"საბაზო რუკა",layers:"ფენები",cadastral:"ნაკვეთები",lineObjects:"ხაზები",forestFund:"ტყე",dark:"მუქი",satellite:"სატელიტი",day:"Z.axis Hillshade",night:"ტრანსპორტი"},
     searchesLeft:"ძიება დარჩა ამ თვეში",
     viewPlans:"ტარიფების ნახვა",
     plansBtn:"ტარიფები",
