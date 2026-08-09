@@ -23,7 +23,7 @@ const OVERPASS_ENDPOINTS = [
 
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-let lang = "en", hasSearched = false, mapMoved = false, mapReady = false, pdfjsLib = null;
+let lang = "ka", hasSearched = false, mapMoved = false, mapReady = false, pdfjsLib = null;
 let _toastTimer=null;function showToast(msg,dur=3000){const el=document.getElementById('app-toast');if(!el)return;el.textContent=msg;el.classList.add('show');clearTimeout(_toastTimer);_toastTimer=setTimeout(()=>el.classList.remove('show'),dur);}
 // Escape untrusted text (remote APIs, user-imported files, OSM data) before it goes into innerHTML/setHTML
 function escapeHtml(s){return String(s??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");}
@@ -72,7 +72,7 @@ function _saveProCounts(uid){
 }
 function _isLargeParcel(){return(_currentParcelAreaM2||0)>=5000;}
 let parcelCentroid = null, _parcelCardLngLat = null, _parcelCardDragged = false, _statusTimer = null, currentUser = null, _afterAuthCb = null, _pendingLogs = [], _marketingConsent = false;
-let _currentBasemap = 'dark', _layersPanelOpen = false;
+let _currentBasemap = 'day', _layersPanelOpen = false;
 const _pulseSize=64;
 const _pulsingDot={
   width:_pulseSize,height:_pulseSize,data:new Uint8Array(_pulseSize*_pulseSize*4),context:null,
@@ -260,7 +260,7 @@ const T = {
     projects:{navTip:"My Projects",panelTitle:"My Projects",saveBtn:"Save current analysis",emptyMsg:"No saved projects yet.",openBtn:"Open",deleteConfirm:"Delete this project?",loadingMsg:"Loading…",savingMsg:"Saving…",saveModalTitle:"Save Project",saveModalHint:"Saves map view, selected features, imported layers and analysis results.",cancelBtn:"Cancel",confirmBtn:"Save",savedToast:"Project saved",deletedToast:"Project deleted",loadedToast:"Project loaded",errorSave:"Failed to save project",errorLoad:"Failed to load project",errorDelete:"Delete failed",layers:"layer",layersPlural:"layers"},
     activityLabels:{map_click:"Clicks",free_analysis:"Free analysis",pro_analysis:"Pro analysis",relief_analysis:"Relief",pdf_export:"PDF export",geojson_export:"GeoJSON export"},
     activityIcons:{map_click:"—",free_analysis:"○",pro_analysis:"◆",relief_analysis:"△",pdf_export:"↓",geojson_export:"⬡"},
-    layers:{btn:"Layers",basemap:"Basemap",layers:"Layers",cadastral:"Parcels",lineObjects:"Lines",forestFund:"Forest",dark:"Dark",satellite:"Satellite",day:"Z.axis Hillshade",night:"Night"},
+    layers:{btn:"Layers",basemap:"Basemap",layers:"Layers",cadastral:"Parcels",lineObjects:"Lines",forestFund:"Forest",dark:"Dark",satellite:"Satellite",day:"Z.axis Hillshade",night:"Traffic"},
     searchesLeft:"searches left this month",
     viewPlans:"View plans",
     plansBtn:"Plans",
@@ -399,7 +399,7 @@ const T = {
     pdfProAnalysis:"Pro ანალიზი",
     pdfNoScore:"კოეფიციენტის საანგარიშოდ საჭიროა ანალიზის ბრძანება",
     pdfNoImage:"ქუჩის სურათები არ არის ხელმისაწვდომი",
-    layers:{btn:"ფენები",basemap:"საბაზო რუკა",layers:"ფენები",cadastral:"ნაკვეთები",lineObjects:"ხაზები",forestFund:"ტყე",dark:"მუქი",satellite:"სატელიტი",day:"Z.axis Hillshade",night:"ღამე"},
+    layers:{btn:"ფენები",basemap:"საბაზო რუკა",layers:"ფენები",cadastral:"ნაკვეთები",lineObjects:"ხაზები",forestFund:"ტყე",dark:"მუქი",satellite:"სატელიტი",day:"Z.axis Hillshade",night:"ტრაფიკი"},
     searchesLeft:"ძიება დარჩა ამ თვეში",
     viewPlans:"ტარიფების ნახვა",
     plansBtn:"ტარიფები",
@@ -5578,7 +5578,7 @@ const _BASEMAP_STYLES={
   dark:"mapbox://styles/mapbox/dark-v11",
   satellite:"mapbox://styles/mapbox/satellite-streets-v12",
   day:"mapbox://styles/jorjone90/cmsg7wons00j701s879l50r8v", // Z.axis Hillshade
-  night:"mapbox://styles/mapbox/standard"
+  night:"mapbox://styles/mapbox/traffic-night-v2" // Mapbox Traffic (dark)
 };
 function switchBasemap(name){
   if(name===_currentBasemap||!mapReady)return;
@@ -5601,8 +5601,7 @@ function switchBasemap(name){
     mapReady=true;
     map.setLanguage(lang==='ka'?'ka':'en');
     const _nll=document.getElementById('nav-lang-label');if(_nll)_nll.textContent=lang==='en'?'EN':'ქა';
-    // "day" is now the Z.axis Hillshade custom style — no Standard "basemap" config to set.
-    if(name==="night"){try{map.setConfigProperty("basemap","lightPreset","night");map.setConfigProperty("basemap","show3dObjects",true);}catch(_){}}
+    // "day" is Z.axis Hillshade and "night" is Mapbox Traffic (classic styles) — no Standard config.
     if(_wasExtruding){
       const _swBld=_activeBld();
       if(_swBld?.threeEditor){try{map.removeLayer(_swBld.threeEditor.id);}catch(e){}try{_swBld.threeEditor.dispose();}catch(e){}  _swBld.threeEditor=null;}
@@ -6922,7 +6921,7 @@ function toggle3D() {
 
 // ── Map ───────────────────────────────────────────────────────────────────────
 mapboxgl.accessToken=MAPBOX_TOKEN;
-const map=new mapboxgl.Map({container:"map",style:"mapbox://styles/mapbox/dark-v11",center:[44.783,41.693],zoom:16,attributionControl:false,preserveDrawingBuffer:true});
+const map=new mapboxgl.Map({container:"map",style:"mapbox://styles/jorjone90/cmsg7wons00j701s879l50r8v",center:[44.783,41.693],zoom:16,attributionControl:false,preserveDrawingBuffer:true});
 // Track app-added sources/layers so they survive a basemap (setStyle) switch.
 // (setStyle replaces the whole style, dropping everything the app added on top.)
 const _appSourceIds=new Set(), _appLayerIds=new Set();
@@ -8187,7 +8186,7 @@ function _showConceptLegend(concept,treeCount){
   if(sum){const s=String(concept.summary||'').trim();if(s){sum.textContent=s;sum.style.display='block';}else{sum.style.display='none';}}
   const t=document.getElementById('pfc-concept-title');if(t)t.textContent=ka?'კონცეფცია':'Concept';
   const cl=document.getElementById('pfc-concept-clear');if(cl)cl.textContent=ka?'გასუფთავება':'Clear';
-  const rb=document.getElementById('pfc-concept-render-btn');if(rb)rb.textContent=(ka?'🖼️ კონცეფციის რენდერი':'🖼️ Generate concept render');
+  const rb=document.getElementById('pfc-concept-render-btn');if(rb)rb.textContent=(ka?'კონცეფციის რენდერი':'Generate concept render');
   info.style.display='block';
 }
 
@@ -13563,6 +13562,9 @@ async function generatePDF(){
 // ── Init ──────────────────────────────────────────────────────────────────────
 async function init(){
   applyLang();
+  // Reflect the default language in the toggle + nav label (default is Georgian).
+  const _nll0=document.getElementById('nav-lang-label');if(_nll0)_nll0.textContent=lang==='en'?'EN':'ქა';
+  document.querySelectorAll(".lang-btn").forEach(b=>b.classList.toggle("active",(lang==="en"&&b.textContent==="EN")||(lang==="ka"&&b.textContent==="ქა")));
 
   // Lightbox keyboard navigation
   document.addEventListener("keydown",e=>{
