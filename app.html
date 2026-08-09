@@ -50,10 +50,16 @@
       <div class="pfc-row"><span class="pfc-lbl" id="pfc-lbl-owner">Owner</span><span class="pfc-val" id="pfc-owner">—</span></div>
       <div id="pfc-ext-row" style="display:none;margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.07)"></div>
       <div id="pfc-render-row" style="display:none;margin-top:6px">
-        <div style="display:flex;gap:6px">
-          <button id="pfc-render-btn" onclick="openRenderModal()" style="flex:1;padding:6px;border-radius:6px;border:1px solid rgba(167,139,250,0.35);background:rgba(167,139,250,0.14);color:#c4b5fd;font-size:0.7rem;font-weight:600;font-family:inherit;cursor:pointer">Render / design</button>
-          <button id="pfc-concept-btn" onclick="openConceptModal()" style="flex:1;padding:6px;border-radius:6px;border:1px solid rgba(52,211,153,0.35);background:rgba(52,211,153,0.14);color:#6ee7b7;font-size:0.7rem;font-weight:600;font-family:inherit;cursor:pointer">Generate concept</button>
+        <button id="pfc-concept-btn" onclick="openConceptModal()" style="width:100%;padding:7px;border-radius:6px;border:1px solid rgba(52,211,153,0.35);background:rgba(52,211,153,0.14);color:#6ee7b7;font-size:0.7rem;font-weight:600;font-family:inherit;cursor:pointer">Generate concept</button>
+      </div>
+      <div id="pfc-concept-info" style="display:none;margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.07)">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
+          <span id="pfc-concept-title" style="font-size:0.6rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:rgba(255,255,255,0.28)">Concept</span>
+          <button id="pfc-concept-clear" onclick="_clearConcept()" title="Clear concept" style="font-size:0.55rem;color:rgba(255,255,255,0.4);background:none;border:1px solid rgba(255,255,255,0.12);border-radius:5px;padding:2px 7px;cursor:pointer;font-family:inherit">Clear</button>
         </div>
+        <div id="pfc-concept-summary" style="display:none;font-size:0.6rem;color:rgba(255,255,255,0.62);line-height:1.5;margin-bottom:6px"></div>
+        <div id="pfc-concept-items" style="display:flex;flex-direction:column;gap:3px;margin-bottom:8px"></div>
+        <button id="pfc-concept-render-btn" onclick="openRenderModal()" style="width:100%;padding:7px;border-radius:6px;border:1px solid rgba(167,139,250,0.35);background:rgba(167,139,250,0.16);color:#c4b5fd;font-size:0.7rem;font-weight:600;font-family:inherit;cursor:pointer">🖼️ Generate concept render</button>
       </div>
       <div id="pfc-nearby-row" style="display:none;margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.07)">
         <button id="pfc-nearby-run-btn" onclick="_nearbyRunClicked()" style="width:100%;padding:6px;border-radius:6px;border:1px solid rgba(99,102,241,0.3);background:rgba(99,102,241,0.12);color:#a5b4fc;font-size:0.7rem;font-weight:600;font-family:inherit;cursor:pointer">Run nearby analysis</button>
@@ -531,11 +537,6 @@
 </div>
 
 <!-- Photorealistic render modal -->
-<div id="concept-legend" style="display:none">
-  <div class="cl-head"><span id="concept-legend-title">Concept</span><button id="concept-clear-btn" onclick="_clearConcept()" title="Clear concept">✕</button></div>
-  <div id="concept-legend-items"></div>
-  <button id="concept-legend-render" onclick="openRenderModal()">🖼️ Render this concept</button>
-</div>
 <div class="modal-overlay" id="render-modal" onclick="if(event.target===this)closeRenderModal()">
   <div class="modal-box" id="render-box">
     <button class="modal-close" onclick="closeRenderModal()">✕</button>

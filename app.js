@@ -1477,7 +1477,7 @@ function _showDrawnAreaCard(bld){
   // Hide parcel-only + zoning/permit rows for drawn areas
   const addrRow=document.getElementById('pfc-lbl-addr')?.closest('.pfc-row');if(addrRow)addrRow.style.display='none';
   const ownerRow=document.getElementById('pfc-lbl-owner')?.closest('.pfc-row');if(ownerRow)ownerRow.style.display='none';
-  ['pfc-zone-row','pfc-kvals-row','pfc-setback-note','pfc-setback-warn','pfc-area-warn','pfc-nodev-warn','pfc-build-params-row','pfc-compliance-row','pfc-permits-row','pfc-render-row'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});
+  ['pfc-zone-row','pfc-kvals-row','pfc-setback-note','pfc-setback-warn','pfc-area-warn','pfc-nodev-warn','pfc-build-params-row','pfc-compliance-row','pfc-permits-row','pfc-render-row','pfc-concept-info'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});
   card.classList.remove('minimized');
   const btn=document.getElementById('pfc-min-btn');if(btn)btn.textContent='−';
   card.style.display='block';
@@ -7265,9 +7265,12 @@ function showParcelPopup(lngLat){
   // Parcels are not renamable; disable the editable header + hide the 3D summary
   const _hd=document.getElementById('pfc-code');if(_hd){_hd.classList.remove('pfc-editable');_hd.removeAttribute('contenteditable');_hd.removeAttribute('title');}
   const _er=document.getElementById('pfc-ext-row');if(_er){_er.style.display='none';_er.innerHTML='';}
-  // Parcel can be rendered/designed directly (no drawn shape needed)
+  // Parcel workflow: Generate concept → (once generated) concept info + Render button
   const _rr=document.getElementById('pfc-render-row');if(_rr)_rr.style.display='block';
-  const _rb=document.getElementById('pfc-render-btn');if(_rb)_rb.textContent=(lang==='ka'?'რენდერი / დიზაინი':'Render / design');
+  const _cb=document.getElementById('pfc-concept-btn');if(_cb)_cb.textContent=(lang==='ka'?'კონცეფციის გენერაცია':'Generate concept');
+  const _ci=document.getElementById('pfc-concept-info');
+  if(_conceptOn&&_conceptLastData){_showConceptLegend(_conceptLastData,_conceptTreeData.features.length);}
+  else if(_ci){_ci.style.display='none';}
   if(_geoTool||_paintOpen)_clearGeoTools(null);
   const _gtb2=document.getElementById('geo-toolbar');if(_gtb2)_gtb2.style.display='none';
   document.getElementById('nav-zoning-btn')?.classList.remove('active');
@@ -7348,7 +7351,9 @@ function _syncSelectionCards(){
   const activeId=_activeEntityId();
   const ids=[];
   if(_dbParcelGeoJSON)ids.push('parcel');
-  _buildings.forEach(b=>ids.push(b.id));
+  // Concept elements (buildings/areas) are clickable on the map and shown in the parcel
+  // card's concept legend — they don't each get a mini-card (that was card overload).
+  _buildings.forEach(b=>{if(b.conceptUse||b.conceptArea)return;ids.push(b.id);});
   // Drop mini cards that are now active or no longer exist
   Object.keys(_miniCards).forEach(id=>{if(id===activeId||ids.indexOf(id)<0){_miniCards[id].remove();delete _miniCards[id];}});
   const wrap=document.getElementById('map-wrap');if(!wrap)return;
@@ -7839,7 +7844,7 @@ async function _renderGenerate(){
 let _conceptBldIds=[]; // extruded buildings created by the last concept
 let _conceptAreaIds=[]; // flat editable ground areas (pool, terrace, …) created by the concept
 let _conceptTreeData={type:'FeatureCollection',features:[]};
-let _conceptOn=false, _conceptSummary='', _conceptParcel=null;
+let _conceptOn=false, _conceptSummary='', _conceptParcel=null, _conceptLastData=null;
 const _CONCEPT_USE={
   house:['#f59e0b','House'],residential:['#e89630','Residential'],apartment:['#e89630','Apartment'],
   office:['#60a5fa','Office'],commercial:['#34d399','Commercial'],mixed:['#a78bfa','Mixed'],
@@ -8009,8 +8014,8 @@ function _clearConcept(){
   _conceptBldIds.concat(_conceptAreaIds).forEach(id=>{try{if(typeof _removeBuildingById==='function')_removeBuildingById(id);}catch(_){}});
   _conceptBldIds=[]; _conceptAreaIds=[];
   _conceptTreeData={type:'FeatureCollection',features:[]};
-  _conceptOn=false; _conceptSummary=''; _conceptParcel=null;
-  const _cl=document.getElementById('concept-legend');if(_cl)_cl.style.display='none';
+  _conceptOn=false; _conceptSummary=''; _conceptParcel=null; _conceptLastData=null;
+  const _cl=document.getElementById('pfc-concept-info');if(_cl)_cl.style.display='none';
   if(mapReady){
     map.getSource('concept-green')?.setData({type:'FeatureCollection',features:[]});
     map.getSource('concept-areas')?.setData({type:'FeatureCollection',features:[]});
@@ -8050,7 +8055,7 @@ async function _conceptGenerate(){
 function _renderConcept(concept,parcel,bb,spanLng,spanLat){
   _clearConcept();
   _conceptEnsureLayers();
-  _conceptOn=true; _conceptSummary=String(concept.summary||''); _conceptParcel=parcel;
+  _conceptOn=true; _conceptSummary=String(concept.summary||''); _conceptParcel=parcel; _conceptLastData=concept;
   const nx2lng=nx=>bb[0]+Math.min(1,Math.max(0,nx))*spanLng;
   const ny2lat=ny=>bb[1]+Math.min(1,Math.max(0,ny))*spanLat;
   // Buildable area = parcel inset 3 m. We keep buildings INSIDE it by clamping their
@@ -8156,42 +8161,17 @@ function _renderConcept(concept,parcel,bb,spanLng,spanLat){
   _conceptTreeData={type:'FeatureCollection',features:treeFeats};
   map.getSource('concept-trees')?.setData(_conceptTreeData);
   _ensureConceptDeco(); // real 3D trees + pitched roofs
-  _showConceptLegend(concept,treeFeats.length);
+  // Reactivate the parcel so its floating card shows the concept info + render button
+  // (the last-registered concept shape would otherwise steal the active card).
+  if(_dbParcelGeoJSON){_activateParcel();}
+  else{_showConceptLegend(concept,treeFeats.length);}
 }
-let _conceptLegendDragInit=false;
-function _initConceptLegendDrag(){
-  if(_conceptLegendDragInit)return;
-  const card=document.getElementById('concept-legend');
-  const header=card&&card.querySelector('.cl-head');
-  if(!card||!header)return;
-  _conceptLegendDragInit=true;
-  let dragging=false,ox=0,oy=0;
-  header.style.cursor='move';
-  header.addEventListener('mousedown',e=>{
-    if(e.target.tagName==='BUTTON')return;
-    dragging=true;
-    const r=card.getBoundingClientRect();
-    ox=e.clientX-r.left; oy=e.clientY-r.top;
-    // Switch to left/top positioning so drag works regardless of the CSS anchor.
-    card.style.left=r.left+'px'; card.style.top=r.top+'px'; card.style.right='auto'; card.style.bottom='auto';
-    document.addEventListener('mousemove',onDM);
-    document.addEventListener('mouseup',onDU);
-    e.preventDefault();
-  });
-  function onDM(e){
-    if(!dragging)return;
-    const cw=card.offsetWidth||200, ch=card.offsetHeight||140;
-    let nx=Math.max(4,Math.min(window.innerWidth-cw-4,e.clientX-ox));
-    let ny=Math.max(4,Math.min(window.innerHeight-ch-4,e.clientY-oy));
-    card.style.left=nx+'px'; card.style.top=ny+'px';
-  }
-  function onDU(){dragging=false;document.removeEventListener('mousemove',onDM);document.removeEventListener('mouseup',onDU);}
-}
-// Floating legend: colour → use for the current concept, plus a Render call-to-action.
+// Concept summary + use legend, rendered INSIDE the parcel float card, with the
+// "Generate concept render" call-to-action beneath it.
 function _showConceptLegend(concept,treeCount){
-  const el=document.getElementById('concept-legend');if(!el)return;
-  _initConceptLegendDrag();
-  const items=document.getElementById('concept-legend-items');if(!items)return;
+  const info=document.getElementById('pfc-concept-info');
+  const items=document.getElementById('pfc-concept-items');
+  if(!info||!items)return;
   const ka=lang==='ka';
   const seen=new Set(),rows=[];
   const add=use=>{const k=String(use||'').toLowerCase();if(!k||seen.has(k))return;seen.add(k);
@@ -8199,13 +8179,16 @@ function _showConceptLegend(concept,treeCount){
     rows.push({col,lbl});};
   (concept.buildings||[]).forEach(b=>add(b.use));
   (concept.areas||[]).forEach(a=>add(a.use));
-  rows.push({col:'#4ade80',lbl:ka?'გამწვანება':'Greenery'});
+  rows.push({col:'#5cb85c',lbl:ka?'გამწვანება':'Greenery'});
   if(treeCount>0)rows.push({col:'#16a34a',lbl:ka?'ხეები':'Trees'});
   const esc=s=>String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
   items.innerHTML=rows.map(r=>`<div class="cl-item"><span class="cl-sw" style="background:${r.col}"></span>${esc(r.lbl)}</div>`).join('');
-  const t=document.getElementById('concept-legend-title');if(t)t.textContent=ka?'კონცეფცია':'Concept';
-  const rb=document.getElementById('concept-legend-render');if(rb)rb.textContent=(ka?'🖼️ დაარენდერე კონცეფცია':'🖼️ Render this concept');
-  el.style.display='block';
+  const sum=document.getElementById('pfc-concept-summary');
+  if(sum){const s=String(concept.summary||'').trim();if(s){sum.textContent=s;sum.style.display='block';}else{sum.style.display='none';}}
+  const t=document.getElementById('pfc-concept-title');if(t)t.textContent=ka?'კონცეფცია':'Concept';
+  const cl=document.getElementById('pfc-concept-clear');if(cl)cl.textContent=ka?'გასუფთავება':'Clear';
+  const rb=document.getElementById('pfc-concept-render-btn');if(rb)rb.textContent=(ka?'🖼️ კონცეფციის რენდერი':'🖼️ Generate concept render');
+  info.style.display='block';
 }
 
 // ── Parse HTML ────────────────────────────────────────────────────────────────
