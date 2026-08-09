@@ -4649,13 +4649,10 @@ function _startShapeDrag(shape){
   _shapeMouseHandlers=function(){map.off('mousedown',onDown);startLL=null;};
 }
 
+// Violations are surfaced as a toast on popup + the red building highlight — no in-card
+// warning boxes. This keeps the highlight state in sync.
 function _checkSetbackViolation(drawnPoly){
-  const warnEl=document.getElementById('pfc-setback-warn');
-  const nodevEl=document.getElementById('pfc-nodev-warn');
-  if(!warnEl)return;
   if(!_dbParcelGeoJSON||!document.getElementById('nav-zoning-btn')?.classList.contains('active')){
-    warnEl.style.display='none';
-    if(nodevEl)nodevEl.style.display='none';
     const ab=_activeBld();if(ab&&ab.violatesSetback){ab.violatesSetback=false;_updateBldHighlights();}
     return;
   }
@@ -4664,16 +4661,12 @@ function _checkSetbackViolation(drawnPoly){
     const parcelFeat={type:'Feature',geometry:_dbParcelGeoJSON,properties:{}};
     const inset=turf.buffer(parcelFeat,-3,{units:'meters'});
     const setbackViol=inset?!turf.booleanWithin(drawnFeat,inset):false;
-    warnEl.style.display=setbackViol?'block':'none';
     let nodevViol=false;
     if(_noDevZoneUnion){try{nodevViol=turf.booleanIntersects(drawnFeat,_noDevZoneUnion);}catch(_){}}
-    if(nodevEl)nodevEl.style.display=nodevViol?'block':'none';
     const anyViol=setbackViol||nodevViol;
     const ab=_activeBld();
     if(ab&&ab.violatesSetback!==anyViol){ab.violatesSetback=anyViol;_updateBldHighlights();}
   }catch(e){
-    warnEl.style.display='none';
-    if(nodevEl)nodevEl.style.display='none';
     const ab=_activeBld();if(ab&&ab.violatesSetback){ab.violatesSetback=false;_updateBldHighlights();}
   }
 }
