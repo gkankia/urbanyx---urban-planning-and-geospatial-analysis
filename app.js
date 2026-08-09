@@ -5578,8 +5578,28 @@ const _BASEMAP_STYLES={
   dark:"mapbox://styles/mapbox/dark-v11",
   satellite:"mapbox://styles/mapbox/satellite-streets-v12",
   day:"mapbox://styles/jorjone90/cmsg7wons00j701s879l50r8v", // Z.axis Hillshade
-  night:"mapbox://styles/mapbox/traffic-night-v2" // Mapbox Traffic (dark)
+  night:"mapbox://styles/mapbox/traffic-night-v2" // Mapbox Traffic — dark fallback
 };
+// Is it currently daylight at the map's location? NOAA sunrise/sunset (computed in UTC).
+function _isDaylightNow(){
+  try{
+    const c=map.getCenter(), lat=c.lat, lng=c.lng, now=new Date(), rad=Math.PI/180;
+    const start=Date.UTC(now.getUTCFullYear(),0,1);
+    const doy=Math.floor((Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),now.getUTCDate())-start)/86400000)+1;
+    const g=2*Math.PI/365*(doy-1+(now.getUTCHours()-12)/24);
+    const eqt=229.18*(0.000075+0.001868*Math.cos(g)-0.032077*Math.sin(g)-0.014615*Math.cos(2*g)-0.040849*Math.sin(2*g));
+    const decl=0.006918-0.399912*Math.cos(g)+0.070257*Math.sin(g)-0.006758*Math.cos(2*g)+0.000907*Math.sin(2*g)-0.002697*Math.cos(3*g)+0.00148*Math.sin(3*g);
+    const cosH=Math.cos(90.833*rad)/(Math.cos(lat*rad)*Math.cos(decl))-Math.tan(lat*rad)*Math.tan(decl);
+    if(cosH>1)return false;   // sun never rises today
+    if(cosH<-1)return true;   // sun never sets today
+    const ha=Math.acos(cosH)/rad;            // half-day arc, degrees
+    const sunrise=720-4*(lng+ha)-eqt, sunset=720-4*(lng-ha)-eqt; // minutes UTC
+    const utcMin=now.getUTCHours()*60+now.getUTCMinutes();
+    return utcMin>=sunrise&&utcMin<=sunset;
+  }catch(_){const h=new Date().getHours();return h>=7&&h<19;}
+}
+// Traffic basemap picks its light/dark variant from the local day/night.
+function _trafficStyle(){return _isDaylightNow()?"mapbox://styles/mapbox/traffic-day-v2":"mapbox://styles/mapbox/traffic-night-v2";}
 function switchBasemap(name){
   if(name===_currentBasemap||!mapReady)return;
   _currentBasemap=name;
@@ -5594,7 +5614,7 @@ function switchBasemap(name){
   mapReady=false;
   const _wasExtruding=_extrusionActive&&_isDrawnArea;
   const _preserved=_captureAppLayers(); // keep analysis overlays across the style swap
-  map.setStyle(_BASEMAP_STYLES[name]);
+  map.setStyle(name==='night'?_trafficStyle():_BASEMAP_STYLES[name]);
   map.once("style.load",()=>{
     try{initCustomLayers();}catch(err){console.error("initCustomLayers (switch) failed:",err);}
     try{_restoreAppLayers(_preserved);}catch(err){console.warn("restore analysis layers failed:",err);}
@@ -6921,7 +6941,7 @@ function toggle3D() {
 
 // ── Map ───────────────────────────────────────────────────────────────────────
 mapboxgl.accessToken=MAPBOX_TOKEN;
-const map=new mapboxgl.Map({container:"map",style:"mapbox://styles/jorjone90/cmsg7wons00j701s879l50r8v",center:[44.783,41.693],zoom:16,attributionControl:false,preserveDrawingBuffer:true});
+const map=new mapboxgl.Map({container:"map",style:"mapbox://styles/jorjone90/cmsg7wons00j701s879l50r8v",center:[44.805766,41.702563],zoom:14.84,bearing:-38.76,pitch:75.65,attributionControl:false,preserveDrawingBuffer:true});
 // Track app-added sources/layers so they survive a basemap (setStyle) switch.
 // (setStyle replaces the whole style, dropping everything the app added on top.)
 const _appSourceIds=new Set(), _appLayerIds=new Set();
