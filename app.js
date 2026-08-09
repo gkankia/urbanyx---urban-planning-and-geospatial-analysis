@@ -71,6 +71,26 @@ function _saveProCounts(uid){
   localStorage.setItem("prA_"+uid,String(_proAnalysisCount));
 }
 function _isLargeParcel(){return(_currentParcelAreaM2||0)>=5000;}
+// In-card analysis grid: parcel-based always active; accessibility-based active only
+// for parcels/areas ≥ 5,000 m² (the 5000 rule). Labels localize; a note explains the gate.
+function _updateAnalysisGrid(show){
+  const g=document.getElementById('pfc-analysis-grid');if(!g)return;
+  if(!show){g.style.display='none';return;}
+  g.style.display='block';
+  const ka=lang==='ka';
+  const lp=document.getElementById('pfc-cat-lbl-parcel');if(lp)lp.textContent=ka?'ნაკვეთის ანალიზი':'Parcel analysis';
+  const la=document.getElementById('pfc-cat-lbl-acc');if(la)la.textContent=ka?'მისაწვდომობის ანალიზი':'Accessibility analysis';
+  // Localized native tooltips (the nav-tip spans were removed with the old nav buttons).
+  const _TT={'nav-zoning-btn':['Zoning','ზონირება'],'cat-btn-relief':['Relief','რელიეფი'],'cat-btn-climate':['Climate','კლიმატი'],'cat-btn-energy':['Clean Energy','სუფთა ენერგია'],'cat-btn-accessibility':['Accessibility','მისაწვდომობა'],'cat-btn-education':['Education','განათლება'],'cat-btn-mobility':['Mobility','მობილურობა'],'cat-btn-morphology':['Morphology','მორფოლოგია']};
+  Object.keys(_TT).forEach(id=>{const b=document.getElementById(id);if(b)b.title=_TT[id][ka?1:0];});
+  const large=_isLargeParcel();
+  ['cat-btn-accessibility','cat-btn-education','cat-btn-mobility','cat-btn-morphology'].forEach(id=>{
+    const b=document.getElementById(id);if(b)b.disabled=!large;
+  });
+  const note=document.getElementById('pfc-acc-note');
+  if(note){note.style.display=large?'none':'block';
+    note.textContent=ka?'მისაწვდომობის ანალიზი საჭიროებს მინიმუმ 5000 მ² ფართობის ნაკვეთს ან არეალს.':'Accessibility analysis needs a parcel or area of at least 5,000 m².';}
+}
 let parcelCentroid = null, _parcelCardLngLat = null, _parcelCardDragged = false, _statusTimer = null, currentUser = null, _afterAuthCb = null, _pendingLogs = [], _marketingConsent = false;
 let _currentBasemap = 'day', _layersPanelOpen = false;
 const _pulseSize=64;
@@ -1486,6 +1506,7 @@ function _showDrawnAreaCard(bld){
   if(mapReady&&c){const pt=map.project(c);const ch=card.offsetHeight||118;card.style.left=(pt.x+88)+'px';card.style.top=(pt.y-ch/2)+'px';}
   // Keep the "Run nearby analysis" affordance available for drawn areas
   if(!_nearbyRan)_nearbyShowRunButton({center:c});
+  _updateAnalysisGrid(true);
 }
 
 function _selectBuilding(id,shift=false){
@@ -2940,7 +2961,7 @@ function _setAnalysisPanel(open){
     closeCatPopover();
     if(proCard){proCard.style.display='none';}
     document.querySelectorAll('.pro-cat').forEach(el=>el.classList.remove('open'));
-    document.querySelectorAll('.cat-icon-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.cat-icon-btn,.pfc-cat-btn').forEach(b=>b.classList.remove('active'));
     if(bottomBar)bottomBar.classList.remove('visible');
     if(btn)btn.classList.remove('active');
     _activeCatKey=null;
@@ -5513,7 +5534,7 @@ function _closeOtherNavPanels(keep){
     const proCard=document.getElementById('pro-analysis-card');
     if(proCard&&proCard.style.display!=='none'){proCard.style.display='none';}
     document.querySelectorAll('.pro-cat').forEach(el=>el.classList.remove('open'));
-    document.querySelectorAll('#nav-cat-group .nav-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('#nav-cat-group .nav-btn,.pfc-cat-btn').forEach(b=>b.classList.remove('active'));
     _activeCatKey=null;
   }
   if(keep!=='zoning'){
@@ -7290,6 +7311,7 @@ function showParcelPopup(lngLat){
   const _ci=document.getElementById('pfc-concept-info');
   if(_conceptOn&&_conceptLastData){_showConceptLegend(_conceptLastData,_conceptTreeData.features.length);}
   else if(_ci){_ci.style.display='none';}
+  _updateAnalysisGrid(true);
   if(_geoTool||_paintOpen)_clearGeoTools(null);
   const _gtb2=document.getElementById('geo-toolbar');if(_gtb2)_gtb2.style.display='none';
   document.getElementById('nav-zoning-btn')?.classList.remove('active');
@@ -8577,7 +8599,7 @@ function showCatInPanel(catKey,btnEl){
   const catEl=document.getElementById('pro-cat-'+catKey);
   const alreadyOpen=catEl&&catEl.classList.contains('open')&&proCard&&proCard.style.display!=='none';
   document.querySelectorAll('.pro-cat').forEach(el=>el.classList.remove('open'));
-  document.querySelectorAll('.cat-icon-btn,#nav-cat-group .nav-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.cat-icon-btn,#nav-cat-group .nav-btn,.pfc-cat-btn').forEach(b=>b.classList.remove('active'));
   if(alreadyOpen){
     if(proCard)proCard.style.display='none';
     _activeCatKey=null;
@@ -8606,7 +8628,7 @@ function openCatPopover(catKey,btnEl){showCatInPanel(catKey,btnEl);}
 function closeCatPopover(){
   const proCard=document.getElementById('pro-analysis-card');
   document.querySelectorAll('.pro-cat').forEach(el=>el.classList.remove('open'));
-  document.querySelectorAll('.cat-icon-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.cat-icon-btn,.pfc-cat-btn').forEach(b=>b.classList.remove('active'));
   if(proCard)proCard.style.display='none';
   _activeCatKey=null;
 }

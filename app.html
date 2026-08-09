@@ -72,6 +72,23 @@
           <div id="pfc-nearby-note" style="display:none;margin-top:6px;padding:5px 8px;background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.22);border-radius:5px;font-size:0.57rem;color:rgba(165,180,252,0.9);line-height:1.5"></div>
         </div>
       </div>
+      <div id="pfc-analysis-grid" style="display:none;margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.07)">
+        <div class="pfc-cat-lbl" id="pfc-cat-lbl-parcel">Parcel analysis</div>
+        <div class="pfc-cat-grid">
+          <button class="pfc-cat-btn" id="nav-zoning-btn" onclick="toggleZoningPanel()" title="Zoning"><img src="analysis-logos/zoning.svg" width="39" height="39" id="nav-zoning-icon"></button>
+          <button class="pfc-cat-btn" id="cat-btn-relief" onclick="showCatInPanel('relief',this)" title="Relief"><img src="analysis-logos/relief%20analysis.svg" width="39" height="39"></button>
+          <button class="pfc-cat-btn" id="cat-btn-climate" onclick="showCatInPanel('climate',this)" title="Climate"><img src="analysis-logos/climate.svg" width="39" height="39"></button>
+          <button class="pfc-cat-btn" id="cat-btn-energy" onclick="showCatInPanel('energy',this)" title="Clean Energy"><img src="analysis-logos/clean%20energy.svg" width="39" height="39"></button>
+        </div>
+        <div class="pfc-cat-lbl" id="pfc-cat-lbl-acc" style="margin-top:7px">Accessibility analysis</div>
+        <div class="pfc-cat-grid">
+          <button class="pfc-cat-btn" id="cat-btn-accessibility" onclick="showCatInPanel('accessibility',this)" title="Accessibility"><img src="analysis-logos/accessibility.svg" width="39" height="39"></button>
+          <button class="pfc-cat-btn" id="cat-btn-education" onclick="showCatInPanel('education',this)" title="Education"><img src="analysis-logos/education.svg" width="39" height="39"></button>
+          <button class="pfc-cat-btn" id="cat-btn-mobility" onclick="showCatInPanel('mobility',this)" title="Mobility"><img src="analysis-logos/mobility.svg" width="39" height="39"></button>
+          <button class="pfc-cat-btn" id="cat-btn-morphology" onclick="showCatInPanel('morphology',this)" title="Morphology"><img src="analysis-logos/urban%20morphology.svg" width="39" height="39"></button>
+        </div>
+        <div id="pfc-acc-note" style="display:none;margin-top:6px;padding:5px 7px;background:rgba(252,211,77,0.07);border:1px solid rgba(252,211,77,0.18);border-radius:5px;font-size:0.55rem;color:rgba(252,211,77,0.7);line-height:1.45">Accessibility analysis needs a parcel or area of at least 5,000 m².</div>
+      </div>
       <div id="pfc-zone-row" style="display:none;margin-top:5px;padding-top:5px;border-top:1px solid rgba(255,255,255,0.07)"><div id="pfc-zones-list"></div></div>
       <div id="pfc-kvals-row" style="display:none"></div>
       <div id="pfc-setback-note" style="display:none;margin-top:6px;padding:5px 7px;background:rgba(252,211,77,0.07);border:1px solid rgba(252,211,77,0.18);border-radius:5px;font-size:0.58rem;color:rgba(252,211,77,0.65);line-height:1.5">3 m inner clearing is the minimum legal requirement. Final setback may vary based on project type, parcel configuration, and negotiation with public authorities.</div>
@@ -124,17 +141,6 @@
       <svg width="31" height="31" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="3" y1="20" x2="21" y2="20" opacity="0.45"/></svg>
       <span class="nav-tip" id="nav-tip-analysis">Analysis</span>
     </button>
-  </div>
-  <div class="nav-sep"></div>
-  <div class="nav-group" id="nav-cat-group">
-    <button class="nav-btn" id="cat-btn-accessibility" onclick="showCatInPanel('accessibility',this)" title="Accessibility"><img src="analysis-logos/accessibility.svg" width="39" height="39" style="opacity:0.70;transition:opacity 0.15s"><span class="nav-tip" id="nav-tip-cat-accessibility">Accessibility</span></button>
-    <button class="nav-btn" id="nav-zoning-btn" onclick="toggleZoningPanel()" title="Zoning"><img src="analysis-logos/zoning.svg" width="39" height="39" style="opacity:0.70;transition:opacity 0.15s" id="nav-zoning-icon"><span class="nav-tip" id="nav-tip-cat-zoning">Zoning</span></button>
-    <button class="nav-btn" id="cat-btn-education" onclick="showCatInPanel('education',this)" title="Education"><img src="analysis-logos/education.svg" width="39" height="39" style="opacity:0.70;transition:opacity 0.15s"><span class="nav-tip" id="nav-tip-cat-education">Education</span></button>
-    <button class="nav-btn" id="cat-btn-mobility" onclick="showCatInPanel('mobility',this)" title="Mobility"><img src="analysis-logos/mobility.svg" width="39" height="39" style="opacity:0.70;transition:opacity 0.15s"><span class="nav-tip" id="nav-tip-cat-mobility">Mobility</span></button>
-    <button class="nav-btn" id="cat-btn-climate" onclick="showCatInPanel('climate',this)" title="Climate"><img src="analysis-logos/climate.svg" width="39" height="39" style="opacity:0.70;transition:opacity 0.15s"><span class="nav-tip" id="nav-tip-cat-climate">Climate</span></button>
-    <button class="nav-btn" id="cat-btn-morphology" onclick="showCatInPanel('morphology',this)" title="Morphology"><img src="analysis-logos/urban%20morphology.svg" width="39" height="39" style="opacity:0.70;transition:opacity 0.15s"><span class="nav-tip" id="nav-tip-cat-morphology">Morphology</span></button>
-    <button class="nav-btn" id="cat-btn-energy" onclick="showCatInPanel('energy',this)" title="Clean Energy"><img src="analysis-logos/clean%20energy.svg" width="39" height="39" style="opacity:0.70;transition:opacity 0.15s"><span class="nav-tip" id="nav-tip-cat-energy">Clean Energy</span></button>
-    <button class="nav-btn" id="cat-btn-relief" onclick="showCatInPanel('relief',this)" title="Relief"><img src="analysis-logos/relief%20analysis.svg" width="39" height="39" style="opacity:0.70;transition:opacity 0.15s"><span class="nav-tip" id="nav-tip-cat-relief">Relief</span></button>
   </div>
   <div class="nav-sep"></div>
   <div class="nav-group">
