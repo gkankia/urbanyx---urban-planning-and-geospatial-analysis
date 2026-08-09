@@ -434,13 +434,15 @@ export default {
         (cs.maxFloorAreaM2 ? `Total floor area should not exceed ${Math.round(cs.maxFloorAreaM2)} m² (K2). ` : "") +
         `Maximum building height is about ${Math.round(cs.maxHeightM||maxFloors*3)} m (~${maxFloors} floors). ` +
         "Size every element realistically for its use (e.g. a house ~80–200 m², a pool ~20–50 m², a shed/garage ~15–40 m²) and keep them from overlapping. " +
-        "Keep ALL elements within the central ~80% of the parcel; leave open space; add a few trees (roughly 4–12) in the open areas only, never on top of buildings. " +
+        "Keep ALL elements within the central ~80% of the parcel; leave open space; add a few trees (roughly 4–12) in the open areas only, never on top of buildings. Choose a fitting tree type per position. " +
+        "Optionally add a few vehicle 'props' parked on driveways, parking areas or along the plot edge — keep them sparse (0–5 total) and never on top of buildings. " +
         (enPrompt ? `Design brief: ${enPrompt}. ` : "Design a sensible small development. ") +
         "Respond ONLY as JSON with this shape: " +
-        `{"summary": string, "buildings": [{"cx": number, "cy": number, "w": number, "d": number, "rot": number, "floors": integer, "use": string}], "areas": [{"cx": number, "cy": number, "w": number, "d": number, "rot": number, "use": string}], "trees": [{"x": number, "y": number}]}. ` +
+        `{"summary": string, "buildings": [{"cx": number, "cy": number, "w": number, "d": number, "rot": number, "floors": integer, "use": string}], "areas": [{"cx": number, "cy": number, "w": number, "d": number, "rot": number, "use": string}], "trees": [{"x": number, "y": number, "type": string}], "props": [{"x": number, "y": number, "type": string}]}. ` +
         "buildings = enclosed structures to be EXTRUDED; use one of: house, apartment, residential, office, commercial, mixed, shed, garage, pavilion, amenity (floors >= 1). " +
         "areas = FLAT ground features; use one of: pool, terrace, patio, driveway, parking, playground, garden, lawn, sport, plaza. " +
-        "cx/cy are the element centre (normalized 0..1); w and d are width and depth in metres; rot is rotation in degrees; x/y are normalized tree positions. Include only elements the brief implies; omit empty arrays as [].";
+        "tree type = one of: broadleaf, conifer, palm, shrub. prop type = one of: car, minivan, bus, truck. " +
+        "cx/cy are the element centre (normalized 0..1); w and d are width and depth in metres; rot is rotation in degrees; x/y are normalized positions. Include only elements the brief implies; omit empty arrays as [].";
       try {
         const gr = await fetch(`${GLM}/gemini-flash-latest:generateContent?key=${key}`, {
           method: "POST", headers: { "Content-Type": "application/json" },

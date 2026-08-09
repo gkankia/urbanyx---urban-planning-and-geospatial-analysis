@@ -7987,6 +7987,7 @@ async function _renderGenerate(){
 let _conceptBldIds=[]; // extruded buildings created by the last concept
 let _conceptAreaIds=[]; // flat editable ground areas (pool, terrace, …) created by the concept
 let _conceptTreeData={type:'FeatureCollection',features:[]};
+let _conceptPropData=[]; // glTF scatter props (people/cars): [{pid,cx,cy,type}]
 let _conceptOn=false, _conceptSummary='', _conceptParcel=null, _conceptLastData=null;
 const _CONCEPT_USE={
   house:['#f59e0b','House'],residential:['#e89630','Residential'],apartment:['#e89630','Apartment'],
@@ -8054,6 +8055,53 @@ function _conceptDecoClick(e){
 }
 // ── Rich in-map 3D decoration for the concept: real low-poly trees + pitched roofs ──
 let _conceptDeco=null;
+// glTF model registry for concept props — real 3D models imported from a CDN (jsDelivr,
+// which serves GitHub with permissive CORS). Swap these for your own CC0 .glb files on R2
+// anytime; a type with no entry (or a load failure) is simply skipped. NOTE: skinned
+// characters (e.g. a rigged person) need SkeletonUtils to instance — kept out for now, so
+// only non-skinned props like vehicles are wired.
+// Kenney Car Kit (CC0), pinned to a commit. Regular vehicles only. `bus` has no free
+// hot-linkable CC0 asset yet — add one here (or on your R2) and it renders automatically.
+const _KENNEY_CARS='https://cdn.jsdelivr.net/gh/Arslan12216775/kenney_car-kit@153591d606970058a4d0e44aeadf435c2d3f89ed/Models/GLB%20format/';
+const _MODEL_REGISTRY={
+  car:    {url:_KENNEY_CARS+'sedan.glb', height:1.5},
+  minivan:{url:_KENNEY_CARS+'van.glb',   height:2.0},
+  truck:  {url:_KENNEY_CARS+'truck.glb', height:2.8}
+  // bus: {url:'<your CC0 bus .glb>', height:3.2}
+};
+const _modelCache={}; // url -> Promise<THREE.Object3D|null>
+const _DRACO_PATH='https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/js/libs/draco/gltf/';
+function _ensureGLTFLoader(cb){
+  if(typeof THREE!=='undefined'&&THREE.GLTFLoader){cb();return;}
+  const add=(src,next)=>{const s=document.createElement('script');s.src=src;s.onload=next;s.onerror=next;document.head.appendChild(s);};
+  // GLTFLoader, then DRACOLoader (many CDN car/scene models are Draco-compressed).
+  add('https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/js/loaders/GLTFLoader.js',()=>
+    add('https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/js/loaders/DRACOLoader.js',()=>cb()));
+}
+function _normalizeModel(obj,targetH){
+  obj.rotation.x=Math.PI/2; obj.updateMatrixWorld(true);            // Y-up model → our Z-up frame
+  let box=new THREE.Box3().setFromObject(obj),size=new THREE.Vector3();box.getSize(size);
+  const sc=(targetH||2)/Math.max(size.z,0.01); obj.scale.setScalar(sc); obj.updateMatrixWorld(true);
+  box=new THREE.Box3().setFromObject(obj);
+  obj.position.x-=(box.min.x+box.max.x)/2; obj.position.y-=(box.min.y+box.max.y)/2; obj.position.z-=box.min.z; // centre on point, sit on ground
+  const holder=new THREE.Group();holder.add(obj);return holder;
+}
+function _loadConceptModel(type){
+  const reg=_MODEL_REGISTRY[type]; if(!reg)return Promise.resolve(null);
+  if(_modelCache[reg.url])return _modelCache[reg.url];
+  const p=new Promise(res=>{
+    _ensureGLTFLoader(()=>{
+      if(typeof THREE==='undefined'||!THREE.GLTFLoader){res(null);return;}
+      const loader=new THREE.GLTFLoader();
+      try{if(THREE.DRACOLoader){const d=new THREE.DRACOLoader();d.setDecoderPath(_DRACO_PATH);loader.setDRACOLoader(d);}}catch(_){}
+      try{loader.load(reg.url,gltf=>{
+        const obj=gltf.scene||(gltf.scenes&&gltf.scenes[0]); if(!obj){res(null);return;}
+        try{res(_normalizeModel(obj,reg.height));}catch(_){res(null);}
+      },undefined,()=>res(null));}catch(_){res(null);}
+    });
+  });
+  _modelCache[reg.url]=p; return p;
+}
 class _ConceptDecoLayer{
   constructor(){this.id='concept-deco';this.type='custom';this.renderingMode='3d';}
   onAdd(map,gl){
@@ -8087,10 +8135,10 @@ class _ConceptDecoLayer{
     this._modelMx=new THREE.Matrix4().set(s,0,0,om.x, 0,-s,0,om.y, 0,0,s,om.z, 0,0,0,1);
     const toLocal=(lng,lat)=>{const m=mapboxgl.MercatorCoordinate.fromLngLat([lng,lat],0);return [(m.x-om.x)/s,-(m.y-om.y)/s];};
     const elevAt=(lng,lat)=>(map.queryTerrainElevation({lng,lat})||0)-baseElev;
-    // Trees
+    // Trees (procedural low-poly variants by type)
     (_conceptTreeData.features||[]).forEach(f=>{
       const p=f.properties||{};if(p.cx==null)return;
-      const [lx,ly]=toLocal(p.cx,p.cy);const g=this._makeTree(p.tid||0);
+      const [lx,ly]=toLocal(p.cx,p.cy);const g=this._makeTree(p.tid||0,p.ttype||'broadleaf');
       g.position.set(lx,ly,elevAt(p.cx,p.cy));this._scene.add(g);
     });
     // Pitched roofs on low-rise concept dwellings
@@ -8100,17 +8148,44 @@ class _ConceptDecoLayer{
       const roof=this._makeRoof(ring,b.extrusionHeight||6,String(b.conceptUse||'').toLowerCase(),toLocal,elevAt);
       if(roof)this._scene.add(roof);
     });
+    // Props (real glTF models loaded async from a CDN) — a stale-guard drops late loads.
+    this._gen=(this._gen||0)+1; const gen=this._gen;
+    (_conceptPropData||[]).forEach(pr=>{
+      const [lx,ly]=toLocal(pr.cx,pr.cy); const z=elevAt(pr.cx,pr.cy);
+      _loadConceptModel(pr.type).then(model=>{
+        if(!model||gen!==this._gen||!this._scene)return;
+        const inst=model.clone(true); inst.position.set(lx,ly,z);
+        inst.rotation.z=Math.abs(Math.sin((pr.pid+1)*7.13))*Math.PI*2;
+        this._scene.add(inst); if(this._map)this._map.triggerRepaint();
+      });
+    });
     if(this._map)this._map.triggerRepaint();
   }
-  _makeTree(seed){
+  _makeTree(seed,type){
     const g=new THREE.Group();
     const r=Math.abs((Math.sin((seed+1)*12.9898)*43758.5453)%1);
-    const sc=0.75+r*0.7;
-    const trunk=new THREE.Mesh(new THREE.CylinderGeometry(0.16,0.22,2.0*sc,6),new THREE.MeshPhongMaterial({color:0x6b4a2b}));
-    trunk.rotation.x=Math.PI/2;trunk.position.z=1.0*sc;g.add(trunk);
-    const foli=new THREE.MeshPhongMaterial({color:(r>0.6?0x3aa055:0x2f8f3e),flatShading:true});
-    const f1=new THREE.Mesh(new THREE.ConeGeometry(1.9*sc,3.0*sc,7),foli);f1.rotation.x=Math.PI/2;f1.position.z=3.4*sc;g.add(f1);
-    const f2=new THREE.Mesh(new THREE.ConeGeometry(1.35*sc,2.2*sc,7),foli);f2.rotation.x=Math.PI/2;f2.position.z=4.9*sc;g.add(f2);
+    const sc=0.8+r*0.55;
+    const bark=new THREE.MeshPhongMaterial({color:0x6b4a2b});
+    const trunk=(h,rt,rb)=>{const t=new THREE.Mesh(new THREE.CylinderGeometry(rt,rb,h,6),bark);t.rotation.x=Math.PI/2;t.position.z=h/2;g.add(t);};
+    if(type==='conifer'){
+      trunk(1.6*sc,0.13,0.2);
+      const foli=new THREE.MeshPhongMaterial({color:0x2f7d3e,flatShading:true});
+      [[2.0,3.0,3.0],[1.5,2.4,4.4],[1.0,1.8,5.6]].forEach(([rad,h,z])=>{const c=new THREE.Mesh(new THREE.ConeGeometry(rad*sc,h*sc,7),foli);c.rotation.x=Math.PI/2;c.position.z=z*sc;g.add(c);});
+    } else if(type==='palm'){
+      const th=4.6*sc; trunk(th,0.15,0.26);
+      const foli=new THREE.MeshPhongMaterial({color:0x3aa055,flatShading:true,side:THREE.DoubleSide});
+      for(let i=0;i<7;i++){const fr=new THREE.Mesh(new THREE.ConeGeometry(0.5*sc,2.8*sc,4),foli);const a=i/7*Math.PI*2;
+        fr.position.set(Math.cos(a)*1.1*sc,Math.sin(a)*1.1*sc,th-0.2*sc);fr.rotation.x=Math.PI/2.6;fr.rotation.z=a;g.add(fr);}
+    } else if(type==='shrub'){
+      const foli=new THREE.MeshPhongMaterial({color:0x4a9d4a,flatShading:true});
+      [[1.1,0,0,0.9],[0.8,0.8,0.2,1.3],[0.8,-0.7,-0.2,1.2]].forEach(([rad,ox,oy,z])=>{const s2=new THREE.Mesh(new THREE.IcosahedronGeometry(rad*sc,0),foli);s2.position.set(ox*sc,oy*sc,z*sc);g.add(s2);});
+    } else { // broadleaf
+      trunk(2.2*sc,0.15,0.24);
+      const foli=new THREE.MeshPhongMaterial({color:(r>0.5?0x4fae4f:0x3d9440),flatShading:true});
+      const canopy=new THREE.Mesh(new THREE.IcosahedronGeometry(2.1*sc,0),foli);canopy.position.z=3.6*sc;canopy.scale.set(1,1,0.92);g.add(canopy);
+      const c2=new THREE.Mesh(new THREE.IcosahedronGeometry(1.25*sc,0),foli);c2.position.set(1.1*sc,0.4*sc,3.0*sc);g.add(c2);
+    }
+    g.rotation.z=r*Math.PI*2; // random yaw
     return g;
   }
   _makeRoof(ring,h,use,toLocal,elevAt){
@@ -8157,6 +8232,7 @@ function _clearConcept(){
   _conceptBldIds.concat(_conceptAreaIds).forEach(id=>{try{if(typeof _removeBuildingById==='function')_removeBuildingById(id);}catch(_){}});
   _conceptBldIds=[]; _conceptAreaIds=[];
   _conceptTreeData={type:'FeatureCollection',features:[]};
+  _conceptPropData=[];
   _conceptOn=false; _conceptSummary=''; _conceptParcel=null; _conceptLastData=null;
   const _cl=document.getElementById('pfc-concept-info');if(_cl)_cl.style.display='none';
   if(mapReady){
@@ -8288,22 +8364,37 @@ function _renderConcept(concept,parcel,bb,spanLng,spanLat){
     footprints.concat(areaFeats).forEach(f=>{try{const d=turf.difference(green,f);if(d)green=d;}catch(_){}});
     map.getSource('concept-green')?.setData(green);
   }catch(_){}
-  // Trees → small 3D green cylinders, kept inside the parcel and off buildings/areas
+  // Trees → real 3D low-poly variants (broadleaf/conifer/palm/shrub), inside the parcel & off buildings/areas
   const blockers=footprints.concat(areaFeats);
+  const _TREE_TYPES=['broadleaf','conifer','palm','shrub'];
   const treeFeats=[];let tid=0;
   (concept.trees||[]).slice(0,24).forEach(t=>{
     try{
       const pt=[nx2lng(+t.x),ny2lat(+t.y)];
       if(!turf.booleanPointInPolygon(pt,turf.feature(parcel)))return;
       if(blockers.some(f=>{try{return turf.booleanPointInPolygon(pt,f);}catch(_){return false;}}))return;
-      const circ=turf.circle(pt,0.0028,{steps:10,units:'kilometers'}); // ~2.8 m radius
-      circ.properties={tid:tid++,h:6,cx:pt[0],cy:pt[1]};
+      const type=_TREE_TYPES.includes(String(t.type||'').toLowerCase())?String(t.type).toLowerCase():'broadleaf';
+      const circ=turf.circle(pt,0.0028,{steps:10,units:'kilometers'}); // ~2.8 m radius (click target)
+      circ.properties={tid:tid++,h:6,cx:pt[0],cy:pt[1],ttype:type};
       treeFeats.push(circ);
     }catch(_){}
   });
   _conceptTreeData={type:'FeatureCollection',features:treeFeats};
   map.getSource('concept-trees')?.setData(_conceptTreeData);
-  _ensureConceptDeco(); // real 3D trees + pitched roofs
+  // Props → real glTF models (people, cars) loaded from a CDN, on open space only
+  const _PROP_TYPES=['car','minivan','bus','truck'];
+  const propFeats=[];let pid=0;
+  (concept.props||[]).slice(0,8).forEach(pr=>{
+    try{
+      const pt=[nx2lng(+pr.x),ny2lat(+pr.y)];
+      if(!turf.booleanPointInPolygon(pt,turf.feature(parcel)))return;
+      if(footprints.some(f=>{try{return turf.booleanPointInPolygon(pt,f);}catch(_){return false;}}))return;
+      const type=_PROP_TYPES.includes(String(pr.type||'').toLowerCase())?String(pr.type).toLowerCase():'car';
+      propFeats.push({pid:pid++,cx:pt[0],cy:pt[1],type});
+    }catch(_){}
+  });
+  _conceptPropData=propFeats;
+  _ensureConceptDeco(); // real 3D trees + pitched roofs + glTF props
   // Reactivate the parcel so its floating card shows the concept info + render button
   // (the last-registered concept shape would otherwise steal the active card).
   if(_dbParcelGeoJSON){_activateParcel();}
