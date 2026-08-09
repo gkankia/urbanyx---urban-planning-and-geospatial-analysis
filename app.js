@@ -1584,11 +1584,18 @@ function _showDrawnAreaCard(bld){
     document.getElementById('pfc-perim').textContent=bld.perimStr;}
   document.getElementById('pfc-lbl-type').textContent=isKa?'ტიპი':'Type';
   document.getElementById('pfc-type').textContent=isKa?'მომხმარებლის დამატებული':'User-added';
-  // Hide parcel-only + zoning/permit rows for drawn areas
+  // Only the parcel-record rows (address/owner/registration) and parcel zoning DATA rows
+  // don't apply to a user-drawn area. Everything interactive matches the parcel card.
   const addrRow=document.getElementById('pfc-lbl-addr')?.closest('.pfc-row');if(addrRow)addrRow.style.display='none';
   const ownerRow=document.getElementById('pfc-lbl-owner')?.closest('.pfc-row');if(ownerRow)ownerRow.style.display='none';
   const _regRowD=document.getElementById('pfc-reg-row');if(_regRowD)_regRowD.style.display='none';
-  ['pfc-zone-row','pfc-kvals-row','pfc-setback-note','pfc-setback-warn','pfc-area-warn','pfc-nodev-warn','pfc-build-params-row','pfc-compliance-row','pfc-permits-row','pfc-render-row','pfc-concept-info'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});
+  ['pfc-zone-row','pfc-kvals-row','pfc-build-params-row','pfc-compliance-row','pfc-permits-row'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});
+  // Same action sections as the parcel card: Generate concept (+ concept info) & analysis.
+  const _rr=document.getElementById('pfc-render-row');if(_rr)_rr.style.display='block';
+  const _cb=document.getElementById('pfc-concept-btn');if(_cb)_cb.textContent=(isKa?'განვითარების კონცეფცია':'Generate concept');
+  const _ci=document.getElementById('pfc-concept-info');
+  if(_conceptOn&&_conceptLastData){_showConceptLegend(_conceptLastData,_conceptTreeData.features.length);}
+  else if(_ci){_ci.style.display='none';}
   card.classList.remove('minimized');
   const btn=document.getElementById('pfc-min-btn');if(btn)btn.textContent='−';
   card.style.display='block';
