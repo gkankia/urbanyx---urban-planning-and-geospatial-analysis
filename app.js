@@ -84,20 +84,30 @@ function _updateAnalysisGrid(show){
   const lp=document.getElementById('pfc-cat-lbl-parcel');if(lp)lp.textContent=ka?'ნაკვეთის ანალიზი':'Parcel analysis';
   const la=document.getElementById('pfc-cat-lbl-acc');if(la)la.textContent=ka?'მისაწვდომობის ანალიზი':'Accessibility analysis';
   // Localized native tooltips (the nav-tip spans were removed with the old nav buttons).
-  const _TT={'nav-zoning-btn':['Zoning','ზონირება'],'cat-btn-relief':['Relief','რელიეფი'],'cat-btn-climate':['Climate','კლიმატი'],'cat-btn-energy':['Clean Energy','სუფთა ენერგია'],'cat-btn-accessibility':['Isochrone','იზოქრონა'],'cat-btn-education':['Education','განათლება'],'cat-btn-mobility':['Mobility','მობილურობა'],'cat-btn-morphology':['Morphology','მორფოლოგია']};
+  const _TT={'nav-zoning-btn':['Zoning','ზონირება'],'cat-btn-relief':['Relief','რელიეფი'],'cat-btn-climate':['Climate','კლიმატი'],'cat-btn-energy':['Clean Energy','სუფთა ენერგია'],'cat-btn-accessibility':['Isochrone','იზოქრონი'],'cat-btn-education':['Education','განათლება'],'cat-btn-mobility':['Mobility','მობილობა'],'cat-btn-morphology':['Morphology','ურბანული მორფოლოგია']};
   Object.keys(_TT).forEach(id=>{const b=document.getElementById(id);if(b)b.title=_TT[id][ka?1:0];});
-  // Lock everything except the Isochrone button when the parcel is small and no isochrone yet.
-  const locked=!_isLargeParcel()&&!_hasIsochrone();
-  const lockTip=ka?'ჯერ გაუშვით იზოქრონის ანალიზი':'Run the Isochrone analysis first';
-  ['nav-zoning-btn','cat-btn-relief','cat-btn-climate','cat-btn-energy','cat-btn-education','cat-btn-mobility','cat-btn-morphology'].forEach(id=>{
-    const b=document.getElementById(id);if(!b)return;
-    b.classList.toggle('pfc-cat-locked',locked);
-    b.setAttribute('data-lock-tip',lockTip);
-  });
+  const area=_currentParcelAreaM2||0;
+  // Parcel analyses: Zoning & Climate always active; Relief & Clean energy need ≥ 1,000 m².
+  const reLocked=area<1000;
+  const reTip=ka?'რელიეფი და სუფთა ენერგია საჭიროებს მინიმუმ 1000 მ² ფართობის ნაკვეთს':'Relief & Clean energy need a parcel of at least 1,000 m²';
+  ['nav-zoning-btn','cat-btn-climate'].forEach(id=>{const b=document.getElementById(id);if(b)b.classList.remove('pfc-cat-locked');});
+  ['cat-btn-relief','cat-btn-energy'].forEach(id=>{const b=document.getElementById(id);if(!b)return;b.classList.toggle('pfc-cat-locked',reLocked);b.setAttribute('data-lock-tip',reTip);});
+  const pnote=document.getElementById('pfc-parcel-note');
+  if(pnote){pnote.style.display=reLocked?'block':'none';
+    pnote.textContent=ka?'რელიეფი და სუფთა ენერგია საჭიროებს მინიმუმ 1000 მ² ფართობის ნაკვეთს.':'Relief & Clean energy need a parcel of at least 1,000 m².';}
+  // Accessibility analyses: Isochrone always active; Education/Mobility/Morphology need an
+  // isochrone (or a ≥ 5,000 m² parcel that can serve as the walking area itself).
+  const accLocked=!(_isLargeParcel()||_hasIsochrone());
+  const accTip=ka?'ჯერ გაუშვით იზოქრონის ანალიზი':'Run the Isochrone analysis first';
   const accBtn=document.getElementById('cat-btn-accessibility');if(accBtn)accBtn.classList.remove('pfc-cat-locked'); // Isochrone always active
+  ['cat-btn-education','cat-btn-mobility','cat-btn-morphology'].forEach(id=>{
+    const b=document.getElementById(id);if(!b)return;
+    b.classList.toggle('pfc-cat-locked',accLocked);
+    b.setAttribute('data-lock-tip',accTip);
+  });
   const note=document.getElementById('pfc-acc-note');
-  if(note){note.style.display=locked?'block':'none';
-    note.textContent=ka?'პატარა ნაკვეთი — ჯერ გაუშვით იზოქრონის ანალიზი, დანარჩენი ანალიზები გააქტიურდება.':'Small parcel — run the Isochrone analysis first to unlock the other analyses.';}
+  if(note){note.style.display=accLocked?'block':'none';
+    note.textContent=ka?'ჯერ გაუშვით იზოქრონის ანალიზი დანარჩენი მისაწვდომობის ანალიზების გასააქტიურებლად.':'Run the Isochrone analysis first to unlock the other accessibility analyses.';}
   // PRO badge on Pro-only analyses for free-tier users.
   const free=!currentUser||currentUser.plan!=='pro';
   ['cat-btn-climate','cat-btn-energy','cat-btn-relief'].forEach(id=>{
@@ -6563,7 +6573,7 @@ function _nearbyShowRunButton(cfg){
   const proTag=isPro?'':' <span style="font-size:0.5rem;letter-spacing:0.08em;background:rgba(165,180,252,0.2);color:#a5b4fc;border:1px solid rgba(165,180,252,0.4);border-radius:3px;padding:1px 4px;vertical-align:1px">PRO</span>';
   const row=document.getElementById('pfc-nearby-row');if(row)row.style.display='block';
   const btn=document.getElementById('pfc-nearby-run-btn');
-  if(btn){btn.style.display='';btn.disabled=false;btn.innerHTML=(isKa?'ახლომდებარე ანალიზის გაშვება':'Run nearby analysis')+proTag;}
+  if(btn){btn.style.display='';btn.disabled=false;btn.innerHTML=(isKa?'ახლომდებარე ანალიზი':'Nearby analysis')+proTag;}
   const body=document.getElementById('pfc-nearby-body');if(body)body.style.display='none';
   const card=document.getElementById('parcel-float-card');if(card&&card.style.display==='none')card.style.display='block';
 }
@@ -7379,7 +7389,7 @@ function showParcelPopup(lngLat){
   const _er=document.getElementById('pfc-ext-row');if(_er){_er.style.display='none';_er.innerHTML='';}
   // Parcel workflow: Generate concept → (once generated) concept info + Render button
   const _rr=document.getElementById('pfc-render-row');if(_rr)_rr.style.display='block';
-  const _cb=document.getElementById('pfc-concept-btn');if(_cb)_cb.textContent=(lang==='ka'?'კონცეფციის გენერაცია':'Generate concept');
+  const _cb=document.getElementById('pfc-concept-btn');if(_cb)_cb.textContent=(lang==='ka'?'განვითარების კონცეფცია':'Generate concept');
   const _ci=document.getElementById('pfc-concept-info');
   if(_conceptOn&&_conceptLastData){_showConceptLegend(_conceptLastData,_conceptTreeData.features.length);}
   else if(_ci){_ci.style.display='none';}
@@ -7971,7 +7981,7 @@ function _hexToRgb01(h){h=String(h).replace('#','');return [parseInt(h.slice(0,2
 function _conceptI18n(){
   const ka=lang==='ka';
   return {
-    title: ka?'კონცეფციის გენერაცია':'Generate concept',
+    title: ka?'განვითარების კონცეფცია':'Generate concept',
     sub: ka?'აღწერე განაშენიანება — აპლიკაცია განათავსებს რედაქტირებად 3D მოცულობებს, გამწვანებასა და ხეებს ნაკვეთში, ზონირების ლიმიტების დაცვით.':'Describe the development — the app places editable 3D masses, greenery and trees within the parcel, respecting the zoning limits.',
     ph: ka?'მაგ.: ორი საცხოვრებელი კორპუსი, 6 სართული, ცენტრალური მწვანე ეზო ხეებით':'e.g. two residential blocks, 6 floors, central green courtyard with trees',
     go: ka?'გენერაცია':'Generate',

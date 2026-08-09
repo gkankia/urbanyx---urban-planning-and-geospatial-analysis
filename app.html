@@ -49,19 +49,6 @@
       <div class="pfc-row"><span class="pfc-lbl" id="pfc-lbl-addr">Address</span><span class="pfc-val" id="pfc-addr">—</span></div>
       <div class="pfc-row"><span class="pfc-lbl" id="pfc-lbl-owner">Owner</span><span class="pfc-val" id="pfc-owner">—</span></div>
       <div class="pfc-row" id="pfc-reg-row" style="display:none"><span class="pfc-lbl" id="pfc-lbl-reg">Registered</span><span class="pfc-val" id="pfc-reg">—</span></div>
-      <div id="pfc-ext-row" style="display:none;margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.07)"></div>
-      <div id="pfc-render-row" style="display:none;margin-top:6px">
-        <button id="pfc-concept-btn" onclick="openConceptModal()" style="width:100%;padding:7px;border-radius:6px;border:1px solid rgba(52,211,153,0.35);background:rgba(52,211,153,0.14);color:#6ee7b7;font-size:0.7rem;font-weight:600;font-family:inherit;cursor:pointer">Generate concept</button>
-      </div>
-      <div id="pfc-concept-info" style="display:none;margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.07)">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
-          <span id="pfc-concept-title" style="font-size:0.6rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:rgba(255,255,255,0.28)">Concept</span>
-          <button id="pfc-concept-clear" onclick="_clearConcept()" title="Clear concept" style="font-size:0.55rem;color:rgba(255,255,255,0.4);background:none;border:1px solid rgba(255,255,255,0.12);border-radius:5px;padding:2px 7px;cursor:pointer;font-family:inherit">Clear</button>
-        </div>
-        <div id="pfc-concept-summary" style="display:none;font-size:0.6rem;color:rgba(255,255,255,0.62);line-height:1.5;margin-bottom:6px"></div>
-        <div id="pfc-concept-items" style="display:flex;flex-direction:column;gap:3px;margin-bottom:8px"></div>
-        <button id="pfc-concept-render-btn" onclick="openRenderModal()" style="width:100%;padding:7px;border-radius:6px;border:1px solid rgba(167,139,250,0.35);background:rgba(167,139,250,0.16);color:#c4b5fd;font-size:0.7rem;font-weight:600;font-family:inherit;cursor:pointer">Generate concept render</button>
-      </div>
       <div id="pfc-nearby-row" style="display:none;margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.07)">
         <button id="pfc-nearby-run-btn" onclick="_nearbyRunClicked()" style="width:100%;padding:6px;border-radius:6px;border:1px solid rgba(99,102,241,0.3);background:rgba(99,102,241,0.12);color:#a5b4fc;font-size:0.7rem;font-weight:600;font-family:inherit;cursor:pointer">Run nearby analysis</button>
         <div id="pfc-nearby-body" style="display:none">
@@ -81,6 +68,7 @@
           <button class="pfc-cat-btn" id="cat-btn-climate" onclick="_pfcCatClick('climate',this)" title="Climate"><img src="analysis-logos/climate.svg" width="39" height="39"></button>
           <button class="pfc-cat-btn" id="cat-btn-energy" onclick="_pfcCatClick('energy',this)" title="Clean Energy"><img src="analysis-logos/clean%20energy.svg" width="39" height="39"></button>
         </div>
+        <div id="pfc-parcel-note" style="display:none;margin-top:6px;padding:5px 7px;background:rgba(252,211,77,0.07);border:1px solid rgba(252,211,77,0.18);border-radius:5px;font-size:0.55rem;color:rgba(252,211,77,0.7);line-height:1.45">Relief & Clean energy need a parcel of at least 1,000 m².</div>
         <div class="pfc-cat-lbl" id="pfc-cat-lbl-acc" style="margin-top:7px">Accessibility analysis</div>
         <div class="pfc-cat-grid">
           <button class="pfc-cat-btn" id="cat-btn-accessibility" onclick="_pfcCatClick('accessibility',this)" title="Isochrone"><img src="analysis-logos/accessibility.svg" width="39" height="39"></button>
@@ -89,6 +77,19 @@
           <button class="pfc-cat-btn" id="cat-btn-morphology" onclick="_pfcCatClick('morphology',this)" title="Morphology"><img src="analysis-logos/urban%20morphology.svg" width="39" height="39"></button>
         </div>
         <div id="pfc-acc-note" style="display:none;margin-top:6px;padding:5px 7px;background:rgba(252,211,77,0.07);border:1px solid rgba(252,211,77,0.18);border-radius:5px;font-size:0.55rem;color:rgba(252,211,77,0.7);line-height:1.45">Accessibility analysis needs a parcel or area of at least 5,000 m².</div>
+      </div>
+      <div id="pfc-ext-row" style="display:none;margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.07)"></div>
+      <div id="pfc-render-row" style="display:none;margin-top:6px">
+        <button id="pfc-concept-btn" onclick="openConceptModal()" style="width:100%;padding:7px;border-radius:6px;border:1px solid rgba(52,211,153,0.35);background:rgba(52,211,153,0.14);color:#6ee7b7;font-size:0.7rem;font-weight:600;font-family:inherit;cursor:pointer">Generate concept</button>
+      </div>
+      <div id="pfc-concept-info" style="display:none;margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.07)">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
+          <span id="pfc-concept-title" style="font-size:0.6rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:rgba(255,255,255,0.28)">Concept</span>
+          <button id="pfc-concept-clear" onclick="_clearConcept()" title="Clear concept" style="font-size:0.55rem;color:rgba(255,255,255,0.4);background:none;border:1px solid rgba(255,255,255,0.12);border-radius:5px;padding:2px 7px;cursor:pointer;font-family:inherit">Clear</button>
+        </div>
+        <div id="pfc-concept-summary" style="display:none;font-size:0.6rem;color:rgba(255,255,255,0.62);line-height:1.5;margin-bottom:6px"></div>
+        <div id="pfc-concept-items" style="display:flex;flex-direction:column;gap:3px;margin-bottom:8px"></div>
+        <button id="pfc-concept-render-btn" onclick="openRenderModal()" style="width:100%;padding:7px;border-radius:6px;border:1px solid rgba(167,139,250,0.35);background:rgba(167,139,250,0.16);color:#c4b5fd;font-size:0.7rem;font-weight:600;font-family:inherit;cursor:pointer">Generate concept render</button>
       </div>
       <div id="pfc-zone-row" style="display:none;margin-top:5px;padding-top:5px;border-top:1px solid rgba(255,255,255,0.07)"><div id="pfc-zones-list"></div></div>
       <div id="pfc-kvals-row" style="display:none"></div>
