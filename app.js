@@ -8060,14 +8060,21 @@ let _conceptDeco=null;
 // anytime; a type with no entry (or a load failure) is simply skipped. NOTE: skinned
 // characters (e.g. a rigged person) need SkeletonUtils to instance — kept out for now, so
 // only non-skinned props like vehicles are wired.
-// Kenney Car Kit (CC0), pinned to a commit. Regular vehicles only. `bus` has no free
-// hot-linkable CC0 asset yet — add one here (or on your R2) and it renders automatically.
-const _KENNEY_CARS='https://cdn.jsdelivr.net/gh/Arslan12216775/kenney_car-kit@153591d606970058a4d0e44aeadf435c2d3f89ed/Models/GLB%20format/';
+// Kenney kits (CC0), pinned to a commit. Vehicles + park/recreation furniture. Types with
+// no entry (bus, playground, lamppost…) skip gracefully — add a .glb URL here (or point at
+// your own R2) and it renders automatically. Garages are buildings; pools are sized areas.
+const _KENNEY='https://cdn.jsdelivr.net/gh/Arslan12216775/kenney_car-kit@153591d606970058a4d0e44aeadf435c2d3f89ed/';
 const _MODEL_REGISTRY={
-  car:    {url:_KENNEY_CARS+'sedan.glb', height:1.5},
-  minivan:{url:_KENNEY_CARS+'van.glb',   height:2.0},
-  truck:  {url:_KENNEY_CARS+'truck.glb', height:2.8}
-  // bus: {url:'<your CC0 bus .glb>', height:3.2}
+  // vehicles
+  car:     {url:_KENNEY+'Models/GLB%20format/sedan.glb', height:1.5},
+  minivan: {url:_KENNEY+'Models/GLB%20format/van.glb',   height:2.0},
+  truck:   {url:_KENNEY+'Models/GLB%20format/truck.glb', height:2.8},
+  // park / recreation furniture
+  fountain:{url:_KENNEY+'Models/Fantasy/fountain-round.glb', height:2.2},
+  bench:   {url:_KENNEY+'Models/Fantasy/stall-bench.glb',    height:1.1},
+  planter: {url:_KENNEY+'Models/City/planter.glb',           height:0.8},
+  rock:    {url:_KENNEY+'Models/Fantasy/rock-large.glb',     height:1.2}
+  // bus / playground / lamppost: {url:'<your CC0 .glb>', height:...}
 };
 const _modelCache={}; // url -> Promise<THREE.Object3D|null>
 const _DRACO_PATH='https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/js/libs/draco/gltf/';
@@ -8382,7 +8389,7 @@ function _renderConcept(concept,parcel,bb,spanLng,spanLat){
   _conceptTreeData={type:'FeatureCollection',features:treeFeats};
   map.getSource('concept-trees')?.setData(_conceptTreeData);
   // Props → real glTF models (people, cars) loaded from a CDN, on open space only
-  const _PROP_TYPES=['car','minivan','bus','truck'];
+  const _PROP_TYPES=['car','minivan','bus','truck','fountain','bench','planter','rock'];
   const propFeats=[];let pid=0;
   (concept.props||[]).slice(0,8).forEach(pr=>{
     try{
