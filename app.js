@@ -105,9 +105,7 @@ function _updateAnalysisGrid(show){
   const reTip=ka?'რელიეფი და სუფთა ენერგია საჭიროებს მინიმუმ 1000 მ² ფართობის ნაკვეთს':'Relief & Clean energy need a parcel of at least 1,000 m²';
   ['nav-zoning-btn','cat-btn-climate'].forEach(id=>{const b=document.getElementById(id);if(b)b.classList.remove('pfc-cat-locked');});
   ['cat-btn-relief','cat-btn-energy'].forEach(id=>{const b=document.getElementById(id);if(!b)return;b.classList.toggle('pfc-cat-locked',reLocked);b.setAttribute('data-lock-tip',reTip);});
-  const pnote=document.getElementById('pfc-parcel-note');
-  if(pnote){pnote.style.display=reLocked?'block':'none';
-    pnote.textContent=ka?'რელიეფი და სუფთა ენერგია საჭიროებს მინიმუმ 1000 მ² ფართობის ნაკვეთს.':'Relief & Clean energy need a parcel of at least 1,000 m².';}
+  // (Lock reasons are shown as hover tooltips on the buttons — no in-card note boxes.)
   // Accessibility analyses: Isochrone always active; Education/Mobility/Morphology need an
   // isochrone (or a ≥ 5,000 m² parcel that can serve as the walking area itself).
   const accLocked=!(_isLargeParcel()||_hasIsochrone());
@@ -118,9 +116,6 @@ function _updateAnalysisGrid(show){
     b.classList.toggle('pfc-cat-locked',accLocked);
     b.setAttribute('data-lock-tip',accTip);
   });
-  const note=document.getElementById('pfc-acc-note');
-  if(note){note.style.display=accLocked?'block':'none';
-    note.textContent=ka?'ჯერ გაუშვით იზოქრონის ანალიზი დანარჩენი მისაწვდომობის ანალიზების გასააქტიურებლად.':'Run the Isochrone analysis first to unlock the other accessibility analyses.';}
   // PRO badge on Pro-only analyses for free-tier users.
   const free=!currentUser||currentUser.plan!=='pro';
   ['cat-btn-climate','cat-btn-energy','cat-btn-relief'].forEach(id=>{
