@@ -7157,8 +7157,10 @@ map.on("load",()=>{
       const res=await fetch("https://maps.gov.ge/map/portal/search",{method:"POST",body:form});
       const data=await res.json();
       if(!data.status||!data.result?.length){setStatus("","");return;}
-      // Skip the large "ract_g_borders" registration areas; keep parcels, line objects & forest.
-      const item=data.result.find(r=>!/lbl=ract_g_borders:/.test(r.details?.info_link||""));
+      // Select ONLY real parcels (lbl "lr_parcels:…"). Skip the large registration borders
+      // ("ract_g_borders") and district sectors ("lr_seqtors", e.g. "01.10") that this search
+      // returns at low zoom. Line/forest are separate raster overlays, not this endpoint.
+      const item=data.result.find(r=>/lbl=lr_parcels:/.test(r.details?.info_link||""));
       if(!item){setStatus("","");return;}
       const lbl=item.details?.info_link?.split("lbl=")[1];
       if(!lbl){setStatus("","");return;}
