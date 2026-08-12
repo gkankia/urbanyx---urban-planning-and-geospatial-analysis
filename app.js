@@ -824,7 +824,7 @@ async function updateSearchCounter(){
     if(left===0)_limitCache={allowed:false,ts:Date.now()};
     if(document.getElementById("dashboard-modal")?.classList.contains("open"))loadDashboardStats();
   }catch(e){console.warn("updateSearchCounter:",e);}
-}
+}20
 
 // ── Auth modal ────────────────────────────────────────────────────────────────
 function showView(id){
@@ -10402,10 +10402,13 @@ function _geojsonLLBBox(geojson){
 
 // DTM grid for relief analysis: precise Tbilisi COG where it covers the area,
 // Mapbox terrain elsewhere. Both return the same {values,width,height,origin,res,nodata}.
+const RELIEF_COG_MAX_M2=2000000; // 200 ha — above this, use Mapbox terrain even inside Tbilisi (COG is heavy for big areas)
 async function fetchDTM(geojson){
   const bb=_geojsonLLBBox(geojson);
   try{await _ensureDEM();}catch(_){}
-  const covered=_demMeta&&bb.minLng>=_demMeta.bbox[0]&&bb.maxLng<=_demMeta.bbox[2]&&bb.minLat>=_demMeta.bbox[1]&&bb.maxLat<=_demMeta.bbox[3];
+  let _areaM2=0;try{_areaM2=turf.area(turf.feature(geojson));}catch(_){}
+  const bigArea=_areaM2>RELIEF_COG_MAX_M2; // parcels & drawn areas alike
+  const covered=!bigArea&&_demMeta&&bb.minLng>=_demMeta.bbox[0]&&bb.maxLng<=_demMeta.bbox[2]&&bb.minLat>=_demMeta.bbox[1]&&bb.maxLat<=_demMeta.bbox[3];
   if(covered){
     try{
       const dtm=await _cogDTM(bb);
