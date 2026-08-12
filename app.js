@@ -207,6 +207,7 @@ let _currentParcelGeoJSON=null;
 let _dbParcelGeoJSON=null;
 let _currentParcelAreaM2=null;
 let _currentParcelRegDate=null;
+const PARCEL_MIN_ZOOM=15; // NAPR serves individual parcels only from this zoom up
 let _setbackRingAreaM2=null;
 let _editingBldId=null;
 let _editingDrawId=null;
@@ -7138,6 +7139,12 @@ map.on("load",()=>{
       return;
     }
     const{lng,lat}=e.lngLat;
+    // NAPR only serves individual parcels from zoom 15+ (below that it returns whole
+    // districts/sectors). Tell the user to zoom in rather than selecting a giant area.
+    if(map.getZoom()<PARCEL_MIN_ZOOM){
+      showToast(lang==='ka'?'ნაკვეთის ასარჩევად მიახლოვდით (მასშტაბი 15+)':'Zoom in to select a parcel (zoom 15+)');
+      return;
+    }
     const bounds=map.getBounds();
     setStatus(t().searching,"");
     try{
@@ -7194,6 +7201,8 @@ map.on("load",()=>{
   map.on("move",_updateMiniCardPositions);
   map.on("mousemove",_updateCoordReadout);
   map.on("mouseout",_hideCoordReadout);
+  // Keep the zoom figure live even when zooming without moving the mouse.
+  map.on("zoom",()=>{const el=document.getElementById('coord-readout');if(el&&el.style.display!=='none'&&_coordLL)_renderCoord(el,_coordLL.lng,_coordLL.lat,_mapboxElev(_coordLL.lng,_coordLL.lat));});
   map.on("mouseenter","parcel-fill",()=>{map.getCanvas().style.cursor="pointer";});
   map.on("mouseleave","parcel-fill",()=>{map.getCanvas().style.cursor="";});
   _initParcelCardDrag();
@@ -7691,7 +7700,8 @@ async function _demElevation(lng,lat){
 function _mapboxElev(lng,lat){try{return map.queryTerrainElevation({lng,lat},{exaggerated:false});}catch(_){return null;}}
 function _renderCoord(el,lng,lat,elev){
   const elevStr=(elev!=null&&isFinite(elev))?Math.round(elev)+' m':'—';
-  el.textContent='long/x: '+lng.toFixed(6)+'   lat/y: '+lat.toFixed(6)+'   elev: '+elevStr;
+  const zoomStr=(mapReady&&typeof map!=='undefined')?map.getZoom().toFixed(1):'—';
+  el.textContent='long/x: '+lng.toFixed(6)+'   lat/y: '+lat.toFixed(6)+'   elev: '+elevStr+'   zoom: '+zoomStr;
 }
 // Coalesced async sampling of the precise DEM — only resolves the latest position.
 function _sampleDEM(){
