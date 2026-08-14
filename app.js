@@ -6324,9 +6324,9 @@ function toggleZoningPanel(){
   _closeOtherNavPanels('zoning');
   if(_wasActive)btn?.classList.add('active');
   _syncZoningPanel();
-  // Zoning + permits live in the dock's Parcel tab.
+  // Zoning is an analysis — its panel lives in the card's Analysis tab.
   card.style.display='flex';
-  if(typeof _dockTab==='function')_dockTab('parcel');
+  if(typeof _dockTab==='function')_dockTab('analysis');
   if(typeof _dockOpen==='function')_dockOpen();
   btn?.classList.add('zoning-panel-open');
 }

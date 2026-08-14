@@ -64,17 +64,6 @@
                         <div id="pfc-permits-list"></div>
                         <div id="pfc-permit-warn" style="display:none;margin-top:7px;padding:6px 8px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.28);border-radius:5px;font-size:0.58rem;color:rgba(248,140,140,0.92);line-height:1.5"></div>
                       </div>
-        <div class="card" id="zoning-panel-card" style="display:none">
-                    <div class="lp-sec-title" id="lbl-zoning-panel">Zoning</div>
-                    <div class="lp-row acc-toggle-row" style="padding:4px 0" onclick="toggleZoningAssessment()">
-                      <span class="lp-row-name" id="lbl-zoning-assess">Assessment</span>
-                      <div class="lp-sw" id="zoning-assess-sw"></div>
-                    </div>
-                    <div class="lp-row acc-toggle-row" style="padding:4px 0;margin-top:2px" onclick="toggleConstructionPermits()">
-                      <span class="lp-row-name" id="lbl-zoning-permits">Construction permits</span>
-                      <div class="lp-sw" id="zoning-permits-sw"></div>
-                    </div>
-                  </div>
         <!-- hidden data sinks: never shown, but ~40 call sites write into them -->
         <div class="card" id="info-card" style="display:none" aria-hidden="true">
                 <div class="card-label" id="lbl-parcel-info">Parcel Info</div>
@@ -109,6 +98,17 @@
                               <button class="pfc-cat-btn" id="cat-btn-education" onclick="_pfcCatClick('education',this)" title="Education"><img src="analysis-logos/education.svg" width="39" height="39"></button>
                               <button class="pfc-cat-btn" id="cat-btn-mobility" onclick="_pfcCatClick('mobility',this)" title="Mobility"><img src="analysis-logos/mobility.svg" width="39" height="39"></button>
                               <button class="pfc-cat-btn" id="cat-btn-morphology" onclick="_pfcCatClick('morphology',this)" title="Morphology"><img src="analysis-logos/urban%20morphology.svg" width="39" height="39"></button>
+                            </div>
+                          </div>
+        <div class="card" id="zoning-panel-card" style="display:none">
+                            <div class="lp-sec-title" id="lbl-zoning-panel">Zoning</div>
+                            <div class="lp-row acc-toggle-row" style="padding:4px 0" onclick="toggleZoningAssessment()">
+                              <span class="lp-row-name" id="lbl-zoning-assess">Assessment</span>
+                              <div class="lp-sw" id="zoning-assess-sw"></div>
+                            </div>
+                            <div class="lp-row acc-toggle-row" style="padding:4px 0;margin-top:2px" onclick="toggleConstructionPermits()">
+                              <span class="lp-row-name" id="lbl-zoning-permits">Construction permits</span>
+                              <div class="lp-sw" id="zoning-permits-sw"></div>
                             </div>
                           </div>
         <div id="pfc-nearby-row" style="display:none;margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.07)">

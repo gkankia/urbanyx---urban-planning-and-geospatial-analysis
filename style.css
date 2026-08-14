@@ -953,9 +953,13 @@
     overflow: hidden;
     pointer-events: all;
     font-family: inherit;
-    max-height: 78vh;
+    /* Stable height: toggling analyses must not resize the card (it made the
+       whole panel jump on every click). The body scrolls inside instead. */
+    height: min(560px, 76vh);
     flex-direction: column;
   }
+  /* collapsed back to just the header when minimized */
+  #parcel-float-card.minimized { height: auto; }
   /* ── the card carries both tabs ── */
   #pfc-tabs { display:flex; gap:2px; margin:7px 9px 0; background:rgba(255,255,255,0.045);
     border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:2px; flex-shrink:0; }
@@ -964,14 +968,16 @@
   .pfc-tab:hover { color:rgba(255,255,255,0.62); }
   .pfc-tab.active { background:rgba(167,139,250,0.16); color:#a78bfa; }
   .pfc-tab:focus-visible { outline:2px solid #a78bfa; outline-offset:1px; }
-  #pfc-body { flex:1; overflow-y:auto; scrollbar-width:none; }
+  #pfc-body { flex:1; min-height:0; overflow-y:auto; overscroll-behavior:contain; scrollbar-width:none; }
+  .pfc-pane { min-height:100%; }
   #pfc-body::-webkit-scrollbar { display:none; }
   .pfc-empty { font-size:0.66rem; color:rgba(255,255,255,0.3); line-height:1.5; padding:4px 2px 8px; }
   /* analysis result panels render in the card's flow, not as fixed flyouts */
   #pfc-pane-analysis .card { position:static !important; left:auto !important; top:auto !important;
     width:auto !important; max-height:none !important; margin:8px 0 0 !important; z-index:auto !important;
     background:rgba(255,255,255,0.03) !important; box-shadow:none !important; backdrop-filter:none !important;
-    border:1px solid rgba(255,255,255,0.07) !important; padding:10px 11px !important; }
+    border:1px solid rgba(255,255,255,0.07) !important; padding:10px 11px !important;
+    transition:none !important; }
   #pfc-header {
     display: flex;
     align-items: center;
@@ -1035,7 +1041,7 @@
 
     /* parcel card → bottom sheet */
     #parcel-float-card { position:fixed !important; left:0 !important; right:0 !important; top:auto !important;
-      bottom:56px !important; width:auto !important; min-width:0; max-width:none; max-height:none;
+      bottom:56px !important; width:auto !important; min-width:0; max-width:none; max-height:none; height:auto;
       border-radius:15px 15px 0 0; border-left:none; border-right:none; border-bottom:none;
       transform:translateY(100%); transition:transform 0.3s cubic-bezier(0.22,1,0.32,1);
       box-shadow:0 -10px 34px rgba(0,0,0,0.55); }
