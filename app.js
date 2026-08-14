@@ -6325,7 +6325,7 @@ function toggleZoningPanel(){
   if(_wasActive)btn?.classList.add('active');
   _syncZoningPanel();
   // Zoning is an analysis — its panel lives in the card's Analysis tab.
-  card.style.display='flex';
+  card.style.display='block';
   if(typeof _dockTab==='function')_dockTab('analysis');
   if(typeof _dockOpen==='function')_dockOpen();
   btn?.classList.add('zoning-panel-open');
@@ -8880,7 +8880,7 @@ function setupProCard(show=false){
   const isKa=lang==="ka";
   const isPro=currentUser?.plan==="pro";
   const card=document.getElementById("pro-analysis-card");
-  if(show)card.style.display="flex";
+  if(show)card.style.display="block";
 
   // Accessibility — available to all
   const accEl=document.getElementById("pro-cat-accessibility-content");
