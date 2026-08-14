@@ -524,14 +524,15 @@ function setLang(l){
 }
 
 function applyLang(){
+  try{if(typeof _pfcApplyLang==='function')_pfcApplyLang();}catch(e){}
   const tr=t(); const pw=tr.pw; const auth=tr.auth;
   // Core
   const _brand=document.getElementById("brand");if(_brand)_brand.textContent=tr.brand;
   const _tmb=document.getElementById("test-mode-banner");if(_tmb)_tmb.textContent=(lang==='ka')?"სატესტო რეჟიმი. გთხოვთ, არ შეიყვანოთ ბარათის მონაცემები გადახდის პორტალზე! უკუკავშირისთვის, მოგვწერეთ info@zaxis.ge":"Test mode. Don't add card details on the payment page! Any feedback is welcome at info@zaxis.ge";
   document.getElementById("input-center").placeholder=tr.placeholder;
-  document.getElementById("input-side").placeholder=tr.placeholder;
+  {const _is=document.getElementById("input-side");if(_is)_is.placeholder=tr.placeholder;}
   document.getElementById("btn-center").textContent=tr.btn;
-  document.getElementById("btn-side").textContent=tr.btn;
+  {const _bs=document.getElementById("btn-side");if(_bs)_bs.textContent=tr.btn;}
   // Parcel info
   document.getElementById("lbl-parcel-info").textContent=tr.parcelInfo;
   document.getElementById("lbl-code").textContent=tr.code;
@@ -1587,7 +1588,7 @@ function _showDrawnAreaCard(bld){
   else if(_ci){_ci.style.display='none';}
   card.classList.remove('minimized');
   const btn=document.getElementById('pfc-min-btn');if(btn)btn.textContent='−';
-  card.style.display='block';
+  card.style.display='flex';
   const c=getCentroid(bld.geojson);
   _parcelCardLngLat=c;_parcelCardDragged=false;
   if(mapReady&&c){const pt=map.project(c);const ch=card.offsetHeight||118;card.style.left=(pt.x+88)+'px';card.style.top=(pt.y-ch/2)+'px';}
@@ -6286,7 +6287,7 @@ function runZoningAnalysis(){
 
     if(note)note.style.display='block';
     const card=document.getElementById('parcel-float-card');
-    if(card&&card.style.display==='none')card.style.display='block';
+    if(card&&card.style.display==='none')card.style.display='flex';
   }).catch((e)=>{
     console.error('[ZoneAnalysis error]',e);
     if(zr)zr.style.display='none';
@@ -6324,7 +6325,7 @@ function toggleZoningPanel(){
   if(_wasActive)btn?.classList.add('active');
   _syncZoningPanel();
   // Zoning + permits live in the dock's Parcel tab.
-  card.style.display='block';
+  card.style.display='flex';
   if(typeof _dockTab==='function')_dockTab('parcel');
   if(typeof _dockOpen==='function')_dockOpen();
   btn?.classList.add('zoning-panel-open');
@@ -6501,7 +6502,7 @@ function _setPermitFloat(html){
   const pfcTitle=document.getElementById('pfc-permits-title');if(pfcTitle)pfcTitle.textContent=_zpKa()?"ნებართვები":"Construction permits";
   const pfcList=document.getElementById('pfc-permits-list');if(pfcList)pfcList.innerHTML=html||'';
   const pfcRow=document.getElementById('pfc-permits-row');if(pfcRow)pfcRow.style.display=html?'block':'none';
-  if(html){const card=document.getElementById('parcel-float-card');if(card&&card.style.display==='none')card.style.display='block';}
+  if(html){const card=document.getElementById('parcel-float-card');if(card&&card.style.display==='none')card.style.display='flex';}
 }
 
 // Hide/clear the float-card permit row (used for empty/error/off/reset states)
@@ -6603,7 +6604,7 @@ function _nearbyShowRunButton(cfg){
   const btn=document.getElementById('pfc-nearby-run-btn');
   if(btn){btn.style.display='';btn.disabled=false;btn.innerHTML=(isKa?'ახლომდებარე ანალიზი':'Nearby analysis')+proTag;}
   const body=document.getElementById('pfc-nearby-body');if(body)body.style.display='none';
-  const card=document.getElementById('parcel-float-card');if(card&&card.style.display==='none')card.style.display='block';
+  const card=document.getElementById('parcel-float-card');if(card&&card.style.display==='none')card.style.display='flex';
 }
 function _nearbyRunClicked(){
   if(!currentUser||currentUser.plan!=='pro'){openPaywall();return;} // Pro feature
@@ -6631,7 +6632,7 @@ function _setNearbyFloat(html){
     const row=document.getElementById('pfc-nearby-row');if(row)row.style.display='block';
     const body=document.getElementById('pfc-nearby-body');if(body)body.style.display='';
     const runBtn=document.getElementById('pfc-nearby-run-btn');if(runBtn)runBtn.style.display='none';
-    const card=document.getElementById('parcel-float-card');if(card&&card.style.display==='none')card.style.display='block';
+    const card=document.getElementById('parcel-float-card');if(card&&card.style.display==='none')card.style.display='flex';
   }
 }
 function _hideNearbyRow(){
@@ -6858,7 +6859,7 @@ function _renderNearby(c){
   const rowEl=document.getElementById('pfc-nearby-row');if(rowEl)rowEl.style.display='block';
   const bodyEl=document.getElementById('pfc-nearby-body');if(bodyEl)bodyEl.style.display='';
   const runBtn=document.getElementById('pfc-nearby-run-btn');if(runBtn)runBtn.style.display='none';
-  const card=document.getElementById('parcel-float-card');if(card&&card.style.display==='none')card.style.display='block';
+  const card=document.getElementById('parcel-float-card');if(card&&card.style.display==='none')card.style.display='flex';
   const note=document.getElementById('pfc-nearby-note');
   if(note){
     let msg=total===0
@@ -7455,7 +7456,7 @@ function showParcelPopup(lngLat){
   const btn=document.getElementById('pfc-min-btn');
   card.classList.remove('minimized');
   if(btn)btn.textContent='−';
-  card.style.display='block';
+  card.style.display='flex';
   if(typeof _setAnalysisPanel==='function')_setAnalysisPanel(true);
   const pt=map.project(lngLat);
   const ch=card.offsetHeight||118;
@@ -8879,7 +8880,7 @@ function setupProCard(show=false){
   const isKa=lang==="ka";
   const isPro=currentUser?.plan==="pro";
   const card=document.getElementById("pro-analysis-card");
-  if(show)card.style.display="block";
+  if(show)card.style.display="flex";
 
   // Accessibility — available to all
   const accEl=document.getElementById("pro-cat-accessibility-content");
