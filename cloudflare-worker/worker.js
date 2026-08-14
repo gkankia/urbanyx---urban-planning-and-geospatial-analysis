@@ -108,6 +108,27 @@ export default {
       }
     }
 
+    // ── 3D model proxy (GET) — serves CC0 .glb/.gltf assets from R2 with CORS ─────
+    // e.g. /model?f=bus.glb  → https://pub-…r2.dev/models/bus.glb
+    if (request.method === "GET" && url.pathname === "/model") {
+      const f = (url.searchParams.get("f") || "").replace(/^\/+/, "");
+      if (f.includes("..") || !/^[A-Za-z0-9/_-]+\.(glb|gltf)$/.test(f)) {
+        return new Response("Invalid model", { status: 400, headers: corsHeaders });
+      }
+      const src = "https://pub-9071f31b4edc4a15ba28c48f949017fc.r2.dev/models/" + f;
+      try {
+        const res = await fetch(src);
+        if (!res.ok) return new Response("Model not found", { status: res.status, headers: corsHeaders });
+        const headers = new Headers(corsHeaders);
+        headers.set("Content-Type", f.endsWith(".gltf") ? "model/gltf+json" : "model/gltf-binary");
+        headers.set("Cache-Control", "public, max-age=31536000, immutable");
+        const cl = res.headers.get("Content-Length"); if (cl) headers.set("Content-Length", cl);
+        return new Response(res.body, { status: 200, headers });
+      } catch(e) {
+        return new Response("Model fetch failed", { status: 502, headers: corsHeaders });
+      }
+    }
+
     // ── TTC Transit proxy (GET) ───────────────────────────────────────────────
     if (request.method === "GET" && url.pathname.startsWith("/ttc/")) {
       const TTC_API = "https://transit.ttc.com.ge/pis-gateway/api/v2";

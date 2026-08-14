@@ -1586,11 +1586,13 @@ function _showDrawnAreaCard(bld){
   const ownerRow=document.getElementById('pfc-lbl-owner')?.closest('.pfc-row');if(ownerRow)ownerRow.style.display='none';
   const _regRowD=document.getElementById('pfc-reg-row');if(_regRowD)_regRowD.style.display='none';
   ['pfc-zone-row','pfc-kvals-row','pfc-build-params-row','pfc-compliance-row','pfc-permits-row'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});
-  // Same action sections as the parcel card: Generate concept (+ concept info) & analysis.
-  const _rr=document.getElementById('pfc-render-row');if(_rr)_rr.style.display='block';
+  // Concept elements are development pieces: no parcel-level tools (concept/render/analysis).
+  // Concept buildings instead get the per-floor use & colour controls inline in this card.
+  const isConceptEl=!!(bld.conceptUse||bld.conceptArea), isConceptBld=!!bld.conceptUse;
+  const _rr=document.getElementById('pfc-render-row');if(_rr)_rr.style.display=isConceptEl?'none':'block';
   const _cb=document.getElementById('pfc-concept-btn');if(_cb)_cb.textContent=(isKa?'განვითარების კონცეფცია':'Generate concept');
   const _ci=document.getElementById('pfc-concept-info');
-  if(_conceptOn&&_conceptLastData){_showConceptLegend(_conceptLastData,_conceptTreeData.features.length);}
+  if(!isConceptEl&&_conceptOn&&_conceptLastData){_showConceptLegend(_conceptLastData,_conceptTreeData.features.length);}
   else if(_ci){_ci.style.display='none';}
   card.classList.remove('minimized');
   const btn=document.getElementById('pfc-min-btn');if(btn)btn.textContent='−';
@@ -1598,9 +1600,16 @@ function _showDrawnAreaCard(bld){
   const c=getCentroid(bld.geojson);
   _parcelCardLngLat=c;_parcelCardDragged=false;
   if(mapReady&&c){const pt=map.project(c);const ch=card.offsetHeight||118;card.style.left=(pt.x+88)+'px';card.style.top=(pt.y-ch/2)+'px';}
-  // Keep the "Run nearby analysis" affordance available for drawn areas
-  if(!_nearbyRan)_nearbyShowRunButton({center:c});
-  _updateAnalysisGrid(true);
+  const _nr=document.getElementById('pfc-nearby-row');
+  if(isConceptEl){
+    if(_nr)_nr.style.display='none';
+    _updateAnalysisGrid(false);
+    _mountFloorPanelInCard(isConceptBld); // floor use/colour panel lives in the card
+  } else {
+    if(!_nearbyRan)_nearbyShowRunButton({center:c});
+    _updateAnalysisGrid(true);
+    _mountFloorPanelInCard(false);
+  }
 }
 
 function _selectBuilding(id,shift=false){
@@ -1789,6 +1798,15 @@ function removeActiveBuilding(){
   else{const _sw=document.getElementById('pfc-setback-warn');if(_sw)_sw.style.display='none';_syncSelectionCards();}
 }
 
+// Relocate the floor use/color panel into the parcel float card (for concept buildings)
+// or back to its standalone spot (everything else).
+function _mountFloorPanelInCard(inCard){
+  const fp=document.getElementById('floor-detail-panel');const mount=document.getElementById('pfc-floor-mount');
+  if(!fp||!mount)return;
+  if(!fp._origParent)fp._origParent=fp.parentNode;
+  if(inCard){if(fp.parentNode!==mount)mount.appendChild(fp);fp.classList.add('pfc-floor-inline');}
+  else{if(fp._origParent&&fp.parentNode!==fp._origParent)fp._origParent.appendChild(fp);fp.classList.remove('pfc-floor-inline');}
+}
 function _selectFloor(fi){
   const panel=document.getElementById('floor-detail-panel');
   if(fi<0){
@@ -3551,6 +3569,7 @@ async function _autoSaveProject(){
     }).eq('id',_openedProjectId).eq('user_id',currentUser.id);
     if(error)throw error;
     _lastSavedAt=Date.now();
+    if(_conceptOn)_conceptSaved=true; // concept persisted with the project
     _updateAutoSaveChip('idle');
   }catch(e){
     console.warn('[projects] auto-save failed:',e);
@@ -3784,6 +3803,7 @@ async function confirmSaveProject(){
       analysis_snapshot:state.analysis_snapshot
     });
     if(error)throw error;
+    if(_conceptOn)_conceptSaved=true; // concept persisted with the project
     closeSaveProjectModal();
     showToast(tr.savedToast);
     if(document.getElementById('projects-panel').classList.contains('open'))_loadProjectsList();
@@ -7167,6 +7187,12 @@ map.on("load",()=>{
       const lbl=item.details?.info_link?.split("lbl=")[1];
       if(!lbl){setStatus("","");return;}
       const name=item.name||lbl;
+      // Discard an unsaved concept when moving to a DIFFERENT parcel (clicking within the
+      // concept's own parcel keeps it). Saved concepts stay — they're part of the project.
+      if(_conceptOn&&!_conceptSaved&&_conceptParcel){
+        let same=false;try{same=turf.booleanPointInPolygon([lng,lat],turf.feature(_conceptParcel));}catch(_){}
+        if(!same){_clearConcept();showToast(lang==='ka'?'შენახვის გარეშე გენერირებული კონცეფცია წაიშალა. შესანარჩუნებლად შეინახე პროექტი.':'Unsaved concept removed. Save the project to keep it.',4500);}
+      }
       const inputEl=document.getElementById("input-center");
       if(inputEl)inputEl.value=name;
       try{resetAnalysis();}catch(_){}
@@ -7422,6 +7448,7 @@ function showParcelPopup(lngLat){
   if(_conceptOn&&_conceptLastData){_showConceptLegend(_conceptLastData,_conceptTreeData.features.length);}
   else if(_ci){_ci.style.display='none';}
   _updateAnalysisGrid(true);
+  _mountFloorPanelInCard(false); // parcel card: floor panel returns to its standalone spot
   if(_geoTool||_paintOpen)_clearGeoTools(null);
   const _gtb2=document.getElementById('geo-toolbar');if(_gtb2)_gtb2.style.display='none';
   document.getElementById('nav-zoning-btn')?.classList.remove('active');
@@ -7998,6 +8025,7 @@ let _conceptAreaIds=[]; // flat editable ground areas (pool, terrace, …) creat
 let _conceptTreeData={type:'FeatureCollection',features:[]};
 let _conceptPropData=[]; // glTF scatter props (people/cars): [{pid,cx,cy,type}]
 let _conceptOn=false, _conceptSummary='', _conceptParcel=null, _conceptLastData=null;
+let _conceptSaved=false; // true once the concept has been written into a saved project
 const _CONCEPT_USE={
   house:['#f59e0b','House'],residential:['#e89630','Residential'],apartment:['#e89630','Apartment'],
   office:['#60a5fa','Office'],commercial:['#34d399','Commercial'],mixed:['#a78bfa','Mixed'],
@@ -8082,9 +8110,14 @@ const _MODEL_REGISTRY={
   fountain:{url:_KENNEY+'Models/Fantasy/fountain-round.glb', height:2.2},
   bench:   {url:_KENNEY+'Models/Fantasy/stall-bench.glb',    height:1.1},
   planter: {url:_KENNEY+'Models/City/planter.glb',           height:0.8},
-  rock:    {url:_KENNEY+'Models/Fantasy/rock-large.glb',     height:1.2}
-  // bus / playground / lamppost: {url:'<your CC0 .glb>', height:...}
+  rock:    {url:_KENNEY+'Models/Fantasy/rock-large.glb',     height:1.2},
+  // R2-only (no CDN default): upload models/bus.glb and it renders. Add more the same way.
+  bus:     {height:3.2}
 };
+// Your own CC0 models on R2 (e.g. converted Quaternius packs) served via the worker /model
+// route. ANY prop type is overridden simply by uploading models/<type>.glb — the loader
+// tries R2 first, then falls back to the registry's CDN default above.
+const _R2_MODEL_BASE=`${PROXY}/model?f=`;
 const _modelCache={}; // url -> Promise<THREE.Object3D|null>
 const _DRACO_PATH='https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/js/libs/draco/gltf/';
 function _ensureGLTFLoader(cb){
@@ -8103,20 +8136,28 @@ function _normalizeModel(obj,targetH){
   const holder=new THREE.Group();holder.add(obj);return holder;
 }
 function _loadConceptModel(type){
-  const reg=_MODEL_REGISTRY[type]; if(!reg)return Promise.resolve(null);
-  if(_modelCache[reg.url])return _modelCache[reg.url];
+  if(_modelCache[type])return _modelCache[type];
+  const reg=_MODEL_REGISTRY[type]||{};
+  const height=reg.height||2;
+  // Try your R2 upload first (models/<type>.glb), then the registry's CDN default.
+  const attempts=[_R2_MODEL_BASE+encodeURIComponent(type)+'.glb'];
+  if(reg.url)attempts.push(reg.url);
   const p=new Promise(res=>{
     _ensureGLTFLoader(()=>{
       if(typeof THREE==='undefined'||!THREE.GLTFLoader){res(null);return;}
-      const loader=new THREE.GLTFLoader();
-      try{if(THREE.DRACOLoader){const d=new THREE.DRACOLoader();d.setDecoderPath(_DRACO_PATH);loader.setDRACOLoader(d);}}catch(_){}
-      try{loader.load(reg.url,gltf=>{
-        const obj=gltf.scene||(gltf.scenes&&gltf.scenes[0]); if(!obj){res(null);return;}
-        try{res(_normalizeModel(obj,reg.height));}catch(_){res(null);}
-      },undefined,()=>res(null));}catch(_){res(null);}
+      const tryUrl=i=>{
+        if(i>=attempts.length){res(null);return;}
+        const loader=new THREE.GLTFLoader();
+        try{if(THREE.DRACOLoader){const d=new THREE.DRACOLoader();d.setDecoderPath(_DRACO_PATH);loader.setDRACOLoader(d);}}catch(_){}
+        try{loader.load(attempts[i],gltf=>{
+          const obj=gltf.scene||(gltf.scenes&&gltf.scenes[0]); if(!obj){tryUrl(i+1);return;}
+          try{res(_normalizeModel(obj,height));}catch(_){tryUrl(i+1);}
+        },undefined,()=>tryUrl(i+1));}catch(_){tryUrl(i+1);}
+      };
+      tryUrl(0);
     });
   });
-  _modelCache[reg.url]=p; return p;
+  _modelCache[type]=p; return p;
 }
 class _ConceptDecoLayer{
   constructor(){this.id='concept-deco';this.type='custom';this.renderingMode='3d';}
@@ -8290,7 +8331,7 @@ async function _conceptGenerate(){
 function _renderConcept(concept,parcel,bb,spanLng,spanLat){
   _clearConcept();
   _conceptEnsureLayers();
-  _conceptOn=true; _conceptSummary=String(concept.summary||''); _conceptParcel=parcel; _conceptLastData=concept;
+  _conceptOn=true; _conceptSummary=String(concept.summary||''); _conceptParcel=parcel; _conceptLastData=concept; _conceptSaved=false;
   const nx2lng=nx=>bb[0]+Math.min(1,Math.max(0,nx))*spanLng;
   const ny2lat=ny=>bb[1]+Math.min(1,Math.max(0,ny))*spanLat;
   // Buildable area = parcel inset 3 m. We keep buildings INSIDE it by clamping their
