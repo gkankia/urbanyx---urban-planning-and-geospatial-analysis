@@ -34,73 +34,11 @@
 <body>
 <div id="map-wrap">
   <div id="map"></div>
-  <div id="parcel-float-card">
-    <div id="pfc-header">
-      <span id="pfc-code" spellcheck="false">—</span>
-      <div style="display:flex;align-items:center;gap:2px">
-        <button id="pfc-min-btn" onclick="toggleParcelCardMin()" title="Minimize">−</button>
-        <button class="inline-close-btn" onclick="clearParcelSelection()" title="Close">✕</button>
-      </div>
-    </div>
-    <div id="pfc-body">
-      <div class="pfc-row"><span class="pfc-lbl" id="pfc-lbl-area">Area</span><span class="pfc-val" id="pfc-area">—</span></div>
-      <div class="pfc-row" id="pfc-perim-row" style="display:none"><span class="pfc-lbl" id="pfc-lbl-perim">Perimeter</span><span class="pfc-val" id="pfc-perim">—</span></div>
-      <div class="pfc-row"><span class="pfc-lbl" id="pfc-lbl-type">Type</span><span class="pfc-val" id="pfc-type">—</span></div>
-      <div class="pfc-row"><span class="pfc-lbl" id="pfc-lbl-addr">Address</span><span class="pfc-val" id="pfc-addr">—</span></div>
-      <div class="pfc-row"><span class="pfc-lbl" id="pfc-lbl-owner">Owner</span><span class="pfc-val" id="pfc-owner">—</span></div>
-      <div class="pfc-row" id="pfc-reg-row" style="display:none"><span class="pfc-lbl" id="pfc-lbl-reg">Registered</span><span class="pfc-val" id="pfc-reg">—</span></div>
-      <div id="pfc-nearby-row" style="display:none;margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.07)">
-        <button id="pfc-nearby-run-btn" onclick="_nearbyRunClicked()" style="width:100%;padding:6px;border-radius:6px;border:1px solid rgba(99,102,241,0.3);background:rgba(99,102,241,0.12);color:#a5b4fc;font-size:0.7rem;font-weight:600;font-family:inherit;cursor:pointer">Run nearby analysis</button>
-        <div id="pfc-nearby-body" style="display:none">
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:5px">
-            <span id="pfc-nearby-title" style="font-size:0.6rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:rgba(255,255,255,0.28)">Nearby</span>
-            <button id="pfc-nearby-clear-btn" onclick="_nearbyClearClicked()" style="font-size:0.55rem;color:rgba(255,255,255,0.4);background:none;border:1px solid rgba(255,255,255,0.12);border-radius:5px;padding:2px 7px;cursor:pointer;font-family:inherit">Clear</button>
-          </div>
-          <div id="pfc-nearby-list"></div>
-          <div id="pfc-nearby-note" style="display:none;margin-top:6px;padding:5px 8px;background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.22);border-radius:5px;font-size:0.57rem;color:rgba(165,180,252,0.9);line-height:1.5"></div>
-        </div>
-      </div>
-      <div id="pfc-analysis-grid" style="display:none;margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.07)">
-        <div class="pfc-cat-lbl" id="pfc-cat-lbl-parcel">Parcel analysis</div>
-        <div class="pfc-cat-grid">
-          <button class="pfc-cat-btn" id="nav-zoning-btn" onclick="_pfcCatClick('zoning',this)" title="Zoning"><img src="analysis-logos/zoning.svg" width="39" height="39" id="nav-zoning-icon"></button>
-          <button class="pfc-cat-btn" id="cat-btn-relief" onclick="_pfcCatClick('relief',this)" title="Relief"><img src="analysis-logos/relief%20analysis.svg" width="39" height="39"></button>
-          <button class="pfc-cat-btn" id="cat-btn-climate" onclick="_pfcCatClick('climate',this)" title="Climate"><img src="analysis-logos/climate.svg" width="39" height="39"></button>
-          <button class="pfc-cat-btn" id="cat-btn-energy" onclick="_pfcCatClick('energy',this)" title="Clean Energy"><img src="analysis-logos/clean%20energy.svg" width="39" height="39"></button>
-        </div>
-        <div class="pfc-cat-lbl" id="pfc-cat-lbl-acc" style="margin-top:7px">Accessibility analysis</div>
-        <div class="pfc-cat-grid">
-          <button class="pfc-cat-btn" id="cat-btn-accessibility" onclick="_pfcCatClick('accessibility',this)" title="Isochrone"><img src="analysis-logos/accessibility.svg" width="39" height="39"></button>
-          <button class="pfc-cat-btn" id="cat-btn-education" onclick="_pfcCatClick('education',this)" title="Education"><img src="analysis-logos/education.svg" width="39" height="39"></button>
-          <button class="pfc-cat-btn" id="cat-btn-mobility" onclick="_pfcCatClick('mobility',this)" title="Mobility"><img src="analysis-logos/mobility.svg" width="39" height="39"></button>
-          <button class="pfc-cat-btn" id="cat-btn-morphology" onclick="_pfcCatClick('morphology',this)" title="Morphology"><img src="analysis-logos/urban%20morphology.svg" width="39" height="39"></button>
-        </div>
-      </div>
-      <div id="pfc-ext-row" style="display:none;margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.07)"></div>
-      <div id="pfc-floor-mount"></div><!-- floor use/color panel is relocated here for concept buildings -->
-      <div id="pfc-render-row" style="display:none;margin-top:6px">
-        <button id="pfc-concept-btn" onclick="openConceptModal()" style="width:100%;padding:7px;border-radius:6px;border:1px solid rgba(52,211,153,0.35);background:rgba(52,211,153,0.14);color:#6ee7b7;font-size:0.7rem;font-weight:600;font-family:inherit;cursor:pointer">Generate concept</button>
-      </div>
-      <div id="pfc-concept-info" style="display:none;margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.07)">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
-          <span id="pfc-concept-title" style="font-size:0.6rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:rgba(255,255,255,0.28)">Concept</span>
-          <button id="pfc-concept-clear" onclick="_clearConcept()" title="Clear concept" style="font-size:0.55rem;color:rgba(255,255,255,0.4);background:none;border:1px solid rgba(255,255,255,0.12);border-radius:5px;padding:2px 7px;cursor:pointer;font-family:inherit">Clear</button>
-        </div>
-        <div id="pfc-concept-summary" style="display:none;font-size:0.6rem;color:rgba(255,255,255,0.62);line-height:1.5;margin-bottom:6px"></div>
-        <div id="pfc-concept-items" style="display:flex;flex-direction:column;gap:3px;margin-bottom:8px"></div>
-        <button id="pfc-concept-render-btn" onclick="openRenderModal()" style="width:100%;padding:7px;border-radius:6px;border:1px solid rgba(167,139,250,0.35);background:rgba(167,139,250,0.16);color:#c4b5fd;font-size:0.7rem;font-weight:600;font-family:inherit;cursor:pointer">Generate concept render</button>
-      </div>
-      <div id="pfc-zone-row" style="display:none;margin-top:5px;padding-top:5px;border-top:1px solid rgba(255,255,255,0.07)"><div id="pfc-zones-list"></div></div>
-      <div id="pfc-kvals-row" style="display:none"></div>
-      <div id="pfc-build-params-row" style="display:none;margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.07)"></div>
-      <div id="pfc-compliance-row" style="display:none;margin-top:6px;padding:6px 8px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:5px"></div>
-      <div id="pfc-permits-row" style="display:none;margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.07)">
-        <div id="pfc-permits-title" style="font-size:0.6rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:rgba(255,255,255,0.28);margin-bottom:5px">Construction permits</div>
-        <div id="pfc-permits-list"></div>
-        <div id="pfc-permit-warn" style="display:none;margin-top:7px;padding:6px 8px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.28);border-radius:5px;font-size:0.58rem;color:rgba(248,140,140,0.92);line-height:1.5"></div>
-      </div>
-    </div>
-  </div>
+</div>
+<div id="parcel-chip" style="display:none">
+  <span class="pchip-dot"></span>
+  <span class="pchip-code" id="pchip-code">—</span>
+  <button class="pchip-btn" id="pchip-btn" onclick="_dockTab('parcel');_dockOpen()">Details</button>
 </div>
 <canvas id="wind-canvas"></canvas>
 <div id="map-blur"></div>
@@ -115,53 +53,59 @@
   </div>
   <div class="nav-group">
     <button class="nav-btn" id="nav-projects-btn" onclick="openProjectsPanel()" style="display:none">
-      <img src="analysis-logos/my project.svg" width="39" height="39" style="opacity:0.65;transition:opacity 0.15s" id="nav-projects-icon">
+      <img src="analysis-logos/my project.svg" width="30" height="30" style="opacity:0.65;transition:opacity 0.15s" id="nav-projects-icon">
+      <span class="nav-lbl" id="nav-lbl-projects">Projects</span>
       <span class="nav-tip" id="nav-tip-projects">Projects</span>
     </button>
     <button class="nav-btn" id="nav-import-btn" onclick="navToggleImport()">
-      <img src="analysis-logos/import data.svg" width="39" height="39" style="opacity:0.55;transition:opacity 0.15s" id="nav-import-icon">
+      <img src="analysis-logos/import data.svg" width="30" height="30" style="opacity:0.55;transition:opacity 0.15s" id="nav-import-icon">
+      <span class="nav-lbl" id="nav-lbl-import">Import</span>
       <span class="nav-tip" id="nav-tip-import">Import</span>
     </button>
     <button class="nav-btn" id="nav-draw-btn" onclick="navToggleDraw()">
-      <img src="analysis-logos/draw.svg" width="39" height="39" style="opacity:0.55;transition:opacity 0.15s" id="nav-draw-icon">
+      <img src="analysis-logos/draw.svg" width="30" height="30" style="opacity:0.55;transition:opacity 0.15s" id="nav-draw-icon">
+      <span class="nav-lbl" id="nav-lbl-draw">Draw</span>
       <span class="nav-tip" id="nav-tip-draw">Draw</span>
-    </button>
-    <button class="nav-btn" id="nav-report-btn" onclick="_rptMenuToggle(this)" title="Generate report">
-      <img src="analysis-logos/report.svg" width="44" height="44" style="opacity:0.55;transition:opacity 0.15s" id="nav-report-icon">
-      <span class="nav-tip" id="nav-tip-report">Generate Report</span>
-    </button>
-    <button class="nav-btn active" id="nav-parcel-btn" onclick="navSelect('parcel')" style="display:none">
-      <svg width="31" height="31" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
-      <span class="nav-tip" id="nav-tip-parcel">Parcel search</span>
-    </button>
-    <button class="nav-btn" id="nav-analysis-btn" onclick="navSelect('analysis')" style="display:none">
-      <svg width="31" height="31" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="3" y1="20" x2="21" y2="20" opacity="0.45"/></svg>
-      <span class="nav-tip" id="nav-tip-analysis">Analysis</span>
-    </button>
-  </div>
-  <div class="nav-sep"></div>
-  <div class="nav-group">
-    <button class="nav-btn" id="nav-lang-btn" onclick="navToggleLang()">
-      <span id="nav-lang-label">EN</span>
-      <span class="nav-tip" id="nav-tip-lang">Language</span>
     </button>
   </div>
   <div class="nav-group bottom">
-    <div class="nav-sep" style="width:32px;margin:0 0 6px"></div>
+    <div class="nav-sep" style="width:26px;margin:0 0 6px"></div>
     <button class="nav-btn" id="nav-data-btn" onclick="openDataPanel()" style="display:none" title="Data Explorer">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="9" x2="9" y2="21"/></svg>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="9" x2="9" y2="21"/></svg>
+      <span class="nav-lbl" id="nav-lbl-data">Data</span>
       <span class="nav-tip" id="nav-tip-data">Data</span>
     </button>
-    <button class="nav-btn" id="nav-user-btn" onclick="navOpenAccount()" style="padding:7px">
+    <button class="nav-btn" id="nav-user-btn" onclick="navOpenAccount()">
       <div id="nav-u-avatar"><span class="avatar-initials"></span></div>
+      <span class="nav-lbl" id="nav-lbl-user">Account</span>
       <span class="nav-tip" id="nav-tip-user">Account</span>
-    </button>
-    <button class="nav-btn" id="nav-signout-btn" onclick="logout()" style="display:none">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-      <span class="nav-tip" id="nav-tip-signout">Sign out</span>
     </button>
   </div>
 </div>
+
+<!-- Mobile bottom tab bar — mirrors the rail, thumb-reachable -->
+<nav id="mobile-tabs">
+  <button class="mt-btn on" data-mt="find" onclick="_mtSelect('find')">
+    <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <span id="mt-lbl-find">Find</span>
+  </button>
+  <button class="mt-btn" data-mt="parcel" onclick="_mtSelect('parcel')">
+    <svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 12h16M12 4v16"/></svg>
+    <span id="mt-lbl-parcel">Parcel</span>
+  </button>
+  <button class="mt-btn" data-mt="analysis" onclick="_mtSelect('analysis')">
+    <svg viewBox="0 0 24 24"><path d="M3 18l5-8 4 5 3-4 6 7z"/></svg>
+    <span id="mt-lbl-analysis">Analyse</span>
+  </button>
+  <button class="mt-btn" data-mt="projects" onclick="_mtSelect('projects')">
+    <svg viewBox="0 0 24 24"><path d="M4 5h6l2 2h8v11H4z"/></svg>
+    <span id="mt-lbl-projects">Projects</span>
+  </button>
+  <button class="mt-btn" data-mt="account" onclick="_mtSelect('account')">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.4"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0"/></svg>
+    <span id="mt-lbl-account">You</span>
+  </button>
+</nav>
 
 <!-- Data Explorer Panel -->
 <div id="data-panel"></div>
@@ -290,115 +234,193 @@
 </div>
 
 <div id="side-panel">
-  <div class="search-bar">
-    <input type="text" id="input-side" placeholder="01.15.07.002.057" spellcheck="false" onkeydown="if(event.key==='Enter') search()">
-    <button class="search-btn" id="btn-side" onclick="search()">Search</button>
-  </div>
-  <div class="card" id="owner-results-card" style="display:none">
-    <div class="card-label" id="lbl-owner-results">Parcels by Owner ID</div>
-    <div id="owner-results-list"></div>
-  </div>
-  <div class="card" id="info-card" style="display:none">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px">
-      <div class="card-label" id="lbl-parcel-info" style="margin-bottom:0">Parcel Info</div>
-      <button class="inline-close-btn" onclick="clearParcelSelection()" title="Clear selection">✕</button>
+  <div id="dock-head">
+    <div class="search-bar dock-search">
+      <input type="text" id="input-side" placeholder="01.15.07.002.057" spellcheck="false" onkeydown="if(event.key==='Enter') search()">
+      <button class="search-btn" id="btn-side" onclick="search()">Search</button>
     </div>
-    <div class="info-row"><span class="info-label" id="lbl-code">Cadastral</span><span class="info-value" id="val-code">—</span></div>
-    <div class="info-row"><span class="info-label" id="lbl-area">Area</span><span class="info-value" id="val-area">—</span></div>
-    <div class="info-row"><span class="info-label" id="lbl-type">Type</span><span class="info-value" id="val-type">—</span></div>
-    <div class="info-row"><span class="info-label" id="lbl-addr">Address</span><span class="info-value" id="val-addr">—</span></div>
-    <div class="info-row"><span class="info-label" id="lbl-owner">Owner</span><span class="info-value" id="val-owner">—</span></div>
-    <div class="info-row" id="row-line-ownership" style="display:none"><span class="info-label" id="lbl-ownership">Ownership</span><span class="info-value" id="val-ownership">—</span></div>
-    <div class="info-row" id="row-line-extra" style="display:none"><span class="info-label" id="lbl-extra">Details</span><span class="info-value" id="val-extra">—</span></div>
-    <div class="info-row" id="row-3d-height" style="display:none"><span class="info-label" id="lbl-3d-height">Height</span><span class="info-value" id="val-3d-height">—</span></div>
-    <div class="info-row" id="row-3d-floors" style="display:none"><span class="info-label" id="lbl-3d-floors">Floors</span><span class="info-value" id="val-3d-floors">—</span></div>
+    <button id="dock-collapse" onclick="_dockToggle()" title="Collapse panel" aria-label="Collapse panel">
+      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg>
+    </button>
   </div>
-
-  <div class="card" id="floor-detail-panel" style="display:none">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-      <div style="display:flex;align-items:center;gap:7px">
-        <div id="floor-sel-swatch" style="width:10px;height:10px;border-radius:3px;background:#94a3b4;flex-shrink:0"></div>
-        <span class="card-label" id="floor-sel-num" style="margin-bottom:0">Floor 1</span>
+  <div id="dock-tabs" role="tablist">
+    <button class="dock-tab active" id="dock-tab-parcel" data-tab="parcel" role="tab" aria-selected="true" onclick="_dockTab('parcel')">Parcel</button>
+    <button class="dock-tab" id="dock-tab-analysis" data-tab="analysis" role="tab" aria-selected="false" onclick="_dockTab('analysis')">Analysis</button>
+  </div>
+  <div id="dock-body">
+    <div class="dock-pane" id="dock-pane-parcel">
+      <div id="dock-empty-parcel" class="dock-empty">Search a cadastral code or click the map to select a parcel.</div>
+        <div id="parcel-float-card">
+          <div id="pfc-header">
+            <span id="pfc-code" spellcheck="false">—</span>
+            <div style="display:flex;align-items:center;gap:2px">
+              <button id="pfc-min-btn" onclick="toggleParcelCardMin()" title="Minimize">−</button>
+              <button class="inline-close-btn" onclick="clearParcelSelection()" title="Close">✕</button>
+            </div>
+          </div>
+          <div id="pfc-body">
+            <div class="pfc-row"><span class="pfc-lbl" id="pfc-lbl-area">Area</span><span class="pfc-val" id="pfc-area">—</span></div>
+            <div class="pfc-row" id="pfc-perim-row" style="display:none"><span class="pfc-lbl" id="pfc-lbl-perim">Perimeter</span><span class="pfc-val" id="pfc-perim">—</span></div>
+            <div class="pfc-row"><span class="pfc-lbl" id="pfc-lbl-type">Type</span><span class="pfc-val" id="pfc-type">—</span></div>
+            <div class="pfc-row"><span class="pfc-lbl" id="pfc-lbl-addr">Address</span><span class="pfc-val" id="pfc-addr">—</span></div>
+            <div class="pfc-row"><span class="pfc-lbl" id="pfc-lbl-owner">Owner</span><span class="pfc-val" id="pfc-owner">—</span></div>
+            <div class="pfc-row" id="pfc-reg-row" style="display:none"><span class="pfc-lbl" id="pfc-lbl-reg">Registered</span><span class="pfc-val" id="pfc-reg">—</span></div>
+            <div id="pfc-nearby-row" style="display:none;margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.07)">
+              <button id="pfc-nearby-run-btn" onclick="_nearbyRunClicked()" style="width:100%;padding:6px;border-radius:6px;border:1px solid rgba(99,102,241,0.3);background:rgba(99,102,241,0.12);color:#a5b4fc;font-size:0.7rem;font-weight:600;font-family:inherit;cursor:pointer">Run nearby analysis</button>
+              <div id="pfc-nearby-body" style="display:none">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:5px">
+                  <span id="pfc-nearby-title" style="font-size:0.6rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:rgba(255,255,255,0.28)">Nearby</span>
+                  <button id="pfc-nearby-clear-btn" onclick="_nearbyClearClicked()" style="font-size:0.55rem;color:rgba(255,255,255,0.4);background:none;border:1px solid rgba(255,255,255,0.12);border-radius:5px;padding:2px 7px;cursor:pointer;font-family:inherit">Clear</button>
+                </div>
+                <div id="pfc-nearby-list"></div>
+                <div id="pfc-nearby-note" style="display:none;margin-top:6px;padding:5px 8px;background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.22);border-radius:5px;font-size:0.57rem;color:rgba(165,180,252,0.9);line-height:1.5"></div>
+              </div>
+            </div>
+            <div id="pfc-analysis-grid" style="display:none;margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.07)">
+              <div class="pfc-cat-lbl" id="pfc-cat-lbl-parcel">Parcel analysis</div>
+              <div class="pfc-cat-grid">
+                <button class="pfc-cat-btn" id="nav-zoning-btn" onclick="_pfcCatClick('zoning',this)" title="Zoning"><img src="analysis-logos/zoning.svg" width="39" height="39" id="nav-zoning-icon"></button>
+                <button class="pfc-cat-btn" id="cat-btn-relief" onclick="_pfcCatClick('relief',this)" title="Relief"><img src="analysis-logos/relief%20analysis.svg" width="39" height="39"></button>
+                <button class="pfc-cat-btn" id="cat-btn-climate" onclick="_pfcCatClick('climate',this)" title="Climate"><img src="analysis-logos/climate.svg" width="39" height="39"></button>
+                <button class="pfc-cat-btn" id="cat-btn-energy" onclick="_pfcCatClick('energy',this)" title="Clean Energy"><img src="analysis-logos/clean%20energy.svg" width="39" height="39"></button>
+              </div>
+              <div class="pfc-cat-lbl" id="pfc-cat-lbl-acc" style="margin-top:7px">Accessibility analysis</div>
+              <div class="pfc-cat-grid">
+                <button class="pfc-cat-btn" id="cat-btn-accessibility" onclick="_pfcCatClick('accessibility',this)" title="Isochrone"><img src="analysis-logos/accessibility.svg" width="39" height="39"></button>
+                <button class="pfc-cat-btn" id="cat-btn-education" onclick="_pfcCatClick('education',this)" title="Education"><img src="analysis-logos/education.svg" width="39" height="39"></button>
+                <button class="pfc-cat-btn" id="cat-btn-mobility" onclick="_pfcCatClick('mobility',this)" title="Mobility"><img src="analysis-logos/mobility.svg" width="39" height="39"></button>
+                <button class="pfc-cat-btn" id="cat-btn-morphology" onclick="_pfcCatClick('morphology',this)" title="Morphology"><img src="analysis-logos/urban%20morphology.svg" width="39" height="39"></button>
+              </div>
+            </div>
+            <div id="pfc-ext-row" style="display:none;margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.07)"></div>
+            <div id="pfc-floor-mount"></div><!-- floor use/color panel is relocated here for concept buildings -->
+            <div id="pfc-render-row" style="display:none;margin-top:6px">
+              <button id="pfc-concept-btn" onclick="openConceptModal()" style="width:100%;padding:7px;border-radius:6px;border:1px solid rgba(52,211,153,0.35);background:rgba(52,211,153,0.14);color:#6ee7b7;font-size:0.7rem;font-weight:600;font-family:inherit;cursor:pointer">Generate concept</button>
+            </div>
+            <div id="pfc-concept-info" style="display:none;margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.07)">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
+                <span id="pfc-concept-title" style="font-size:0.6rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:rgba(255,255,255,0.28)">Concept</span>
+                <button id="pfc-concept-clear" onclick="_clearConcept()" title="Clear concept" style="font-size:0.55rem;color:rgba(255,255,255,0.4);background:none;border:1px solid rgba(255,255,255,0.12);border-radius:5px;padding:2px 7px;cursor:pointer;font-family:inherit">Clear</button>
+              </div>
+              <div id="pfc-concept-summary" style="display:none;font-size:0.6rem;color:rgba(255,255,255,0.62);line-height:1.5;margin-bottom:6px"></div>
+              <div id="pfc-concept-items" style="display:flex;flex-direction:column;gap:3px;margin-bottom:8px"></div>
+              <button id="pfc-concept-render-btn" onclick="openRenderModal()" style="width:100%;padding:7px;border-radius:6px;border:1px solid rgba(167,139,250,0.35);background:rgba(167,139,250,0.16);color:#c4b5fd;font-size:0.7rem;font-weight:600;font-family:inherit;cursor:pointer">Generate concept render</button>
+            </div>
+            <div id="pfc-zone-row" style="display:none;margin-top:5px;padding-top:5px;border-top:1px solid rgba(255,255,255,0.07)"><div id="pfc-zones-list"></div></div>
+            <div id="pfc-kvals-row" style="display:none"></div>
+            <div id="pfc-build-params-row" style="display:none;margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.07)"></div>
+            <div id="pfc-compliance-row" style="display:none;margin-top:6px;padding:6px 8px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:5px"></div>
+            <div id="pfc-permits-row" style="display:none;margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.07)">
+              <div id="pfc-permits-title" style="font-size:0.6rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:rgba(255,255,255,0.28);margin-bottom:5px">Construction permits</div>
+              <div id="pfc-permits-list"></div>
+              <div id="pfc-permit-warn" style="display:none;margin-top:7px;padding:6px 8px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.28);border-radius:5px;font-size:0.58rem;color:rgba(248,140,140,0.92);line-height:1.5"></div>
+            </div>
+          </div>
+      <div class="card" id="zoning-panel-card" style="display:none">
+          <div class="lp-sec-title" id="lbl-zoning-panel">Zoning</div>
+          <div class="lp-row acc-toggle-row" style="padding:4px 0" onclick="toggleZoningAssessment()">
+            <span class="lp-row-name" id="lbl-zoning-assess">Assessment</span>
+            <div class="lp-sw" id="zoning-assess-sw"></div>
+          </div>
+          <div class="lp-row acc-toggle-row" style="padding:4px 0;margin-top:2px" onclick="toggleConstructionPermits()">
+            <span class="lp-row-name" id="lbl-zoning-permits">Construction permits</span>
+            <div class="lp-sw" id="zoning-permits-sw"></div>
+          </div>
+        </div>
+      <div class="card" id="owner-results-card" style="display:none">
+          <div class="card-label" id="lbl-owner-results">Parcels by Owner ID</div>
+          <div id="owner-results-list"></div>
+        </div>
+      <div class="card" id="floor-detail-panel" style="display:none">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+            <div style="display:flex;align-items:center;gap:7px">
+              <div id="floor-sel-swatch" style="width:10px;height:10px;border-radius:3px;background:#94a3b4;flex-shrink:0"></div>
+              <span class="card-label" id="floor-sel-num" style="margin-bottom:0">Floor 1</span>
+            </div>
+            <button onclick="_resetSelectedFloors()" style="background:none;border:none;color:rgba(255,255,255,0.25);font-size:0.68rem;cursor:pointer;font-family:inherit;padding:0;transition:color 0.15s" onmouseover="this.style.color='rgba(255,255,255,0.65)'" onmouseout="this.style.color='rgba(255,255,255,0.25)'">Reset</button>
+          </div>
+          <div id="floor-use-btns" style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:8px"></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.07)">
+            <span style="font-size:0.62rem;font-weight:600;letter-spacing:0.05em;text-transform:uppercase;color:rgba(255,255,255,0.4)">Custom color</span>
+            <input type="color" id="floor-color-input" value="#94a3b8" oninput="_setFloorColorHex(this.value)" style="width:40px;height:24px;border:1px solid rgba(255,255,255,0.15);border-radius:5px;background:none;padding:0;cursor:pointer">
+          </div>
+          <div style="font-size:0.58rem;color:rgba(255,255,255,0.2);line-height:1.5">Click any floor to select · then assign a use type or custom color</div>
+        </div>
+    </div>
+      <!-- Hidden data sink: never displayed, but loadParcel() and ~40 other call
+           sites write parcel fields into these nodes unguarded. The visible
+           parcel readout is #parcel-float-card above. Removing this requires
+           removing those writes too — tracked as follow-up cleanup. -->
+      <div class="card" id="info-card" style="display:none" aria-hidden="true">
+        <div class="card-label" id="lbl-parcel-info">Parcel Info</div>
+        <div class="info-row"><span class="info-label" id="lbl-code">Cadastral</span><span class="info-value" id="val-code">—</span></div>
+        <div class="info-row"><span class="info-label" id="lbl-area">Area</span><span class="info-value" id="val-area">—</span></div>
+        <div class="info-row"><span class="info-label" id="lbl-type">Type</span><span class="info-value" id="val-type">—</span></div>
+        <div class="info-row"><span class="info-label" id="lbl-addr">Address</span><span class="info-value" id="val-addr">—</span></div>
+        <div class="info-row"><span class="info-label" id="lbl-owner">Owner</span><span class="info-value" id="val-owner">—</span></div>
+        <div class="info-row" id="row-line-ownership" style="display:none"><span class="info-label" id="lbl-ownership">Ownership</span><span class="info-value" id="val-ownership">—</span></div>
+        <div class="info-row" id="row-line-extra" style="display:none"><span class="info-label" id="lbl-extra">Details</span><span class="info-value" id="val-extra">—</span></div>
+        <div class="info-row" id="row-3d-height" style="display:none"><span class="info-label" id="lbl-3d-height">Height</span><span class="info-value" id="val-3d-height">—</span></div>
+        <div class="info-row" id="row-3d-floors" style="display:none"><span class="info-label" id="lbl-3d-floors">Floors</span><span class="info-value" id="val-3d-floors">—</span></div>
       </div>
-      <button onclick="_resetSelectedFloors()" style="background:none;border:none;color:rgba(255,255,255,0.25);font-size:0.68rem;cursor:pointer;font-family:inherit;padding:0;transition:color 0.15s" onmouseover="this.style.color='rgba(255,255,255,0.65)'" onmouseout="this.style.color='rgba(255,255,255,0.25)'">Reset</button>
+      <button class="analyse-btn" id="analyse-btn" style="display:none" aria-hidden="true" onclick="onAnalyseClick()">
+        <span id="analyse-btn-label"></span>
+        <span id="free-badge"></span>
+      </button>
     </div>
-    <div id="floor-use-btns" style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:8px"></div>
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.07)">
-      <span style="font-size:0.62rem;font-weight:600;letter-spacing:0.05em;text-transform:uppercase;color:rgba(255,255,255,0.4)">Custom color</span>
-      <input type="color" id="floor-color-input" value="#94a3b8" oninput="_setFloorColorHex(this.value)" style="width:40px;height:24px;border:1px solid rgba(255,255,255,0.15);border-radius:5px;background:none;padding:0;cursor:pointer">
-    </div>
-    <div style="font-size:0.58rem;color:rgba(255,255,255,0.2);line-height:1.5">Click any floor to select · then assign a use type or custom color</div>
-  </div>
-
-  <button class="analyse-btn" id="analyse-btn" style="display:none" onclick="onAnalyseClick()">
-    <span id="analyse-btn-label"></span>
-    <span style="font-size:0.58rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;background:rgba(167,139,250,0.15);color:#a78bfa;border-radius:4px;padding:2px 5px" id="free-badge"></span>
-  </button>
-
-
-  <div class="card" id="score-card" style="display:none">
-    <div class="card-label" id="lbl-score-title"></div>
-    <div class="score-wrap">
-      <svg width="70" height="70" viewBox="0 0 70 70" style="flex-shrink:0">
-        <circle cx="35" cy="35" r="27" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="7"/>
-        <circle id="score-ring" cx="35" cy="35" r="27" fill="none" stroke="#34d399" stroke-width="7"
-          stroke-linecap="round" stroke-dasharray="169.65" stroke-dashoffset="169.65"
-          transform="rotate(-90 35 35)" style="transition:stroke-dashoffset 1.1s cubic-bezier(0.23,1,0.32,1),stroke 0.4s"/>
-      </svg>
-      <div class="score-meta">
-        <div class="score-num" id="score-num">—</div>
-        <div class="score-sub" id="lbl-out-of"></div>
-        <div class="score-verdict" id="score-verdict"></div>
-      </div>
-    </div>
-    <div id="cat-list"></div>
-  </div>
-
-
-
-  <div class="card" id="zoning-panel-card" style="display:none">
-    <div class="lp-sec-title" id="lbl-zoning-panel">Zoning</div>
-    <div class="lp-row acc-toggle-row" style="padding:4px 0" onclick="toggleZoningAssessment()">
-      <span class="lp-row-name" id="lbl-zoning-assess">Assessment</span>
-      <div class="lp-sw" id="zoning-assess-sw"></div>
-    </div>
-    <div class="lp-row acc-toggle-row" style="padding:4px 0;margin-top:2px" onclick="toggleConstructionPermits()">
-      <span class="lp-row-name" id="lbl-zoning-permits">Construction permits</span>
-      <div class="lp-sw" id="zoning-permits-sw"></div>
-    </div>
-  </div>
-  <div class="card" id="pro-analysis-card" style="display:none">
-    <div class="pro-cat" id="pro-cat-accessibility">
-      <div class="pro-cat-body"><div class="pro-cat-body-inner" id="pro-cat-accessibility-content"></div></div>
-    </div>
-    <div class="pro-cat" id="pro-cat-climate">
-      <div class="pro-cat-body"><div class="pro-cat-body-inner" id="pro-cat-climate-content"></div></div>
-    </div>
-    <div class="pro-cat" id="pro-cat-education">
-      <div class="pro-cat-body"><div class="pro-cat-body-inner" id="pro-cat-education-content"></div></div>
-    </div>
-    <div class="pro-cat" id="pro-cat-mobility">
-      <div class="pro-cat-body"><div class="pro-cat-body-inner" id="pro-cat-mobility-content"></div></div>
-    </div>
-    <div class="pro-cat" id="pro-cat-morphology" style="display:none">
-      <div class="pro-cat-body"><div class="pro-cat-body-inner" id="pro-cat-morphology-content">
-        <div id="acc-syntax-result"><div id="syntax-legend" style="display:none"></div><div id="orient-rose" style="display:none"></div></div>
-        <div id="osm-legend" style="display:none"></div>
-      </div></div>
-    </div>
-    <div class="pro-cat" id="pro-cat-energy" style="display:none">
-      <div class="pro-cat-body"><div class="pro-cat-body-inner" id="pro-cat-energy-content"></div></div>
-    </div>
-    <div class="pro-cat" id="pro-cat-relief" style="display:none">
-      <div class="pro-cat-body"><div class="pro-cat-body-inner" id="pro-cat-relief-content"></div></div>
+    <div class="dock-pane" id="dock-pane-analysis" style="display:none">
+      <div id="dock-engines"></div>
+      <div class="card" id="pro-analysis-card" style="display:none">
+          <div class="pro-cat" id="pro-cat-accessibility">
+            <div class="pro-cat-body"><div class="pro-cat-body-inner" id="pro-cat-accessibility-content"></div></div>
+          </div>
+          <div class="pro-cat" id="pro-cat-climate">
+            <div class="pro-cat-body"><div class="pro-cat-body-inner" id="pro-cat-climate-content"></div></div>
+          </div>
+          <div class="pro-cat" id="pro-cat-education">
+            <div class="pro-cat-body"><div class="pro-cat-body-inner" id="pro-cat-education-content"></div></div>
+          </div>
+          <div class="pro-cat" id="pro-cat-mobility">
+            <div class="pro-cat-body"><div class="pro-cat-body-inner" id="pro-cat-mobility-content"></div></div>
+          </div>
+          <div class="pro-cat" id="pro-cat-morphology" style="display:none">
+            <div class="pro-cat-body"><div class="pro-cat-body-inner" id="pro-cat-morphology-content">
+              <div id="acc-syntax-result"><div id="syntax-legend" style="display:none"></div><div id="orient-rose" style="display:none"></div></div>
+              <div id="osm-legend" style="display:none"></div>
+            </div></div>
+          </div>
+          <div class="pro-cat" id="pro-cat-energy" style="display:none">
+            <div class="pro-cat-body"><div class="pro-cat-body-inner" id="pro-cat-energy-content"></div></div>
+          </div>
+          <div class="pro-cat" id="pro-cat-relief" style="display:none">
+            <div class="pro-cat-body"><div class="pro-cat-body-inner" id="pro-cat-relief-content"></div></div>
+          </div>
+        </div>
+      <div class="card" id="score-card" style="display:none">
+          <div class="card-label" id="lbl-score-title"></div>
+          <div class="score-wrap">
+            <svg width="70" height="70" viewBox="0 0 70 70" style="flex-shrink:0">
+              <circle cx="35" cy="35" r="27" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="7"/>
+              <circle id="score-ring" cx="35" cy="35" r="27" fill="none" stroke="#34d399" stroke-width="7"
+                stroke-linecap="round" stroke-dasharray="169.65" stroke-dashoffset="169.65"
+                transform="rotate(-90 35 35)" style="transition:stroke-dashoffset 1.1s cubic-bezier(0.23,1,0.32,1),stroke 0.4s"/>
+            </svg>
+            <div class="score-meta">
+              <div class="score-num" id="score-num">—</div>
+              <div class="score-sub" id="lbl-out-of"></div>
+              <div class="score-verdict" id="score-verdict"></div>
+            </div>
+          </div>
+          <div id="cat-list"></div>
+        </div>
+      <div class="card" id="wind-card" style="display:none">
+          <div class="card-label" id="lbl-wind-card-title"></div>
+          <div id="wind-result-inner"></div>
+        </div>
     </div>
   </div>
-  <div class="card" id="wind-card" style="display:none">
-    <div class="card-label" id="lbl-wind-card-title"></div>
-    <div id="wind-result-inner"></div>
-  </div>
 
-  <!-- Exports consolidated into the left-rail Generate Report menu -->
+  <!-- Report/GeoJSON/GeoTIFF export now lives in the Projects panel (needs a saved project) -->
   <div class="status" id="status-analysis"></div>
   <!-- Search limit warning -->
   <div id="limit-warning" style="display:none;background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.25);border-radius:10px;padding:10px 12px;font-size:0.75rem;color:#fbbf24;line-height:1.5">
@@ -678,6 +700,7 @@
 </div>
 
 <script src="app.js"></script>
+<script src="dock.js"></script>
 
 <!-- Dashboard modal -->
 <div id="billing-modal" onclick="onBillingOverlayClick(event)" style="position:fixed;inset:0;z-index:210;background:rgba(0,0,0,0.55);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;pointer-events:none;transition:opacity 0.22s ease">
@@ -712,7 +735,7 @@
     </div>
     <!-- Actions -->
     <div class="dash-section" style="padding-bottom:0">
-      <button id="bill-upgrade-btn" class="dash-action-btn upgrade" onclick="closeBillingPortal();openPaywall()" style="width:100%;display:none" id="bill-upgrade-btn"></button>
+      <button id="bill-upgrade-btn" class="dash-action-btn upgrade" onclick="closeBillingPortal();openPaywall()" style="width:100%;display:none"></button>
       <div id="bill-trial-notice" style="display:none;font-size:0.65rem;color:#a78bfa;margin-bottom:6px;line-height:1.5;padding:8px 10px;background:rgba(167,139,250,0.07);border-radius:7px;border:1px solid rgba(167,139,250,0.15)"></div>
       <button id="bill-cancel-btn" class="billing-cancel-btn" onclick="cancelSubscription()" style="display:none;width:100%;text-align:center;padding:6px 0"></button>
     </div>

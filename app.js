@@ -129,25 +129,11 @@ function _updateAnalysisGrid(show){
 function _refreshAnalysisGrid(){const g=document.getElementById('pfc-analysis-grid');if(g&&g.style.display!=='none')_updateAnalysisGrid(true);}
 // Position an analysis result panel right next to the floating card (to its left, or to
 // the right if there isn't room). Falls back to the old left-edge slot if no card is shown.
-function _analysisPanelPos(width){
-  width=width||262;const gap=8;
-  const card=document.getElementById('parcel-float-card');
-  if(card&&card.style.display!=='none'){
-    const r=card.getBoundingClientRect();
-    let left=r.left-gap-width;
-    if(left<8){left=r.right+gap;if(left+width>window.innerWidth-8)left=Math.max(8,window.innerWidth-width-8);}
-    const top=Math.max(8,Math.min(r.top,window.innerHeight-60));
-    return {left:Math.round(left),top:Math.round(top)};
-  }
-  return {left:68,top:90};
-}
+// Docked layout: panels live in the dock's flow, so there is nothing to position.
+// Kept as a no-op because several call sites still ask for coordinates.
+function _analysisPanelPos(width){ return {left:0,top:0}; }
 // Keep an already-open sub-analysis panel glued to the floating card (e.g. while dragging).
-function _repositionOpenAnalysisPanels(){
-  const pro=document.getElementById('pro-analysis-card');
-  if(pro&&pro.style.display==='block'){const p=_analysisPanelPos(262);pro.style.left=p.left+'px';pro.style.top=p.top+'px';pro.style.maxHeight='calc(100vh - '+p.top+'px - 12px)';}
-  const zon=document.getElementById('zoning-panel-card');
-  if(zon&&zon.style.display==='block'){const z=_analysisPanelPos(280);zon.style.left=z.left+'px';zon.style.top=z.top+'px';}
-}
+function _repositionOpenAnalysisPanels(){ /* docked — CSS owns the layout */ }
 // Unified click for the in-card analysis buttons — blocks locked ones with a hint.
 function _pfcCatClick(key,el){
   if(el&&el.classList.contains('pfc-cat-locked')){
@@ -549,7 +535,7 @@ function applyLang(){
   document.getElementById("lbl-addr").textContent=tr.addr;
   document.getElementById("lbl-owner").textContent=tr.owner;
   // Buttons
-  document.getElementById("analyse-btn-label").textContent=tr.analyseBtn;
+  {const _abl=document.getElementById("analyse-btn-label");if(_abl)_abl.textContent=tr.analyseBtn;}
   document.getElementById("free-badge").textContent=tr.freeBadge;
   // Analysis cards
   document.getElementById("lbl-score-title").textContent=tr.scoreTitle;
@@ -3073,7 +3059,7 @@ function _setAnalysisPanel(open){
     closeCatPopover();
     if(proCard){proCard.style.display='none';}
     document.querySelectorAll('.pro-cat').forEach(el=>el.classList.remove('open'));
-    document.querySelectorAll('.cat-icon-btn,.pfc-cat-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.pfc-cat-btn').forEach(b=>b.classList.remove('active'));
     if(bottomBar)bottomBar.classList.remove('visible');
     if(btn)btn.classList.remove('active');
     _activeCatKey=null;
@@ -3834,7 +3820,7 @@ async function _loadProjectsList(){
       const thumb=p.thumbnail
         ?`<img class="pp-thumb" src="${p.thumbnail}" alt="" loading="lazy">`
         :`<div class="pp-thumb-placeholder"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="rgba(99,102,241,0.35)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg></div>`;
-      return `<div class="pp-project-card">${thumb}<div class="pp-card-body"><div class="pp-card-name">${p.name.replace(/&/g,'&amp;').replace(/</g,'&lt;')}</div><div class="pp-card-meta">${ds}${meta?' · '+meta:''}</div></div><div class="pp-card-footer"><button class="pp-load-btn" onclick="event.stopPropagation();loadProject('${p.id}')">${tr.openBtn}</button><button class="pp-del-btn" onclick="event.stopPropagation();deleteProject('${p.id}',this)" title="Delete"><img src="analysis-logos/delete.svg"></button></div></div>`;
+      return `<div class="pp-project-card">${thumb}<div class="pp-card-body"><div class="pp-card-name">${p.name.replace(/&/g,'&amp;').replace(/</g,'&lt;')}</div><div class="pp-card-meta">${ds}${meta?' · '+meta:''}</div></div><div class="pp-card-footer"><button class="pp-load-btn" onclick="event.stopPropagation();loadProject('${p.id}')">${tr.openBtn}</button><button class="pp-export-btn" onclick="event.stopPropagation();_ppExport('${p.id}',this)" title="${_expTitle()}"><img src="analysis-logos/report.svg">${_expLabel()}</button><button class="pp-del-btn" onclick="event.stopPropagation();deleteProject('${p.id}',this)" title="Delete"><img src="analysis-logos/delete.svg"></button></div></div>`;
     }).join('');
   }catch(err){
     console.error('[projects] list:',err);
@@ -5641,7 +5627,7 @@ function _closeOtherNavPanels(keep){
     const proCard=document.getElementById('pro-analysis-card');
     if(proCard&&proCard.style.display!=='none'){proCard.style.display='none';}
     document.querySelectorAll('.pro-cat').forEach(el=>el.classList.remove('open'));
-    document.querySelectorAll('#nav-cat-group .nav-btn,.pfc-cat-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.pfc-cat-btn').forEach(b=>b.classList.remove('active'));
     _activeCatKey=null;
   }
   if(keep!=='zoning'){
@@ -6332,9 +6318,10 @@ function toggleZoningPanel(){
   _closeOtherNavPanels('zoning');
   if(_wasActive)btn?.classList.add('active');
   _syncZoningPanel();
-  // Slide out next to the parcel floating card (matches the other analysis panels).
-  const _zp=_analysisPanelPos(280);card.style.left=_zp.left+'px';card.style.top=_zp.top+'px';
+  // Zoning + permits live in the dock's Parcel tab.
   card.style.display='block';
+  if(typeof _dockTab==='function')_dockTab('parcel');
+  if(typeof _dockOpen==='function')_dockOpen();
   btn?.classList.add('zoning-panel-open');
 }
 
@@ -7356,6 +7343,7 @@ function _initParcelCardDrag(){
   const card=document.getElementById('parcel-float-card');
   const header=document.getElementById('pfc-header');
   if(!card||!header)return;
+  if(document.getElementById('dock-pane-parcel'))return; // docked: no dragging
   let dragging=false,ox=0,oy=0;
   header.addEventListener('mousedown',e=>{
     if(e.target.tagName==='BUTTON')return;
@@ -7388,16 +7376,7 @@ function _initParcelCardDrag(){
     document.removeEventListener('mouseup',onDU);
   }
 }
-function _updateParcelCardPos(){
-  if(!_parcelCardLngLat||_parcelCardDragged)return;
-  const card=document.getElementById('parcel-float-card');
-  if(!card||card.style.display==='none')return;
-  const pt=map.project(_parcelCardLngLat);
-  const cw=card.offsetWidth||200, ch=card.offsetHeight||120;
-  card.style.left=(pt.x+88)+'px';
-  card.style.top=(pt.y-ch/2)+'px';
-  _repositionOpenAnalysisPanels();
-}
+function _updateParcelCardPos(){ /* docked — the parcel pane no longer floats */ }
 function toggleParcelCardMin(){
   const card=document.getElementById('parcel-float-card');
   const btn=document.getElementById('pfc-min-btn');
@@ -8849,16 +8828,17 @@ function showCatInPanel(catKey,btnEl){
   const catEl=document.getElementById('pro-cat-'+catKey);
   const alreadyOpen=catEl&&catEl.classList.contains('open')&&proCard&&proCard.style.display!=='none';
   document.querySelectorAll('.pro-cat').forEach(el=>el.classList.remove('open'));
-  document.querySelectorAll('.cat-icon-btn,#nav-cat-group .nav-btn,.pfc-cat-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.pfc-cat-btn').forEach(b=>b.classList.remove('active'));
   if(alreadyOpen){
     if(proCard)proCard.style.display='none';
     _activeCatKey=null;
     return;
   }
   if(proCard){
-    // Slide out next to the parcel/drawn-area floating card (falls back to left edge).
-    const pos=_analysisPanelPos(262);
-    proCard.style.cssText='display:block;position:fixed;left:'+pos.left+'px;top:'+pos.top+'px;margin:0;width:262px;max-height:calc(100vh - '+pos.top+'px - 12px);overflow-y:auto;scrollbar-width:none;background:var(--glass-bg);backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);border:1px solid var(--glass-border);border-radius:var(--glass-radius);box-shadow:var(--glass-shadow);padding:14px 14px 10px;z-index:28;color:white;font-size:0.8rem;';
+    // Docked: the card renders in the dock's Analysis pane; CSS owns position.
+    proCard.style.display='block';
+    if(typeof _dockTab==='function')_dockTab('analysis');
+    if(typeof _dockOpen==='function')_dockOpen();
   }
   if(catEl)catEl.classList.add('open');
   const catBtn=document.getElementById('cat-btn-'+catKey);
@@ -8878,7 +8858,7 @@ function openCatPopover(catKey,btnEl){showCatInPanel(catKey,btnEl);}
 function closeCatPopover(){
   const proCard=document.getElementById('pro-analysis-card');
   document.querySelectorAll('.pro-cat').forEach(el=>el.classList.remove('open'));
-  document.querySelectorAll('.cat-icon-btn,.pfc-cat-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.pfc-cat-btn').forEach(b=>b.classList.remove('active'));
   if(proCard)proCard.style.display='none';
   _activeCatKey=null;
 }
@@ -12569,6 +12549,7 @@ function _updateProfileMapCursor(lng,lat){
 async function runAnalysis(){
   if(!parcelCentroid)return;
   const tr=t();const btn=document.getElementById("analyse-btn");
+  if(!btn)return; // free-analysis button removed in the dock redesign
   btn.disabled=true;btn.style.opacity="";
   btn.innerHTML=`<span class="spinner"></span><span class="btn-step">${tr.analysingIso}</span>`;
   setStatus("","","status-analysis");
@@ -13278,7 +13259,7 @@ async function loadParcel(lbl, code){
   document.getElementById("val-extra").textContent=isLine?(attrs.extraFeatures||"—"):"—";
   document.getElementById("row-line-extra").style.display=(isLine&&!!attrs.extraFeatures)?"flex":"none";
   document.getElementById("info-card").style.display="none";
-  document.getElementById("analyse-btn").style.display="none"; // walkability (free analysis) removed
+  // walkability (free analysis) removed — #analyse-btn no longer exists
   _updateMapInfoBadge();
   _currentParcelRegDate=isLine?null:(attrs.regDate||null);
   if(!isLine){
@@ -13407,7 +13388,7 @@ function zoomToOwnerParcel(idx){
   document.getElementById("val-addr").textContent=p.address||"—";
   document.getElementById("val-owner").textContent="—";
   document.getElementById("info-card").style.display="none";
-  document.getElementById("analyse-btn").style.display="none"; // walkability (free analysis) removed
+  // walkability (free analysis) removed — #analyse-btn no longer exists
   _updateMapInfoBadge();
   showParcelPopup(parcelCentroid);
 }
@@ -13443,7 +13424,7 @@ async function loadParcelFromDB(cadastral){
   document.getElementById("row-line-extra").style.display="none";
   document.getElementById("info-card").style.display="none";
   document.getElementById("owner-results-card").style.display="none";
-  document.getElementById("analyse-btn").style.display="none"; // walkability (free analysis) removed
+  // walkability (free analysis) removed — #analyse-btn no longer exists
   _updateMapInfoBadge();
   _currentParcelRegDate=isLine?null:(attrs.regDate||null);
   if(!isLine){
@@ -15326,18 +15307,19 @@ function _rptMenuToggle(btn){
   const isKa=lang==='ka';
   const btnS='display:block;width:100%;text-align:left;font-family:inherit;font-size:0.66rem;font-weight:600;padding:8px 11px;border-radius:8px;margin-top:5px;cursor:pointer;';
   m=document.createElement('div');m.id='rpt-menu';
-  m.style.cssText='position:fixed;left:64px;z-index:60;width:198px;background:var(--glass-bg,rgba(8,8,8,0.9));backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,0.09);border-radius:11px;padding:9px 10px 11px;box-shadow:0 8px 28px rgba(0,0,0,0.45)';
+  m.style.cssText='position:fixed;left:52px;z-index:220;width:198px;background:var(--glass-bg,rgba(8,8,8,0.9));backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,0.09);border-radius:11px;padding:9px 10px 11px;box-shadow:0 8px 28px rgba(0,0,0,0.45)';
   m.innerHTML=
     `<div style="font-family:ui-monospace,monospace;font-size:0.52rem;letter-spacing:0.14em;text-transform:uppercase;color:rgba(255,255,255,0.35)">${isKa?'რეპორტი':'Report'}</div>`+
     `<button onclick="_rptMenuToggle();exportReportPDF()" style="${btnS}border:1px solid rgba(167,139,250,0.3);background:rgba(167,139,250,0.12);color:#a78bfa">${isKa?'PDF რეპორტის ექსპორტი':'Export PDF report'}</button>`+
     `<button onclick="_rptMenuToggle();_rptExportGeoJSON()" style="${btnS}border:1px solid rgba(255,255,255,0.09);background:rgba(255,255,255,0.03);color:rgba(255,255,255,0.6)">${isKa?'აქტიური ფენები · GeoJSON':'Active layers · GeoJSON'}</button>`+
     `<button onclick="_rptMenuToggle();_rptExportGeoTIFF()" style="${btnS}border:1px solid rgba(255,255,255,0.09);background:rgba(255,255,255,0.03);color:rgba(255,255,255,0.6)">${isKa?'აქტიური რასტრები · GeoTIFF':'Active rasters · GeoTIFF'}</button>`;
   document.body.appendChild(m);
-  const r=(btn||document.getElementById('nav-report-btn'))?.getBoundingClientRect();
-  m.style.top=Math.max(8,Math.min((r?.top||120)-8,window.innerHeight-m.offsetHeight-10))+'px';
+  const r=btn?.getBoundingClientRect();
+  if(r){m.style.left=Math.max(8,Math.min(r.left,window.innerWidth-208))+'px';}
+  m.style.top=Math.max(8,Math.min((r?.bottom||120)+6,window.innerHeight-m.offsetHeight-10))+'px';
   document.getElementById('nav-report-icon')?.style.setProperty('opacity','1');
   setTimeout(()=>document.addEventListener('click',function _c(e){
-    if(!m.contains(e.target)&&!e.target.closest('#nav-report-btn')){
+    if(!m.contains(e.target)&&!e.target.closest('.pp-export-btn')){
       m.remove();document.getElementById('nav-report-icon')?.style.setProperty('opacity','0.55');
       document.removeEventListener('click',_c);
     }

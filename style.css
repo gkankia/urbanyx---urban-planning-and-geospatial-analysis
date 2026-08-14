@@ -21,7 +21,7 @@
      .info-value) that also hold addresses/owner names, incl. Georgian text. */
   .num, .mono, [data-num],
   .score-num, .dash-stat-val, .mib-val, .lp-elev-stat .stat-val { font-family: var(--mono); font-variant-numeric: tabular-nums; }
-  #map-wrap { position: absolute; top: 0; bottom: 0; right: 0; left: 60px; }
+  #map-wrap { position: absolute; top: 0; bottom: 0; right: 0; left: 48px; }
   #map { position: absolute; inset: 0; }
   #map-blur { position: absolute; inset: 0; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); background: rgba(0,0,0,0.4); z-index: 5; transition: opacity 0.8s ease; pointer-events: none; }
   #map-blur.hidden { opacity: 0; }
@@ -29,7 +29,7 @@
   #center-search.hidden { opacity: 0; pointer-events: none; }
   #center-search.hidden .center-inner { pointer-events: none; }
   #center-search.compact.hidden { transform: translateX(-24px); }
-  #center-search.compact { inset: unset; top: 7px; left: 60px; right: auto; bottom: auto; align-items: flex-start; justify-content: flex-start; transform: none; z-index: 21; }
+  #center-search.compact { inset: unset; top: 7px; left: 48px; right: auto; bottom: auto; align-items: flex-start; justify-content: flex-start; transform: none; z-index: 21; }
   #center-search.compact .center-inner { max-width: 300px; padding: 0; gap: 8px; }
   #center-search.compact .brand { display: none; }
   #center-search.compact .or-click-row { display: none !important; }
@@ -77,10 +77,87 @@
     animation: ms-pulse 1s ease-in-out infinite;
   }
   @keyframes ms-pulse { 0%,100%{opacity:0.35;transform:scale(0.8)} 50%{opacity:1;transform:scale(1)} }
-  #side-panel { position: absolute; top: 0; left: 60px; z-index: 10; width: 300px; height: auto; max-height: 100vh; display: flex; flex-direction: column; gap: 0; opacity: 0; pointer-events: none; transition: opacity 0.35s ease; overflow-y: auto; scrollbar-width: none; background: transparent; padding:70px 0 16px; }
+  /* ══ DOCK — one declarative column; replaces the old card-stack + JS flyouts ══ */
+  #side-panel { position:absolute; top:0; left:48px; bottom:0; z-index:10; width:300px;
+    display:flex; flex-direction:column; opacity:0; pointer-events:none;
+    transition:opacity 0.3s ease, width 0.28s cubic-bezier(0.22,1,0.32,1);
+    background:var(--glass-bg); backdrop-filter:var(--glass-blur); -webkit-backdrop-filter:var(--glass-blur);
+    border-right:1px solid var(--glass-border); padding:0; overflow:hidden; }
+  body.dock-collapsed #side-panel { width:26px; }
+  body.dock-collapsed #dock-head, body.dock-collapsed #dock-tabs, body.dock-collapsed #dock-body { opacity:0; pointer-events:none; }
+  #dock-head { display:flex; align-items:center; gap:6px; padding:9px 9px 8px; flex-shrink:0; border-bottom:1px solid rgba(255,255,255,0.07); transition:opacity 0.12s; }
+  #dock-head .dock-search { flex:1; min-width:0; padding:4px 4px 4px 12px; }
+  #dock-head .dock-search input { font-size:0.78rem; }
+  #dock-head .search-btn { padding:5px 12px; font-size:0.72rem; }
+  #dock-collapse { flex-shrink:0; width:24px; height:24px; display:flex; align-items:center; justify-content:center;
+    background:none; border:1px solid rgba(255,255,255,0.1); border-radius:6px; color:rgba(255,255,255,0.35); cursor:pointer; transition:color 0.14s, border-color 0.14s; }
+  #dock-collapse:hover { color:#a78bfa; border-color:rgba(167,139,250,0.4); }
+  #dock-expand { position:absolute; left:0; top:0; bottom:0; width:26px; display:none; align-items:center; justify-content:center;
+    background:none; border:none; color:rgba(255,255,255,0.32); cursor:pointer; z-index:3; }
+  body.dock-collapsed #dock-expand { display:flex; }
+  #dock-expand:hover { color:#a78bfa; }
+  #dock-tabs { display:flex; gap:2px; margin:8px 9px 0; background:rgba(255,255,255,0.045); border:1px solid rgba(255,255,255,0.08);
+    border-radius:8px; padding:2px; flex-shrink:0; transition:opacity 0.12s; }
+  .dock-tab { flex:1; font-family:inherit; font-size:0.7rem; font-weight:600; color:rgba(255,255,255,0.35);
+    background:none; border:none; border-radius:6px; padding:6px 0; cursor:pointer; transition:background 0.15s, color 0.15s; }
+  .dock-tab:hover { color:rgba(255,255,255,0.62); }
+  .dock-tab.active { background:rgba(167,139,250,0.16); color:#a78bfa; }
+  #dock-body { flex:1; overflow-y:auto; scrollbar-width:none; padding:10px 0 18px; transition:opacity 0.12s; }
+  #dock-body::-webkit-scrollbar { display:none; }
+  .dock-empty { font-size:0.7rem; color:rgba(255,255,255,0.3); line-height:1.55; padding:10px 14px 4px; }
+
+  /* the parcel card is now a docked pane, not a floating window */
+  #dock-pane-parcel #parcel-float-card { position:static !important; display:none; left:auto !important; top:auto !important;
+    width:auto; min-width:0; max-width:none; margin:0 10px 10px; box-shadow:none; background:rgba(255,255,255,0.028);
+    border:1px solid rgba(255,255,255,0.08); }
+  #dock-pane-parcel #pfc-header { cursor:default; }
+  #dock-pane-parcel #pfc-min-btn { display:none; }
+  /* analysis + zoning render in the dock flow, not as fixed flyouts */
+  #dock-pane-analysis #pro-analysis-card { position:static !important; left:auto !important; top:auto !important;
+    width:auto !important; max-height:none !important; margin:0 10px 10px !important; z-index:auto !important;
+    background:rgba(255,255,255,0.028) !important; box-shadow:none !important; padding:12px 13px !important; }
+  #dock-pane-parcel #zoning-panel-card { position:static !important; left:auto !important; top:auto !important;
+    width:auto !important; max-height:none !important; margin:0 10px 10px !important; z-index:auto !important; }
+
+  /* ── analysis engine list — capabilities are legible before you click ── */
+  #dock-engines { padding:0 12px 4px; }
+  .eng-sec { font-size:0.55rem; font-weight:700; letter-spacing:0.12em; text-transform:uppercase;
+    color:rgba(255,255,255,0.26); margin:4px 0 6px; }
+  .eng-sec + .eng-sec, .eng-row + .eng-sec { margin-top:14px; }
+  .eng-row { display:flex; align-items:center; gap:9px; width:100%; padding:7px 2px; text-align:left; cursor:pointer;
+    background:none; border:none; border-bottom:1px solid rgba(255,255,255,0.055); font-family:inherit; transition:opacity 0.16s; }
+  .eng-row:last-of-type { border-bottom:none; }
+  .eng-row:hover .eng-name { color:rgba(255,255,255,0.92); }
+  .eng-ico { width:26px; height:26px; flex-shrink:0; display:flex; align-items:center; justify-content:center; border-radius:7px;
+    background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.09); }
+  .eng-ico img { width:16px; height:16px; opacity:0.7; }
+  .eng-row.on .eng-ico { background:rgba(167,139,250,0.16); border-color:rgba(167,139,250,0.45); }
+  .eng-row.on .eng-ico img { opacity:1; }
+  .eng-meta { flex:1; min-width:0; }
+  .eng-name { font-size:0.74rem; color:rgba(255,255,255,0.62); display:flex; align-items:center; gap:5px; flex-wrap:wrap; transition:color 0.14s; }
+  .eng-row.on .eng-name { color:#fff; font-weight:600; }
+  .eng-sub { font-family:var(--mono); font-size:0.55rem; color:rgba(255,255,255,0.3); margin-top:1px; }
+  .eng-badge { font-family:var(--mono); font-size:0.46rem; letter-spacing:0.08em; text-transform:uppercase; border-radius:3px; padding:1px 4px; border:1px solid; }
+  .eng-badge.free { color:#34d399; border-color:rgba(52,211,153,0.32); }
+  .eng-badge.pro { color:#a78bfa; border-color:rgba(167,139,250,0.36); }
+  .eng-row.locked { opacity:0.45; }
+  .eng-hint { font-size:0.6rem; color:rgba(255,255,255,0.34); line-height:1.5; padding:7px 9px; border-radius:7px;
+    background:rgba(167,139,250,0.07); border:1px solid rgba(167,139,250,0.18); margin-bottom:10px; }
+
+  /* ── map selection chip ── */
+  #parcel-chip { position:absolute; left:calc(48px + 300px + 12px); top:12px; z-index:24; display:flex; align-items:center; gap:9px;
+    background:rgba(8,8,8,0.88); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+    border:1px solid rgba(255,255,255,0.13); border-radius:8px; padding:6px 9px; box-shadow:0 5px 20px rgba(0,0,0,0.5);
+    transition:left 0.28s cubic-bezier(0.22,1,0.32,1); }
+  body.dock-collapsed #parcel-chip { left:calc(48px + 26px + 12px); }
+  .pchip-dot { width:7px; height:7px; border-radius:50%; background:#a78bfa; flex-shrink:0; }
+  .pchip-code { font-family:var(--mono); font-size:0.65rem; color:rgba(255,255,255,0.9); }
+  .pchip-btn { font-family:inherit; font-size:0.58rem; font-weight:600; color:#a78bfa; background:rgba(167,139,250,0.14);
+    border:1px solid rgba(167,139,250,0.3); border-radius:5px; padding:3px 8px; cursor:pointer; white-space:nowrap; }
+  .pchip-btn:hover { background:rgba(167,139,250,0.24); }
   #side-panel::-webkit-scrollbar { display: none; }
-  #side-panel.visible { opacity: 1; pointer-events: all; }
-  #side-panel .search-bar { display: none !important; }
+  #side-panel.visible { opacity:1; pointer-events:all; }
+
   .card { background: rgba(8,8,8,0.72); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); border: 1px solid rgba(255,255,255,0.09); border-radius: var(--glass-radius); padding: 14px 16px; color: white; font-size: 0.8rem; line-height: 1.6; margin:0 10px 10px; }
   .card-label { font-size: 0.6rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(255,255,255,0.28); margin-bottom: 12px; }
   .info-row { display: flex; justify-content: space-between; gap: 12px; border-bottom: 1px solid rgba(255,255,255,0.07); padding: 5px 0; }
@@ -220,7 +297,14 @@
   .pp-card-body { padding:9px 12px 6px; }
   .pp-card-name { color:white; font-size:0.8rem; font-weight:600; margin-bottom:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .pp-card-meta { color:rgba(255,255,255,0.32); font-size:0.65rem; }
-  .pp-card-footer { display:flex; align-items:center; justify-content:space-between; padding:7px 12px 9px; }
+  .pp-card-footer { display:flex; align-items:center; justify-content:space-between; gap:5px; padding:7px 12px 9px; }
+  /* Report/GeoJSON/GeoTIFF export now lives on the project card — a project
+     must be saved (and open) before its report can be exported. */
+  .pp-export-btn { display:flex; align-items:center; gap:5px; background:rgba(167,139,250,0.12); border:1px solid rgba(167,139,250,0.28);
+    border-radius:6px; color:#a78bfa; font-size:0.66rem; font-weight:600; padding:4px 9px; cursor:pointer; font-family:inherit;
+    transition:background 0.15s; margin-left:auto; }
+  .pp-export-btn:hover { background:rgba(167,139,250,0.22); }
+  .pp-export-btn img { width:13px; height:13px; opacity:0.85; }
   .pp-load-btn { background:rgba(99,102,241,0.14); border:1px solid rgba(99,102,241,0.28); border-radius:6px; color:rgba(139,132,255,0.9); font-size:0.68rem; font-weight:600; padding:4px 11px; cursor:pointer; font-family:inherit; transition:background 0.15s; }
   .pp-load-btn:hover { background:rgba(99,102,241,0.28); }
   .pp-del-btn { background:none; border:none; cursor:pointer; padding:3px 6px; border-radius:4px; display:flex; align-items:center; justify-content:center; }
@@ -873,12 +957,16 @@
   #acc-transit-result::-webkit-scrollbar-thumb { background: rgba(165,180,252,0.25); border-radius: 2px; }
 
   /* === Icon Nav (full-height sidebar column) === */
-  #icon-nav { position:absolute; left:0; top:0; bottom:0; z-index:20; width:60px; background:rgba(5,5,5,0.99); border-right:1px solid rgba(255,255,255,0.07); padding:0; display:flex; flex-direction:column; align-items:center; user-select:none; }
-  #nav-brand-wrap { width:60px; display:flex; align-items:center; justify-content:center; flex-shrink:0; border-bottom:1px solid rgba(255,255,255,0.07); padding:7px 0; margin-bottom:6px; }
-  .nav-group { display:flex; flex-direction:column; align-items:center; gap:1px; width:100%; padding:0 5px; }
+  #icon-nav { position:absolute; left:0; top:0; bottom:0; z-index:20; width:48px; background:rgba(5,5,5,0.99); border-right:1px solid rgba(255,255,255,0.07); padding:0; display:flex; flex-direction:column; align-items:center; user-select:none; }
+  #nav-brand-wrap { width:48px; display:flex; align-items:center; justify-content:center; flex-shrink:0; border-bottom:1px solid rgba(255,255,255,0.07); padding:7px 0; margin-bottom:6px; }
+  .nav-group { display:flex; flex-direction:column; align-items:center; gap:1px; width:100%; padding:0 4px; }
+  /* micro-labels under each rail icon — the icons never had names before */
+  .nav-btn { flex-direction:column; gap:1px; }
+  .nav-lbl { font-size:0.42rem; line-height:1; letter-spacing:0.045em; text-transform:uppercase; font-weight:700; opacity:0.66; }
+  .nav-btn img, .nav-btn svg { flex-shrink:0; }
   .nav-group.bottom { margin-top:auto; padding-bottom:8px; }
   .nav-sep { width:32px; height:1px; background:rgba(255,255,255,0.07); margin:4px 0; flex-shrink:0; }
-  .nav-btn { width:44px; height:44px; border-radius:10px; border:none; outline:none; background:transparent; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0; transition:background 0.15s,color 0.15s; color:rgba(255,255,255,0.28); position:relative; flex-shrink:0; font-family:inherit; }
+  .nav-btn { width:40px; height:42px; border-radius:9px; border:none; outline:none; background:transparent; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0; transition:background 0.15s,color 0.15s; color:rgba(255,255,255,0.28); position:relative; flex-shrink:0; font-family:inherit; }
   .nav-btn:hover { background:rgba(255,255,255,0.07); color:rgba(255,255,255,0.72); }
   /* Free tier — Climate/Energy/Relief/Draw/3D-Extrude are Pro per the plan
      comparison table; Accessibility, Education, Mobility, Morphology, Zoning
@@ -887,16 +975,15 @@
   body.free-tier #cat-btn-climate,
   body.free-tier #cat-btn-energy,
   body.free-tier #cat-btn-relief,
-  body.free-tier #nav-draw-btn,
-  body.free-tier #nav-report-btn { filter:grayscale(1); opacity:0.4; }
+  body.free-tier #nav-draw-btn { filter:grayscale(1); opacity:0.4; }
   .nav-btn.active { background:rgba(167,139,250,0.22); color:#a78bfa; border-radius:10px; box-shadow:inset 0 0 0 1px rgba(167,139,250,0.4); }
   .nav-btn.active:hover { background:rgba(167,139,250,0.30); }
   .nav-btn.layer-active { background:rgba(165,180,252,0.22); color:#a5b4fc; border-radius:10px; box-shadow:inset 0 0 0 1px rgba(165,180,252,0.4); }
   .nav-btn.layer-active:hover { background:rgba(165,180,252,0.30); }
   .nav-btn.zoning-panel-open { background:rgba(255,255,255,0.10); box-shadow:inset 0 0 0 1px rgba(255,255,255,0.18); }
 
-  /* Zoning panel opens beside its nav button (top set in JS), not stacked in #side-panel */
-  #zoning-panel-card { position:fixed; left:70px; top:80px; width:280px; max-height:80vh; overflow-y:auto; margin:0; z-index:12; scrollbar-width:none; }
+  /* Zoning + permits live in the dock's Parcel tab */
+  #zoning-panel-card { overflow-y:visible; scrollbar-width:none; }
   #zoning-panel-card::-webkit-scrollbar { display:none; }
 
   /* Construction permits result */
@@ -976,3 +1063,75 @@
 
   #app-toast { position:fixed; bottom:28px; left:50%; transform:translateX(-50%) translateY(12px); background:rgba(15,15,20,0.95); color:rgba(255,255,255,0.88); font-size:0.76rem; font-weight:500; padding:9px 18px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); box-shadow:0 4px 20px rgba(0,0,0,0.5); z-index:9999; pointer-events:none; opacity:0; transition:opacity 0.2s,transform 0.2s; white-space:nowrap; }
   #app-toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
+  /* ══════════════════════════════════════════════════════════════════════════
+     MOBILE — dock becomes a bottom sheet with three snap points, rail becomes
+     a bottom tab bar. These are the app's first breakpoints.
+     ══════════════════════════════════════════════════════════════════════════ */
+  #mobile-tabs { display:none; }
+
+  @media (max-width:820px) {
+    /* rail → bottom tab bar */
+    #icon-nav { display:none; }
+    #map-wrap { left:0; bottom:56px; }
+    #center-search.compact { left:8px; top:8px; right:8px; }
+    #center-search.compact .center-inner { max-width:none; }
+
+    #mobile-tabs { display:flex; position:fixed; left:0; right:0; bottom:0; height:56px; z-index:40;
+      background:rgba(6,6,7,0.97); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);
+      border-top:1px solid rgba(255,255,255,0.09); padding-bottom:env(safe-area-inset-bottom,0); }
+    .mt-btn { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px;
+      background:none; border:none; color:rgba(255,255,255,0.32); font-family:inherit; cursor:pointer; padding:0;
+      transition:color 0.14s; }
+    .mt-btn svg { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round; }
+    .mt-btn span { font-size:0.48rem; letter-spacing:0.05em; text-transform:uppercase; font-weight:700; }
+    .mt-btn.on { color:#a78bfa; }
+
+    /* dock → bottom sheet */
+    #side-panel { left:0; right:0; top:auto; bottom:56px; width:auto !important; height:auto;
+      border-right:none; border-top:1px solid rgba(255,255,255,0.14); border-radius:15px 15px 0 0;
+      transform:translateY(100%); opacity:1; pointer-events:none;
+      transition:transform 0.3s cubic-bezier(0.22,1,0.32,1);
+      box-shadow:0 -10px 34px rgba(0,0,0,0.55); }
+    #side-panel.visible { pointer-events:all; }
+    body.sheet-peek #side-panel { transform:translateY(0); height:38vh; }
+    body.sheet-half #side-panel { transform:translateY(0); height:62vh; }
+    body.sheet-full #side-panel { transform:translateY(0); height:92vh; }
+    body.dock-collapsed #side-panel { transform:translateY(100%); }
+
+    /* drag handle replaces the desktop collapse chevron */
+    #dock-head { padding-top:14px; position:relative; }
+    #dock-head::before { content:''; position:absolute; top:6px; left:50%; transform:translateX(-50%);
+      width:34px; height:3px; border-radius:3px; background:rgba(255,255,255,0.22); }
+    #dock-collapse { transform:rotate(-90deg); }
+    #dock-expand { display:none !important; }
+    #dock-tabs { margin:8px 12px 0; }
+    .dock-tab { padding:8px 0; font-size:0.74rem; }
+    #dock-body { padding-bottom:26px; }
+
+    /* chip sits above the sheet, full width */
+    #parcel-chip { left:10px !important; right:10px; top:auto; bottom:calc(56px + 10px); justify-content:space-between; }
+    body.sheet-peek #parcel-chip, body.sheet-half #parcel-chip, body.sheet-full #parcel-chip { display:none !important; }
+
+    /* right-side map furniture gets out of the thumb zone */
+    #map-zoom-controls { right:8px; top:auto !important; bottom:calc(56px + 60px); transform:none !important; }
+    #layers-panel { right:8px; left:8px; top:auto; bottom:calc(56px + 60px); width:auto; max-height:46vh; overflow-y:auto; }
+    #top-right { right:8px; top:8px; gap:5px; }
+    #top-right .u-info { display:none; }
+    #user-pill { padding:4px; }
+    #btn-3d, #plans-btn { display:none; }
+    #zaxis-footer { display:none; }
+    #layers-btn { display:none; }
+  }
+
+  @media (max-width:820px) and (orientation:landscape) {
+    body.sheet-half #side-panel { height:80vh; }
+    body.sheet-peek #side-panel { height:54vh; }
+  }
+
+  @media (max-width:480px) {
+    #dock-head .search-btn { padding:5px 10px; font-size:0.68rem; }
+    .mt-btn span { font-size:0.44rem; }
+    #parcel-chip { padding:5px 8px; gap:7px; }
+    .pchip-code { font-size:0.6rem; }
+  }
