@@ -36,7 +36,6 @@ function _dockTab(tab){
     b.classList.toggle('active',on);
     b.setAttribute('aria-selected',on?'true':'false');
   });
-  if(tab==='analysis')_renderEngines();
   _dockSyncEmpty();
   // keep the mobile tab bar in step
   document.querySelectorAll('#mobile-tabs .mt-btn').forEach(b=>{
@@ -56,79 +55,27 @@ function _dockCollapse(){
   try{localStorage.setItem(_DOCK_KEY,'1');}catch(e){}
   if(_isMobileLayout())_sheetSnap(null);
 }
+function _dockSearchToggle(){
+  const open=document.body.classList.toggle('dock-search-open');
+  if(open){ const i=document.getElementById('input-side'); if(i)setTimeout(()=>i.focus(),30); }
+}
 function _dockToggle(){
   document.body.classList.contains('dock-collapsed')?_dockOpen():_dockCollapse();
 }
 
 /* Hide the "select a parcel" hint once something is actually selected. */
 function _dockSyncEmpty(){
-  const hint=document.getElementById('dock-empty-parcel');
-  if(!hint)return;
   const pfc=document.getElementById('parcel-float-card');
   const hasSel=!!(pfc&&pfc.style.display&&pfc.style.display!=='none')||_dockHasSelection();
-  hint.style.display=hasSel?'none':'';
+  const hp=document.getElementById('dock-empty-parcel');
+  if(hp)hp.style.display=hasSel?'none':'';
+  const ha=document.getElementById('dock-empty-analysis');
+  if(ha)ha.style.display=hasSel?'none':'';
+  // the icon grid owns its own lock/badge state — let it refresh itself
+  if(hasSel&&typeof _updateAnalysisGrid==='function'){ try{_updateAnalysisGrid(true);}catch(e){} }
 }
 
-/* ── the analysis engine list: capabilities visible before any click ─────── */
-var _ENGINES=[
-  {k:'zoning',      ic:'zoning.svg',                en:'Parcel & zoning',      ka:'ნაკვეთი და ზონირება',   sen:'incl. building permits',        ska:'მშენებლობის ნებართვები',   tier:'free'},
-  {k:'accessibility',ic:'accessibility.svg',        en:'Accessibility',        ka:'მისაწვდომობა',          sen:'isochrone catchment',           ska:'იზოქრონული ზონა',          tier:'free'},
-  {k:'education',   ic:'education.svg',             en:'Education',            ka:'განათლება',             sen:'schools & kindergartens',       ska:'სკოლები და ბაღები',        tier:'free'},
-  {k:'mobility',    ic:'mobility.svg',              en:'Mobility',             ka:'მობილობა',              sen:'transit, incidents, parking',   ska:'ტრანსპორტი, ინციდენტები',  tier:'free'},
-  {k:'morphology',  ic:'urban morphology.svg',      en:'Urban morphology',     ka:'ურბანული მორფოლოგია',   sen:'connectivity & orientation',    ska:'კავშირობა და ორიენტაცია',  tier:'free'},
-  {k:'climate',     ic:'climate.svg',               en:'Climate',              ka:'კლიმატი',               sen:'canopy & surface temp',         ska:'ვარჯი და ტემპერატურა',     tier:'pro'},
-  {k:'relief',      ic:'relief analysis.svg',       en:'Relief',               ka:'რელიეფი',               sen:'slope, elevation, aspect',      ska:'დახრა, სიმაღლე, ექსპოზიცია',tier:'pro'},
-  {k:'energy',      ic:'clean energy.svg',          en:'Clean energy',         ka:'სუფთა ენერგია',         sen:'solar & wind potential',        ska:'მზე და ქარი',              tier:'pro'}
-];
-function _renderEngines(){
-  const host=document.getElementById('dock-engines');
-  if(!host)return;
-  const isKa=_dockLang()==='ka';
-  const hasParcel=_dockHasSelection();
-  let h='';
-  if(!hasParcel){
-    h+='<div class="eng-hint">'+(isKa
-      ? 'აირჩიე ნაკვეთი რუკაზე ან მოძებნე კოდით — შემდეგ გაუშვი ქვემოთ მოცემული ანალიზი.'
-      : 'Select a parcel on the map or search a code — then run any analysis below.')+'</div>';
-  }
-  const sec=(t)=>'<div class="eng-sec">'+t+'</div>';
-  const rows=(tier)=>_ENGINES.filter(e=>e.tier===tier).map(e=>{
-    const active=(_dockActiveCat()===e.k);
-    return '<button class="eng-row'+(active?' on':'')+(hasParcel?'':' locked')+'" data-eng="'+e.k+'" onclick="_engClick(\''+e.k+'\')">'
-      +'<span class="eng-ico"><img src="analysis-logos/'+encodeURI(e.ic)+'" alt=""></span>'
-      +'<span class="eng-meta"><span class="eng-name">'+(isKa?e.ka:e.en)
-      +' <span class="eng-badge '+e.tier+'">'+(e.tier==='pro'?'Pro':(isKa?'უფასო':'Free'))+'</span></span>'
-      +'<span class="eng-sub">'+(isKa?e.ska:e.sen)+'</span></span></button>';
-  }).join('');
-  h+=sec(isKa?'უფასო':'Free')+rows('free')+sec('Pro')+rows('pro');
-  host.innerHTML=h;
-}
-function _engClick(key){
-  if(!_dockHasSelection()){
-    _dockToast(_dockLang()==='ka'?'ჯერ აირჩიე ნაკვეთი':'Select a parcel first');
-    return;
-  }
-  if(key==='zoning'){ _dockTab('parcel'); if(typeof toggleZoningPanel==='function')toggleZoningPanel(); return; }
-  const btn=document.getElementById('cat-btn-'+key);
-  if(typeof showCatInPanel==='function')showCatInPanel(key,btn);
-  _renderEngines();
-}
 
-/* ── map selection chip mirrors the parcel code, no extra call sites ─────── */
-function _initParcelChip(){
-  const chip=document.getElementById('parcel-chip'),code=document.getElementById('pfc-code'),
-        out=document.getElementById('pchip-code'),pfc=document.getElementById('parcel-float-card');
-  if(!chip||!code||!out||!pfc)return;
-  const sync=()=>{
-    out.textContent=code.textContent||'—';
-    const shown=pfc.style.display&&pfc.style.display!=='none';
-    chip.style.display=shown?'':'none';
-    _dockSyncEmpty();
-  };
-  new MutationObserver(sync).observe(code,{childList:true,characterData:true,subtree:true});
-  new MutationObserver(sync).observe(pfc,{attributes:true,attributeFilter:['style']});
-  sync();
-}
 
 /* ══ MOBILE — bottom sheet with three snap points + bottom tab bar ══════════ */
 function _sheetSnap(level){
@@ -137,13 +84,6 @@ function _sheetSnap(level){
 }
 function _mtSelect(which){
   document.querySelectorAll('#mobile-tabs .mt-btn').forEach(b=>b.classList.toggle('on',b.getAttribute('data-mt')===which));
-  if(which==='find'){
-    _sheetSnap(null);
-    const cs=document.getElementById('center-search');
-    const inp=document.getElementById('input-side')||document.getElementById('input-center');
-    if(inp)inp.focus();
-    return;
-  }
   if(which==='projects'){ _sheetSnap(null); if(typeof openProjectsPanel==='function')openProjectsPanel(); return; }
   if(which==='account'){ _sheetSnap(null); if(typeof navOpenAccount==='function')navOpenAccount(); return; }
   _dockOpen(); _dockTab(which); _sheetSnap('half');
@@ -201,7 +141,6 @@ function _initDock(){
   if(collapsed&&!_isMobileLayout())document.body.classList.add('dock-collapsed');
   _dockTab('parcel');
   try{_dockApplyLang();}catch(e){}
-  _initParcelChip();
   _initSheetDrag();
   window.addEventListener('resize',()=>{
     if(_isMobileLayout())document.body.classList.remove('dock-collapsed');
@@ -216,25 +155,24 @@ var _DOCK_STR={
   en:{ tabParcel:'Parcel', tabAnalysis:'Analysis',
        emptyParcel:'Search a cadastral code or click the map to select a parcel.',
        railProjects:'Projects', railImport:'Import', railDraw:'Draw', railData:'Data', railUser:'Account',
-       mtFind:'Find', mtParcel:'Parcel', mtAnalysis:'Analyse', mtProjects:'Projects', mtAccount:'You',
-       details:'Details' },
+       mtParcel:'Parcel', mtAnalysis:'Analyse', mtProjects:'Projects', mtAccount:'You',
+       emptyAnalysis:'Select a parcel to run an analysis.' },
   ka:{ tabParcel:'ნაკვეთი', tabAnalysis:'ანალიზი',
        emptyParcel:'მოძებნე საკადასტრო კოდი ან დააჭირე რუკაზე ნაკვეთის ასარჩევად.',
        railProjects:'პროექტი', railImport:'იმპორტი', railDraw:'ხაზვა', railData:'მონაცემები', railUser:'ანგარიში',
-       mtFind:'ძებნა', mtParcel:'ნაკვეთი', mtAnalysis:'ანალიზი', mtProjects:'პროექტი', mtAccount:'პროფილი',
-       details:'დეტალები' }
+       mtParcel:'ნაკვეთი', mtAnalysis:'ანალიზი', mtProjects:'პროექტი', mtAccount:'პროფილი',
+       emptyAnalysis:'ანალიზისთვის აირჩიე ნაკვეთი.' }
 };
 function _dockApplyLang(){
   var s=_DOCK_STR[_dockLang()]||_DOCK_STR.en;
   var set=function(id,v){var e=document.getElementById(id);if(e)e.textContent=v;};
   set('dock-tab-parcel',s.tabParcel); set('dock-tab-analysis',s.tabAnalysis);
-  set('dock-empty-parcel',s.emptyParcel);
+  set('dock-empty-parcel',s.emptyParcel); set('dock-empty-analysis',s.emptyAnalysis);
   set('nav-lbl-projects',s.railProjects); set('nav-lbl-import',s.railImport);
   set('nav-lbl-draw',s.railDraw); set('nav-lbl-data',s.railData); set('nav-lbl-user',s.railUser);
-  set('mt-lbl-find',s.mtFind); set('mt-lbl-parcel',s.mtParcel); set('mt-lbl-analysis',s.mtAnalysis);
+  set('mt-lbl-parcel',s.mtParcel); set('mt-lbl-analysis',s.mtAnalysis);
   set('mt-lbl-projects',s.mtProjects); set('mt-lbl-account',s.mtAccount);
-  set('pchip-btn',s.details);
-  if(_dockCurTab==='analysis')_renderEngines();
+
 }
 /* re-apply whenever the app switches language (function decls are global props,
    so wrapping here also catches app.js's own internal applyLang() calls) */

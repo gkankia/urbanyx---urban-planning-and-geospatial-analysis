@@ -116,14 +116,19 @@ function _updateAnalysisGrid(show){
     b.classList.toggle('pfc-cat-locked',accLocked);
     b.setAttribute('data-lock-tip',accTip);
   });
-  // PRO badge on Pro-only analyses for free-tier users.
+  // Tier badges — only shown when the user is signed out or on the free tier.
+  // Pro (and trialing) users see a clean grid with no labels at all.
   const free=!currentUser||currentUser.plan!=='pro';
-  ['cat-btn-climate','cat-btn-energy','cat-btn-relief'].forEach(id=>{
+  const _badge=(id,cls,txt)=>{
     const b=document.getElementById(id);if(!b)return;
-    let badge=b.querySelector('.pfc-pro-badge');
-    if(free){if(!badge){badge=document.createElement('span');badge.className='pfc-pro-badge';badge.textContent='PRO';b.appendChild(badge);}}
-    else if(badge)badge.remove();
-  });
+    let badge=b.querySelector('.'+cls);
+    if(free){
+      if(!badge){badge=document.createElement('span');badge.className=cls;badge.textContent=txt;b.appendChild(badge);}
+    } else if(badge) badge.remove();
+  };
+  ['cat-btn-climate','cat-btn-energy','cat-btn-relief'].forEach(id=>_badge(id,'pfc-pro-badge','PRO'));
+  ['nav-zoning-btn','cat-btn-accessibility','cat-btn-education','cat-btn-mobility','cat-btn-morphology']
+    .forEach(id=>_badge(id,'pfc-free-badge',ka?'უფ':'FREE'));
   _pfcInitLockTips();
 }
 function _refreshAnalysisGrid(){const g=document.getElementById('pfc-analysis-grid');if(g&&g.style.display!=='none')_updateAnalysisGrid(true);}
@@ -7343,7 +7348,6 @@ function _initParcelCardDrag(){
   const card=document.getElementById('parcel-float-card');
   const header=document.getElementById('pfc-header');
   if(!card||!header)return;
-  if(document.getElementById('dock-pane-parcel'))return; // docked: no dragging
   let dragging=false,ox=0,oy=0;
   header.addEventListener('mousedown',e=>{
     if(e.target.tagName==='BUTTON')return;
@@ -7368,7 +7372,6 @@ function _initParcelCardDrag(){
     ny=Math.max(4,Math.min(mr.height-ch-4,ny));
     card.style.left=nx+'px'; card.style.top=ny+'px';
     _parcelCardDragged=true;
-    _repositionOpenAnalysisPanels(); // keep any open sub-analysis panel next to the card
   }
   function onDU(){
     dragging=false;
@@ -7376,7 +7379,15 @@ function _initParcelCardDrag(){
     document.removeEventListener('mouseup',onDU);
   }
 }
-function _updateParcelCardPos(){ /* docked — the parcel pane no longer floats */ }
+function _updateParcelCardPos(){
+  if(!_parcelCardLngLat||_parcelCardDragged)return;
+  const card=document.getElementById('parcel-float-card');
+  if(!card||card.style.display==='none')return;
+  const pt=map.project(_parcelCardLngLat);
+  const cw=card.offsetWidth||200, ch=card.offsetHeight||120;
+  card.style.left=(pt.x+88)+'px';
+  card.style.top=(pt.y-ch/2)+'px';
+}
 function toggleParcelCardMin(){
   const card=document.getElementById('parcel-float-card');
   const btn=document.getElementById('pfc-min-btn');

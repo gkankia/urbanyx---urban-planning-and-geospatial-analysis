@@ -86,7 +86,14 @@
   body.dock-collapsed #side-panel { width:26px; }
   body.dock-collapsed #dock-head, body.dock-collapsed #dock-tabs, body.dock-collapsed #dock-body { opacity:0; pointer-events:none; }
   #dock-head { display:flex; align-items:center; gap:6px; padding:9px 9px 8px; flex-shrink:0; border-bottom:1px solid rgba(255,255,255,0.07); transition:opacity 0.12s; }
-  #dock-head .dock-search { flex:1; min-width:0; padding:4px 4px 4px 12px; }
+  /* search starts compact — the icon expands it; keeps the head quiet by default */
+  #dock-search-toggle { flex-shrink:0; width:26px; height:26px; display:flex; align-items:center; justify-content:center;
+    background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:7px;
+    color:rgba(255,255,255,0.42); cursor:pointer; transition:color 0.14s, border-color 0.14s; }
+  #dock-search-toggle:hover { color:#a78bfa; border-color:rgba(167,139,250,0.4); }
+  #dock-head .dock-search { flex:1; min-width:0; padding:4px 4px 4px 12px; display:none; }
+  body.dock-search-open #dock-head .dock-search { display:flex; }
+  body.dock-search-open #dock-search-toggle { color:#a78bfa; border-color:rgba(167,139,250,0.4); }
   #dock-head .dock-search input { font-size:0.78rem; }
   #dock-head .search-btn { padding:5px 12px; font-size:0.72rem; }
   #dock-collapse { flex-shrink:0; width:24px; height:24px; display:flex; align-items:center; justify-content:center;
@@ -106,12 +113,6 @@
   #dock-body::-webkit-scrollbar { display:none; }
   .dock-empty { font-size:0.7rem; color:rgba(255,255,255,0.3); line-height:1.55; padding:10px 14px 4px; }
 
-  /* the parcel card is now a docked pane, not a floating window */
-  #dock-pane-parcel #parcel-float-card { position:static !important; display:none; left:auto !important; top:auto !important;
-    width:auto; min-width:0; max-width:none; margin:0 10px 10px; box-shadow:none; background:rgba(255,255,255,0.028);
-    border:1px solid rgba(255,255,255,0.08); }
-  #dock-pane-parcel #pfc-header { cursor:default; }
-  #dock-pane-parcel #pfc-min-btn { display:none; }
   /* analysis + zoning render in the dock flow, not as fixed flyouts */
   #dock-pane-analysis #pro-analysis-card { position:static !important; left:auto !important; top:auto !important;
     width:auto !important; max-height:none !important; margin:0 10px 10px !important; z-index:auto !important;
@@ -119,42 +120,7 @@
   #dock-pane-parcel #zoning-panel-card { position:static !important; left:auto !important; top:auto !important;
     width:auto !important; max-height:none !important; margin:0 10px 10px !important; z-index:auto !important; }
 
-  /* ── analysis engine list — capabilities are legible before you click ── */
-  #dock-engines { padding:0 12px 4px; }
-  .eng-sec { font-size:0.55rem; font-weight:700; letter-spacing:0.12em; text-transform:uppercase;
-    color:rgba(255,255,255,0.26); margin:4px 0 6px; }
-  .eng-sec + .eng-sec, .eng-row + .eng-sec { margin-top:14px; }
-  .eng-row { display:flex; align-items:center; gap:9px; width:100%; padding:7px 2px; text-align:left; cursor:pointer;
-    background:none; border:none; border-bottom:1px solid rgba(255,255,255,0.055); font-family:inherit; transition:opacity 0.16s; }
-  .eng-row:last-of-type { border-bottom:none; }
-  .eng-row:hover .eng-name { color:rgba(255,255,255,0.92); }
-  .eng-ico { width:26px; height:26px; flex-shrink:0; display:flex; align-items:center; justify-content:center; border-radius:7px;
-    background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.09); }
-  .eng-ico img { width:16px; height:16px; opacity:0.7; }
-  .eng-row.on .eng-ico { background:rgba(167,139,250,0.16); border-color:rgba(167,139,250,0.45); }
-  .eng-row.on .eng-ico img { opacity:1; }
-  .eng-meta { flex:1; min-width:0; }
-  .eng-name { font-size:0.74rem; color:rgba(255,255,255,0.62); display:flex; align-items:center; gap:5px; flex-wrap:wrap; transition:color 0.14s; }
-  .eng-row.on .eng-name { color:#fff; font-weight:600; }
-  .eng-sub { font-family:var(--mono); font-size:0.55rem; color:rgba(255,255,255,0.3); margin-top:1px; }
-  .eng-badge { font-family:var(--mono); font-size:0.46rem; letter-spacing:0.08em; text-transform:uppercase; border-radius:3px; padding:1px 4px; border:1px solid; }
-  .eng-badge.free { color:#34d399; border-color:rgba(52,211,153,0.32); }
-  .eng-badge.pro { color:#a78bfa; border-color:rgba(167,139,250,0.36); }
-  .eng-row.locked { opacity:0.45; }
-  .eng-hint { font-size:0.6rem; color:rgba(255,255,255,0.34); line-height:1.5; padding:7px 9px; border-radius:7px;
-    background:rgba(167,139,250,0.07); border:1px solid rgba(167,139,250,0.18); margin-bottom:10px; }
 
-  /* ── map selection chip ── */
-  #parcel-chip { position:absolute; left:calc(48px + 300px + 12px); top:12px; z-index:24; display:flex; align-items:center; gap:9px;
-    background:rgba(8,8,8,0.88); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
-    border:1px solid rgba(255,255,255,0.13); border-radius:8px; padding:6px 9px; box-shadow:0 5px 20px rgba(0,0,0,0.5);
-    transition:left 0.28s cubic-bezier(0.22,1,0.32,1); }
-  body.dock-collapsed #parcel-chip { left:calc(48px + 26px + 12px); }
-  .pchip-dot { width:7px; height:7px; border-radius:50%; background:#a78bfa; flex-shrink:0; }
-  .pchip-code { font-family:var(--mono); font-size:0.65rem; color:rgba(255,255,255,0.9); }
-  .pchip-btn { font-family:inherit; font-size:0.58rem; font-weight:600; color:#a78bfa; background:rgba(167,139,250,0.14);
-    border:1px solid rgba(167,139,250,0.3); border-radius:5px; padding:3px 8px; cursor:pointer; white-space:nowrap; }
-  .pchip-btn:hover { background:rgba(167,139,250,0.24); }
   #side-panel::-webkit-scrollbar { display: none; }
   #side-panel.visible { opacity:1; pointer-events:all; }
 
@@ -530,6 +496,7 @@
   .pfc-cat-btn.pfc-cat-locked:hover img { opacity:0.5; }
   .pfc-cat-btn.pfc-cat-pulse { box-shadow:0 0 0 3px rgba(165,180,252,0.65); }
   .pfc-pro-badge { position:absolute; top:-5px; right:-5px; background:#a78bfa; color:#15151f; font-size:0.42rem; font-weight:800; letter-spacing:0.04em; padding:1px 3px; border-radius:4px; line-height:1; pointer-events:none; box-shadow:0 1px 3px rgba(0,0,0,0.4); }
+  .pfc-free-badge { position:absolute; top:-4px; right:-4px; font-family:var(--mono); font-size:0.42rem; font-weight:700; letter-spacing:0.05em; background:rgba(52,211,153,0.18); color:#34d399; border:1px solid rgba(52,211,153,0.4); border-radius:3px; padding:0 3px; line-height:1.5; pointer-events:none; }
   .pfc-lock-tip { position:fixed; z-index:60; background:rgba(0,0,0,0.92); color:#fff; font-size:0.6rem; line-height:1.35; padding:4px 8px; border-radius:6px; max-width:150px; text-align:center; pointer-events:none; box-shadow:0 4px 14px rgba(0,0,0,0.45); }
   #pfc-concept-items .cl-item { display:flex; align-items:center; gap:8px; font-size:0.62rem; color:rgba(255,255,255,0.78); }
   #pfc-concept-items .cl-sw { width:11px; height:11px; border-radius:3px; flex:0 0 auto; border:1px solid rgba(255,255,255,0.22); }
@@ -1104,14 +1071,14 @@
     #dock-head::before { content:''; position:absolute; top:6px; left:50%; transform:translateX(-50%);
       width:34px; height:3px; border-radius:3px; background:rgba(255,255,255,0.22); }
     #dock-collapse { transform:rotate(-90deg); }
+    /* the map already carries a search bar — the sheet doesn't need one */
+    #dock-head .dock-search, #dock-search-toggle { display:none !important; }
+    #dock-head { justify-content:flex-end; }
     #dock-expand { display:none !important; }
     #dock-tabs { margin:8px 12px 0; }
     .dock-tab { padding:8px 0; font-size:0.74rem; }
     #dock-body { padding-bottom:26px; }
 
-    /* chip sits above the sheet, full width */
-    #parcel-chip { left:10px !important; right:10px; top:auto; bottom:calc(56px + 10px); justify-content:space-between; }
-    body.sheet-peek #parcel-chip, body.sheet-half #parcel-chip, body.sheet-full #parcel-chip { display:none !important; }
 
     /* right-side map furniture gets out of the thumb zone */
     #map-zoom-controls { right:8px; top:auto !important; bottom:calc(56px + 60px); transform:none !important; }
@@ -1132,6 +1099,4 @@
   @media (max-width:480px) {
     #dock-head .search-btn { padding:5px 10px; font-size:0.68rem; }
     .mt-btn span { font-size:0.44rem; }
-    #parcel-chip { padding:5px 8px; gap:7px; }
-    .pchip-code { font-size:0.6rem; }
   }
