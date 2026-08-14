@@ -113,7 +113,10 @@
                             </div>
                           </div>
         <div id="pfc-nearby-row" style="display:none;margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.07)">
-                        <button id="pfc-nearby-run-btn" onclick="_nearbyRunClicked()" style="width:100%;padding:6px;border-radius:6px;border:1px solid rgba(99,102,241,0.3);background:rgba(99,102,241,0.12);color:#a5b4fc;font-size:0.7rem;font-weight:600;font-family:inherit;cursor:pointer">Run nearby analysis</button>
+                        <div style="display:flex;gap:6px;align-items:stretch">
+                          <button id="pfc-nearby-run-btn" onclick="_nearbyRunClicked()" style="flex:1;padding:6px;border-radius:6px;border:1px solid rgba(99,102,241,0.3);background:rgba(99,102,241,0.12);color:#a5b4fc;font-size:0.7rem;font-weight:600;font-family:inherit;cursor:pointer">Run nearby analysis</button>
+                          <span id="pfc-nearby-info" class="pfc-info-btn" tabindex="0" title="">i</span>
+                        </div>
                         <div id="pfc-nearby-body" style="display:none">
                           <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:5px">
                             <span id="pfc-nearby-title" style="font-size:0.6rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:rgba(255,255,255,0.28)">Nearby</span>
@@ -202,6 +205,17 @@
                     </div>
                     <div style="font-size:0.58rem;color:rgba(255,255,255,0.2);line-height:1.5">Click any floor to select · then assign a use type or custom color</div>
                   </div>
+      </div>
+      <div class="pfc-pane" id="pfc-pane-plan" style="display:none">
+        <div id="pfc-plan-hint" class="pfc-empty">Generate a development concept for this parcel, then render it photorealistically.</div>
+        <!-- concept button (#pfc-render-row) + concept info (#pfc-concept-info) are moved here at runtime -->
+        <div id="pfc-plan-render-result" style="display:none;margin-top:8px">
+          <div id="pfc-plan-render-title" style="font-size:0.6rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:rgba(255,255,255,0.28);margin-bottom:5px">Render</div>
+          <img id="pfc-plan-render-img" alt="" onclick="_pfcRenderLightbox()" style="width:100%;border-radius:8px;display:block;cursor:zoom-in">
+          <div style="display:flex;gap:6px;margin-top:6px">
+            <a id="pfc-plan-render-dl" download="urbanyx-render.png" style="flex:1;text-align:center;padding:6px;border-radius:6px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.05);color:#e5e7eb;font-size:0.64rem;font-weight:600;text-decoration:none;cursor:pointer">↓ Download</a>
+          </div>
+        </div>
       </div>
     </div>
   </div>

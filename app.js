@@ -109,7 +109,7 @@ function _updateAnalysisGrid(show){
   // Accessibility analyses: Isochrone always active; Education/Mobility/Morphology need an
   // isochrone (or a ≥ 5,000 m² parcel that can serve as the walking area itself).
   const accLocked=!(_isLargeParcel()||_hasIsochrone());
-  const accTip=ka?'ჯერ გაუშვით იზოქრონის ანალიზი':'Run the Isochrone analysis first';
+  const accTip=ka?'ჯერ ჩართეთ იზოქრონის ანალიზი':'Run the Isochrone analysis first';
   const accBtn=document.getElementById('cat-btn-accessibility');if(accBtn)accBtn.classList.remove('pfc-cat-locked'); // Isochrone always active
   ['cat-btn-education','cat-btn-mobility','cat-btn-morphology'].forEach(id=>{
     const b=document.getElementById(id);if(!b)return;
@@ -142,7 +142,7 @@ function _repositionOpenAnalysisPanels(){ /* docked — CSS owns the layout */ }
 // Unified click for the in-card analysis buttons — blocks locked ones with a hint.
 function _pfcCatClick(key,el){
   if(el&&el.classList.contains('pfc-cat-locked')){
-    showToast(lang==='ka'?'ჯერ გაუშვით იზოქრონის ანალიზი':'Run the Isochrone analysis first');
+    showToast(lang==='ka'?'ჯერ ჩართეთ იზოქრონის ანალიზი':'Run the Isochrone analysis first');
     const acc=document.getElementById('cat-btn-accessibility');
     if(acc){acc.classList.add('pfc-cat-pulse');setTimeout(()=>acc.classList.remove('pfc-cat-pulse'),1300);}
     return;
@@ -1593,14 +1593,17 @@ function _showDrawnAreaCard(bld){
   _parcelCardLngLat=c;_parcelCardDragged=false;
   if(mapReady&&c){const pt=map.project(c);const ch=card.offsetHeight||118;card.style.left=(pt.x+88)+'px';card.style.top=(pt.y-ch/2)+'px';}
   const _nr=document.getElementById('pfc-nearby-row');
+  const _ea=document.getElementById('pfc-empty-analysis');if(_ea)_ea.style.display='none';
   if(isConceptEl){
     if(_nr)_nr.style.display='none';
     _updateAnalysisGrid(false);
     _mountFloorPanelInCard(isConceptBld); // floor use/colour panel lives in the card
+    _pfcSetTabs(['parcel'],'parcel'); // concept pieces: just their info + floor controls
   } else {
     if(!_nearbyRan)_nearbyShowRunButton({center:c});
     _updateAnalysisGrid(true);
     _mountFloorPanelInCard(false);
+    _pfcSetTabs(['parcel','analysis','plan'],'parcel');
   }
 }
 
@@ -3740,6 +3743,8 @@ function _collectProjectState(){
         activeCatKey:_activeCatKey||null,
         resultsHtml
       };
+      // Plan-tab render image — persisted so it reopens with the project
+      if(_lastRenderImage)snap.renderImage=_lastRenderImage;
       // Walkability — saved explicitly so score ring can be re-rendered without a network call
       if(_walkData)snap.walkData={score:_walkData.score,counts:{..._walkData.counts}};
       // Isochrone polygon — GeoJSON, restored directly onto the map source
@@ -3916,6 +3921,7 @@ async function _restoreProjectState(project){
   // Deferred until flyTo completes — _activateBld calls map.easeTo({pitch:55}) which
   // would cancel the flyTo animation if run immediately, leaving the map at the wrong position.
   const savedSnap=project.analysis_snapshot||{};
+  if(savedSnap.renderImage){try{_pfcShowRender(savedSnap.renderImage);}catch(_){}} // reopen the saved Plan render
   if((savedSnap.buildings||[]).length>0){
     const doRestoreBuildings=()=>_restoreBuildings(savedSnap.buildings,savedSnap.activeBldId||null);
     if(ms.center&&mapReady){map.once('moveend',doRestoreBuildings);}
@@ -6602,7 +6608,7 @@ function _nearbyShowRunButton(cfg){
   const proTag=isPro?'':' <span style="font-size:0.5rem;letter-spacing:0.08em;background:rgba(165,180,252,0.2);color:#a5b4fc;border:1px solid rgba(165,180,252,0.4);border-radius:3px;padding:1px 4px;vertical-align:1px">PRO</span>';
   const row=document.getElementById('pfc-nearby-row');if(row)row.style.display='block';
   const btn=document.getElementById('pfc-nearby-run-btn');
-  if(btn){btn.style.display='';btn.disabled=false;btn.innerHTML=(isKa?'ახლომდებარე ანალიზი':'Nearby analysis')+proTag;}
+  if(btn){btn.style.display='';btn.disabled=false;btn.innerHTML=(isKa?'ახლომახლო ანალიზი':'Nearby analysis')+proTag;}
   const body=document.getElementById('pfc-nearby-body');if(body)body.style.display='none';
   const card=document.getElementById('parcel-float-card');if(card&&card.style.display==='none')card.style.display='flex';
 }
@@ -6853,7 +6859,7 @@ function _renderNearby(c){
   }
   const html=tile+items.join('');
   // Render directly (not via _setNearbyFloat) so the row + note stay visible even when nothing is found
-  const ti=document.getElementById('pfc-nearby-title');if(ti)ti.textContent=isKa?"ახლომდებარე":"Nearby";
+  const ti=document.getElementById('pfc-nearby-title');if(ti)ti.textContent=isKa?"ახლომახლო":"Nearby";
   const clr=document.getElementById('pfc-nearby-clear-btn');if(clr)clr.textContent=isKa?'გასუფთავება':'Clear';
   const list=document.getElementById('pfc-nearby-list');if(list)list.innerHTML=html;
   const rowEl=document.getElementById('pfc-nearby-row');if(rowEl)rowEl.style.display='block';
@@ -6863,10 +6869,10 @@ function _renderNearby(c){
   const note=document.getElementById('pfc-nearby-note');
   if(note){
     let msg=total===0
-      ? (isKa?"ახლომდებარე ვერაფერი მოიძებნა. გაუშვი მისაწვდომობის ანალიზი ფართო არეალის მოსაძებნად.":"Nothing found nearby. Run the accessibility analysis to search a larger area.")
-      : (isKa?"გაუშვი მისაწვდომობის ანალიზი უფრო ფართო არეალის დასაფარად.":"Run the accessibility analysis to cover a larger area.");
+      ? (isKa?"ახლომახლო ვერაფერი მოიძებნა. ჩართე მისაწვდომობის ანალიზი ფართო არეალის მოსაძებნად.":"Nothing found nearby. Run the accessibility analysis to search a larger area.")
+      : (isKa?"ჩართე მისაწვდომობის ანალიზი უფრო ფართო არეალის დასაფარად.":"Run the accessibility analysis to cover a larger area.");
     if(c.overpass==='fail')
-      msg+=(isKa?" მიწათსარგებლობის (მრავალფეროვნების) მონაცემი ვერ ჩაიტვირთა — გაუშვი მისაწვდომობის ანალიზი მის ჩასართავად."
+      msg+=(isKa?" მიწათსარგებლობის (მრავალფეროვნების) მონაცემი ვერ ჩაიტვირთა — ჩართე მისაწვდომობის ანალიზი მის ჩასართავად."
               :" Land-use (diversity) data didn't respond — run the accessibility analysis to include it.");
     note.textContent=msg;
     note.style.display='';
@@ -7389,6 +7395,70 @@ function _updateParcelCardPos(){
   card.style.left=(pt.x+88)+'px';
   card.style.top=(pt.y-ch/2)+'px';
 }
+// Floating-card tabs: Parcel · Analysis · Plan.
+let _pfcActiveTab='parcel';
+function _pfcTab(name){
+  if(!['parcel','analysis','plan'].includes(name))name='parcel';
+  _pfcActiveTab=name;
+  ['parcel','analysis','plan'].forEach(t=>{
+    const btn=document.getElementById('pfc-tab-'+t), pane=document.getElementById('pfc-pane-'+t);
+    const on=(t===name);
+    if(btn){btn.classList.toggle('active',on);btn.setAttribute('aria-selected',on?'true':'false');}
+    if(pane)pane.style.display=on?'':'none';
+  });
+  const body=document.getElementById('pfc-body');if(body)body.scrollTop=0;
+  _repositionOpenAnalysisPanels&&_repositionOpenAnalysisPanels();
+}
+// Show only the tabs relevant to the active entity, then default to the first visible one.
+function _pfcSetTabs(list,def){
+  ['parcel','analysis','plan'].forEach(t=>{const btn=document.getElementById('pfc-tab-'+t);if(btn)btn.style.display=list.includes(t)?'':'none';});
+  _pfcTab(list.includes(def)?def:list[0]||'parcel');
+}
+// Distribute the card's elements into the right panes (done once at startup). Keeps every
+// element id intact so the ~40 existing call sites that write into them keep working.
+let _pfcPanesRelocated=false;
+function _pfcRelocatePanes(){
+  if(_pfcPanesRelocated)return;
+  const parcelPane=document.getElementById('pfc-pane-parcel');
+  const analysisPane=document.getElementById('pfc-pane-analysis');
+  const planPane=document.getElementById('pfc-pane-plan');
+  if(!parcelPane||!analysisPane||!planPane)return;
+  _pfcPanesRelocated=true;
+  const fm=document.getElementById('pfc-floor-mount');if(fm)parcelPane.appendChild(fm); // floor controls live with building info
+  ['pfc-zone-row','pfc-kvals-row','pfc-build-params-row','pfc-compliance-row','pfc-permits-row'].forEach(id=>{const el=document.getElementById(id);if(el)analysisPane.appendChild(el);}); // analysis RESULTS → Analysis pane
+  const nearby=document.getElementById('pfc-nearby-row'), grid=document.getElementById('pfc-analysis-grid'); // Nearby → top of Analysis pane
+  if(nearby){if(grid&&grid.parentNode===analysisPane)analysisPane.insertBefore(nearby,grid);else analysisPane.insertBefore(nearby,analysisPane.firstChild);}
+  const planResult=document.getElementById('pfc-plan-render-result'); // concept + render → Plan pane
+  ['pfc-render-row','pfc-concept-info'].forEach(id=>{const el=document.getElementById(id);if(el){if(planResult)planPane.insertBefore(el,planResult);else planPane.appendChild(el);}});
+  const ni=document.getElementById('pfc-nearby-info');
+  if(ni)ni.title=(lang==='ka'?'ახლომახლო ანალიზი აფასებს ნაკვეთის გარშემო არსებულ ინფრასტრუქტურას (მაღაზიები, სკოლები, ტრანსპორტი, ჯანდაცვა, პარკები…) ფეხით სავალ მანძილზე და აჩვენებს მისაწვდომობასა და მრავალფეროვნებას.':"Nearby analysis scans the surrounding area for amenities (shops, schools, transit, healthcare, parks…) within walking distance and scores the parcel's access and land-use diversity.");
+}
+// Simple full-screen viewer for the Plan-tab render (click image to expand, click to close).
+let _lastRenderImage=null;
+function _pfcRenderLightbox(){
+  if(!_lastRenderImage)return;
+  let lb=document.getElementById('pfc-render-lightbox');
+  if(!lb){
+    lb=document.createElement('div');lb.id='pfc-render-lightbox';
+    lb.style.cssText='position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.9);display:flex;align-items:center;justify-content:center;cursor:zoom-out;padding:24px';
+    lb.onclick=()=>{lb.style.display='none';};
+    const img=document.createElement('img');img.id='pfc-render-lightbox-img';
+    img.style.cssText='max-width:96vw;max-height:92vh;border-radius:8px;box-shadow:0 10px 40px rgba(0,0,0,0.6)';
+    lb.appendChild(img);document.body.appendChild(lb);
+  }
+  document.getElementById('pfc-render-lightbox-img').src=_lastRenderImage;
+  lb.style.display='flex';
+}
+// Show the finished render in the Plan tab (image → lightbox, download, persists with project).
+function _pfcShowRender(url){
+  _lastRenderImage=url||null;
+  const res=document.getElementById('pfc-plan-render-result');
+  const img=document.getElementById('pfc-plan-render-img');
+  const dl=document.getElementById('pfc-plan-render-dl');
+  if(img&&url)img.src=url;
+  if(dl&&url)dl.href=url;
+  if(res)res.style.display=url?'block':'none';
+}
 function toggleParcelCardMin(){
   const card=document.getElementById('parcel-float-card');
   const btn=document.getElementById('pfc-min-btn');
@@ -7440,6 +7510,8 @@ function showParcelPopup(lngLat){
   else if(_ci){_ci.style.display='none';}
   _updateAnalysisGrid(true);
   _mountFloorPanelInCard(false); // parcel card: floor panel returns to its standalone spot
+  const _ea2=document.getElementById('pfc-empty-analysis');if(_ea2)_ea2.style.display='none';
+  _pfcSetTabs(['parcel','analysis','plan'],'parcel');
   if(_geoTool||_paintOpen)_clearGeoTools(null);
   const _gtb2=document.getElementById('geo-toolbar');if(_gtb2)_gtb2.style.display='none';
   document.getElementById('nav-zoning-btn')?.classList.remove('active');
@@ -8001,6 +8073,8 @@ async function _renderGenerate(){
     const outImg=document.getElementById('render-img');outImg.src=finalImage;
     document.getElementById('render-dl-btn').href=finalImage;
     document.getElementById('render-result').style.display='block';
+    _pfcShowRender(finalImage); // mirror into the Plan tab (expandable, downloadable, saved w/ project)
+    if(_conceptOn)_pfcTab('plan');
     status.textContent='';
     if(typeof logFeatureUse==='function')logFeatureUse('ai_render').catch(()=>{});
   }catch(e){
@@ -8283,6 +8357,7 @@ function _clearConcept(){
   _conceptPropData=[];
   _conceptOn=false; _conceptSummary=''; _conceptParcel=null; _conceptLastData=null;
   const _cl=document.getElementById('pfc-concept-info');if(_cl)_cl.style.display='none';
+  if(typeof _pfcShowRender==='function')_pfcShowRender(null); // clear the Plan-tab render too
   if(mapReady){
     map.getSource('concept-green')?.setData({type:'FeatureCollection',features:[]});
     map.getSource('concept-areas')?.setData({type:'FeatureCollection',features:[]});
@@ -8447,6 +8522,8 @@ function _renderConcept(concept,parcel,bb,spanLng,spanLat){
   // (the last-registered concept shape would otherwise steal the active card).
   if(_dbParcelGeoJSON){_activateParcel();}
   else{_showConceptLegend(concept,treeFeats.length);}
+  const _pt=document.getElementById('pfc-tab-plan'); // land on the Plan tab (if available) to show concept + render
+  if(_pt&&_pt.style.display!=='none')_pfcTab('plan');
 }
 // Concept summary + use legend, rendered INSIDE the parcel float card, with the
 // "Generate concept render" call-to-action beneath it.
@@ -10317,7 +10394,7 @@ async function toggleAccMobility(){
   if(sw.classList.contains("on")){sw.classList.remove("on");if(el)el.innerHTML="";return;}
   const isoFeat=_isoData?.features?.[0];
   if(!isoFeat&&!_isLargeParcel()){
-    const msg=isKa?"პირველ გაუშვით სივრცული ანალიზი":"Generate an isochrone first";
+    const msg=isKa?"პირველ ჩართეთ სივრცული ანალიზი":"Generate an isochrone first";
     if(el)el.innerHTML=`<div style="font-size:0.7rem;color:rgba(255,255,255,0.25);padding:4px 0">${msg}</div>`;
     return;
   }
@@ -13855,6 +13932,7 @@ async function generatePDF(){
 // ── Init ──────────────────────────────────────────────────────────────────────
 async function init(){
   applyLang();
+  _pfcRelocatePanes(); // distribute the floating-card elements into their tab panes
   // Reflect the default language in the toggle + nav label (default is Georgian).
   const _nll0=document.getElementById('nav-lang-label');if(_nll0)_nll0.textContent=lang==='en'?'EN':'ქა';
   document.querySelectorAll(".lang-btn").forEach(b=>b.classList.toggle("active",(lang==="en"&&b.textContent==="EN")||(lang==="ka"&&b.textContent==="ქა")));
@@ -14851,7 +14929,7 @@ function _morphTotalKm(gj){
 
 function _morphExportGeoJSON(){
   if(!currentUser||currentUser.plan!=='pro'){openPaywall(true);return;}
-  if(!_morphHasData()){showToast(lang==='ka'?'ჯერ გაუშვით მორფოლოგიის ანალიზი':'Run a morphology analysis first');return;}
+  if(!_morphHasData()){showToast(lang==='ka'?'ჯერ ჩართეთ მორფოლოგიის ანალიზი':'Run a morphology analysis first');return;}
   const features=[];
   for(const f of _syntaxGJ?.features||[])features.push({...f,properties:{...f.properties,analysis:'space_syntax'}});
   for(const f of _orientGJ?.features||[])features.push({...f,properties:{...f.properties,analysis:'orientation'}});
@@ -14876,7 +14954,7 @@ function _morphLegendSpec(){
 
 async function _morphExportPDF(){
   if(!currentUser||currentUser.plan!=='pro'){openPaywall(true);return;}
-  if(!_morphHasData()){showToast(lang==='ka'?'ჯერ გაუშვით მორფოლოგიის ანალიზი':'Run a morphology analysis first');return;}
+  if(!_morphHasData()){showToast(lang==='ka'?'ჯერ ჩართეთ მორფოლოგიის ანალიზი':'Run a morphology analysis first');return;}
   try{
     const{jsPDF}=window.jspdf||window;
     const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
