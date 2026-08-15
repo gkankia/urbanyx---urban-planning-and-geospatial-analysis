@@ -2743,6 +2743,7 @@ function _movHDrag(){
   const hl=_movHandle.getLngLat();
   const moved=_translateGeom(_movOrig,hl.lng-_movStart[0],hl.lat-_movStart[1]);
   _geoCommitGeom(_activeBld(),moved);
+  _scheduleReRunAnalysesLive(); // continuously refresh active analyses while dragging
 }
 function _movHEnd(){
   _movOrig=null;_movStart=null;
@@ -3588,16 +3589,27 @@ async function _autoSaveProject(){
 // ── Live re-run of active analyses when a custom drawn area is moved/edited ──────
 // Whatever analysis is currently active updates for the shape's new location in place,
 // without the user re-triggering it. Debounced to the end of the move/rotate/edit gesture.
-let _reRunTimer=null;
+let _reRunTimer=null,_reRunBusy=false,_reRunLast=0;
 function _scheduleReRunAnalyses(){
   const bld=_activeBld();
   if(!bld||!_isDrawnArea||bld.conceptUse||bld.conceptArea)return; // only user-drawn areas
   clearTimeout(_reRunTimer);
   _reRunTimer=setTimeout(()=>{_reRunActiveAnalyses();},350);
 }
+// Throttled variant fired continuously during a drag — updates as fast as each re-run
+// finishes (never stacks requests), so light/cached analyses track the shape live.
+function _scheduleReRunAnalysesLive(){
+  const bld=_activeBld();
+  if(!bld||!_isDrawnArea||bld.conceptUse||bld.conceptArea)return;
+  if(_reRunBusy)return;
+  if(Date.now()-_reRunLast<400)return;
+  _reRunActiveAnalyses();
+}
 async function _reRunActiveAnalyses(){
   const bld=_activeBld();
   if(!bld||!_isDrawnArea||bld.conceptUse||bld.conceptArea)return;
+  if(_reRunBusy)return; _reRunBusy=true;
+  try{
   // Point the analyses at the shape's NEW geometry/centroid
   _currentParcelGeoJSON=bld.geojson; _currentParcelAreaM2=bld.areaM2; parcelCentroid=getCentroid(bld.geojson);
   const on=id=>document.getElementById(id)?.classList.contains('on');
@@ -3621,6 +3633,7 @@ async function _reRunActiveAnalyses(){
   if(on('zoning-assess-sw')&&typeof toggleZoningAssessment==='function')await cyc(toggleZoningAssessment);
   // Nearby (only if not already re-run by the isochrone cascade above)
   if(!isoOn&&typeof _nearbyRan!=='undefined'&&_nearbyRan&&typeof runNearbyAnalysis==='function'){try{_nearbyWalkCenter=parcelCentroid;const r=runNearbyAnalysis({center:parcelCentroid});if(r instanceof Promise)await r;}catch(_){}}
+  }finally{_reRunBusy=false;_reRunLast=Date.now();}
 }
 function _buildActionLog(){
   const sw=id=>document.getElementById(id)?.classList.contains('on');
