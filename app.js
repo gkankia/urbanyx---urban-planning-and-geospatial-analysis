@@ -1969,7 +1969,7 @@ function _ensureDimLayer(){
   if(!map.getSource('dim-labels'))map.addSource('dim-labels',{type:'geojson',data:{type:'FeatureCollection',features:[]}});
   if(!map.getLayer('dim-labels-lyr'))map.addLayer({id:'dim-labels-lyr',type:'symbol',source:'dim-labels',
     layout:{'text-field':['get','label'],'text-size':11,'text-font':['DIN Offc Pro Medium','Arial Unicode MS Bold'],'text-allow-overlap':true,'text-ignore-placement':true,
-      'text-rotate':['coalesce',['get','rot'],0],'text-rotation-alignment':'map','text-offset':[0,-0.7]},
+      'text-rotate':['coalesce',['get','rot'],0],'text-rotation-alignment':'map','text-pitch-alignment':'viewport','text-offset':[0,-0.7]},
     paint:{'text-color':'#ffffff','text-halo-color':'rgba(0,0,0,0.82)','text-halo-width':1.7}});
 }
 function _clearDimLabels(){if(mapReady)map.getSource('dim-labels')?.setData({type:'FeatureCollection',features:[]});}
@@ -2769,8 +2769,9 @@ function _clearGeoTools(keep){
   if(keep!=='paint')_closePaintPanel();
   if(keep!=='edit'&&_editingBldId)_exitBldEditMode(true);
   if(mapReady&&map.getCanvas())map.getCanvas().style.cursor=(_geoTool==='erase'||_geoTool==='slice')?'crosshair':'';
-  // Circle resize anchor only in default (no-tool) select mode
-  {const _cb=_activeBld();if(!_geoTool&&!_editingBldId&&_cb&&_isDrawnArea&&_cb.drawShape==='circle'){if(!_circHandle)_showCircHandle(_cb);}else{_hideCircHandle();}}
+  // Circle resize anchor only in default (no-tool) select mode; a tool being activated (keep) hides it
+  {const _cb=_activeBld();const _sel=(!keep||keep==='paint')&&!_editingBldId;
+   if(_sel&&_cb&&_isDrawnArea&&_cb.drawShape==='circle'){if(!_circHandle)_showCircHandle(_cb);}else{_hideCircHandle();}}
   _updateGeoToolbar();
 }
 
