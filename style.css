@@ -1043,11 +1043,12 @@
     #mobile-tabs { display:flex; position:fixed; left:0; right:0; bottom:0; height:56px; z-index:40;
       background:rgba(6,6,7,0.97); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);
       border-top:1px solid rgba(255,255,255,0.09); padding-bottom:env(safe-area-inset-bottom,0); }
-    .mt-btn { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px;
-      background:none; border:none; color:rgba(255,255,255,0.32); font-family:inherit; cursor:pointer; padding:0; transition:color 0.14s; }
-    .mt-btn svg { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round; }
-    .mt-btn span { font-size:0.48rem; letter-spacing:0.05em; text-transform:uppercase; font-weight:700; }
+    .mt-btn { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px;
+      background:none; border:none; color:rgba(255,255,255,0.4); font-family:inherit; cursor:pointer; padding:0; transition:color 0.14s; }
+    .mt-btn svg { width:22px; height:22px; fill:none; stroke:currentColor; stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round; }
+    .mt-btn span { font-size:0.6rem; letter-spacing:0.03em; text-transform:none; font-weight:600; }
     .mt-btn.on { color:#a78bfa; }
+    .mt-btn.on svg { stroke-width:2.2; }
 
     /* parcel card → bottom sheet */
     #parcel-float-card { position:fixed !important; left:0 !important; right:0 !important; top:auto !important;
@@ -1059,13 +1060,20 @@
     body.sheet-half #parcel-float-card { transform:translateY(0); height:62vh; }
     body.sheet-full #parcel-float-card { transform:translateY(0); height:92vh; }
     /* grab handle instead of the desktop minimize/drag chrome */
-    #pfc-header { padding-top:15px; position:relative; cursor:grab; }
-    #pfc-header::before { content:''; position:absolute; top:6px; left:50%; transform:translateX(-50%);
-      width:34px; height:3px; border-radius:3px; background:rgba(255,255,255,0.22); }
+    #pfc-header { padding-top:18px; position:relative; cursor:grab; }
+    #pfc-header::before { content:''; position:absolute; top:7px; left:50%; transform:translateX(-50%);
+      width:44px; height:4px; border-radius:4px; background:rgba(255,255,255,0.32); }
+    #pfc-code { font-size:0.82rem; max-width:none; }
     #pfc-min-btn { display:none; }
-    #pfc-tabs { margin:8px 12px 0; }
-    .pfc-tab { padding:8px 0; font-size:0.74rem; }
-    #pfc-body { padding-bottom:22px; }
+    #pfc-tabs { margin:10px 12px 0; gap:3px; }
+    .pfc-tab { padding:11px 0; font-size:0.84rem; }
+    /* larger, more legible card content + touch targets on phones */
+    #pfc-body { padding:10px 14px 26px; font-size:0.8rem; }
+    #pfc-body .pfc-row { padding:3px 0; }
+    .pfc-lbl, .pfc-val { font-size:0.8rem; }
+    .pfc-cat-btn { padding:8px; }
+    .pfc-cat-btn img { width:42px; height:42px; }
+    #pfc-nearby-run-btn, #pfc-concept-btn, #pfc-concept-render-btn { padding:11px !important; font-size:0.8rem !important; }
 
     #side-panel { left:8px; right:8px; width:auto; top:58px; }
 
@@ -1084,6 +1092,6 @@
   }
 
   @media (max-width:480px) {
-    .mt-btn span { font-size:0.44rem; }
-    .pfc-tab { font-size:0.7rem; }
+    .mt-btn span { font-size:0.56rem; }
+    .pfc-tab { font-size:0.8rem; padding:10px 0; }
   }
