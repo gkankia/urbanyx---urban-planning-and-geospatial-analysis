@@ -1613,7 +1613,7 @@ function _showDrawnAreaCard(bld){
     _pfcSetTabs(['parcel','analysis','plan'],'parcel');
   }
   _updateDimLabels(bld.geojson,bld.drawShape); // on-map edge/diameter dimensions
-  if(bld.drawShape==='circle')_showCircHandle(bld);else _hideCircHandle(); // circle edge resize anchor
+  if(_isCircleBld(bld))_showCircHandle(bld);else _hideCircHandle(); // circle edge resize anchor
 }
 
 function _selectBuilding(id,shift=false){
@@ -1964,6 +1964,17 @@ function _liveEditCardUpdate(){
 }
 // ── On-map dimension labels: length next to each edge (diameter for circles) ─────
 function _fmtEdge(m){return m>=1000?(m/1000).toFixed(2)+' km':(m<10?m.toFixed(1):Math.round(m))+' m';}
+// Circles are stored as many-segment polygons; detect one by a regular, near-constant radius.
+function _looksLikeCircle(geom){
+  try{
+    const ring=geom&&geom.type==='Polygon'?geom.coordinates[0]:null;
+    if(!ring||ring.length<24)return false;
+    const c=turf.centroid(turf.feature(geom)).geometry.coordinates;
+    let mn=Infinity,mx=0;for(let i=0;i<ring.length-1;i++){const d=turf.distance(c,ring[i]);if(d<mn)mn=d;if(d>mx)mx=d;}
+    return mx>0&&(mx-mn)/mx<0.08; // all vertices within 8% of the same radius
+  }catch(_){return false;}
+}
+function _isCircleBld(bld){return !!(bld&&(bld.drawShape==='circle'||_looksLikeCircle(bld.geojson)));}
 function _ensureDimLayer(){
   if(!mapReady)return;
   if(!map.getSource('dim-labels'))map.addSource('dim-labels',{type:'geojson',data:{type:'FeatureCollection',features:[]}});
@@ -1984,7 +1995,7 @@ function _updateDimLabels(geom,drawShape){
   if(!ring||ring.length<2){_clearDimLabels();return;}
   const feats=[];
   try{
-    if(drawShape==='circle'){
+    if(drawShape==='circle'||_looksLikeCircle(geom)){
       // diameter centred inside the circle
       const c=turf.centroid(turf.feature(geom)).geometry.coordinates;
       let rKm=0;for(let i=0;i<ring.length;i++){rKm=Math.max(rKm,turf.distance(c,ring[i],{units:'kilometers'}));}
@@ -2008,7 +2019,7 @@ let _circHandle=null,_circCenter=null;
 function _hideCircHandle(){if(_circHandle){try{_circHandle.remove();}catch(_){}_circHandle=null;}_circCenter=null;}
 function _showCircHandle(bld){
   _hideCircHandle();
-  if(!bld||bld.drawShape!=='circle'||!mapReady||typeof mapboxgl==='undefined'||_geoTool)return;
+  if(!bld||!_isCircleBld(bld)||!mapReady||typeof mapboxgl==='undefined'||_geoTool)return;
   const geom=bld.geojson;const ring=geom.coordinates[0];
   _circCenter=turf.centroid(turf.feature(geom)).geometry.coordinates;
   let rKm=0;for(let i=0;i<ring.length;i++)rKm=Math.max(rKm,turf.distance(_circCenter,ring[i],{units:'kilometers'}));
@@ -2771,7 +2782,7 @@ function _clearGeoTools(keep){
   if(mapReady&&map.getCanvas())map.getCanvas().style.cursor=(_geoTool==='erase'||_geoTool==='slice')?'crosshair':'';
   // Circle resize anchor only in default (no-tool) select mode; a tool being activated (keep) hides it
   {const _cb=_activeBld();const _sel=(!keep||keep==='paint')&&!_editingBldId;
-   if(_sel&&_cb&&_isDrawnArea&&_cb.drawShape==='circle'){if(!_circHandle)_showCircHandle(_cb);}else{_hideCircHandle();}}
+   if(_sel&&_cb&&_isDrawnArea&&_isCircleBld(_cb)){if(!_circHandle)_showCircHandle(_cb);}else{_hideCircHandle();}}
   _updateGeoToolbar();
 }
 
@@ -4872,6 +4883,7 @@ function _checkAreaViolation(bld){
 
 async function onDrawCreate(){
   const tr=t();
+  const _shapeAtCreate=_drawShape; // capture the drawn shape before it's reset below
   const hint=document.getElementById("draw-hint");
   hint.style.display="none";
   _polyDrawing=false;_drawShape='polygon';
@@ -4920,7 +4932,8 @@ async function onDrawCreate(){
   // ── Register as a new building (adds its own map source + activates it) ──────
   _drawnAreaProps={};
   document.getElementById('parcel-float-card').style.display='none';
-  _registerBuilding(poly);
+  const _nb=_registerBuilding(poly);
+  if(_nb){_nb.drawShape=_shapeAtCreate||'polygon';_updateDimLabels(_nb.geojson,_nb.drawShape);if(_isCircleBld(_nb))_showCircHandle(_nb);}
   _checkSetbackViolation(poly);
   _checkAreaViolation(_activeBld());
   // Show side panel on first draw
