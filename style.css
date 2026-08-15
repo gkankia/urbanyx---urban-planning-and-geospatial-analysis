@@ -974,8 +974,6 @@
   /* Parcel tab hugs its rows. Analysis tab keeps one fixed height so opening
      and closing analyses scrolls inside the pane instead of resizing the card. */
   /* All panes hug their content like the Parcel tab; the card's max-height caps it with scroll. */
-  .pfc-info-btn { flex:0 0 auto; width:24px; display:flex; align-items:center; justify-content:center; border-radius:6px; border:1px solid rgba(255,255,255,0.14); background:rgba(255,255,255,0.05); color:rgba(255,255,255,0.55); font-size:0.66rem; font-weight:700; font-style:italic; font-family:Georgia,serif; cursor:help; user-select:none; }
-  .pfc-info-btn:hover { color:#a5b4fc; border-color:rgba(165,180,252,0.4); }
   #pfc-body::-webkit-scrollbar { display:none; }
   .pfc-empty { font-size:0.66rem; color:rgba(255,255,255,0.3); line-height:1.5; padding:4px 2px 8px; }
   /* analysis result panels render in the card's flow, not as fixed flyouts */

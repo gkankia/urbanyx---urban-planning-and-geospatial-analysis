@@ -512,6 +512,7 @@ function setLang(l){
   if(mapReady) map.setLanguage(l==='ka'?'ka':'en');
   const _nll=document.getElementById('nav-lang-label');if(_nll)_nll.textContent=l==='en'?'EN':'ქა';
   applyLang();
+  if(typeof _pfcApplyLang==='function')_pfcApplyLang(); // re-translate dock.js tab/nav labels
   // The left analysis panels (Climate/Mobility/Education/Morphology/Energy)
   // build their labels into innerHTML once and don't self-update — force a
   // rebuild in the new language. Morphology/Energy skip rebuilding unless
@@ -974,6 +975,12 @@ function _moveRateInfo(e){
 function _hideRateInfo(){
   const tt=document.getElementById("pw-rate-tooltip");if(!tt)return;
   tt.style.display="none";
+}
+// Nearby-analysis info: same cursor-following tooltip as the transport index ⓘ.
+function _showNearbyInfo(e){
+  const tt=_getRateTooltip();
+  tt.textContent=(lang==='ka'?'ახლომდებარე ანალიზი აფასებს ნაკვეთის გარშემო არსებულ ინფრასტრუქტურას (მაღაზიები, სკოლები, ტრანსპორტი, ჯანდაცვა, პარკები…) ფეხით სავალ მანძილზე და აჩვენებს მისაწვდომობასა და მრავალფეროვნებას.':"Nearby analysis scans the surrounding area for amenities (shops, schools, transit, healthcare, parks…) within walking distance and scores the parcel's access and land-use diversity.");
+  tt.style.left=(e.clientX+12)+"px";tt.style.top=(e.clientY+12)+"px";tt.style.display="block";
 }
 function setPwBilling(mode){
   const pw=t().pw;
@@ -7430,8 +7437,6 @@ function _pfcRelocatePanes(){
   if(nearby){if(grid&&grid.parentNode===analysisPane)analysisPane.insertBefore(nearby,grid);else analysisPane.insertBefore(nearby,analysisPane.firstChild);}
   const planResult=document.getElementById('pfc-plan-render-result'); // concept + render → Plan pane
   ['pfc-render-row','pfc-concept-info'].forEach(id=>{const el=document.getElementById(id);if(el){if(planResult)planPane.insertBefore(el,planResult);else planPane.appendChild(el);}});
-  const ni=document.getElementById('pfc-nearby-info');
-  if(ni)ni.title=(lang==='ka'?'ახლომახლო ანალიზი აფასებს ნაკვეთის გარშემო არსებულ ინფრასტრუქტურას (მაღაზიები, სკოლები, ტრანსპორტი, ჯანდაცვა, პარკები…) ფეხით სავალ მანძილზე და აჩვენებს მისაწვდომობასა და მრავალფეროვნებას.':"Nearby analysis scans the surrounding area for amenities (shops, schools, transit, healthcare, parks…) within walking distance and scores the parcel's access and land-use diversity.");
 }
 // Simple full-screen viewer for the Plan-tab render (click image to expand, click to close).
 let _lastRenderImage=null;

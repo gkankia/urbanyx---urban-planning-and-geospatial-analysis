@@ -13,11 +13,9 @@ function _isMobileLayout(){ return window.matchMedia('(max-width:820px)').matche
 /* Switch the card's tab. Kept callable as _dockTab() because showCatInPanel()
    and toggleZoningPanel() call it by that name. */
 function _pfcTab(tab){
-  if(tab!=='parcel'&&tab!=='analysis')return;
+  if(!['parcel','analysis','plan'].includes(tab))return;
   _pfcCurTab=tab;
-  const p=document.getElementById('pfc-pane-parcel'),a=document.getElementById('pfc-pane-analysis');
-  if(p)p.style.display=tab==='parcel'?'':'none';
-  if(a)a.style.display=tab==='analysis'?'':'none';
+  ['parcel','analysis','plan'].forEach(t=>{const pane=document.getElementById('pfc-pane-'+t);if(pane)pane.style.display=(t===tab)?'':'none';});
   document.querySelectorAll('#pfc-tabs .pfc-tab').forEach(b=>{
     const on=b.getAttribute('data-ptab')===tab;
     b.classList.toggle('active',on);
@@ -98,17 +96,17 @@ function _ppExport(id,btn){
 
 /* ── i18n for the new bits ────────────────────────────────────────────────── */
 const _PFC_STR={
-  en:{ tabParcel:'Parcel', tabAnalysis:'Analysis',
+  en:{ tabParcel:'Parcel', tabAnalysis:'Analysis', tabPlan:'Plan',
        emptyAnalysis:'Select a parcel to run an analysis.',
        mtParcel:'Parcel', mtAnalysis:'Analyse', mtProjects:'Projects', mtAccount:'You' },
-  ka:{ tabParcel:'ნაკვეთი', tabAnalysis:'ანალიზი',
+  ka:{ tabParcel:'ნაკვეთი', tabAnalysis:'ანალიზი', tabPlan:'გეგმა',
        emptyAnalysis:'ანალიზისთვის აირჩიე ნაკვეთი.',
        mtParcel:'ნაკვეთი', mtAnalysis:'ანალიზი', mtProjects:'პროექტები', mtAccount:'პროფილი' }
 };
 function _pfcApplyLang(){
   const s=_PFC_STR[lang==='ka'?'ka':'en'];
   const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
-  set('pfc-tab-parcel',s.tabParcel); set('pfc-tab-analysis',s.tabAnalysis);
+  set('pfc-tab-parcel',s.tabParcel); set('pfc-tab-analysis',s.tabAnalysis); set('pfc-tab-plan',s.tabPlan);
   set('pfc-empty-analysis',s.emptyAnalysis);
   set('mt-lbl-parcel',s.mtParcel); set('mt-lbl-analysis',s.mtAnalysis);
   set('mt-lbl-projects',s.mtProjects); set('mt-lbl-account',s.mtAccount);
