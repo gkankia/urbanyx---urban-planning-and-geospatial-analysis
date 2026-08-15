@@ -777,6 +777,10 @@
   .geo-tb-btn:not([disabled]):hover { background:rgba(255,255,255,0.07); border-color:rgba(255,255,255,0.14); color:rgba(255,255,255,0.65); opacity:1; cursor:pointer; }
   .geo-tb-btn.geo-tool-btn { opacity:1; cursor:pointer; }
   .geo-tb-btn.geo-tool-btn:hover { background:rgba(255,255,255,0.08); border-color:rgba(255,255,255,0.14); }
+  /* render is not ready yet — dimmed "coming soon" */
+  .geo-tb-btn.geo-render-soon { opacity:0.4; }
+  .geo-tb-btn.geo-render-soon:hover { opacity:0.55; background:none; border-color:transparent; }
+  .geo-tb-btn.geo-render-soon .geo-tb-ico { filter:grayscale(1); }
   .geo-tb-btn .geo-tb-ico { opacity:0.55; transition:opacity 0.15s; display:block; }
   .geo-tb-btn.geo-tool-btn:hover .geo-tb-ico { opacity:0.95; }
   .geo-tb-btn.active { background:rgba(167,139,250,0.22); border-color:rgba(167,139,250,0.5); opacity:1; }

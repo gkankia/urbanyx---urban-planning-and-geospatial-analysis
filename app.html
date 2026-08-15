@@ -137,7 +137,8 @@
                         </div>
                         <div id="pfc-concept-summary" style="display:none;font-size:0.6rem;color:rgba(255,255,255,0.62);line-height:1.5;margin-bottom:6px"></div>
                         <div id="pfc-concept-items" style="display:flex;flex-direction:column;gap:3px;margin-bottom:8px"></div>
-                        <button id="pfc-concept-render-btn" onclick="openRenderModal()" style="width:100%;padding:7px;border-radius:6px;border:1px solid rgba(167,139,250,0.35);background:rgba(167,139,250,0.16);color:#c4b5fd;font-size:0.7rem;font-weight:600;font-family:inherit;cursor:pointer">Generate concept render</button>
+                        <button id="pfc-concept-render-btn" disabled style="width:100%;padding:7px;border-radius:6px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:rgba(255,255,255,0.38);font-size:0.7rem;font-weight:600;font-family:inherit;cursor:not-allowed">Generate concept render</button>
+                        <div id="pfc-render-soon" style="text-align:center;font-size:0.55rem;font-weight:700;letter-spacing:0.09em;text-transform:uppercase;color:rgba(255,255,255,0.32);margin-top:5px">Coming soon</div>
                       </div>
         <div class="card" id="pro-analysis-card" style="display:none">
                   <div class="pro-cat" id="pro-cat-accessibility">
@@ -519,9 +520,9 @@
     <img src="analysis-logos/slice.svg" width="32" height="32" class="geo-tb-ico">
     <span class="geo-tip" id="geo-slice-tip">Slice</span>
   </button>
-  <button class="geo-tb-btn geo-tool-btn" id="geo-render-btn" onclick="openRenderModal()" title="Photorealistic render">
+  <button class="geo-tb-btn geo-tool-btn geo-render-soon" id="geo-render-btn" onclick="_renderComingSoon()" title="Photorealistic render — coming soon">
     <img src="analysis-logos/render.svg" width="32" height="32" class="geo-tb-ico">
-    <span class="geo-tip" id="geo-render-tip">Render</span>
+    <span class="geo-tip" id="geo-render-tip">Render · soon</span>
   </button>
   <div class="geo-tb-sep"></div>
   <button class="geo-tb-btn geo-tool-btn" id="geo-paint-btn" onclick="togglePaintPanel()" title="Fill & outline color">

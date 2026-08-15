@@ -8040,6 +8040,8 @@ function _renderApplyPreset(i){
   if(ta){ta.value=(lang==='ka'?pr.ka:pr.en).p;ta.focus();}
 }
 function _renderTargetGeom(){ return (_activeBld()&&_activeBld().geojson)||_currentParcelGeoJSON||_dbParcelGeoJSON||null; }
+// Render is temporarily disabled — surfaced as "coming soon" in the UI.
+function _renderComingSoon(){showToast(lang==='ka'?'ფოტორეალისტური რენდერი — მალე':'Photorealistic render — coming soon',3500);}
 function openRenderModal(){
   if(!currentUser||currentUser.plan!=='pro'){openPaywall();return;}
   if(!_renderTargetGeom()){showToast(_renderI18n().needsel);return;}
