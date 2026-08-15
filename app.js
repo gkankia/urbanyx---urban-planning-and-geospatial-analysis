@@ -109,7 +109,7 @@ function _updateAnalysisGrid(show){
   // Accessibility analyses: Isochrone always active; Education/Mobility/Morphology need an
   // isochrone (or a ≥ 5,000 m² parcel that can serve as the walking area itself).
   const accLocked=!(_isLargeParcel()||_hasIsochrone());
-  const accTip=ka?'ჯერ ჩართეთ იზოქრონის ანალიზი':'Run the Isochrone analysis first';
+  const accTip=ka?'ჯერ ჩართე იზოქრონის ანალიზი':'Run the Isochrone analysis first';
   const accBtn=document.getElementById('cat-btn-accessibility');if(accBtn)accBtn.classList.remove('pfc-cat-locked'); // Isochrone always active
   ['cat-btn-education','cat-btn-mobility','cat-btn-morphology'].forEach(id=>{
     const b=document.getElementById(id);if(!b)return;
@@ -142,7 +142,7 @@ function _repositionOpenAnalysisPanels(){ /* docked — CSS owns the layout */ }
 // Unified click for the in-card analysis buttons — blocks locked ones with a hint.
 function _pfcCatClick(key,el){
   if(el&&el.classList.contains('pfc-cat-locked')){
-    showToast(lang==='ka'?'ჯერ ჩართეთ იზოქრონის ანალიზი':'Run the Isochrone analysis first');
+    showToast(lang==='ka'?'ჯერ ჩართე იზოქრონის ანალიზი':'Run the Isochrone analysis first');
     const acc=document.getElementById('cat-btn-accessibility');
     if(acc){acc.classList.add('pfc-cat-pulse');setTimeout(()=>acc.classList.remove('pfc-cat-pulse'),1300);}
     return;
@@ -5837,6 +5837,7 @@ function switchBasemap(name){
   document.getElementById("mzc-3d-btn")?.classList.remove("active");
   _reliefActiveType=null;
   mapReady=false;
+  const _wasExtruding=_extrusionActive&&_isDrawnArea;
   const _preserved=_captureAppLayers(); // keep analysis overlays across the style swap
   map.setStyle(name==='night'?_trafficStyle():_BASEMAP_STYLES[name]);
   map.once("style.load",()=>{
@@ -5846,31 +5847,27 @@ function switchBasemap(name){
     map.setLanguage(lang==='ka'?'ka':'en');
     const _nll=document.getElementById('nav-lang-label');if(_nll)_nll.textContent=lang==='en'?'EN':'ქა';
     // "day" is Z.axis Hillshade and "night" is Mapbox Traffic (classic styles) — no Standard config.
-    // Custom WebGL layers (every extruded building's 3D mesh + the concept deco) are dropped by
-    // the style reload and NOT restored by _restoreAppLayers — recreate them all so nothing is lost.
-    const _anyExt=_buildings.some(b=>b.extrusionActive);
-    if(_anyExt||_conceptOn){
-      _threeEditor=null;
+    if(_wasExtruding){
+      const _swBld=_activeBld();
+      if(_swBld?.threeEditor){try{map.removeLayer(_swBld.threeEditor.id);}catch(e){}try{_swBld.threeEditor.dispose();}catch(e){}  _swBld.threeEditor=null;}
+      if(_threeEditor){try{_threeEditor.dispose();}catch(e){}_threeEditor=null;}
       requestAnimationFrame(()=>{
         _ensureThreeJs(()=>{
           try{
-            _buildings.forEach(b=>{
-              if(!b.extrusionActive)return;
-              if(b.threeEditor){try{map.removeLayer(b.threeEditor.id);}catch(_){}try{b.threeEditor.dispose&&b.threeEditor.dispose();}catch(_){}b.threeEditor=null;}
-              const ed=new _BuildingEditorLayer(b.id);
-              try{map.addLayer(ed);b.threeEditor=ed;}catch(_){}
-              if(b.id===_activeBldId){_threeEditor=ed;try{ed._activateListeners();ed.setEditMode(_shapeEditMode);}catch(_){}}
-            });
-            if(_conceptOn)try{_ensureConceptDeco();}catch(_){}
+            const _swBld2=_activeBld();
+            if(_swBld2&&!_swBld2.threeEditor){
+              _threeEditor=new _BuildingEditorLayer(_activeBldId);
+              map.addLayer(_threeEditor);
+              _swBld2.threeEditor=_threeEditor;
+            }
             map.triggerRepaint();
-            // DEM tiles may not be loaded yet — terrain elevation returns 0, sinking the mesh
-            // below ground where it fails the depth test. Rebuild once tiles are ready.
-            map.once('idle',()=>{_buildings.forEach(b=>{if(b.threeEditor){try{b.threeEditor.rebuild();}catch(_){}}});if(_conceptDeco)try{_conceptDeco.rebuild();}catch(_){}map.triggerRepaint();});
-          }catch(ex){console.error('3D restore failed:',ex);}
+            // DEM tiles may not be loaded yet — terrain elevation returns 0, placing the
+            // building underground where it fails the depth test. Rebuild once tiles are ready.
+            map.once('idle',()=>{if(_threeEditor){_threeEditor.rebuild();map.triggerRepaint();}});
+          }catch(ex){console.error('building-3d restore failed:',ex);}
         });
       });
     }
-    try{if(_isDrawnArea)_updateDimLabels();}catch(_){} // re-render on-map edge dimensions
   });
 }
 
@@ -10496,7 +10493,7 @@ async function toggleAccMobility(){
   if(sw.classList.contains("on")){sw.classList.remove("on");if(el)el.innerHTML="";return;}
   const isoFeat=_isoData?.features?.[0];
   if(!isoFeat&&!_isLargeParcel()){
-    const msg=isKa?"პირველ ჩართეთ სივრცული ანალიზი":"Generate an isochrone first";
+    const msg=isKa?"პირველ რიგში, ჩართე იზოქრონი":"Generate an isochrone first";
     if(el)el.innerHTML=`<div style="font-size:0.7rem;color:rgba(255,255,255,0.25);padding:4px 0">${msg}</div>`;
     return;
   }
@@ -15031,7 +15028,7 @@ function _morphTotalKm(gj){
 
 function _morphExportGeoJSON(){
   if(!currentUser||currentUser.plan!=='pro'){openPaywall(true);return;}
-  if(!_morphHasData()){showToast(lang==='ka'?'ჯერ ჩართეთ მორფოლოგიის ანალიზი':'Run a morphology analysis first');return;}
+  if(!_morphHasData()){showToast(lang==='ka'?'ჯერ ჩართე მორფოლოგიის ანალიზი':'Run a morphology analysis first');return;}
   const features=[];
   for(const f of _syntaxGJ?.features||[])features.push({...f,properties:{...f.properties,analysis:'space_syntax'}});
   for(const f of _orientGJ?.features||[])features.push({...f,properties:{...f.properties,analysis:'orientation'}});
@@ -15056,7 +15053,7 @@ function _morphLegendSpec(){
 
 async function _morphExportPDF(){
   if(!currentUser||currentUser.plan!=='pro'){openPaywall(true);return;}
-  if(!_morphHasData()){showToast(lang==='ka'?'ჯერ ჩართეთ მორფოლოგიის ანალიზი':'Run a morphology analysis first');return;}
+  if(!_morphHasData()){showToast(lang==='ka'?'ჯერ ჩართე მორფოლოგიის ანალიზი':'Run a morphology analysis first');return;}
   try{
     const{jsPDF}=window.jspdf||window;
     const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
