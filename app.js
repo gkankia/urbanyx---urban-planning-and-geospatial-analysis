@@ -2751,6 +2751,7 @@ function _movHEnd(){
   const bld=_activeBld();if(bld&&_movHandle){try{_movHandle.setLngLat(turf.centroid(turf.feature(bld.geojson)).geometry.coordinates);}catch(_){}}
   // A concept building's pitched roof lives in the deco layer — resync it after the move.
   if(_conceptOn&&_conceptDeco)_conceptDeco.rebuild();
+  _scheduleReRunAnalyses(); // live-update any active analysis for the new location
 }
 function _movDetach(){
   if(_movHandle){try{_movHandle.remove();}catch(_){}_movHandle=null;}
@@ -2890,6 +2891,7 @@ function _rotHEnd(){
   _rotHandle.setLngLat(snapped);_rotUpdateLine(snapped);
   _histCommit();
   if(_conceptOn&&_conceptDeco)_conceptDeco.rebuild();
+  _scheduleReRunAnalyses();
 }
 function _rotDetach(){
   if(_rotHandle){try{_rotHandle.remove();}catch(_){}_rotHandle=null;}
@@ -3583,6 +3585,43 @@ async function _autoSaveProject(){
 
 // Build a replay-able action list from the current active analysis state.
 // Called at save time — we inspect DOM toggles and data vars to know what the user ran.
+// ── Live re-run of active analyses when a custom drawn area is moved/edited ──────
+// Whatever analysis is currently active updates for the shape's new location in place,
+// without the user re-triggering it. Debounced to the end of the move/rotate/edit gesture.
+let _reRunTimer=null;
+function _scheduleReRunAnalyses(){
+  const bld=_activeBld();
+  if(!bld||!_isDrawnArea||bld.conceptUse||bld.conceptArea)return; // only user-drawn areas
+  clearTimeout(_reRunTimer);
+  _reRunTimer=setTimeout(()=>{_reRunActiveAnalyses();},350);
+}
+async function _reRunActiveAnalyses(){
+  const bld=_activeBld();
+  if(!bld||!_isDrawnArea||bld.conceptUse||bld.conceptArea)return;
+  // Point the analyses at the shape's NEW geometry/centroid
+  _currentParcelGeoJSON=bld.geojson; _currentParcelAreaM2=bld.areaM2; parcelCentroid=getCentroid(bld.geojson);
+  const on=id=>document.getElementById(id)?.classList.contains('on');
+  const cyc=async(fn,...a)=>{if(typeof fn!=='function')return;try{let r=fn(...a);if(r instanceof Promise)await r;r=fn(...a);if(r instanceof Promise)await r;}catch(_){}}; // off→on = recompute
+  const isoOn=on('acc-iso-sw')&&!!parcelCentroid;
+  // Isochrone + its active dependent layers (regenerates from the new centroid, cascades to schools/KG/mobility/transit/parking/nearby)
+  if(isoOn)await cyc(typeof toggleAccIsochrone==='function'?toggleAccIsochrone:null);
+  // Climate
+  if(typeof _canopyOverlayCache!=='undefined'&&_canopyOverlayCache)await cyc(typeof toggleAccCanopy==='function'?toggleAccCanopy:null);
+  if(typeof _lstOverlayCache!=='undefined'&&_lstOverlayCache)await cyc(typeof toggleAccLST==='function'?toggleAccLST:null);
+  // Relief
+  if(typeof _reliefActiveType!=='undefined'&&_reliefActiveType&&typeof toggleAccRelief==='function')await cyc(toggleAccRelief,_reliefActiveType);
+  // Energy
+  if(typeof _solarOverlayCache!=='undefined'&&_solarOverlayCache&&typeof runSolarAnalysis==='function'){try{const r=runSolarAnalysis();if(r instanceof Promise)await r;}catch(_){}}
+  if(typeof _windData!=='undefined'&&_windData&&typeof runWindAnalysis==='function'){try{const r=runWindAnalysis();if(r instanceof Promise)await r;}catch(_){}}
+  // Morphology
+  if(on('acc-connectivity-sw'))await cyc(typeof toggleAccConnectivity==='function'?toggleAccConnectivity:null);
+  if(on('acc-orientation-sw'))await cyc(typeof toggleAccOrientation==='function'?toggleAccOrientation:null);
+  if(typeof _osmActive!=='undefined'&&_osmActive)await cyc(typeof toggleAccOSM==='function'?toggleAccOSM:null);
+  // Zoning assessment
+  if(on('zoning-assess-sw')&&typeof toggleZoningAssessment==='function')await cyc(toggleZoningAssessment);
+  // Nearby (only if not already re-run by the isochrone cascade above)
+  if(!isoOn&&typeof _nearbyRan!=='undefined'&&_nearbyRan&&typeof runNearbyAnalysis==='function'){try{_nearbyWalkCenter=parcelCentroid;const r=runNearbyAnalysis({center:parcelCentroid});if(r instanceof Promise)await r;}catch(_){}}
+}
 function _buildActionLog(){
   const sw=id=>document.getElementById(id)?.classList.contains('on');
   const actions=[];
@@ -4733,7 +4772,7 @@ function _exitBldEditMode(commit){
   try{map.setLayoutProperty('bld-fill-'+id,'visibility','visible');}catch(_){}
   try{map.setLayoutProperty('bld-line-'+id,'visibility','visible');}catch(_){}
   _updateBldHighlights();
-  if(commit)_histCommit();
+  if(commit){_histCommit();_scheduleReRunAnalyses();} // re-run active analyses for the edited shape
 }
 function _checkAreaViolation(bld){
   const warnEl=document.getElementById('pfc-area-warn');if(!warnEl)return;
