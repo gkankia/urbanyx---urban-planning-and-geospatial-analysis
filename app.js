@@ -1613,6 +1613,7 @@ function _showDrawnAreaCard(bld){
     _pfcSetTabs(['parcel','analysis','plan'],'parcel');
   }
   _updateDimLabels(bld.geojson,bld.drawShape); // on-map edge/diameter dimensions
+  if(bld.drawShape==='circle')_showCircHandle(bld);else _hideCircHandle(); // circle edge resize anchor
 }
 
 function _selectBuilding(id,shift=false){
@@ -1759,7 +1760,7 @@ function _deselectBuilding(){
   _threeEditor=null; // clear reference; editor stays on map
   _extrusionActive=false;_extrusionHeight=12;_floorOverrides={};_selectedFloors.clear();
   _activeBldId=null;_selectedBldIds.clear();_isDrawnArea=false;_currentParcelGeoJSON=null;_currentParcelAreaM2=0;
-  _clearDimLabels();
+  _clearDimLabels();_hideCircHandle();
   _updateBldHighlights();
   document.getElementById('poly-result-panel').style.display='none';
   // Hide the drawn-area floating card and restore parcel-only rows
@@ -1967,7 +1968,8 @@ function _ensureDimLayer(){
   if(!mapReady)return;
   if(!map.getSource('dim-labels'))map.addSource('dim-labels',{type:'geojson',data:{type:'FeatureCollection',features:[]}});
   if(!map.getLayer('dim-labels-lyr'))map.addLayer({id:'dim-labels-lyr',type:'symbol',source:'dim-labels',
-    layout:{'text-field':['get','label'],'text-size':11,'text-font':['DIN Offc Pro Medium','Arial Unicode MS Bold'],'text-allow-overlap':true,'text-ignore-placement':true},
+    layout:{'text-field':['get','label'],'text-size':11,'text-font':['DIN Offc Pro Medium','Arial Unicode MS Bold'],'text-allow-overlap':true,'text-ignore-placement':true,
+      'text-rotate':['coalesce',['get','rot'],0],'text-rotation-alignment':'map','text-offset':[0,-0.7]},
     paint:{'text-color':'#ffffff','text-halo-color':'rgba(0,0,0,0.82)','text-halo-width':1.7}});
 }
 function _clearDimLabels(){if(mapReady)map.getSource('dim-labels')?.setData({type:'FeatureCollection',features:[]});}
@@ -1983,19 +1985,51 @@ function _updateDimLabels(geom,drawShape){
   const feats=[];
   try{
     if(drawShape==='circle'){
-      const bb=turf.bbox(turf.feature(geom)),cy=(bb[1]+bb[3])/2;
-      const diamM=turf.distance([bb[0],cy],[bb[2],cy],{units:'kilometers'})*1000;
-      feats.push({type:'Feature',geometry:{type:'Point',coordinates:[(bb[0]+bb[2])/2,cy]},properties:{label:'⌀ '+_fmtEdge(diamM)}});
+      // diameter centred inside the circle
+      const c=turf.centroid(turf.feature(geom)).geometry.coordinates;
+      let rKm=0;for(let i=0;i<ring.length;i++){rKm=Math.max(rKm,turf.distance(c,ring[i],{units:'kilometers'}));}
+      feats.push({type:'Feature',geometry:{type:'Point',coordinates:c},properties:{label:'⌀ '+_fmtEdge(rKm*2000),rot:0}});
     } else {
+      // one label per edge, rotated to align with that edge
       for(let i=0;i<ring.length-1;i++){
         const a=ring[i],b=ring[i+1];
         const len=turf.distance(a,b,{units:'kilometers'})*1000;
         if(len<0.5)continue;
-        feats.push({type:'Feature',geometry:{type:'Point',coordinates:[(a[0]+b[0])/2,(a[1]+b[1])/2]},properties:{label:_fmtEdge(len)}});
+        let rot=turf.bearing(a,b)-90; rot=((rot+180)%360+360)%360-180;
+        if(rot>90)rot-=180;else if(rot<-90)rot+=180; // keep text upright
+        feats.push({type:'Feature',geometry:{type:'Point',coordinates:[(a[0]+b[0])/2,(a[1]+b[1])/2]},properties:{label:_fmtEdge(len),rot}});
       }
     }
   }catch(_){}
   src.setData({type:'FeatureCollection',features:feats});
+}
+// ── Circle resize handle: an anchor on the edge; drag it to change the radius ─────
+let _circHandle=null,_circCenter=null;
+function _hideCircHandle(){if(_circHandle){try{_circHandle.remove();}catch(_){}_circHandle=null;}_circCenter=null;}
+function _showCircHandle(bld){
+  _hideCircHandle();
+  if(!bld||bld.drawShape!=='circle'||!mapReady||typeof mapboxgl==='undefined'||_geoTool)return;
+  const geom=bld.geojson;const ring=geom.coordinates[0];
+  _circCenter=turf.centroid(turf.feature(geom)).geometry.coordinates;
+  let rKm=0;for(let i=0;i<ring.length;i++)rKm=Math.max(rKm,turf.distance(_circCenter,ring[i],{units:'kilometers'}));
+  const hpos=turf.destination(_circCenter,rKm,90).geometry.coordinates; // east edge
+  const el=document.createElement('div');el.className='geo-circ-handle';el.title=(lang==='ka'?'გადაათრიე ზომის შესაცვლელად':'Drag to resize');
+  _circHandle=new mapboxgl.Marker({element:el,draggable:true}).setLngLat(hpos).addTo(map);
+  _circHandle.on('drag',_circResizeDrag);
+  _circHandle.on('dragend',_circResizeEnd);
+}
+function _circResizeDrag(){
+  const bld=_activeBld();if(!bld||!_circCenter||!_circHandle)return;
+  const hl=_circHandle.getLngLat();
+  const rKm=Math.max(0.001,turf.distance(_circCenter,[hl.lng,hl.lat],{units:'kilometers'}));
+  _geoCommitGeom(bld,turf.circle(_circCenter,rKm,{steps:64,units:'kilometers'}).geometry);
+}
+function _circResizeEnd(){
+  if(_circHandle&&_circCenter){
+    const rKm=Math.max(0.001,turf.distance(_circCenter,[_circHandle.getLngLat().lng,_circHandle.getLngLat().lat],{units:'kilometers'}));
+    try{_circHandle.setLngLat(turf.destination(_circCenter,rKm,90).geometry.coordinates);}catch(_){}
+  }
+  _histCommit();_scheduleReRunAnalyses();
 }
 function onDrawShapeUpdate(){
   const data=_draw.getAll();
@@ -2735,6 +2769,8 @@ function _clearGeoTools(keep){
   if(keep!=='paint')_closePaintPanel();
   if(keep!=='edit'&&_editingBldId)_exitBldEditMode(true);
   if(mapReady&&map.getCanvas())map.getCanvas().style.cursor=(_geoTool==='erase'||_geoTool==='slice')?'crosshair':'';
+  // Circle resize anchor only in default (no-tool) select mode
+  {const _cb=_activeBld();if(!_geoTool&&!_editingBldId&&_cb&&_isDrawnArea&&_cb.drawShape==='circle'){if(!_circHandle)_showCircHandle(_cb);}else{_hideCircHandle();}}
   _updateGeoToolbar();
 }
 
@@ -7212,6 +7248,10 @@ map.on("load",()=>{
   map.on("click",async(e)=>{
     if(_measureMode)return; // measuring — ignore parcel selection
     if(_polyDrawing)return;
+    // Any active MapboxDraw drawing/editing mode owns the click — never select a parcel.
+    try{if(_draw&&typeof _draw.getMode==='function'){const _dm=_draw.getMode();if(_dm&&_dm!=='simple_select')return;}}catch(_){}
+    if(_drawMenuOpen)return; // draw shape menu open → placing points, not selecting
+    if(_editingBldId)return; // reshaping a drawn shape
     if(_drawJustFinished)return;
     if(e.originalEvent?._ttcHandled)return;
     if(e.originalEvent?._bldHandled)return;
@@ -7607,7 +7647,7 @@ function showParcelPopup(lngLat){
   else if(_ci){_ci.style.display='none';}
   _updateAnalysisGrid(true);
   _mountFloorPanelInCard(false); // parcel card: floor panel returns to its standalone spot
-  _clearDimLabels(); // parcels don't show edge dimensions
+  _clearDimLabels();_hideCircHandle(); // parcels don't show edge dimensions/resize handles
   const _ea2=document.getElementById('pfc-empty-analysis');if(_ea2)_ea2.style.display='none';
   _pfcSetTabs(['parcel','analysis','plan'],'parcel');
   if(_geoTool||_paintOpen)_clearGeoTools(null);
