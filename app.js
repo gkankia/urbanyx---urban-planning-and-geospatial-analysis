@@ -1612,6 +1612,7 @@ function _showDrawnAreaCard(bld){
     _mountFloorPanelInCard(false);
     _pfcSetTabs(['parcel','analysis','plan'],'parcel');
   }
+  _updateDimLabels(bld.geojson,bld.drawShape); // on-map edge/diameter dimensions
 }
 
 function _selectBuilding(id,shift=false){
@@ -1758,6 +1759,7 @@ function _deselectBuilding(){
   _threeEditor=null; // clear reference; editor stays on map
   _extrusionActive=false;_extrusionHeight=12;_floorOverrides={};_selectedFloors.clear();
   _activeBldId=null;_selectedBldIds.clear();_isDrawnArea=false;_currentParcelGeoJSON=null;_currentParcelAreaM2=0;
+  _clearDimLabels();
   _updateBldHighlights();
   document.getElementById('poly-result-panel').style.display='none';
   // Hide the drawn-area floating card and restore parcel-only rows
@@ -1956,7 +1958,44 @@ function _liveEditCardUpdate(){
     if(a)a.textContent=aM2>=10000?(aM2/10000).toFixed(2)+' ha':Math.round(aM2).toLocaleString()+' m²';
     const p=document.getElementById('pfc-perim');
     if(p)p.textContent=pM>=1000?(pM/1000).toFixed(2)+' km':Math.round(pM).toLocaleString()+' m';
+    _updateDimLabels(g,_activeBld()?.drawShape); // live edge dimensions while reshaping
   });
+}
+// ── On-map dimension labels: length next to each edge (diameter for circles) ─────
+function _fmtEdge(m){return m>=1000?(m/1000).toFixed(2)+' km':(m<10?m.toFixed(1):Math.round(m))+' m';}
+function _ensureDimLayer(){
+  if(!mapReady)return;
+  if(!map.getSource('dim-labels'))map.addSource('dim-labels',{type:'geojson',data:{type:'FeatureCollection',features:[]}});
+  if(!map.getLayer('dim-labels-lyr'))map.addLayer({id:'dim-labels-lyr',type:'symbol',source:'dim-labels',
+    layout:{'text-field':['get','label'],'text-size':11,'text-font':['DIN Offc Pro Medium','Arial Unicode MS Bold'],'text-allow-overlap':true,'text-ignore-placement':true},
+    paint:{'text-color':'#ffffff','text-halo-color':'rgba(0,0,0,0.82)','text-halo-width':1.7}});
+}
+function _clearDimLabels(){if(mapReady)map.getSource('dim-labels')?.setData({type:'FeatureCollection',features:[]});}
+function _updateDimLabels(geom,drawShape){
+  if(!mapReady)return;
+  const bld=_activeBld();
+  if(!geom&&bld&&_isDrawnArea){geom=bld.geojson;drawShape=bld.drawShape;}
+  if(!geom||!_isDrawnArea){_clearDimLabels();return;}
+  _ensureDimLayer();
+  const src=map.getSource('dim-labels');if(!src)return;
+  const ring=geom.type==='Polygon'?geom.coordinates[0]:(geom.type==='MultiPolygon'?geom.coordinates[0][0]:null);
+  if(!ring||ring.length<2){_clearDimLabels();return;}
+  const feats=[];
+  try{
+    if(drawShape==='circle'){
+      const bb=turf.bbox(turf.feature(geom)),cy=(bb[1]+bb[3])/2;
+      const diamM=turf.distance([bb[0],cy],[bb[2],cy],{units:'kilometers'})*1000;
+      feats.push({type:'Feature',geometry:{type:'Point',coordinates:[(bb[0]+bb[2])/2,cy]},properties:{label:'⌀ '+_fmtEdge(diamM)}});
+    } else {
+      for(let i=0;i<ring.length-1;i++){
+        const a=ring[i],b=ring[i+1];
+        const len=turf.distance(a,b,{units:'kilometers'})*1000;
+        if(len<0.5)continue;
+        feats.push({type:'Feature',geometry:{type:'Point',coordinates:[(a[0]+b[0])/2,(a[1]+b[1])/2]},properties:{label:_fmtEdge(len)}});
+      }
+    }
+  }catch(_){}
+  src.setData({type:'FeatureCollection',features:feats});
 }
 function onDrawShapeUpdate(){
   const data=_draw.getAll();
@@ -2682,6 +2721,7 @@ function _geoCommitGeom(bld,geom){
     const p=document.getElementById('pfc-perim');if(p)p.textContent=bld.perimStr;
   }
   _update3DMetrics();
+  if(bld.id===_activeBldId)_updateDimLabels(geom,bld.drawShape); // keep on-map dimensions live
 }
 
 // Deactivate any active map tool (erase/rotate/slice) and, unless kept, exit 2D edit + paint.
@@ -7567,6 +7607,7 @@ function showParcelPopup(lngLat){
   else if(_ci){_ci.style.display='none';}
   _updateAnalysisGrid(true);
   _mountFloorPanelInCard(false); // parcel card: floor panel returns to its standalone spot
+  _clearDimLabels(); // parcels don't show edge dimensions
   const _ea2=document.getElementById('pfc-empty-analysis');if(_ea2)_ea2.style.display='none';
   _pfcSetTabs(['parcel','analysis','plan'],'parcel');
   if(_geoTool||_paintOpen)_clearGeoTools(null);
