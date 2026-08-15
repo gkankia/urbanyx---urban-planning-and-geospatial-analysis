@@ -5837,7 +5837,6 @@ function switchBasemap(name){
   document.getElementById("mzc-3d-btn")?.classList.remove("active");
   _reliefActiveType=null;
   mapReady=false;
-  const _wasExtruding=_extrusionActive&&_isDrawnArea;
   const _preserved=_captureAppLayers(); // keep analysis overlays across the style swap
   map.setStyle(name==='night'?_trafficStyle():_BASEMAP_STYLES[name]);
   map.once("style.load",()=>{
@@ -5847,27 +5846,31 @@ function switchBasemap(name){
     map.setLanguage(lang==='ka'?'ka':'en');
     const _nll=document.getElementById('nav-lang-label');if(_nll)_nll.textContent=lang==='en'?'EN':'ქა';
     // "day" is Z.axis Hillshade and "night" is Mapbox Traffic (classic styles) — no Standard config.
-    if(_wasExtruding){
-      const _swBld=_activeBld();
-      if(_swBld?.threeEditor){try{map.removeLayer(_swBld.threeEditor.id);}catch(e){}try{_swBld.threeEditor.dispose();}catch(e){}  _swBld.threeEditor=null;}
-      if(_threeEditor){try{_threeEditor.dispose();}catch(e){}_threeEditor=null;}
+    // Custom WebGL layers (every extruded building's 3D mesh + the concept deco) are dropped by
+    // the style reload and NOT restored by _restoreAppLayers — recreate them all so nothing is lost.
+    const _anyExt=_buildings.some(b=>b.extrusionActive);
+    if(_anyExt||_conceptOn){
+      _threeEditor=null;
       requestAnimationFrame(()=>{
         _ensureThreeJs(()=>{
           try{
-            const _swBld2=_activeBld();
-            if(_swBld2&&!_swBld2.threeEditor){
-              _threeEditor=new _BuildingEditorLayer(_activeBldId);
-              map.addLayer(_threeEditor);
-              _swBld2.threeEditor=_threeEditor;
-            }
+            _buildings.forEach(b=>{
+              if(!b.extrusionActive)return;
+              if(b.threeEditor){try{map.removeLayer(b.threeEditor.id);}catch(_){}try{b.threeEditor.dispose&&b.threeEditor.dispose();}catch(_){}b.threeEditor=null;}
+              const ed=new _BuildingEditorLayer(b.id);
+              try{map.addLayer(ed);b.threeEditor=ed;}catch(_){}
+              if(b.id===_activeBldId){_threeEditor=ed;try{ed._activateListeners();ed.setEditMode(_shapeEditMode);}catch(_){}}
+            });
+            if(_conceptOn)try{_ensureConceptDeco();}catch(_){}
             map.triggerRepaint();
-            // DEM tiles may not be loaded yet — terrain elevation returns 0, placing the
-            // building underground where it fails the depth test. Rebuild once tiles are ready.
-            map.once('idle',()=>{if(_threeEditor){_threeEditor.rebuild();map.triggerRepaint();}});
-          }catch(ex){console.error('building-3d restore failed:',ex);}
+            // DEM tiles may not be loaded yet — terrain elevation returns 0, sinking the mesh
+            // below ground where it fails the depth test. Rebuild once tiles are ready.
+            map.once('idle',()=>{_buildings.forEach(b=>{if(b.threeEditor){try{b.threeEditor.rebuild();}catch(_){}}});if(_conceptDeco)try{_conceptDeco.rebuild();}catch(_){}map.triggerRepaint();});
+          }catch(ex){console.error('3D restore failed:',ex);}
         });
       });
     }
+    try{if(_isDrawnArea)_updateDimLabels();}catch(_){} // re-render on-map edge dimensions
   });
 }
 
@@ -8444,7 +8447,8 @@ class _ConceptDecoLayer{
 }
 function _ensureConceptDeco(){
   if(!mapReady||typeof THREE==='undefined')return;
-  if(!_conceptDeco){_conceptDeco=new _ConceptDecoLayer();try{map.addLayer(_conceptDeco);}catch(_){}}
+  // Check the MAP layer (not just the JS object) so it re-adds after a basemap/style reload.
+  if(!map.getLayer('concept-deco')){_conceptDeco=new _ConceptDecoLayer();try{map.addLayer(_conceptDeco);}catch(_){}}
   else _conceptDeco.rebuild();
 }
 function _clearConcept(){
