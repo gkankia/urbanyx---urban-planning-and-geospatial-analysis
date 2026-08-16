@@ -9390,13 +9390,13 @@ async function _lstRun(){
   if(!c){ if(sw)sw.classList.remove("on"); return; }
   try{
     await _ensureProj4();
-    if(el)el.innerHTML=`<div style="display:flex;align-items:center;gap:6px;padding:6px 0;color:rgba(255,255,255,0.4);font-size:0.68rem"><span class="spinner" style="width:11px;height:11px;border-width:1.5px"></span><span>${isKa?'სცენების ძებნა…':'Finding scenes…'}</span></div>`;
+    if(el)el.innerHTML=`<div style="display:flex;align-items:center;gap:6px;padding:6px 0;color:rgba(255,255,255,0.4);font-size:0.68rem"><span class="spinner" style="width:11px;height:11px;border-width:1.5px"></span><span>${isKa?'პერიოდის ძებნა…':'Ranging periods…'}</span></div>`;
     const scenes=await fetchLSTScenes(c[0],c[1],_lstRangeYears,40);
     if(!scenes.length){ return _lstLegacyTbilisi(); }
     _lstScenes=scenes; _lstSceneLoc=c; _lstHistoric=true;
     const geo=_currentParcelGeoJSON;
     _lstSeries=await _buildLstSeries(scenes,geo,(done,total)=>{
-      if(el)el.innerHTML=`<div style="display:flex;align-items:center;gap:6px;padding:6px 0;color:rgba(255,255,255,0.4);font-size:0.68rem"><span class="spinner" style="width:11px;height:11px;border-width:1.5px"></span><span>${isKa?'ტემპერატურის დამუშავება':'Reading temperatures'} ${done}/${total}</span></div>`;
+      if(el)el.innerHTML=`<div style="display:flex;align-items:center;gap:6px;padding:6px 0;color:rgba(255,255,255,0.4);font-size:0.68rem"><span class="spinner" style="width:11px;height:11px;border-width:1.5px"></span><span>${isKa?'ტემპერატურის ანალიზი':'Reading temperatures'} ${done}/${total}</span></div>`;
     });
     if(!_lstSeries.some(s=>s.mean!=null)){ return _lstLegacyTbilisi(); }
     _lstBin='all'; _lstSelBinIdx=null;
@@ -9458,7 +9458,7 @@ function _lstTrendSVG(){
   const isKa=lang==='ka';
   _lstBins=_lstBinned(_lstSeries,_lstBin);
   const bins=_lstBins;
-  if(!bins.length)return `<div style="font-size:0.66rem;color:rgba(255,255,255,0.3);padding:8px 0">${isKa?'ამ პერიოდში ვარგისი სცენა არ არის':'No usable scenes in this range'}</div>`;
+  if(!bins.length)return `<div style="font-size:0.66rem;color:rgba(255,255,255,0.3);padding:8px 0">${isKa?'საკმარისი მონაცემები არ არის':'Not enough data'}</div>`;
   const W=248,H=82,padL=6,padR=6,padT=10,padB=16;
   const temps=bins.map(b=>b.mean), tlo=Math.floor(Math.min(...temps)-1), thi=Math.ceil(Math.max(...temps)+1);
   const mss=bins.map(b=>b.ms), mmin=Math.min(...mss), mmax=Math.max(...mss);
@@ -9547,7 +9547,7 @@ function _lstTrendStat(){
 function _lstTrendReadout(){
   const isKa=lang==='ka';
   const st=_lstTrendStat();
-  if(!st)return `<div style="font-size:0.58rem;color:rgba(255,255,255,0.25);margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.06)">${isKa?'ტენდენციისთვის მეტი სცენაა საჭირო (გაზარდე პერიოდი)':'Widen the range for a trend'}</div>`;
+  if(!st)return `<div style="font-size:0.58rem;color:rgba(255,255,255,0.25);margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.06)">${isKa?'ტენდენციისთვის მეტი მონაცემია საჭირო (გაზარდე პერიოდი)':'Widen the range for a trend'}</div>`;
   const pd=st.perDecade;
   const weak=!st.harmonic||!st.significant; // short span or slope within noise
   const col=weak?'rgba(255,255,255,0.5)':(pd>=0.5?'#ef4444':pd>=0.1?'#f97316':pd<=-0.5?'#38bdf8':pd<=-0.1?'#60a5fa':'rgba(255,255,255,0.6)');
@@ -9558,13 +9558,13 @@ function _lstTrendReadout(){
   return `<div style="display:flex;align-items:baseline;gap:7px;flex-wrap:wrap;margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.06)">`+
     `<span style="font-size:0.62rem;color:rgba(255,255,255,0.4)">${isKa?'დათბობის ტენდენცია':'Warming trend'}</span>`+
     `<span style="font-size:0.82rem;font-weight:700;color:${col}">${arrow} ${val}</span>`+
-    `<span style="font-size:0.55rem;color:rgba(255,255,255,0.32)">${note} · ${st.n} ${isKa?'სცენა':'scenes'}</span></div>`;
+    `<span style="font-size:0.55rem;color:rgba(255,255,255,0.32)">${note} · ${st.n} ${isKa?'პერიოდი':'period'}</span></div>`;
 }
 function _renderLstPanel(){
   const el=document.getElementById("acc-lst-result"); if(!el)return;
   const isKa=lang==='ka';
   const segRow=`<div style="display:flex;gap:2px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.09);border-radius:8px;padding:2px;margin:2px 0 8px">`+
-    _lstSeg('all',isKa?'სცენა':'Scene')+_lstSeg('month',isKa?'თვე':'Month')+_lstSeg('quarter',isKa?'კვარტ.':'Qtr')+_lstSeg('year',isKa?'წელი':'Year')+`</div>`;
+    _lstSeg('all',isKa?'':'Scene')+_lstSeg('month',isKa?'თვე':'Month')+_lstSeg('quarter',isKa?'კვარტ.':'Qtr')+_lstSeg('year',isKa?'წელი':'Year')+`</div>`;
   const now=_lstYearNow(), sy=_lstStartYear();
   const slider=`<div style="margin:2px 0 9px">`+
     `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><span style="font-size:0.6rem;color:rgba(255,255,255,0.4)">${isKa?'პერიოდი':'Look-back'}</span><span id="lst-range-lbl" style="font-size:0.62rem;color:#818cf8;font-family:ui-monospace,monospace">${sy}–${now} · ${_lstRangeYears}${isKa?' წ':'y'}</span></div>`+
@@ -9592,7 +9592,7 @@ function _lstUpdateHead(dateLabel,temp,cloud,nScenes){
   const pct=lst==null?0:Math.min(100,Math.max(0,((lst-10)/40)*100));
   const ring=`<svg width="54" height="54" viewBox="0 0 70 70" style="flex-shrink:0"><circle cx="35" cy="35" r="27" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="7"/><circle cx="35" cy="35" r="27" fill="none" stroke="${col}" stroke-width="7" stroke-linecap="round" stroke-dasharray="169.65" stroke-dashoffset="${169.65*(1-pct/100)}" transform="rotate(-90 35 35)" style="transition:stroke-dashoffset 0.8s cubic-bezier(0.23,1,0.32,1)"/><text x="35" y="39" text-anchor="middle" fill="${col}" font-size="13" font-weight="700" font-family="-apple-system,sans-serif">${loading?'…':(lst==null?'—':lst+'°')}</text></svg>`;
   const sub=[];
-  if(nScenes>1)sub.push((isKa?'საშ. ':'avg ')+nScenes+(isKa?' სცენა':' scenes'));
+  if(nScenes>1)sub.push((isKa?'საშ. ':'avg ')+nScenes+(isKa?' პერიოდი':' period'));
   else if(cloud!=null)sub.push((isKa?'ღრუბ. ':'cloud ')+Math.round(cloud)+'%');
   head.innerHTML=`<div style="display:flex;align-items:center;gap:12px">${ring}<div style="min-width:0"><div style="font-size:0.82rem;font-weight:600;color:rgba(255,255,255,0.85)">${dateLabel}</div><div style="font-size:0.62rem;color:rgba(255,255,255,0.4)">${sub.join(' · ')}</div></div></div>`;
 }
