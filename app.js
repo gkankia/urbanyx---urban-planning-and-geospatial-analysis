@@ -1614,6 +1614,7 @@ function _showDrawnAreaCard(bld){
   }
   _updateDimLabels(bld.geojson,bld.drawShape); // on-map edge/diameter dimensions
   if(_isCircleBld(bld))_showCircHandle(bld);else _hideCircHandle(); // circle edge resize anchor
+  _geoShortcutHint(); // let the user know copy/cut/paste/undo/redo work on drawn shapes
 }
 
 function _selectBuilding(id,shift=false){
@@ -2859,6 +2860,14 @@ function _setFloorColorHex(hex){
 // Edit shape — 3D vertex drag when extruded, else 2D vertices + midpoints (direct_select).
 function editShapeClicked(){
   if(!_isDrawnArea||!_activeBldId){showToast(lang==='ka'?'ჯერ მონიშნე ფიგურა':'Select a drawn shape first');return;}
+  const _eb=_activeBld();
+  // A circle isn't a free polygon — "edit" means resize via its edge handle, not vertex dragging.
+  if(_eb&&_isCircleBld(_eb)&&!_extrusionActive){
+    _clearGeoTools(null);           // back to select mode (shows the circle edge handle)
+    _showCircHandle(_eb);
+    showToast(lang==='ka'?'გადაათრიე კიდის სახელური წრის ზომის შესაცვლელად':'Drag the edge handle to resize the circle');
+    return;
+  }
   if(_extrusionActive){toggleShapeEditMode();if(_shapeEditMode)_geoEditHint();return;}
   _clearGeoTools('edit');
   if(_editingBldId)_exitBldEditMode(true);
@@ -3063,6 +3072,13 @@ function _geoShortcutsActive(){return !!_activeBldId||!!_geoClipboard||_hist.len
 function _geoEditHint(){
   const C=_GEO_CMD;
   showToast((lang==='ka'?'რედაქტირება ჩართულია · ':'Edit mode on · ')+`${C}C · ${C}X · ${C}V · ${C}Z · ⇧${C}Z`);
+}
+// Surface the copy/cut/paste/undo/redo shortcuts once, when a drawn shape is first selected.
+let _geoHintShown=false;
+function _geoShortcutHint(){
+  if(_geoHintShown)return;_geoHintShown=true;
+  const C=_GEO_CMD;
+  showToast((lang==='ka'?'მალსახმობები · ':'Shortcuts · ')+`${C}C · ${C}X · ${C}V · ${C}Z · ⇧${C}Z`,4200);
 }
 
 function _histSnapshot(){
