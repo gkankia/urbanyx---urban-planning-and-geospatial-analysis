@@ -99,6 +99,8 @@ function _updateAnalysisGrid(show){
   // Localized native tooltips (the nav-tip spans were removed with the old nav buttons).
   const _TT={'nav-zoning-btn':['Zoning','ზონირება'],'cat-btn-relief':['Relief','რელიეფი'],'cat-btn-climate':['Climate','კლიმატი'],'cat-btn-energy':['Clean Energy','სუფთა ენერგია'],'cat-btn-accessibility':['Isochrone','იზოქრონი'],'cat-btn-education':['Education','განათლება'],'cat-btn-mobility':['Mobility','მობილობა'],'cat-btn-morphology':['Morphology','ურბანული მორფოლოგია']};
   Object.keys(_TT).forEach(id=>{const b=document.getElementById(id);if(b)b.title=_TT[id][ka?1:0];});
+  // Zoning is Georgia-only — hide it entirely at a location pin (outside Georgia).
+  const _zb=document.getElementById('nav-zoning-btn');if(_zb)_zb.style.display=_pinMode?'none':'';
   const area=_currentParcelAreaM2||0;
   // Parcel analyses: Zoning & Climate always active; Relief & Clean energy need ≥ 1,000 m².
   const reLocked=area<1000;
@@ -194,6 +196,11 @@ let _dbParcelGeoJSON=null;
 let _currentParcelAreaM2=null;
 let _currentParcelRegDate=null;
 const PARCEL_MIN_ZOOM=15; // NAPR serves individual parcels only from this zoom up
+// Georgia (approx country bbox). Parcel/zoning data (NAPR) only exists inside it; beyond it
+// the app drops a location pin and runs the globally-available analyses instead.
+const GEORGIA_BBOX=[39.9,41.0,46.8,43.65]; // minLng,minLat,maxLng,maxLat
+function _inGeorgia(lng,lat){return lng>=GEORGIA_BBOX[0]&&lng<=GEORGIA_BBOX[2]&&lat>=GEORGIA_BBOX[1]&&lat<=GEORGIA_BBOX[3];}
+let _pinMode=false, _locPinMarker=null;
 let _setbackRingAreaM2=null;
 let _editingBldId=null;
 let _editingDrawId=null;
@@ -5718,7 +5725,7 @@ function initCustomLayers(){
   if(_lstOverlayCache&&!map.getSource("lst-overlay")){
     const l=_lstOverlayCache;
     map.addSource("lst-overlay",{type:"image",url:l.dataUrl,coordinates:[l.nw,l.ne,l.se,l.sw]});
-    map.addLayer({id:"lst-overlay-layer",type:"raster",source:"lst-overlay",paint:{"raster-opacity":0.75}});
+    map.addLayer({id:"lst-overlay-layer",type:"raster",source:"lst-overlay",paint:{"raster-opacity":0.78,"raster-resampling":"nearest"}});
   }
   if(_solarOverlayCache&&!map.getSource("solar-overlay")){
     const s=_solarOverlayCache;
@@ -7148,6 +7155,7 @@ function _parkingRenderLayers(polyFeatures,centroidFeatures){
 }
 
 function clearParcelSelection(){
+  _clearLocationPin(); // remove any location pin + exit pin mode
   if(_activeBldId){
     // Drawn area: remove the shape entirely along with any analysis results
     _nearbyReqToken++;
@@ -7322,6 +7330,8 @@ map.on("load",()=>{
       return;
     }
     const{lng,lat}=e.lngLat;
+    // Beyond Georgia there is no parcel/zoning data — drop a location pin and analyse from it.
+    if(!_inGeorgia(lng,lat)){_dropLocationPin(lng,lat);return;}
     // NAPR only serves individual parcels from zoom 15+ (below that it returns whole
     // districts/sectors). Tell the user to zoom in rather than selecting a giant area.
     if(map.getZoom()<PARCEL_MIN_ZOOM){
@@ -7635,8 +7645,47 @@ function toggleParcelCardMin(){
   if(_parcelCardDragged)return;
   _updateParcelCardPos();
 }
+// ── Location pin (outside Georgia): no parcel/zoning, run the global analyses ────
+function _clearLocationPin(){if(_locPinMarker){try{_locPinMarker.remove();}catch(_){}_locPinMarker=null;}_pinMode=false;}
+function _dropLocationPin(lng,lat){
+  if(!mapReady||typeof mapboxgl==='undefined')return;
+  try{resetAnalysis();}catch(_){}
+  _pinMode=true;_isDrawnArea=false;_dbParcelGeoJSON=null;_activeBldId=null;
+  parcelCentroid=[lng,lat];
+  const buf=turf.buffer(turf.point([lng,lat]),0.3,{units:'kilometers'}); // ~300 m analysis footprint
+  _currentParcelGeoJSON=buf.geometry;_currentParcelAreaM2=Math.round(turf.area(buf));
+  if(_locPinMarker){try{_locPinMarker.setLngLat([lng,lat]);}catch(_){}}
+  else{const el=document.createElement('div');el.className='loc-pin';_locPinMarker=new mapboxgl.Marker({element:el}).setLngLat([lng,lat]).addTo(map);}
+  try{map.getSource('parcel')?.setData({type:'FeatureCollection',features:[{type:'Feature',geometry:_currentParcelGeoJSON,properties:{}}]});}catch(_){}
+  _showLocationCard(lng,lat);
+}
+function _showLocationCard(lng,lat){
+  const card=document.getElementById('parcel-float-card');if(!card)return;
+  const ka=lang==='ka';
+  const _hdr=document.getElementById('pfc-code');
+  if(_hdr){_hdr.textContent=(ka?'📍 მდებარეობა':'📍 Location');_hdr.classList.remove('pfc-editable');_hdr.removeAttribute('contenteditable');_hdr.removeAttribute('title');}
+  const _la=document.getElementById('pfc-lbl-area'),_va=document.getElementById('pfc-area');
+  if(_la)_la.textContent=ka?'ანალიზის არეალი':'Analysis area';
+  if(_va)_va.textContent='~'+(_currentParcelAreaM2/10000).toFixed(1)+' ha';
+  const _lt=document.getElementById('pfc-lbl-type'),_vt=document.getElementById('pfc-type');
+  if(_lt)_lt.textContent=ka?'კოორდინატები':'Coordinates';
+  if(_vt)_vt.textContent=lat.toFixed(5)+', '+lng.toFixed(5);
+  const _pr=document.getElementById('pfc-perim-row');if(_pr)_pr.style.display='none';
+  const _ar=document.getElementById('pfc-lbl-addr')?.closest('.pfc-row');if(_ar)_ar.style.display='none';
+  const _or=document.getElementById('pfc-lbl-owner')?.closest('.pfc-row');if(_or)_or.style.display='none';
+  ['pfc-reg-row','pfc-ext-row','pfc-render-row','pfc-concept-info','pfc-zone-row','pfc-kvals-row','pfc-build-params-row','pfc-compliance-row','pfc-permits-row'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});
+  _clearDimLabels();_hideCircHandle();_mountFloorPanelInCard(false);
+  card.classList.remove('minimized');const _mb=document.getElementById('pfc-min-btn');if(_mb)_mb.textContent='−';
+  card.style.display='block';
+  _parcelCardLngLat=[lng,lat];_parcelCardDragged=false;
+  if(mapReady){const pt=map.project([lng,lat]);const ch=card.offsetHeight||118;card.style.left=(pt.x+88)+'px';card.style.top=(pt.y-ch/2)+'px';}
+  if(!_nearbyRan)_nearbyShowRunButton({center:[lng,lat]});
+  _updateAnalysisGrid(true);                 // zoning is hidden in pin mode (see _updateAnalysisGrid)
+  _pfcSetTabs(['parcel','analysis'],'analysis');
+}
 function showParcelPopup(lngLat){
   if(!map||!lngLat)return;
+  _clearLocationPin(); // selecting a Georgian parcel exits pin mode
   const tr=t();
   _parcelCardLngLat=lngLat;
   _parcelCardDragged=false;
@@ -9321,10 +9370,62 @@ async function toggleAccLST(){
   if(!window.GeoTIFF){
     await new Promise((res,rej)=>{const s=document.createElement("script");s.src="https://cdn.jsdelivr.net/npm/geotiff@2.1.3/dist-browser/geotiff.js";s.onload=res;s.onerror=rej;document.head.appendChild(s);});
   }
+  await _lstRun();
+}
+
+// Centroid of the current analysis geometry (lng,lat).
+function _lstCentroid(){
+  try{ if(Array.isArray(parcelCentroid)&&parcelCentroid.length===2)return parcelCentroid; }catch(_){}
+  try{ return turf.centroid(turf.feature(_currentParcelGeoJSON)).geometry.coordinates; }catch(_){ return null; }
+}
+
+// Fetch the Landsat scene stack for the current range, build the mean-LST trend,
+// draw the panel, and show the most recent scene. Falls back to the legacy Tbilisi
+// COG only if the global archive yields nothing.
+async function _lstRun(){
+  const el=document.getElementById("acc-lst-result");
+  const sw=document.getElementById("acc-lst-sw");
+  const isKa=lang==="ka";
+  const c=_lstCentroid();
+  if(!c){ if(sw)sw.classList.remove("on"); return; }
   try{
+    await _ensureProj4();
+    if(el)el.innerHTML=`<div style="display:flex;align-items:center;gap:6px;padding:6px 0;color:rgba(255,255,255,0.4);font-size:0.68rem"><span class="spinner" style="width:11px;height:11px;border-width:1.5px"></span><span>${isKa?'სცენების ძებნა…':'Finding scenes…'}</span></div>`;
+    const scenes=await fetchLSTScenes(c[0],c[1],_lstRangeYears,40);
+    if(!scenes.length){ return _lstLegacyTbilisi(); }
+    _lstScenes=scenes; _lstSceneLoc=c; _lstHistoric=true;
+    const geo=_currentParcelGeoJSON;
+    _lstSeries=await _buildLstSeries(scenes,geo,(done,total)=>{
+      if(el)el.innerHTML=`<div style="display:flex;align-items:center;gap:6px;padding:6px 0;color:rgba(255,255,255,0.4);font-size:0.68rem"><span class="spinner" style="width:11px;height:11px;border-width:1.5px"></span><span>${isKa?'ტემპერატურის დამუშავება':'Reading temperatures'} ${done}/${total}</span></div>`;
+    });
+    if(!_lstSeries.some(s=>s.mean!=null)){ return _lstLegacyTbilisi(); }
+    _lstBin='all'; _lstSelBinIdx=null;
+    _renderLstPanel();
+    _lstBins=_lstBinned(_lstSeries,_lstBin);
+    if(_lstBins.length)await _lstPickBin(_lstBins.length-1); // most recent
+    document.getElementById("lp-lst-sw")?.classList.add("on");
+  }catch(e){
+    console.warn("LST scenes:",e);
+    return _lstLegacyTbilisi();
+  }
+}
+
+// Legacy single-COG path (Tbilisi only) — used when the global archive has no usable scene.
+async function _lstLegacyTbilisi(){
+  const el=document.getElementById("acc-lst-result");
+  const sw=document.getElementById("acc-lst-sw");
+  const isKa=lang==="ka";
+  const c=_lstCentroid();
+  if(!c||!_inGeorgia(c[0],c[1])){
+    if(sw)sw.classList.remove("on");
+    if(el)el.innerHTML=`<div style="font-size:0.7rem;color:rgba(255,255,255,0.25);padding:4px 0">${isKa?"მონაცემები მიუწვდომელია":"Data unavailable"}</div>`;
+    return;
+  }
+  try{
+    _lstHistoric=false;
     const result=await fetchLST(_currentParcelGeoJSON);
     _lstRawData=result.raw;
-    const lst=result.mean;
+    const lst=result.mean; _lstMean=lst;
     if(!_climateData)_climateData={canopyPct:null,lst:null};
     _climateData.lst=lst;
     const lstColor=lst>40?"#ef4444":lst>35?"#f97316":lst>28?"#eab308":"#22c55e";
@@ -9335,9 +9436,127 @@ async function toggleAccLST(){
     document.getElementById("lp-lst-sw")?.classList.add("on");
   }catch(e){
     console.warn("LST:",e);
-    sw.classList.remove("on");
+    if(sw)sw.classList.remove("on");
     if(el)el.innerHTML=`<div style="font-size:0.7rem;color:rgba(255,255,255,0.25);padding:4px 0">${isKa?"მონაცემები მიუწვდომელია":"Data unavailable"}</div>`;
   }
+}
+
+// ── Historical LST panel: header ring + range/granularity controls + trend chart ──
+function _lstBinned(series,bin){
+  const valid=(series||[]).filter(s=>s.mean!=null);
+  if(bin==='all')return valid.map(s=>({key:s.datetime.slice(0,10),ms:s.ms,mean:s.mean,scenes:[s]}));
+  const groups={};
+  valid.forEach(s=>{ const d=new Date(s.ms); let key;
+    if(bin==='year')key=''+d.getUTCFullYear();
+    else if(bin==='quarter')key=d.getUTCFullYear()+'-Q'+(Math.floor(d.getUTCMonth()/3)+1);
+    else key=d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0');
+    (groups[key]=groups[key]||[]).push(s); });
+  return Object.keys(groups).sort().map(key=>{const a=groups[key];const mean=a.reduce((x,y)=>x+y.mean,0)/a.length;const ms=a.reduce((x,y)=>x+y.ms,0)/a.length;return {key,ms,mean,scenes:a};});
+}
+function _lstRangeLabel(){ const isKa=lang==='ka'; return _lstRangeYears>=13?(isKa?'სრული':'Full'):(_lstRangeYears+(isKa?' წ':'y')); }
+function _lstTrendSVG(){
+  const isKa=lang==='ka';
+  _lstBins=_lstBinned(_lstSeries,_lstBin);
+  const bins=_lstBins;
+  if(!bins.length)return `<div style="font-size:0.66rem;color:rgba(255,255,255,0.3);padding:8px 0">${isKa?'ამ პერიოდში ვარგისი სცენა არ არის':'No usable scenes in this range'}</div>`;
+  const W=248,H=82,padL=6,padR=6,padT=10,padB=16;
+  const temps=bins.map(b=>b.mean), tlo=Math.floor(Math.min(...temps)-1), thi=Math.ceil(Math.max(...temps)+1);
+  const mss=bins.map(b=>b.ms), mmin=Math.min(...mss), mmax=Math.max(...mss);
+  const xOf=ms=>padL+((ms-mmin)/((mmax-mmin)||1))*(W-padL-padR);
+  const yOf=t=>padT+(1-((t-tlo)/((thi-tlo)||1)))*(H-padT-padB);
+  const pts=bins.map((b,i)=>({x:xOf(b.ms),y:yOf(b.mean),b,i}));
+  const line=pts.map((p,i)=>(i?'L':'M')+p.x.toFixed(1)+' '+p.y.toFixed(1)).join(' ');
+  const dots=pts.map(p=>{const sel=p.i===_lstSelBinIdx;const[r,g,bl]=_lstTempRGB(p.b.mean);return `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${sel?4.5:3}" fill="rgb(${r},${g},${bl})" stroke="${sel?'#fff':'rgba(0,0,0,0.4)'}" stroke-width="${sel?1.5:1}" style="cursor:pointer" onclick="_lstPickBin(${p.i})"><title>${p.b.key}: ${Math.round(p.b.mean*10)/10}°C${p.b.scenes.length>1?' ('+p.b.scenes.length+')':''}</title></circle>`;}).join('');
+  const yr=ms=>new Date(ms).getUTCFullYear();
+  return `<svg width="100%" viewBox="0 0 ${W} ${H}" style="display:block;margin-top:4px" preserveAspectRatio="none">`+
+    `<line x1="${padL}" y1="${yOf(tlo)}" x2="${W-padR}" y2="${yOf(tlo)}" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>`+
+    `<line x1="${padL}" y1="${yOf(thi)}" x2="${W-padR}" y2="${yOf(thi)}" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>`+
+    `<text x="${padL}" y="${yOf(thi)-2}" fill="rgba(255,255,255,0.35)" font-size="7">${thi}°</text>`+
+    `<text x="${padL}" y="${yOf(tlo)+8}" fill="rgba(255,255,255,0.35)" font-size="7">${tlo}°</text>`+
+    `<path d="${line}" fill="none" stroke="rgba(129,140,248,0.55)" stroke-width="1.5"/>`+dots+
+    `<text x="${padL}" y="${H-3}" fill="rgba(255,255,255,0.35)" font-size="7">${yr(mmin)}</text>`+
+    `<text x="${W-padR}" y="${H-3}" text-anchor="end" fill="rgba(255,255,255,0.35)" font-size="7">${yr(mmax)}</text>`+
+    `</svg>`;
+}
+// Granularity segmented control — mirrors the transit Live/History switcher.
+function _lstSeg(b,label){
+  const on=_lstBin===b;
+  return `<button onclick="_lstSetBin('${b}')" style="flex:1;border:0;font-family:inherit;font-size:0.66rem;font-weight:600;padding:5px 0;border-radius:6px;cursor:pointer;background:${on?'rgba(167,139,250,0.14)':'none'};color:${on?'#a78bfa':'rgba(255,255,255,0.35)'}">${label}</button>`;
+}
+// Range chips — mirror the transit history day/band chips.
+function _lstChip(y,label){
+  const on=_lstRangeYears===y;
+  return `<button onclick="_lstSetRange(${y})" style="font-family:ui-monospace,monospace;font-size:0.56rem;border:1px solid ${on?'rgba(129,140,248,0.4)':'rgba(255,255,255,0.09)'};background:${on?'rgba(129,140,248,0.14)':'none'};color:${on?'#818cf8':'rgba(255,255,255,0.35)'};border-radius:6px;padding:3px 7px;cursor:pointer;white-space:nowrap">${label}</button>`;
+}
+function _renderLstPanel(){
+  const el=document.getElementById("acc-lst-result"); if(!el)return;
+  const isKa=lang==='ka';
+  const segRow=`<div style="display:flex;gap:2px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.09);border-radius:8px;padding:2px;margin:2px 0 7px">`+
+    _lstSeg('all',isKa?'სცენა':'Scene')+_lstSeg('month',isKa?'თვე':'Month')+_lstSeg('quarter',isKa?'კვარტ.':'Qtr')+_lstSeg('year',isKa?'წელი':'Year')+`</div>`;
+  const chips=`<div style="display:flex;gap:5px;margin-bottom:6px">`+
+    _lstChip(1,'1y')+_lstChip(3,'3y')+_lstChip(5,'5y')+_lstChip(13,isKa?'სრ.':'All')+`</div>`;
+  el.innerHTML=
+    `<div id="lst-head" style="margin:2px 0 8px"></div>`+segRow+chips+
+    `<div id="lst-trend">${_lstTrendSVG()}</div>`+
+    `<div style="font-size:0.58rem;color:rgba(255,255,255,0.28);margin-top:5px;line-height:1.3">${isKa?'Landsat 8/9 · 30მ · Planetary Computer. წერტილზე დაჭერით — რუკაზე ჩნდება ტემპერატურის რუკა.':'Landsat 8/9 · 30 m · Planetary Computer. Click a point to map that period.'}</div>`;
+}
+function _lstRedrawTrend(){ const c=document.getElementById("lst-trend"); if(c)c.innerHTML=_lstTrendSVG(); }
+function _lstUpdateHead(dateLabel,temp,cloud,nScenes){
+  const head=document.getElementById("lst-head"); if(!head)return;
+  const isKa=lang==='ka';
+  const loading=(temp==='…');
+  const lst=(typeof temp==='number')?temp:null;
+  const col=lst==null?'rgba(255,255,255,0.4)':(lst>40?"#ef4444":lst>35?"#f97316":lst>28?"#eab308":"#22c55e");
+  const pct=lst==null?0:Math.min(100,Math.max(0,((lst-10)/40)*100));
+  const ring=`<svg width="54" height="54" viewBox="0 0 70 70" style="flex-shrink:0"><circle cx="35" cy="35" r="27" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="7"/><circle cx="35" cy="35" r="27" fill="none" stroke="${col}" stroke-width="7" stroke-linecap="round" stroke-dasharray="169.65" stroke-dashoffset="${169.65*(1-pct/100)}" transform="rotate(-90 35 35)" style="transition:stroke-dashoffset 0.8s cubic-bezier(0.23,1,0.32,1)"/><text x="35" y="39" text-anchor="middle" fill="${col}" font-size="13" font-weight="700" font-family="-apple-system,sans-serif">${loading?'…':(lst==null?'—':lst+'°')}</text></svg>`;
+  const sub=[];
+  if(nScenes>1)sub.push((isKa?'საშ. ':'avg ')+nScenes+(isKa?' სცენა':' scenes'));
+  else if(cloud!=null)sub.push((isKa?'ღრუბ. ':'cloud ')+Math.round(cloud)+'%');
+  head.innerHTML=`<div style="display:flex;align-items:center;gap:12px">${ring}<div style="min-width:0"><div style="font-size:0.82rem;font-weight:600;color:rgba(255,255,255,0.85)">${dateLabel}</div><div style="font-size:0.62rem;color:rgba(255,255,255,0.4)">${sub.join(' · ')}</div></div></div>`;
+}
+async function _lstSetRange(years){ if(_lstRangeYears===years)return; _lstRangeYears=years; await _lstRun(); }
+async function _lstSetBin(bin){
+  if(_lstBin===bin)return; _lstBin=bin; _lstSelBinIdx=null;
+  _lstBins=_lstBinned(_lstSeries,_lstBin);
+  _renderLstPanel();
+  if(_lstBins.length)await _lstPickBin(_lstBins.length-1);
+}
+// Click a trend point → single scene overlay (Scene mode) or per-pixel period average.
+async function _lstPickBin(i){
+  const bin=_lstBins&&_lstBins[i]; if(!bin)return;
+  _lstSelBinIdx=i; _lstRedrawTrend();
+  const isKa=lang==='ka';
+  _lstUpdateHead(bin.key,'…',null,bin.scenes.length);
+  try{
+    const agg=await _lstAggregate(bin.scenes,_currentParcelGeoJSON);
+    if(agg.mean==null){ _lstUpdateHead(bin.key,null,null,bin.scenes.length); return; }
+    _renderLstGrid(agg);
+    _lstMean=Math.round(agg.mean*10)/10;
+    if(!_climateData)_climateData={canopyPct:null,lst:null}; _climateData.lst=_lstMean;
+    _lstUpdateHead(bin.key,_lstMean,bin.scenes.length===1?bin.scenes[0].cloud:null,bin.scenes.length);
+  }catch(e){ console.warn('LST bin:',e); _lstUpdateHead(bin.key,null,null,bin.scenes.length); }
+}
+
+// Outside Georgia we have no national schools/KG dataset — pull points from OpenStreetMap
+// (Overpass) within the current analysis area. Returns Point features in the shape the
+// existing map-layer renderers expect.
+async function _osmEducationFeats(amenity){
+  const isoFeat=_isoData?.features?.[0];
+  const geom=isoFeat?isoFeat.geometry:_getMorphologyGeo();
+  if(!geom)return [];
+  const bb=turf.bbox({type:"Feature",properties:{},geometry:geom}); // [minLng,minLat,maxLng,maxLat]
+  const bbox=`${bb[1]},${bb[0]},${bb[3]},${bb[2]}`; // Overpass expects S,W,N,E
+  const q=`[out:json][timeout:25];(node[amenity=${amenity}](${bbox});way[amenity=${amenity}](${bbox});relation[amenity=${amenity}](${bbox}););out center tags;`;
+  const data=await fetchOverpass(q,2);
+  const feats=[];
+  for(const e of (data.elements||[])){
+    const lng=e.lon??e.center?.lon, lat=e.lat??e.center?.lat;
+    if(lng==null||lat==null)continue;
+    if(!pointInPolygon(lng,lat,geom))continue;
+    const nm=e.tags?.name||e.tags?.["name:en"]||"";
+    feats.push({type:"Feature",geometry:{type:"Point",coordinates:[lng,lat]},properties:{school_name:nm,name:nm,type:e.tags?.["school:type"]||""}});
+  }
+  return feats;
 }
 
 async function toggleAccSchools(){
@@ -9351,6 +9570,15 @@ async function toggleAccSchools(){
   sw.classList.add("on");
   if(el)el.innerHTML=`<div style="display:flex;align-items:center;gap:6px;padding:5px 0 6px;color:rgba(255,255,255,0.35);font-size:0.7rem"><span class="spinner" style="width:10px;height:10px;border-width:1.5px"></span></div>`;
   try{
+    if(_pinMode){
+      // Outside Georgia: OSM schools only (no national facility/condition/cost data).
+      const inArea=await _osmEducationFeats("school");
+      const count=inArea.length;
+      if(_isDrawnArea)_drawnAreaProps.schools_500m=count;
+      if(el)el.innerHTML=`<div class="school-stats"><div class="school-metrics-row"><div class="school-metric"><span class="school-metric-val">${count}</span><span class="school-metric-lbl">${isKa?'სკოლა':'Schools'}</span></div></div><div style="font-size:0.62rem;color:rgba(255,255,255,0.28);padding:6px 0 2px">${isKa?'წყარო: OpenStreetMap':'Source: OpenStreetMap'}</div></div>`;
+      addSchoolsMapLayer(inArea);
+      return;
+    }
     if(!_schoolsGeoJSON){
       const res=await fetch("data/public_schools.geojson");
       if(!res.ok)throw new Error("schools_fetch");
@@ -9429,6 +9657,13 @@ async function toggleAccKindergartens(){
   sw.classList.add("on");
   if(el)el.innerHTML='<div style="display:flex;align-items:center;gap:6px;padding:5px 0 6px;color:rgba(255,255,255,0.35);font-size:0.7rem"><span class="spinner" style="width:10px;height:10px;border-width:1.5px"></span></div>';
   try{
+    if(_pinMode){
+      const inArea=await _osmEducationFeats("kindergarten");
+      if(_isDrawnArea)_drawnAreaProps.kindergartens_500m=inArea.length;
+      addKgMapLayer(inArea);
+      if(el)el.innerHTML='<div style="font-size:0.65rem;color:rgba(255,255,255,0.28);padding:4px 0">'+(isKa?inArea.length+' ბაღი — წყარო: OpenStreetMap':inArea.length+' kindergartens — source: OpenStreetMap')+'</div>';
+      return;
+    }
     if(!_kgGeoJSON){
       const res=await fetch("data/kindergartens_tbilisi_1.geojson");
       if(!res.ok)throw new Error("kg_fetch");
@@ -12885,8 +13120,130 @@ async function fetchTreeCanopy(geojson){
   return {pct, classCounts, raw:{pixels,width:winW,height:winH,originX,originY,resX:pixW,resY:pixH}};
 }
 
+// ══════════════════════════════════════════════════════════════════════════════
+//  Historical / global surface temperature — Landsat C2 L2 (ST_B10) via Planetary
+//  Computer. Scenes are per-UTM-zone COGs, so we reproject the parcel into the
+//  scene's UTM to read the right pixels. We build a mean-LST trend over time and
+//  can render either a single scene or a per-pixel period average as a heat overlay.
+// ══════════════════════════════════════════════════════════════════════════════
+const LST_C2L2_SCALE = 0.00341802, LST_C2L2_OFFSET = 149.0; // DN → Kelvin
+function _landsatDNtoC(dn){ if(dn==null||dn===0||!isFinite(dn))return null; const c=dn*LST_C2L2_SCALE+LST_C2L2_OFFSET-273.15; return (c<-40||c>80)?null:c; }
+function _lstTempRGB(t){
+  const tMin=20,tMax=45;
+  const ramp=[[0,[96,165,250]],[0.3,[52,211,153]],[0.5,[251,191,36]],[0.75,[249,115,22]],[1.0,[239,68,68]]];
+  const n=Math.max(0,Math.min(1,(t-tMin)/(tMax-tMin)));
+  for(let i=1;i<ramp.length;i++){ if(n<=ramp[i][0]){const lo=ramp[i-1],hi=ramp[i],f=(n-lo[0])/(hi[0]-lo[0]);return lo[1].map((c,j)=>Math.round(c+f*(hi[1][j]-c)));} }
+  return ramp[ramp.length-1][1];
+}
+let _lstScenes=null, _lstSeries=null, _lstBins=null, _lstSelBinIdx=null;
+let _lstSceneLoc=null, _lstRangeYears=1, _lstBin='all', _lstHistoric=false;
+
+async function _ensureProj4(){
+  if(window.proj4)return;
+  await new Promise((res,rej)=>{const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/proj4@2.11.0/dist/proj4.js';s.onload=res;s.onerror=rej;document.head.appendChild(s);});
+}
+function _utmDef(epsg){ const e=+epsg||32638; const zone=e%100; const south=(Math.floor(e/100)===327); return `+proj=utm +zone=${zone}${south?' +south':''} +datum=WGS84 +units=m +no_defs`; }
+function _geomToUtmRings(geojson,P){
+  const out=[]; const push=poly=>poly.forEach(r=>out.push(r.map(c=>P.forward([c[0],c[1]]))));
+  if(geojson.type==='Polygon')push(geojson.coordinates);
+  else if(geojson.type==='MultiPolygon')geojson.coordinates.forEach(push);
+  return out;
+}
+function _pipEvenOdd(x,y,rings){
+  let inside=false;
+  for(const ring of rings){ for(let i=0,j=ring.length-1;i<ring.length;j=i++){
+    const xi=ring[i][0],yi=ring[i][1],xj=ring[j][0],yj=ring[j][1];
+    if(((yi>y)!==(yj>y))&&(x<(xj-xi)*(y-yi)/((yj-yi)||1e-12)+xi))inside=!inside;
+  }} return inside;
+}
+function _lstReproject(geojson,epsg){
+  const P=proj4(_utmDef(epsg)); const rings=_geomToUtmRings(geojson,P);
+  let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+  rings.forEach(r=>r.forEach(p=>{if(p[0]<minX)minX=p[0];if(p[0]>maxX)maxX=p[0];if(p[1]<minY)minY=p[1];if(p[1]>maxY)maxY=p[1];}));
+  return {P,rings,bboxUTM:{minX,minY,maxX,maxY}};
+}
+// Read the small parcel-covering window from a scene COG (native UTM grid).
+async function _lstReadWindow(scene,bboxUTM){
+  const tiff=await GeoTIFF.fromUrl(`${PROXY}/lst?url=${encodeURIComponent(scene.href)}`,{allowFullFile:false});
+  const image=await tiff.getImage();
+  const bb=image.getBoundingBox(); const W=image.getWidth(),H=image.getHeight();
+  const rX=(bb[2]-bb[0])/W, rY=(bb[3]-bb[1])/H;
+  let x1=Math.floor((bboxUTM.minX-bb[0])/rX), x2=Math.ceil((bboxUTM.maxX-bb[0])/rX);
+  let y1=Math.floor((bb[3]-bboxUTM.maxY)/rY), y2=Math.ceil((bb[3]-bboxUTM.minY)/rY);
+  x1=Math.max(0,Math.min(W,x1));x2=Math.max(0,Math.min(W,x2));
+  y1=Math.max(0,Math.min(H,y1));y2=Math.max(0,Math.min(H,y2));
+  if(x2<=x1||y2<=y1)return null;
+  const raster=await image.readRasters({window:[x1,y1,x2,y2]});
+  return {pixels:raster[0],winW:x2-x1,winH:y2-y1,ox:bb[0]+x1*rX,oy:bb[3]-y1*rY,res:rX};
+}
+async function _lstParcelMean(scene,rep){
+  const win=await _lstReadWindow(scene,rep.bboxUTM); if(!win)return null;
+  let s=0,n=0;
+  for(let py=0;py<win.winH;py++)for(let px=0;px<win.winW;px++){
+    const c=_landsatDNtoC(win.pixels[py*win.winW+px]); if(c==null)continue;
+    const X=win.ox+(px+0.5)*win.res, Y=win.oy-(py+0.5)*win.res;
+    if(!_pipEvenOdd(X,Y,rep.rings))continue; s+=c;n++;
+  }
+  return n?s/n:null;
+}
+// Aggregate one or many scenes onto a shared 30 m UTM grid (single scene ⇒ no averaging).
+async function _lstAggregate(scenes,geojson,onProg){
+  const epsg=scenes[0]?.epsg||32638;
+  const rep=_lstReproject(geojson,epsg); const res=30;
+  const gx0=Math.floor(rep.bboxUTM.minX/res)*res, gyTop=Math.ceil(rep.bboxUTM.maxY/res)*res;
+  const cols=Math.max(1,Math.ceil((rep.bboxUTM.maxX-gx0)/res)), rows=Math.max(1,Math.ceil((gyTop-rep.bboxUTM.minY)/res));
+  const sum=new Float64Array(cols*rows), cnt=new Uint16Array(cols*rows), inside=new Uint8Array(cols*rows);
+  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){const X=gx0+(c+0.5)*res,Y=gyTop-(r+0.5)*res;inside[r*cols+c]=_pipEvenOdd(X,Y,rep.rings)?1:0;}
+  let gS=0,gN=0,used=0;
+  for(const sc of scenes){
+    if((sc.epsg||32638)!==epsg)continue;
+    let win=null; try{win=await _lstReadWindow(sc,rep.bboxUTM);}catch(_){}
+    if(win){ used++;
+      for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){ const gi=r*cols+c; if(!inside[gi])continue;
+        const X=gx0+(c+0.5)*res, Y=gyTop-(r+0.5)*res;
+        const px=Math.floor((X-win.ox)/win.res), py=Math.floor((win.oy-Y)/win.res);
+        if(px<0||py<0||px>=win.winW||py>=win.winH)continue;
+        const cc=_landsatDNtoC(win.pixels[py*win.winW+px]); if(cc==null)continue;
+        sum[gi]+=cc;cnt[gi]++;gS+=cc;gN++;
+      }
+    }
+    if(onProg)onProg(used,scenes.length);
+  }
+  return {cols,rows,gx0,gyTop,res,sum,cnt,mean:gN?gS/gN:null,epsg,rep};
+}
+function _renderLstGrid(agg){
+  const {cols,rows,gx0,gyTop,res,sum,cnt,rep}=agg;
+  const canvas=document.createElement('canvas'); canvas.width=cols;canvas.height=rows;
+  const ctx=canvas.getContext('2d'); const img=ctx.createImageData(cols,rows); const d=img.data;
+  for(let i=0;i<cols*rows;i++){ if(!cnt[i])continue; const [r,g,b]=_lstTempRGB(sum[i]/cnt[i]); d[i*4]=r;d[i*4+1]=g;d[i*4+2]=b;d[i*4+3]=195; }
+  ctx.putImageData(img,0,0);
+  const dataUrl=canvas.toDataURL('image/png');
+  const P=rep.P;
+  const nw=P.inverse([gx0,gyTop]), ne=P.inverse([gx0+cols*res,gyTop]);
+  const se=P.inverse([gx0+cols*res,gyTop-rows*res]), sw=P.inverse([gx0,gyTop-rows*res]);
+  if(map.getLayer('lst-overlay-layer'))map.removeLayer('lst-overlay-layer');
+  if(map.getSource('lst-overlay'))map.removeSource('lst-overlay');
+  map.addSource('lst-overlay',{type:'image',url:dataUrl,coordinates:[nw,ne,se,sw]});
+  map.addLayer({id:'lst-overlay-layer',type:'raster',source:'lst-overlay',paint:{'raster-opacity':0.78,'raster-resampling':'nearest'}});
+  _lstOverlayCache={dataUrl,nw,ne,se,sw};
+}
+async function fetchLSTScenes(lng,lat,years,cloud){
+  const end=new Date(); const start=new Date(end); start.setFullYear(start.getFullYear()-years);
+  const iso=d=>d.toISOString().slice(0,10);
+  const u=`${PROXY}/lst-scenes?lng=${lng.toFixed(5)}&lat=${lat.toFixed(5)}&start=${iso(start)}&end=${iso(end)}&cloud=${cloud}&limit=200`;
+  const r=await fetch(u); if(!r.ok)throw new Error('scenes_'+r.status);
+  return (await r.json()).scenes||[];
+}
+async function _buildLstSeries(scenes,geojson,onProg){
+  const repCache={}; const getRep=e=>{const k=e||32638; if(!repCache[k])repCache[k]=_lstReproject(geojson,k); return repCache[k];};
+  const out=new Array(scenes.length); let i=0,done=0; const CONC=5;
+  async function worker(){ while(i<scenes.length){ const k=i++; const sc=scenes[k]; let mean=null; try{mean=await _lstParcelMean(sc,getRep(sc.epsg));}catch(_){} out[k]={...sc,mean,ms:Date.parse(sc.datetime)}; if(onProg)onProg(++done,scenes.length); } }
+  await Promise.all(Array.from({length:Math.min(CONC,scenes.length)},worker));
+  return out;
+}
+
 async function fetchLST(geojson) {
-  const LST_URL = "https://pub-9071f31b4edc4a15ba28c48f949017fc.r2.dev/lst_tbilisi_cog.tif";  
+  const LST_URL = "https://pub-9071f31b4edc4a15ba28c48f949017fc.r2.dev/lst_tbilisi_cog.tif";
   const proxyUrl = `${PROXY}/lst?url=${encodeURIComponent(LST_URL)}`;_rptRasterSrc.lst=proxyUrl;
 
   let allCoords = [];
@@ -13033,6 +13390,7 @@ function renderLSTOverlay(raw,geojson){
 
 function clearLSTOverlay(){
   _lstOverlayCache=null;
+  _lstScenes=null;_lstSeries=null;_lstBins=null;_lstSelBinIdx=null;_lstSceneLoc=null;_lstHistoric=false;
   if(!mapReady)return;
   try{if(map.getLayer("lst-overlay-layer"))map.removeLayer("lst-overlay-layer");}catch(_){}
   try{if(map.getSource("lst-overlay"))map.removeSource("lst-overlay");}catch(_){}

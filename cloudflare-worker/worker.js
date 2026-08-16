@@ -89,9 +89,17 @@ export default {
     }
 
     // ── LST COG proxy (GET) ───────────────────────────────────────────────────
+    // Serves our own R2 COGs (Tbilisi) and Planetary Computer Landsat blobs
+    // (historical/global surface temperature). PC hrefs already carry a SAS token.
     if (request.method === "GET" && url.pathname === "/lst") {
       const tileUrl = url.searchParams.get("url");
-      if (!tileUrl || !tileUrl.startsWith("https://pub-9071f31b4edc4a15ba28c48f949017fc.r2.dev/")) {
+      let okHost = false;
+      try {
+        const h = new URL(tileUrl).host;
+        okHost = tileUrl.startsWith("https://pub-9071f31b4edc4a15ba28c48f949017fc.r2.dev/")
+              || h.endsWith(".blob.core.windows.net");
+      } catch (_) { okHost = false; }
+      if (!tileUrl || !okHost) {
         return new Response("Invalid URL", { status: 400, headers: corsHeaders });
       }
       try {
@@ -105,6 +113,62 @@ export default {
         return new Response(res.body, { status: res.status, headers });
       } catch(e) {
         return new Response("LST fetch failed", { status: 502, headers: corsHeaders });
+      }
+    }
+
+    // ── LST scene search (GET) ────────────────────────────────────────────────
+    // Historical/global surface temperature: query Microsoft Planetary Computer's
+    // STAC for Landsat Collection-2 Level-2 scenes over a point + date range, and
+    // return each scene's signed `lwir11` (ST_B10) COG URL. The client reads the
+    // small parcel window from each COG to build a trend / heat map.
+    //   /lst-scenes?lng=..&lat=..&start=YYYY-MM-DD&end=YYYY-MM-DD&cloud=40&limit=120
+    if (request.method === "GET" && url.pathname === "/lst-scenes") {
+      const lng = parseFloat(url.searchParams.get("lng"));
+      const lat = parseFloat(url.searchParams.get("lat"));
+      const start = url.searchParams.get("start");
+      const end = url.searchParams.get("end");
+      const cloud = Math.min(100, Math.max(0, parseFloat(url.searchParams.get("cloud")) || 40));
+      const limit = Math.min(300, Math.max(1, parseInt(url.searchParams.get("limit")) || 150));
+      if (!isFinite(lng) || !isFinite(lat) || !start || !end) {
+        return new Response(JSON.stringify({ error: "bad_params" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      try {
+        const STAC = "https://planetarycomputer.microsoft.com/api/stac/v1/search";
+        const body = {
+          collections: ["landsat-c2-l2"],
+          intersects: { type: "Point", coordinates: [lng, lat] },
+          datetime: `${start}T00:00:00Z/${end}T23:59:59Z`,
+          query: { "eo:cloud_cover": { lt: cloud }, "platform": { in: ["landsat-8", "landsat-9"] } },
+          limit: limit,
+        };
+        const sr = await fetch(STAC, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+        if (!sr.ok) return new Response(JSON.stringify({ error: "stac_" + sr.status }), { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        const fc = await sr.json();
+        // One SAS token for the whole collection — appended to every asset href.
+        let token = "";
+        try {
+          const tr = await fetch("https://planetarycomputer.microsoft.com/api/sas/v1/token/landsat-c2-l2");
+          if (tr.ok) token = (await tr.json()).token || "";
+        } catch (_) {}
+        const scenes = (fc.features || []).map(f => {
+          const a = f.assets && f.assets.lwir11;
+          if (!a || !a.href) return null;
+          const href = token ? (a.href + (a.href.includes("?") ? "&" : "?") + token) : a.href;
+          const p = f.properties || {};
+          return {
+            id: f.id,
+            datetime: p.datetime,
+            cloud: p["eo:cloud_cover"],
+            platform: p.platform,
+            epsg: p["proj:epsg"] || null,
+            href,
+          };
+        }).filter(Boolean).sort((x, y) => (x.datetime < y.datetime ? -1 : 1));
+        return new Response(JSON.stringify({ scenes }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json", "Cache-Control": "public, max-age=86400" },
+        });
+      } catch (e) {
+        return new Response(JSON.stringify({ error: "search_failed", detail: String(e) }), { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
     }
 
