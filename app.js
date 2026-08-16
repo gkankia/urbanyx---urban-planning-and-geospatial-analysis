@@ -9398,7 +9398,7 @@ async function _lstRun(){
     meta.forEach(s=>{s.ms=Date.parse(s.datetime);});
     _lstMeta=meta; _lstScenes=meta; _lstSceneLoc=c; _lstHistoric=true; _lstMeanCache={};
     _lstYears=[...new Set(meta.map(s=>new Date(s.ms).getUTCFullYear()))].sort((a,b)=>a-b);
-    _lstStartYr=_lstYears[_lstYears.length-1]; // default: current/most-recent year only
+    _lstStartYr=_lstYears[_lstYears.length-1]; _lstEndYr=_lstYears[_lstYears.length-1]; // default: current year only
     _lstBin='all'; _lstSelBinIdx=null;
     await _lstApplyWindow();
     if(!(_lstSeries||[]).some(s=>s.mean!=null)){ return _lstLegacyTbilisi(); }
@@ -9414,7 +9414,7 @@ async function _lstRun(){
 async function _lstApplyWindow(){
   const el=document.getElementById("acc-lst-result");
   const isKa=lang==='ka';
-  const subset=(_lstMeta||[]).filter(s=>new Date(s.ms).getUTCFullYear()>=_lstStartYr);
+  const subset=(_lstMeta||[]).filter(s=>{const y=new Date(s.ms).getUTCFullYear();return y>=_lstStartYr&&y<=_lstEndYr;});
   const prog=(done,total)=>{
     if(!total)return;
     const html=`<div style="display:flex;align-items:center;gap:6px;padding:8px 0;color:rgba(255,255,255,0.4);font-size:0.66rem"><span class="spinner" style="width:11px;height:11px;border-width:1.5px"></span><span>${isKa?'ტემპერატურის დამუშავება':'Reading temperatures'} ${done}/${total}</span></div>`;
@@ -9436,7 +9436,6 @@ async function _lstReadMeans(scenes,onProg){
   await Promise.all(Array.from({length:Math.min(CONC,todo.length)},w));
   return scenes.map(s=>({...s,mean:_lstMeanCache[s.id],ms:s.ms}));
 }
-async function _lstSetStart(y){ y=+y; if(y===_lstStartYr)return; _lstStartYr=y; await _lstApplyWindow(); }
 
 // Legacy single-COG path (Tbilisi only) — used when the global archive has no usable scene.
 async function _lstLegacyTbilisi(){
@@ -9510,33 +9509,51 @@ function _lstSeg(b,label){
   const on=_lstBin===b;
   return `<button onclick="_lstSetBin('${b}')" style="flex:1;border:0;font-family:inherit;font-size:0.66rem;font-weight:${on?700:500};padding:5px 0;border-radius:6px;cursor:pointer;background:${on?'rgba(167,139,250,0.28)':'none'};color:${on?'#fff':'rgba(255,255,255,0.5)'}">${label}</button>`;
 }
-// Year timeline — one tick per year that actually has data. Selecting a year sets the
-// START of the trend window (that year → now); the selected year and everything to its
-// right are highlighted to show the span the trend is measured over.
+// Year timeline — a DUAL-handle range slider picking both the start and end year of
+// the trend window. Two overlaid native range inputs (only their thumbs are clickable)
+// plus a highlighted band between them.
 const LST_FIRST_YEAR=2013; // Landsat 8 launch
 function _lstYearNow(){ return new Date().getFullYear(); }
-function _lstSliderTrack(pct){
-  return `linear-gradient(90deg,rgba(255,255,255,0.12) 0%,rgba(255,255,255,0.12) ${pct}%,rgba(129,140,248,0.85) ${pct}%,rgba(129,140,248,0.85) 100%)`;
+function _lstTimelineBounds(){
+  const years=_lstYears||[]; const minY=years.length?Math.min(...years):LST_FIRST_YEAR;
+  const maxY=years.length?Math.max(...years):_lstYearNow();
+  return {minY,maxY,span:(maxY-minY)||1};
 }
 function _lstTimeline(){
-  const isKa=lang==='ka', years=_lstYears||[], now=_lstYearNow();
-  if(!years.length)return '';
-  const minY=Math.min(...years), span=(now-minY)||1, sy=_lstStartYr;
-  const pct=((sy-minY)/span)*100;
+  const isKa=lang==='ka';
+  if(!(_lstYears&&_lstYears.length))return '';
+  const {minY,maxY,span}=_lstTimelineBounds();
+  const loPct=((_lstStartYr-minY)/span)*100, hiPct=((_lstEndYr-minY)/span)*100;
   const anchors=[0,0.25,0.5,0.75,1].map(f=>Math.round(minY+f*span));
   const lblRow=anchors.map(y=>`<span>${y}</span>`).join('');
   return `<div style="margin:2px 0 10px">`+
-    `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><span style="font-size:0.6rem;color:rgba(255,255,255,0.4)">${isKa?'ტენდენცია წლიდან':'Trend from'}</span><span id="lst-range-lbl" style="font-size:0.68rem;font-weight:600;color:#a78bfa;font-family:ui-monospace,monospace">${sy} → ${now}</span></div>`+
-    `<input type="range" id="lst-year-slider" class="lst-year-slider" min="${minY}" max="${now}" step="1" value="${sy}" style="background:${_lstSliderTrack(pct)}" oninput="_lstSliderPreview(this.value)" onchange="_lstSetStart(this.value)">`+
-    `<div style="display:flex;justify-content:space-between;font-size:0.56rem;color:rgba(255,255,255,0.35);margin-top:6px;font-family:ui-monospace,monospace">${lblRow}</div>`+
+    `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:9px"><span style="font-size:0.6rem;color:rgba(255,255,255,0.4)">${isKa?'ტენდენციის პერიოდი':'Trend period'}</span><span id="lst-range-lbl" style="font-size:0.68rem;font-weight:600;color:#a78bfa;font-family:ui-monospace,monospace">${_lstStartYr} → ${_lstEndYr}</span></div>`+
+    `<div class="lst-dual">`+
+      `<div class="lst-dual-track"></div>`+
+      `<div class="lst-dual-fill" id="lst-dual-fill" style="left:${loPct}%;right:${100-hiPct}%"></div>`+
+      `<input type="range" id="lst-year-lo" class="lst-dual-input" min="${minY}" max="${maxY}" step="1" value="${_lstStartYr}" oninput="_lstDualInput('lo')" onchange="_lstDualChange()">`+
+      `<input type="range" id="lst-year-hi" class="lst-dual-input" min="${minY}" max="${maxY}" step="1" value="${_lstEndYr}" oninput="_lstDualInput('hi')" onchange="_lstDualChange()">`+
+    `</div>`+
+    `<div style="display:flex;justify-content:space-between;font-size:0.56rem;color:rgba(255,255,255,0.35);margin-top:7px;font-family:ui-monospace,monospace">${lblRow}</div>`+
   `</div>`;
 }
-// Live feedback while dragging (no reload until release).
-function _lstSliderPreview(y){
-  const now=_lstYearNow(), minY=(_lstYears&&_lstYears.length)?Math.min(..._lstYears):LST_FIRST_YEAR;
-  const pct=((+y-minY)/((now-minY)||1))*100;
-  const s=document.getElementById('lst-year-slider'); if(s)s.style.background=_lstSliderTrack(pct);
-  const lbl=document.getElementById('lst-range-lbl'); if(lbl)lbl.textContent=`${y} → ${now}`;
+// Live drag: keep lo ≤ hi, move the fill band and the label without reloading.
+function _lstDualInput(which){
+  const loEl=document.getElementById('lst-year-lo'), hiEl=document.getElementById('lst-year-hi');
+  if(!loEl||!hiEl)return;
+  let lo=+loEl.value, hi=+hiEl.value;
+  if(lo>hi){ if(which==='lo'){lo=hi;loEl.value=lo;} else {hi=lo;hiEl.value=hi;} }
+  const {minY,span}=_lstTimelineBounds();
+  const loPct=((lo-minY)/span)*100, hiPct=((hi-minY)/span)*100;
+  const fill=document.getElementById('lst-dual-fill'); if(fill){fill.style.left=loPct+'%';fill.style.right=(100-hiPct)+'%';}
+  const lbl=document.getElementById('lst-range-lbl'); if(lbl)lbl.textContent=`${lo} → ${hi}`;
+}
+async function _lstDualChange(){
+  const loEl=document.getElementById('lst-year-lo'), hiEl=document.getElementById('lst-year-hi');
+  if(!loEl||!hiEl)return;
+  let lo=+loEl.value, hi=+hiEl.value; if(lo>hi){const t=lo;lo=hi;hi=t;}
+  if(lo===_lstStartYr&&hi===_lstEndYr)return;
+  _lstStartYr=lo; _lstEndYr=hi; await _lstApplyWindow();
 }
 // Colormap legend for the heat overlay — same look as the relief legend. The overlay
 // uses a fixed 20–45 °C ramp so the colours are comparable across dates/parcels.
@@ -9584,9 +9601,9 @@ function _lstTrendStat(){
   return {perDecade:beta[1]*10, seDecade:se*10, r2, n, spanY, harmonic, significant:Math.abs(beta[1])>2*se};
 }
 function _lstTrendReadout(){
-  const isKa=lang==='ka', now=_lstYearNow();
-  const sameYear=(_lstStartYr>=now);
-  const label=sameYear?(isKa?`${now} წელი`:`${now}`):(isKa?`ტენდენცია ${_lstStartYr}–${now}`:`Trend ${_lstStartYr}–${now}`);
+  const isKa=lang==='ka';
+  const sameYear=(_lstStartYr>=_lstEndYr);
+  const label=sameYear?(isKa?`${_lstEndYr} წელი`:`${_lstEndYr}`):(isKa?`ტენდენცია ${_lstStartYr}–${_lstEndYr}`:`Trend ${_lstStartYr}–${_lstEndYr}`);
   const wrap=(valHtml,sub)=>`<div style="display:flex;align-items:baseline;gap:7px;flex-wrap:wrap;margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.06)">`+
     `<span style="font-size:0.62rem;color:rgba(255,255,255,0.4)">${label}</span>${valHtml}`+
     (sub?`<span style="font-size:0.55rem;color:rgba(255,255,255,0.3)">${sub}</span>`:'')+`</div>`;
@@ -9638,7 +9655,7 @@ function _lstUpdateHead(dateLabel,temp,cloud,nScenes){
   const ring=`<svg width="54" height="54" viewBox="0 0 70 70" style="flex-shrink:0"><circle cx="35" cy="35" r="27" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="7"/><circle cx="35" cy="35" r="27" fill="none" stroke="${col}" stroke-width="7" stroke-linecap="round" stroke-dasharray="169.65" stroke-dashoffset="${169.65*(1-pct/100)}" transform="rotate(-90 35 35)" style="transition:stroke-dashoffset 0.8s cubic-bezier(0.23,1,0.32,1)"/><text x="35" y="39" text-anchor="middle" fill="${col}" font-size="13" font-weight="700" font-family="-apple-system,sans-serif">${loading?'…':(lst==null?'—':lst+'°')}</text></svg>`;
   const sub=[];
   if(nScenes>1)sub.push((isKa?'საშ. ':'avg ')+nScenes+(isKa?' პერიოდი':' scenes'));
-  else if(cloud!=null)sub.push((isKa?'ღრუბ. ':'cloud ')+Math.round(cloud)+'%');
+  else if(cloud!=null)sub.push((isKa?'ღრუბლიანობა ':'cloud ')+Math.round(cloud)+'%');
   head.innerHTML=`<div style="display:flex;align-items:center;gap:12px">${ring}<div style="min-width:0"><div style="font-size:0.82rem;font-weight:600;color:rgba(255,255,255,0.85)">${dateLabel}</div><div style="font-size:0.62rem;color:rgba(255,255,255,0.4)">${sub.join(' · ')}</div></div></div>`;
 }
 async function _lstSetBin(bin){
@@ -13266,7 +13283,7 @@ let _lstSceneLoc=null, _lstRangeYears=1, _lstBin='all', _lstHistoric=false;
 // Full-archive scene metadata (one cheap STAC fetch), the years that have data, the
 // selected start year (window = startYr → now), and a per-scene mean cache so moving
 // the start year only reads scenes not seen yet.
-let _lstMeta=null, _lstYears=null, _lstStartYr=null, _lstMeanCache={};
+let _lstMeta=null, _lstYears=null, _lstStartYr=null, _lstEndYr=null, _lstMeanCache={};
 
 async function _ensureProj4(){
   if(window.proj4)return;
@@ -13539,7 +13556,7 @@ function renderLSTOverlay(raw,geojson){
 function clearLSTOverlay(){
   _lstOverlayCache=null;
   _lstScenes=null;_lstSeries=null;_lstBins=null;_lstSelBinIdx=null;_lstSceneLoc=null;_lstHistoric=false;
-  _lstMeta=null;_lstYears=null;_lstStartYr=null;_lstMeanCache={};
+  _lstMeta=null;_lstYears=null;_lstStartYr=null;_lstEndYr=null;_lstMeanCache={};
   if(!mapReady)return;
   try{if(map.getLayer("lst-overlay-layer"))map.removeLayer("lst-overlay-layer");}catch(_){}
   try{if(map.getSource("lst-overlay"))map.removeSource("lst-overlay");}catch(_){}
