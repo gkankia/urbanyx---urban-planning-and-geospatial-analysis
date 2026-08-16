@@ -9483,22 +9483,104 @@ function _lstSeg(b,label){
   const on=_lstBin===b;
   return `<button onclick="_lstSetBin('${b}')" style="flex:1;border:0;font-family:inherit;font-size:0.66rem;font-weight:600;padding:5px 0;border-radius:6px;cursor:pointer;background:${on?'rgba(167,139,250,0.14)':'none'};color:${on?'#a78bfa':'rgba(255,255,255,0.35)'}">${label}</button>`;
 }
-// Range chips — mirror the transit history day/band chips.
-function _lstChip(y,label){
-  const on=_lstRangeYears===y;
-  return `<button onclick="_lstSetRange(${y})" style="font-family:ui-monospace,monospace;font-size:0.56rem;border:1px solid ${on?'rgba(129,140,248,0.4)':'rgba(255,255,255,0.09)'};background:${on?'rgba(129,140,248,0.14)':'none'};color:${on?'#818cf8':'rgba(255,255,255,0.35)'};border-radius:6px;padding:3px 7px;cursor:pointer;white-space:nowrap">${label}</button>`;
+// Look-back timeline scroller — a slider whose thumb sets the start year of the
+// window (start … now). Replaces the fixed 1/3/5/All chips.
+const LST_FIRST_YEAR=2013; // Landsat 8 launch
+function _lstYearNow(){ return new Date().getFullYear(); }
+function _lstStartYear(){ return Math.max(LST_FIRST_YEAR, _lstYearNow()-_lstRangeYears+1); }
+function _lstSliderPreview(y){
+  const now=_lstYearNow(), yrs=now-(+y)+1, isKa=lang==='ka';
+  const lbl=document.getElementById('lst-range-lbl');
+  if(lbl)lbl.textContent=`${y}–${now} · ${yrs}${isKa?' წ':'y'}`;
+}
+async function _lstSetStartYear(y){
+  y=Math.max(LST_FIRST_YEAR,Math.min(_lstYearNow(),Math.round(+y)));
+  const yrs=_lstYearNow()-y+1;
+  if(yrs===_lstRangeYears)return;
+  _lstRangeYears=yrs; await _lstRun();
+}
+// Colormap legend for the heat overlay — same look as the relief legend. The overlay
+// uses a fixed 20–45 °C ramp so the colours are comparable across dates/parcels.
+function _drawLstLegend(){
+  const c=document.getElementById('lst-legend-bar'); if(!c)return;
+  const ctx=c.getContext('2d'), w=c.width, h=c.height;
+  for(let x=0;x<w;x++){ const [r,g,b]=_lstTempRGB(20+(x/w)*25); ctx.fillStyle=`rgb(${r},${g},${b})`; ctx.fillRect(x,0,1,h); }
+}
+// Solve A·x = b (square, partial-pivot Gaussian elimination). Returns x or null.
+function _solveLin(A,b){
+  const n=b.length, M=A.map((r,i)=>[...r,b[i]]);
+  for(let c=0;c<n;c++){
+    let piv=c; for(let r=c+1;r<n;r++)if(Math.abs(M[r][c])>Math.abs(M[piv][c]))piv=r;
+    if(Math.abs(M[piv][c])<1e-12)return null;
+    [M[c],M[piv]]=[M[piv],M[c]];
+    for(let r=0;r<n;r++){ if(r===c)continue; const f=M[r][c]/M[c][c]; for(let k=c;k<=n;k++)M[r][k]-=f*M[c][k]; }
+  }
+  return M.map((r,i)=>r[n]/r[i]);
+}
+// Warming trend from the valid scene stack. Landsat's cloud filter biases scenes to
+// clear (summer) days, so a plain slope is corrupted by the annual cycle. We fit a
+// harmonic model  y = a + b·t + c·sin(2πt) + d·cos(2πt)  and report b (°C/yr) as the
+// DESEASONALISED trend, with a slope standard error for a significance flag.
+function _lstTrendStat(){
+  const v=(_lstSeries||[]).filter(s=>s.mean!=null).map(s=>({t:s.ms,y:s.mean})).sort((a,b)=>a.t-b.t);
+  if(v.length<6)return null;
+  const YR=365.25*86400000, t0=v[0].t;
+  const xs=v.map(p=>(p.t-t0)/YR), ys=v.map(p=>p.y), n=v.length;
+  const spanY=xs[n-1]-xs[0];
+  const harmonic=spanY>=1.2; // need ~1+ annual cycle to separate trend from season
+  const dim=harmonic?4:2;
+  const row=t=>harmonic?[1,t,Math.sin(2*Math.PI*t),Math.cos(2*Math.PI*t)]:[1,t];
+  const X=xs.map(row);
+  const XtX=Array.from({length:dim},()=>new Array(dim).fill(0)), Xty=new Array(dim).fill(0);
+  for(let i=0;i<n;i++)for(let a=0;a<dim;a++){ Xty[a]+=X[i][a]*ys[i]; for(let b2=0;b2<dim;b2++)XtX[a][b2]+=X[i][a]*X[i][b2]; }
+  const beta=_solveLin(XtX,Xty); if(!beta)return null;
+  const my=ys.reduce((a,b)=>a+b,0)/n; let ssRes=0,ssTot=0;
+  for(let i=0;i<n;i++){ let p=0; for(let a=0;a<dim;a++)p+=beta[a]*X[i][a]; ssRes+=(ys[i]-p)**2; ssTot+=(ys[i]-my)**2; }
+  const r2=ssTot>0?1-ssRes/ssTot:0;
+  // slope standard error: σ² · (XtX)⁻¹[1][1]
+  const e1=new Array(dim).fill(0); e1[1]=1;
+  const covCol=_solveLin(XtX,e1);
+  const sigma2=n>dim?ssRes/(n-dim):0;
+  const se=(covCol&&covCol[1]>0)?Math.sqrt(sigma2*covCol[1]):Infinity;
+  return {perDecade:beta[1]*10, seDecade:se*10, r2, n, spanY, harmonic, significant:Math.abs(beta[1])>2*se};
+}
+function _lstTrendReadout(){
+  const isKa=lang==='ka';
+  const st=_lstTrendStat();
+  if(!st)return `<div style="font-size:0.58rem;color:rgba(255,255,255,0.25);margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.06)">${isKa?'ტენდენციისთვის მეტი სცენაა საჭირო (გაზარდე პერიოდი)':'Widen the range for a trend'}</div>`;
+  const pd=st.perDecade;
+  const weak=!st.harmonic||!st.significant; // short span or slope within noise
+  const col=weak?'rgba(255,255,255,0.5)':(pd>=0.5?'#ef4444':pd>=0.1?'#f97316':pd<=-0.5?'#38bdf8':pd<=-0.1?'#60a5fa':'rgba(255,255,255,0.6)');
+  const arrow=pd>=0.1?'↑':pd<=-0.1?'↓':'→';
+  const val=`${pd>=0?'+':''}${pd.toFixed(1)}${isFinite(st.seDecade)&&st.harmonic?'±'+st.seDecade.toFixed(1):''} °C/${isKa?'ათწლ.':'decade'}`;
+  const note=!st.harmonic?(isKa?'სეზონური':'seasonal — widen range')
+            :(!st.significant?(isKa?'უმნიშვნელო':'not significant'):(isKa?'დესეზონ.':'deseasonalised'));
+  return `<div style="display:flex;align-items:baseline;gap:7px;flex-wrap:wrap;margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.06)">`+
+    `<span style="font-size:0.62rem;color:rgba(255,255,255,0.4)">${isKa?'დათბობის ტენდენცია':'Warming trend'}</span>`+
+    `<span style="font-size:0.82rem;font-weight:700;color:${col}">${arrow} ${val}</span>`+
+    `<span style="font-size:0.55rem;color:rgba(255,255,255,0.32)">${note} · ${st.n} ${isKa?'სცენა':'scenes'}</span></div>`;
 }
 function _renderLstPanel(){
   const el=document.getElementById("acc-lst-result"); if(!el)return;
   const isKa=lang==='ka';
-  const segRow=`<div style="display:flex;gap:2px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.09);border-radius:8px;padding:2px;margin:2px 0 7px">`+
+  const segRow=`<div style="display:flex;gap:2px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.09);border-radius:8px;padding:2px;margin:2px 0 8px">`+
     _lstSeg('all',isKa?'სცენა':'Scene')+_lstSeg('month',isKa?'თვე':'Month')+_lstSeg('quarter',isKa?'კვარტ.':'Qtr')+_lstSeg('year',isKa?'წელი':'Year')+`</div>`;
-  const chips=`<div style="display:flex;gap:5px;margin-bottom:6px">`+
-    _lstChip(1,'1y')+_lstChip(3,'3y')+_lstChip(5,'5y')+_lstChip(13,isKa?'სრ.':'All')+`</div>`;
+  const now=_lstYearNow(), sy=_lstStartYear();
+  const slider=`<div style="margin:2px 0 9px">`+
+    `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><span style="font-size:0.6rem;color:rgba(255,255,255,0.4)">${isKa?'პერიოდი':'Look-back'}</span><span id="lst-range-lbl" style="font-size:0.62rem;color:#818cf8;font-family:ui-monospace,monospace">${sy}–${now} · ${_lstRangeYears}${isKa?' წ':'y'}</span></div>`+
+    `<input type="range" class="lst-range-slider" min="${LST_FIRST_YEAR}" max="${now}" step="1" value="${sy}" oninput="_lstSliderPreview(this.value)" onchange="_lstSetStartYear(this.value)">`+
+    `<div style="display:flex;justify-content:space-between;font-size:0.55rem;color:rgba(255,255,255,0.3);margin-top:2px"><span>${LST_FIRST_YEAR}</span><span>${now}</span></div>`+
+  `</div>`;
+  const legend=`<div class="relief-legend" id="lst-legend" style="display:block;margin-top:8px"><canvas class="relief-legend-bar" id="lst-legend-bar" width="240" height="8"></canvas><div class="relief-legend-labels"><span>20°C</span><span>32°C</span><span>45°C</span></div></div>`;
   el.innerHTML=
-    `<div id="lst-head" style="margin:2px 0 8px"></div>`+segRow+chips+
+    `<div id="lst-head" style="margin:2px 0 8px"></div>`+
+    legend+
+    slider+
+    segRow+
     `<div id="lst-trend">${_lstTrendSVG()}</div>`+
+    `<div id="lst-trend-stat">${_lstTrendReadout()}</div>`+
     `<div style="font-size:0.58rem;color:rgba(255,255,255,0.28);margin-top:5px;line-height:1.3">${isKa?'Landsat 8/9 · 30მ · Planetary Computer. წერტილზე დაჭერით — რუკაზე ჩნდება ტემპერატურის რუკა.':'Landsat 8/9 · 30 m · Planetary Computer. Click a point to map that period.'}</div>`;
+  _drawLstLegend();
 }
 function _lstRedrawTrend(){ const c=document.getElementById("lst-trend"); if(c)c.innerHTML=_lstTrendSVG(); }
 function _lstUpdateHead(dateLabel,temp,cloud,nScenes){
@@ -9514,7 +9596,6 @@ function _lstUpdateHead(dateLabel,temp,cloud,nScenes){
   else if(cloud!=null)sub.push((isKa?'ღრუბ. ':'cloud ')+Math.round(cloud)+'%');
   head.innerHTML=`<div style="display:flex;align-items:center;gap:12px">${ring}<div style="min-width:0"><div style="font-size:0.82rem;font-weight:600;color:rgba(255,255,255,0.85)">${dateLabel}</div><div style="font-size:0.62rem;color:rgba(255,255,255,0.4)">${sub.join(' · ')}</div></div></div>`;
 }
-async function _lstSetRange(years){ if(_lstRangeYears===years)return; _lstRangeYears=years; await _lstRun(); }
 async function _lstSetBin(bin){
   if(_lstBin===bin)return; _lstBin=bin; _lstSelBinIdx=null;
   _lstBins=_lstBinned(_lstSeries,_lstBin);
