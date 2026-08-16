@@ -9205,7 +9205,7 @@ function setupProCard(show=false){
   document.getElementById("pro-cat-climate-content").innerHTML=
     `<div class="lp-row acc-toggle-row" style="padding:4px 0" onclick="toggleAccCanopy()"><span class="lp-row-name">${isKa?"ხის ვარჯის დაფარვა":"Tree Canopy Coverage"}</span><div class="lp-sw" id="acc-canopy-sw"></div></div>`+
     `<div id="acc-canopy-result"></div>`+
-    `<div class="lp-row acc-toggle-row" style="padding:4px 0;margin-top:2px" onclick="toggleAccLST()"><span class="lp-row-name">${isKa?"ზედაპირის ტემპ.":"Surface Temperature"}</span><div class="lp-sw" id="acc-lst-sw"></div></div>`+
+    `<div class="lp-row acc-toggle-row" style="padding:4px 0;margin-top:2px" onclick="toggleAccLST()"><span class="lp-row-name">${isKa?"მიწის ზედაპირის ტემპერატურა.":"Land Surface Temperature"}</span><div class="lp-sw" id="acc-lst-sw"></div></div>`+
     `<div id="acc-lst-result"></div>`;
 
   // Education — available to all
@@ -9481,7 +9481,7 @@ function _lstTrendSVG(){
 // Granularity segmented control — mirrors the transit Live/History switcher.
 function _lstSeg(b,label){
   const on=_lstBin===b;
-  return `<button onclick="_lstSetBin('${b}')" style="flex:1;border:0;font-family:inherit;font-size:0.66rem;font-weight:600;padding:5px 0;border-radius:6px;cursor:pointer;background:${on?'rgba(167,139,250,0.14)':'none'};color:${on?'#a78bfa':'rgba(255,255,255,0.35)'}">${label}</button>`;
+  return `<button onclick="_lstSetBin('${b}')" style="flex:1;border:0;font-family:inherit;font-size:0.66rem;font-weight:${on?700:500};padding:5px 0;border-radius:6px;cursor:pointer;background:${on?'rgba(167,139,250,0.28)':'none'};color:${on?'#fff':'rgba(255,255,255,0.5)'}">${label}</button>`;
 }
 // Look-back timeline scroller — a slider whose thumb sets the start year of the
 // window (start … now). Replaces the fixed 1/3/5/All chips.
@@ -13567,14 +13567,14 @@ async function runClimateAnalysis(geojson){
         </svg>
         <div>
           <div style="font-size:0.78rem;color:rgba(255,255,255,0.7);display:flex;align-items:center;gap:5px;margin-bottom:2px">
-            ${lang==="ka"?"ზედაპირის ტემპ. (ზაფხული)":"Surface Temp. (Summer)"}
+            ${lang==="ka"?"მიწის ზედაპირის ტემპერატურა. (ზაფხული)":"Land Surface Temperature. (Summer)"}
           </div>
           <div style="font-size:0.65rem;color:rgba(255,255,255,0.25)">Landsat 8 · 30m · 2024</div>
         </div>
       </div>
     </div>`;
   }else{
-    html+=`<div style="font-size:0.75rem;color:rgba(255,255,255,0.25)">${lang==="ka"?"ტემპერატურის მონაცემები მიუწვდომელია":"LST data unavailable"}</div>`;
+    html+=`<div style="font-size:0.75rem;color:rgba(255,255,255,0.25)">${lang==="ka"?"მიწის ზედაპირის ტემპერატურის მონაცემები მიუწვდომელია":"LST data unavailable"}</div>`;
   }
 
   if(canopyResult.status==="fulfilled"||lstResult.status==="fulfilled"){
