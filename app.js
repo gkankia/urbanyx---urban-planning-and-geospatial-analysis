@@ -13227,12 +13227,30 @@ function _renderLstGrid(agg){
   map.addLayer({id:'lst-overlay-layer',type:'raster',source:'lst-overlay',paint:{'raster-opacity':0.78,'raster-resampling':'nearest'}});
   _lstOverlayCache={dataUrl,nw,ne,se,sw};
 }
+// Planetary Computer blobs need a SAS token. The token endpoint is CORS-open, so we
+// sign client-side (cached ~1 h) — this works whether or not the Worker also signs.
+let _lstSas=null, _lstSasExp=0;
+async function _lstEnsureSas(){
+  const now=Date.now();
+  if(_lstSas&&now<_lstSasExp-120000)return _lstSas;
+  try{
+    const r=await fetch('https://planetarycomputer.microsoft.com/api/sas/v1/token/landsat-c2-l2');
+    if(r.ok){const j=await r.json();_lstSas=j.token||'';_lstSasExp=j['msft:expiry']?Date.parse(j['msft:expiry']):(now+3000000);}
+  }catch(_){}
+  return _lstSas;
+}
+function _lstSignScenes(scenes,tok){
+  if(!tok)return scenes;
+  scenes.forEach(s=>{ if(s.href&&!/[?&]sig=/.test(s.href))s.href+=(s.href.includes('?')?'&':'?')+tok; });
+  return scenes;
+}
 async function fetchLSTScenes(lng,lat,years,cloud){
   const end=new Date(); const start=new Date(end); start.setFullYear(start.getFullYear()-years);
   const iso=d=>d.toISOString().slice(0,10);
   const u=`${PROXY}/lst-scenes?lng=${lng.toFixed(5)}&lat=${lat.toFixed(5)}&start=${iso(start)}&end=${iso(end)}&cloud=${cloud}&limit=200`;
   const r=await fetch(u); if(!r.ok)throw new Error('scenes_'+r.status);
-  return (await r.json()).scenes||[];
+  const scenes=(await r.json()).scenes||[];
+  return _lstSignScenes(scenes, await _lstEnsureSas());
 }
 async function _buildLstSeries(scenes,geojson,onProg){
   const repCache={}; const getRep=e=>{const k=e||32638; if(!repCache[k])repCache[k]=_lstReproject(geojson,k); return repCache[k];};
