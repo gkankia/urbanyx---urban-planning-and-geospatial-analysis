@@ -9398,7 +9398,10 @@ async function _lstRun(){
     meta.forEach(s=>{s.ms=Date.parse(s.datetime);});
     _lstMeta=meta; _lstScenes=meta; _lstSceneLoc=c; _lstHistoric=true; _lstMeanCache={};
     _lstYears=[...new Set(meta.map(s=>new Date(s.ms).getUTCFullYear()))].sort((a,b)=>a-b);
-    _lstStartYr=_lstYears[_lstYears.length-1]; _lstEndYr=_lstYears[_lstYears.length-1]; // default: current year only
+    // Default to a separated ~3-year window so both handles are visible/usable and the
+    // trend is meaningful out of the box.
+    _lstEndYr=_lstYears[_lstYears.length-1];
+    _lstStartYr=_lstYears[Math.max(0,_lstYears.length-3)];
     _lstBin='all'; _lstSelBinIdx=null;
     await _lstApplyWindow();
     if(!(_lstSeries||[]).some(s=>s.mean!=null)){ return _lstLegacyTbilisi(); }
@@ -9531,11 +9534,17 @@ function _lstTimeline(){
     `<div class="lst-dual">`+
       `<div class="lst-dual-track"></div>`+
       `<div class="lst-dual-fill" id="lst-dual-fill" style="left:${loPct}%;right:${100-hiPct}%"></div>`+
-      `<input type="range" id="lst-year-lo" class="lst-dual-input" min="${minY}" max="${maxY}" step="1" value="${_lstStartYr}" oninput="_lstDualInput('lo')" onchange="_lstDualChange()">`+
-      `<input type="range" id="lst-year-hi" class="lst-dual-input" min="${minY}" max="${maxY}" step="1" value="${_lstEndYr}" oninput="_lstDualInput('hi')" onchange="_lstDualChange()">`+
+      `<input type="range" id="lst-year-lo" class="lst-dual-input" min="${minY}" max="${maxY}" step="1" value="${_lstStartYr}" onpointerdown="_lstDualRaise(this)" oninput="_lstDualInput('lo')" onchange="_lstDualChange()">`+
+      `<input type="range" id="lst-year-hi" class="lst-dual-input" min="${minY}" max="${maxY}" step="1" value="${_lstEndYr}" onpointerdown="_lstDualRaise(this)" oninput="_lstDualInput('hi')" onchange="_lstDualChange()">`+
     `</div>`+
     `<div style="display:flex;justify-content:space-between;font-size:0.56rem;color:rgba(255,255,255,0.35);margin-top:7px;font-family:ui-monospace,monospace">${lblRow}</div>`+
   `</div>`;
+}
+// Raise the handle being grabbed so overlapping thumbs are always reachable.
+function _lstDualRaise(el){
+  const lo=document.getElementById('lst-year-lo'), hi=document.getElementById('lst-year-hi');
+  if(lo)lo.style.zIndex=(el.id==='lst-year-lo')?5:4;
+  if(hi)hi.style.zIndex=(el.id==='lst-year-hi')?5:4;
 }
 // Live drag: keep lo ≤ hi, move the fill band and the label without reloading.
 function _lstDualInput(which){
