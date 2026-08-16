@@ -718,7 +718,7 @@ function updateUserUI(){
     const initials=(currentUser.name||currentUser.email||"U").split(" ").map(w=>w[0]).join("").toUpperCase().slice(0,2);
     setAvatar(document.getElementById("u-avatar"),currentUser.avatarUrl,initials);
     const _navAvEl=document.getElementById("nav-u-avatar");if(_navAvEl)setAvatar(_navAvEl,currentUser.avatarUrl,initials);
-    {const _pf=document.getElementById("pf-avatar-initials");if(_pf){const _s=_pf.querySelector("span");if(_s)_s.textContent=initials;}}
+    {const _pf=document.getElementById("pf-avatar");if(_pf)setAvatar(_pf,currentUser.avatarUrl,initials);}
     document.getElementById("u-name").textContent=currentUser.name||currentUser.email;
     const planEl=document.getElementById("u-plan");
     planEl.textContent=currentUser.plan==="pro"?tr.planPro:tr.planFree;
@@ -743,7 +743,7 @@ function updateUserUI(){
     const _navSO2=document.getElementById("nav-signout-btn");if(_navSO2)_navSO2.style.display="none";
     _updateProjectsNavBtn();
     const _navAvEl2=document.getElementById("nav-u-avatar");if(_navAvEl2){const _ti=_navAvEl2.querySelector(".avatar-initials");if(_ti)_ti.textContent="";}
-    {const _pf=document.getElementById("pf-avatar-initials");if(_pf){const _s=_pf.querySelector("span");if(_s)_s.textContent="?";}}
+    {const _pf=document.getElementById("pf-avatar");if(_pf)setAvatar(_pf,null,"?");}
   }
 }
 

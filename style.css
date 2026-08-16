@@ -906,20 +906,22 @@
   /* === Icon Nav (full-height sidebar column) === */
   /* Left rail dissolved: the middle controls become a floating middle-left glass
      panel (same look as the zoom controls); search + profile relocate out of it. */
-  #icon-nav { position:absolute; left:16px; top:50%; transform:translateY(-50%); bottom:auto; width:auto; z-index:20; background:var(--glass-bg); backdrop-filter:var(--glass-blur); -webkit-backdrop-filter:var(--glass-blur); border:1px solid var(--glass-border); border-radius:10px; box-shadow:var(--glass-shadow); padding:3px; display:flex; flex-direction:column; align-items:center; gap:1px; user-select:none; }
-  #nav-brand-wrap { display:none; }   /* search moved to the standalone top-left icon */
-  #nav-user-btn { display:none; }     /* profile lives in the top-right pill */
+  #icon-nav { position:absolute; left:16px; top:50%; transform:translateY(-50%); bottom:auto; width:auto; z-index:10; background:var(--glass-bg); backdrop-filter:var(--glass-blur); -webkit-backdrop-filter:var(--glass-blur); border:1px solid var(--glass-border); border-radius:10px; box-shadow:var(--glass-shadow); overflow:hidden; padding:0; display:flex; flex-direction:column; align-items:center; gap:0; user-select:none; }
+  #nav-user-btn { display:none; }     /* profile lives in the top-right avatar */
   #icon-nav .nav-group { padding:0; gap:0; }
   #icon-nav .nav-group.bottom { margin-top:0; padding-bottom:0; }
   #icon-nav .nav-lbl { display:none; }  /* icon-only, like the zoom control panel */
   #icon-nav .nav-sep { display:none; }
+  #icon-nav .nav-btn { width:40px; height:38px; border-radius:0; }  /* flush, matching .mzc-btn */
+  #icon-nav .nav-tip { display:none; }  /* overflow:hidden clips them — use native title tooltips instead */
   /* Floating map icons (search top-left, profile top-right): transparent, with a
      soft shadow so they read against any basemap. */
-  #search-fab, #profile-fab { position:absolute; top:14px; z-index:21; width:40px; height:40px; display:flex; align-items:center; justify-content:center; background:transparent; border:none; box-shadow:none; color:#fff; cursor:pointer; filter:drop-shadow(0 1px 5px rgba(0,0,0,0.85)); transition:transform 0.12s, opacity 0.15s; }
-  #search-fab { left:14px; }
-  #profile-fab { right:16px; }
+  #search-fab, #profile-fab { position:absolute; top:14px; width:40px; height:40px; display:flex; align-items:center; justify-content:center; background:transparent; border:none; box-shadow:none; color:#fff; cursor:pointer; filter:drop-shadow(0 1px 5px rgba(0,0,0,0.85)); transition:transform 0.12s, opacity 0.15s; }
+  #search-fab { left:14px; z-index:10; }        /* a control — sits behind the first-load blur */
+  #profile-fab { right:16px; z-index:30; }       /* avatar stays crisp above the blur */
   #search-fab:hover, #profile-fab:hover { transform:scale(1.08); }
-  #profile-fab .pf-avatar { width:30px; height:30px; border-radius:50%; background:rgba(99,102,241,0.9); display:flex; align-items:center; justify-content:center; color:#fff; font-size:0.72rem; font-weight:700; }
+  #profile-fab .pf-avatar { width:32px; height:32px; border-radius:50%; overflow:hidden; background:rgba(99,102,241,0.95); display:flex; align-items:center; justify-content:center; color:#fff; font-size:0.72rem; font-weight:700; box-shadow:0 1px 5px rgba(0,0,0,0.7); }
+  #profile-fab .pf-avatar .avatar-img { width:100%; height:100%; border-radius:50%; object-fit:cover; display:block; }
   #nav-brand-wrap { width:48px; display:flex; align-items:center; justify-content:center; flex-shrink:0; border-bottom:1px solid rgba(255,255,255,0.07); padding:7px 0; margin-bottom:6px; }
   .nav-group { display:flex; flex-direction:column; align-items:center; gap:1px; width:100%; padding:0 4px; }
   /* micro-labels under each rail icon — the icons never had names before */

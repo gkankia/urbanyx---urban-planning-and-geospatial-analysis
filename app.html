@@ -231,28 +231,22 @@
 </button>
 <!-- Standalone top-right profile icon → opens the account panel -->
 <button id="profile-fab" onclick="navOpenAccount()" title="Account">
-  <div class="pf-avatar" id="pf-avatar-initials"><span>?</span></div>
+  <div class="pf-avatar" id="pf-avatar"><span class="avatar-initials">?</span></div>
 </button>
 
 <div id="icon-nav">
-  <div id="nav-brand-wrap">
-    <button class="nav-btn" id="nav-brand" onclick="navBrandClick()">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-      <span class="nav-tip" id="nav-tip-search">Search</span>
-    </button>
-  </div>
   <div class="nav-group">
-    <button class="nav-btn" id="nav-projects-btn" onclick="openProjectsPanel()" style="display:none">
+    <button class="nav-btn" id="nav-projects-btn" onclick="openProjectsPanel()" style="display:none" title="Projects">
       <img src="analysis-logos/my project.svg" width="30" height="30" style="opacity:0.65;transition:opacity 0.15s" id="nav-projects-icon">
       <span class="nav-lbl" id="nav-lbl-projects">Projects</span>
       <span class="nav-tip" id="nav-tip-projects">Projects</span>
     </button>
-    <button class="nav-btn" id="nav-import-btn" onclick="navToggleImport()">
+    <button class="nav-btn" id="nav-import-btn" onclick="navToggleImport()" title="Import">
       <img src="analysis-logos/import data.svg" width="30" height="30" style="opacity:0.55;transition:opacity 0.15s" id="nav-import-icon">
       <span class="nav-lbl" id="nav-lbl-import">Import</span>
       <span class="nav-tip" id="nav-tip-import">Import</span>
     </button>
-    <button class="nav-btn" id="nav-draw-btn" onclick="navToggleDraw()">
+    <button class="nav-btn" id="nav-draw-btn" onclick="navToggleDraw()" title="Draw">
       <img src="analysis-logos/draw.svg" width="30" height="30" style="opacity:0.55;transition:opacity 0.15s" id="nav-draw-icon">
       <span class="nav-lbl" id="nav-lbl-draw">Draw</span>
       <span class="nav-tip" id="nav-tip-draw">Draw</span>
