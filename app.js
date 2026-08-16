@@ -9390,7 +9390,7 @@ async function _lstRun(){
   if(!c){ if(sw)sw.classList.remove("on"); return; }
   try{
     await _ensureProj4();
-    if(el)el.innerHTML=`<div style="display:flex;align-items:center;gap:6px;padding:6px 0;color:rgba(255,255,255,0.4);font-size:0.68rem"><span class="spinner" style="width:11px;height:11px;border-width:1.5px"></span><span>${isKa?'სცენების ძებნა…':'Finding scenes…'}</span></div>`;
+    if(el)el.innerHTML=`<div style="display:flex;align-items:center;gap:6px;padding:6px 0;color:rgba(255,255,255,0.4);font-size:0.68rem"><span class="spinner" style="width:11px;height:11px;border-width:1.5px"></span><span>${isKa?'პერიოდის ძებნა…':'Ranging…'}</span></div>`;
     // One cheap metadata fetch over the whole Landsat archive → know which years exist.
     const fullYears=_lstYearNow()-LST_FIRST_YEAR+1;
     const meta=await fetchLSTScenes(c[0],c[1],fullYears,40);
@@ -9515,16 +9515,28 @@ function _lstSeg(b,label){
 // right are highlighted to show the span the trend is measured over.
 const LST_FIRST_YEAR=2013; // Landsat 8 launch
 function _lstYearNow(){ return new Date().getFullYear(); }
+function _lstSliderTrack(pct){
+  return `linear-gradient(90deg,rgba(255,255,255,0.12) 0%,rgba(255,255,255,0.12) ${pct}%,rgba(129,140,248,0.85) ${pct}%,rgba(129,140,248,0.85) 100%)`;
+}
 function _lstTimeline(){
   const isKa=lang==='ka', years=_lstYears||[], now=_lstYearNow();
   if(!years.length)return '';
-  const ticks=years.map(y=>{
-    const sel=y===_lstStartYr, inWin=y>=_lstStartYr;
-    return `<button onclick="_lstSetStart(${y})" title="${y} → ${now}" style="flex:1;min-width:22px;border:0;background:none;padding:0;cursor:pointer;font-family:ui-monospace,monospace;font-size:0.55rem;font-weight:${sel?700:400};color:${sel?'#fff':inWin?'#818cf8':'rgba(255,255,255,0.3)'}"><div style="height:6px;border-radius:3px;margin:0 1px 3px;background:${sel?'#818cf8':inWin?'rgba(129,140,248,0.5)':'rgba(255,255,255,0.1)'}"></div>${String(y).slice(2)}</button>`;
-  }).join('');
-  return `<div style="margin:2px 0 9px">`+
-    `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px"><span style="font-size:0.6rem;color:rgba(255,255,255,0.4)">${isKa?'ტენდენცია წლიდან':'Trend from'}</span><span style="font-size:0.62rem;color:#818cf8;font-family:ui-monospace,monospace">${_lstStartYr} → ${now}</span></div>`+
-    `<div style="display:flex;gap:2px;align-items:flex-end">${ticks}</div></div>`;
+  const minY=Math.min(...years), span=(now-minY)||1, sy=_lstStartYr;
+  const pct=((sy-minY)/span)*100;
+  const anchors=[0,0.25,0.5,0.75,1].map(f=>Math.round(minY+f*span));
+  const lblRow=anchors.map(y=>`<span>${y}</span>`).join('');
+  return `<div style="margin:2px 0 10px">`+
+    `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><span style="font-size:0.6rem;color:rgba(255,255,255,0.4)">${isKa?'ტენდენცია წლიდან':'Trend from'}</span><span id="lst-range-lbl" style="font-size:0.68rem;font-weight:600;color:#a78bfa;font-family:ui-monospace,monospace">${sy} → ${now}</span></div>`+
+    `<input type="range" id="lst-year-slider" class="lst-year-slider" min="${minY}" max="${now}" step="1" value="${sy}" style="background:${_lstSliderTrack(pct)}" oninput="_lstSliderPreview(this.value)" onchange="_lstSetStart(this.value)">`+
+    `<div style="display:flex;justify-content:space-between;font-size:0.56rem;color:rgba(255,255,255,0.35);margin-top:6px;font-family:ui-monospace,monospace">${lblRow}</div>`+
+  `</div>`;
+}
+// Live feedback while dragging (no reload until release).
+function _lstSliderPreview(y){
+  const now=_lstYearNow(), minY=(_lstYears&&_lstYears.length)?Math.min(..._lstYears):LST_FIRST_YEAR;
+  const pct=((+y-minY)/((now-minY)||1))*100;
+  const s=document.getElementById('lst-year-slider'); if(s)s.style.background=_lstSliderTrack(pct);
+  const lbl=document.getElementById('lst-range-lbl'); if(lbl)lbl.textContent=`${y} → ${now}`;
 }
 // Colormap legend for the heat overlay — same look as the relief legend. The overlay
 // uses a fixed 20–45 °C ramp so the colours are comparable across dates/parcels.
@@ -9554,7 +9566,7 @@ function _lstTrendStat(){
   const YR=365.25*86400000, t0=v[0].t;
   const xs=v.map(p=>(p.t-t0)/YR), ys=v.map(p=>p.y), n=v.length;
   const spanY=xs[n-1]-xs[0];
-  const harmonic=spanY>=1.2; // need ~1+ annual cycle to separate trend from season
+  const harmonic=spanY>=2.0; // need ~2 full annual cycles to fit season + trend stably
   const dim=harmonic?4:2;
   const row=t=>harmonic?[1,t,Math.sin(2*Math.PI*t),Math.cos(2*Math.PI*t)]:[1,t];
   const X=xs.map(row);
@@ -9584,21 +9596,26 @@ function _lstTrendReadout(){
     return wrap(`<span style="font-size:0.8rem;font-weight:600;color:rgba(255,255,255,0.5)">—</span>`,
       isKa?'აირჩიე ადრინდელი წელი (მინ. 2 წ)':'select an earlier year (min. 2 yrs)');
   const pd=st.perDecade, se=st.seDecade;
+  // Safety net: a real surface-temperature trend is a few °C/decade at most. Anything
+  // wilder (or with a huge error bar) means an ill-conditioned fit — show nothing.
+  if(!isFinite(pd)||Math.abs(pd)>20||!isFinite(se)||se>20)
+    return wrap(`<span style="font-size:0.8rem;font-weight:600;color:rgba(255,255,255,0.5)">—</span>`,
+      isKa?'ხმაურიანი — მეტი მონაცემი':'too noisy — need a longer span');
   // Slope within noise → call it steady rather than reporting a spurious direction.
   if(!st.significant)
     return wrap(`<span style="font-size:0.8rem;font-weight:700;color:rgba(255,255,255,0.62)">${isKa?'≈ სტაბილური':'≈ steady'}</span>`,
-      `${pd>=0?'+':''}${pd.toFixed(1)}±${se.toFixed(1)} °C/${isKa?'ათწლ.':'dec'} · ${st.n} ${isKa?'სცენა':'scenes'}`);
+      `${pd>=0?'+':''}${pd.toFixed(1)}±${se.toFixed(1)} °C/${isKa?'ათწლ.':'dec'} · ${st.n} ${isKa?'პერიოდი':'scenes'}`);
   const warming=pd>0;
   const col=pd>=0.5?'#ef4444':pd>0?'#f97316':pd<=-0.5?'#38bdf8':'#60a5fa';
   const word=warming?(isKa?'დათბობა':'warming'):(isKa?'გაგრილება':'cooling');
   return wrap(`<span style="font-size:0.82rem;font-weight:700;color:${col}">${warming?'↑':'↓'} ${pd>=0?'+':''}${pd.toFixed(1)} °C/${isKa?'ათწლ.':'dec'}</span>`,
-    `${word} · ±${se.toFixed(1)} · ${st.n} ${isKa?'სცენა':'scenes'}`);
+    `${word} · ±${se.toFixed(1)} · ${st.n} ${isKa?'პერიოდი':'scenes'}`);
 }
 function _renderLstPanel(){
   const el=document.getElementById("acc-lst-result"); if(!el)return;
   const isKa=lang==='ka';
   const segRow=`<div style="display:flex;gap:2px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.09);border-radius:8px;padding:2px;margin:2px 0 8px">`+
-    _lstSeg('all',isKa?'სცენა':'Scene')+_lstSeg('month',isKa?'თვე':'Month')+_lstSeg('quarter',isKa?'კვარტ.':'Qtr')+_lstSeg('year',isKa?'წელი':'Year')+`</div>`;
+    _lstSeg('all',isKa?'პერიოდი':'Scene')+_lstSeg('month',isKa?'თვე':'Month')+_lstSeg('quarter',isKa?'კვარტ.':'Qtr')+_lstSeg('year',isKa?'წელი':'Year')+`</div>`;
   const legend=`<div class="relief-legend" id="lst-legend" style="display:block;margin-top:8px"><canvas class="relief-legend-bar" id="lst-legend-bar" width="240" height="8"></canvas><div class="relief-legend-labels"><span>20°C</span><span>32°C</span><span>45°C</span></div></div>`;
   el.innerHTML=
     `<div id="lst-head" style="margin:2px 0 8px"></div>`+
@@ -9620,7 +9637,7 @@ function _lstUpdateHead(dateLabel,temp,cloud,nScenes){
   const pct=lst==null?0:Math.min(100,Math.max(0,((lst-10)/40)*100));
   const ring=`<svg width="54" height="54" viewBox="0 0 70 70" style="flex-shrink:0"><circle cx="35" cy="35" r="27" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="7"/><circle cx="35" cy="35" r="27" fill="none" stroke="${col}" stroke-width="7" stroke-linecap="round" stroke-dasharray="169.65" stroke-dashoffset="${169.65*(1-pct/100)}" transform="rotate(-90 35 35)" style="transition:stroke-dashoffset 0.8s cubic-bezier(0.23,1,0.32,1)"/><text x="35" y="39" text-anchor="middle" fill="${col}" font-size="13" font-weight="700" font-family="-apple-system,sans-serif">${loading?'…':(lst==null?'—':lst+'°')}</text></svg>`;
   const sub=[];
-  if(nScenes>1)sub.push((isKa?'საშ. ':'avg ')+nScenes+(isKa?' სცენა':' scenes'));
+  if(nScenes>1)sub.push((isKa?'საშ. ':'avg ')+nScenes+(isKa?' პერიოდი':' scenes'));
   else if(cloud!=null)sub.push((isKa?'ღრუბ. ':'cloud ')+Math.round(cloud)+'%');
   head.innerHTML=`<div style="display:flex;align-items:center;gap:12px">${ring}<div style="min-width:0"><div style="font-size:0.82rem;font-weight:600;color:rgba(255,255,255,0.85)">${dateLabel}</div><div style="font-size:0.62rem;color:rgba(255,255,255,0.4)">${sub.join(' · ')}</div></div></div>`;
 }
