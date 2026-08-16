@@ -718,6 +718,7 @@ function updateUserUI(){
     const initials=(currentUser.name||currentUser.email||"U").split(" ").map(w=>w[0]).join("").toUpperCase().slice(0,2);
     setAvatar(document.getElementById("u-avatar"),currentUser.avatarUrl,initials);
     const _navAvEl=document.getElementById("nav-u-avatar");if(_navAvEl)setAvatar(_navAvEl,currentUser.avatarUrl,initials);
+    {const _pf=document.getElementById("pf-avatar-initials");if(_pf){const _s=_pf.querySelector("span");if(_s)_s.textContent=initials;}}
     document.getElementById("u-name").textContent=currentUser.name||currentUser.email;
     const planEl=document.getElementById("u-plan");
     planEl.textContent=currentUser.plan==="pro"?tr.planPro:tr.planFree;
@@ -742,6 +743,7 @@ function updateUserUI(){
     const _navSO2=document.getElementById("nav-signout-btn");if(_navSO2)_navSO2.style.display="none";
     _updateProjectsNavBtn();
     const _navAvEl2=document.getElementById("nav-u-avatar");if(_navAvEl2){const _ti=_navAvEl2.querySelector(".avatar-initials");if(_ti)_ti.textContent="";}
+    {const _pf=document.getElementById("pf-avatar-initials");if(_pf){const _s=_pf.querySelector("span");if(_s)_s.textContent="?";}}
   }
 }
 
@@ -7156,6 +7158,7 @@ function _parkingRenderLayers(polyFeatures,centroidFeatures){
 
 function clearParcelSelection(){
   _clearLocationPin(); // remove any location pin + exit pin mode
+  {const _cs=document.getElementById("center-search");if(_cs&&_cs.classList.contains("compact"))_cs.classList.add("hidden");} // nothing selected → collapse search to the icon
   if(_activeBldId){
     // Drawn area: remove the shape entirely along with any analysis results
     _nearbyReqToken++;
@@ -7686,6 +7689,7 @@ function _showLocationCard(lng,lat){
 function showParcelPopup(lngLat){
   if(!map||!lngLat)return;
   _clearLocationPin(); // selecting a Georgian parcel exits pin mode
+  {const _cs=document.getElementById("center-search");if(_cs){_cs.classList.add("compact");_cs.classList.remove("hidden");}} // reveal the search bar for the selected parcel
   const tr=t();
   _parcelCardLngLat=lngLat;
   _parcelCardDragged=false;
@@ -14656,7 +14660,9 @@ async function init(){
     if(e.target.closest("#auth-modal,#paywall-modal,#dashboard-modal,#center-search"))return;
     mapMoved=true;
     document.getElementById("map-blur").classList.add("hidden");
-    document.getElementById("center-search").classList.add("compact");
+    // Collapse the search to just the top-left icon; it re-opens on icon click or
+    // when a parcel is selected.
+    document.getElementById("center-search").classList.add("compact","hidden");
   },{passive:true});
   // Password-recovery links land here with a recovery session in the URL. Do NOT
   // sign the user in — show the "set new password" view instead.

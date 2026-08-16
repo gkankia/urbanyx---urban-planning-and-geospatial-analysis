@@ -913,9 +913,13 @@
   #icon-nav .nav-group.bottom { margin-top:0; padding-bottom:0; }
   #icon-nav .nav-lbl { display:none; }  /* icon-only, like the zoom control panel */
   #icon-nav .nav-sep { display:none; }
-  /* Standalone top-left search icon (glass, matches the zoom/nav panels) */
-  #search-fab { position:absolute; top:14px; left:12px; z-index:21; width:40px; height:40px; display:flex; align-items:center; justify-content:center; background:var(--glass-bg); backdrop-filter:var(--glass-blur); -webkit-backdrop-filter:var(--glass-blur); border:1px solid var(--glass-border); border-radius:10px; box-shadow:var(--glass-shadow); color:rgba(255,255,255,0.62); cursor:pointer; transition:color 0.15s, background 0.15s; }
-  #search-fab:hover { color:rgba(255,255,255,0.95); background:rgba(255,255,255,0.05); }
+  /* Floating map icons (search top-left, profile top-right): transparent, with a
+     soft shadow so they read against any basemap. */
+  #search-fab, #profile-fab { position:absolute; top:14px; z-index:21; width:40px; height:40px; display:flex; align-items:center; justify-content:center; background:transparent; border:none; box-shadow:none; color:#fff; cursor:pointer; filter:drop-shadow(0 1px 5px rgba(0,0,0,0.85)); transition:transform 0.12s, opacity 0.15s; }
+  #search-fab { left:14px; }
+  #profile-fab { right:16px; }
+  #search-fab:hover, #profile-fab:hover { transform:scale(1.08); }
+  #profile-fab .pf-avatar { width:30px; height:30px; border-radius:50%; background:rgba(99,102,241,0.9); display:flex; align-items:center; justify-content:center; color:#fff; font-size:0.72rem; font-weight:700; }
   #nav-brand-wrap { width:48px; display:flex; align-items:center; justify-content:center; flex-shrink:0; border-bottom:1px solid rgba(255,255,255,0.07); padding:7px 0; margin-bottom:6px; }
   .nav-group { display:flex; flex-direction:column; align-items:center; gap:1px; width:100%; padding:0 4px; }
   /* micro-labels under each rail icon — the icons never had names before */
@@ -1060,7 +1064,7 @@
 
   @media (max-width:820px) {
     #icon-nav { display:none; }
-    #search-fab { display:none; }
+    #search-fab, #profile-fab { display:none; }
     #map-wrap { left:0; bottom:56px; }
     #center-search.compact { left:8px; right:8px; top:8px; }
     #center-search.compact .center-inner { max-width:none; }
