@@ -9205,7 +9205,7 @@ function setupProCard(show=false){
   document.getElementById("pro-cat-climate-content").innerHTML=
     `<div class="lp-row acc-toggle-row" style="padding:4px 0" onclick="toggleAccCanopy()"><span class="lp-row-name">${isKa?"ხის ვარჯის დაფარვა":"Tree Canopy Coverage"}</span><div class="lp-sw" id="acc-canopy-sw"></div></div>`+
     `<div id="acc-canopy-result"></div>`+
-    `<div class="lp-row acc-toggle-row" style="padding:4px 0;margin-top:2px" onclick="toggleAccLST()"><span class="lp-row-name">${isKa?"მიწის ზედაპირის ტემპერატურა.":"Land Surface Temperature"}</span><div class="lp-sw" id="acc-lst-sw"></div></div>`+
+    `<div class="lp-row acc-toggle-row" style="padding:4px 0;margin-top:2px" onclick="toggleAccLST()"><span class="lp-row-name">${isKa?"მიწის ზედაპირის ტემპერატურა":"Land Surface Temperature"}</span><div class="lp-sw" id="acc-lst-sw"></div></div>`+
     `<div id="acc-lst-result"></div>`;
 
   // Education — available to all
@@ -9390,25 +9390,53 @@ async function _lstRun(){
   if(!c){ if(sw)sw.classList.remove("on"); return; }
   try{
     await _ensureProj4();
-    if(el)el.innerHTML=`<div style="display:flex;align-items:center;gap:6px;padding:6px 0;color:rgba(255,255,255,0.4);font-size:0.68rem"><span class="spinner" style="width:11px;height:11px;border-width:1.5px"></span><span>${isKa?'პერიოდის ძებნა…':'Ranging periods…'}</span></div>`;
-    const scenes=await fetchLSTScenes(c[0],c[1],_lstRangeYears,40);
-    if(!scenes.length){ return _lstLegacyTbilisi(); }
-    _lstScenes=scenes; _lstSceneLoc=c; _lstHistoric=true;
-    const geo=_currentParcelGeoJSON;
-    _lstSeries=await _buildLstSeries(scenes,geo,(done,total)=>{
-      if(el)el.innerHTML=`<div style="display:flex;align-items:center;gap:6px;padding:6px 0;color:rgba(255,255,255,0.4);font-size:0.68rem"><span class="spinner" style="width:11px;height:11px;border-width:1.5px"></span><span>${isKa?'ტემპერატურის ანალიზი':'Reading temperatures'} ${done}/${total}</span></div>`;
-    });
-    if(!_lstSeries.some(s=>s.mean!=null)){ return _lstLegacyTbilisi(); }
+    if(el)el.innerHTML=`<div style="display:flex;align-items:center;gap:6px;padding:6px 0;color:rgba(255,255,255,0.4);font-size:0.68rem"><span class="spinner" style="width:11px;height:11px;border-width:1.5px"></span><span>${isKa?'სცენების ძებნა…':'Finding scenes…'}</span></div>`;
+    // One cheap metadata fetch over the whole Landsat archive → know which years exist.
+    const fullYears=_lstYearNow()-LST_FIRST_YEAR+1;
+    const meta=await fetchLSTScenes(c[0],c[1],fullYears,40);
+    if(!meta.length){ return _lstLegacyTbilisi(); }
+    meta.forEach(s=>{s.ms=Date.parse(s.datetime);});
+    _lstMeta=meta; _lstScenes=meta; _lstSceneLoc=c; _lstHistoric=true; _lstMeanCache={};
+    _lstYears=[...new Set(meta.map(s=>new Date(s.ms).getUTCFullYear()))].sort((a,b)=>a-b);
+    _lstStartYr=_lstYears[_lstYears.length-1]; // default: current/most-recent year only
     _lstBin='all'; _lstSelBinIdx=null;
-    _renderLstPanel();
-    _lstBins=_lstBinned(_lstSeries,_lstBin);
-    if(_lstBins.length)await _lstPickBin(_lstBins.length-1); // most recent
+    await _lstApplyWindow();
+    if(!(_lstSeries||[]).some(s=>s.mean!=null)){ return _lstLegacyTbilisi(); }
     document.getElementById("lp-lst-sw")?.classList.add("on");
   }catch(e){
     console.warn("LST scenes:",e);
     return _lstLegacyTbilisi();
   }
 }
+
+// Read parcel-mean LST for every scene in the current window (startYr → now), reusing
+// the per-scene cache, then repaint the panel and show the most recent period.
+async function _lstApplyWindow(){
+  const el=document.getElementById("acc-lst-result");
+  const isKa=lang==='ka';
+  const subset=(_lstMeta||[]).filter(s=>new Date(s.ms).getUTCFullYear()>=_lstStartYr);
+  const prog=(done,total)=>{
+    if(!total)return;
+    const html=`<div style="display:flex;align-items:center;gap:6px;padding:8px 0;color:rgba(255,255,255,0.4);font-size:0.66rem"><span class="spinner" style="width:11px;height:11px;border-width:1.5px"></span><span>${isKa?'ტემპერატურის დამუშავება':'Reading temperatures'} ${done}/${total}</span></div>`;
+    const te=document.getElementById('lst-trend'); if(te){te.innerHTML=html;} else if(el){el.innerHTML=html;}
+  };
+  _lstSeries=await _lstReadMeans(subset,prog);
+  _lstSelBinIdx=null;
+  _renderLstPanel();
+  _lstBins=_lstBinned(_lstSeries,_lstBin);
+  if(_lstBins.length)await _lstPickBin(_lstBins.length-1); // most recent period
+}
+// Concurrency-limited window read with per-scene caching.
+async function _lstReadMeans(scenes,onProg){
+  const geo=_currentParcelGeoJSON;
+  const repCache={}; const getRep=e=>{const k=e||32638; if(!repCache[k])repCache[k]=_lstReproject(geo,k); return repCache[k];};
+  const todo=scenes.filter(s=>!(s.id in _lstMeanCache));
+  let i=0,done=0; const CONC=5;
+  async function w(){ while(i<todo.length){ const sc=todo[i++]; let m=null; try{m=await _lstParcelMean(sc,getRep(sc.epsg));}catch(_){} _lstMeanCache[sc.id]=m; if(onProg)onProg(++done,todo.length); } }
+  await Promise.all(Array.from({length:Math.min(CONC,todo.length)},w));
+  return scenes.map(s=>({...s,mean:_lstMeanCache[s.id],ms:s.ms}));
+}
+async function _lstSetStart(y){ y=+y; if(y===_lstStartYr)return; _lstStartYr=y; await _lstApplyWindow(); }
 
 // Legacy single-COG path (Tbilisi only) — used when the global archive has no usable scene.
 async function _lstLegacyTbilisi(){
@@ -9453,7 +9481,6 @@ function _lstBinned(series,bin){
     (groups[key]=groups[key]||[]).push(s); });
   return Object.keys(groups).sort().map(key=>{const a=groups[key];const mean=a.reduce((x,y)=>x+y.mean,0)/a.length;const ms=a.reduce((x,y)=>x+y.ms,0)/a.length;return {key,ms,mean,scenes:a};});
 }
-function _lstRangeLabel(){ const isKa=lang==='ka'; return _lstRangeYears>=13?(isKa?'სრული':'Full'):(_lstRangeYears+(isKa?' წ':'y')); }
 function _lstTrendSVG(){
   const isKa=lang==='ka';
   _lstBins=_lstBinned(_lstSeries,_lstBin);
@@ -9483,21 +9510,21 @@ function _lstSeg(b,label){
   const on=_lstBin===b;
   return `<button onclick="_lstSetBin('${b}')" style="flex:1;border:0;font-family:inherit;font-size:0.66rem;font-weight:${on?700:500};padding:5px 0;border-radius:6px;cursor:pointer;background:${on?'rgba(167,139,250,0.28)':'none'};color:${on?'#fff':'rgba(255,255,255,0.5)'}">${label}</button>`;
 }
-// Look-back timeline scroller — a slider whose thumb sets the start year of the
-// window (start … now). Replaces the fixed 1/3/5/All chips.
+// Year timeline — one tick per year that actually has data. Selecting a year sets the
+// START of the trend window (that year → now); the selected year and everything to its
+// right are highlighted to show the span the trend is measured over.
 const LST_FIRST_YEAR=2013; // Landsat 8 launch
 function _lstYearNow(){ return new Date().getFullYear(); }
-function _lstStartYear(){ return Math.max(LST_FIRST_YEAR, _lstYearNow()-_lstRangeYears+1); }
-function _lstSliderPreview(y){
-  const now=_lstYearNow(), yrs=now-(+y)+1, isKa=lang==='ka';
-  const lbl=document.getElementById('lst-range-lbl');
-  if(lbl)lbl.textContent=`${y}–${now} · ${yrs}${isKa?' წ':'y'}`;
-}
-async function _lstSetStartYear(y){
-  y=Math.max(LST_FIRST_YEAR,Math.min(_lstYearNow(),Math.round(+y)));
-  const yrs=_lstYearNow()-y+1;
-  if(yrs===_lstRangeYears)return;
-  _lstRangeYears=yrs; await _lstRun();
+function _lstTimeline(){
+  const isKa=lang==='ka', years=_lstYears||[], now=_lstYearNow();
+  if(!years.length)return '';
+  const ticks=years.map(y=>{
+    const sel=y===_lstStartYr, inWin=y>=_lstStartYr;
+    return `<button onclick="_lstSetStart(${y})" title="${y} → ${now}" style="flex:1;min-width:22px;border:0;background:none;padding:0;cursor:pointer;font-family:ui-monospace,monospace;font-size:0.55rem;font-weight:${sel?700:400};color:${sel?'#fff':inWin?'#818cf8':'rgba(255,255,255,0.3)'}"><div style="height:6px;border-radius:3px;margin:0 1px 3px;background:${sel?'#818cf8':inWin?'rgba(129,140,248,0.5)':'rgba(255,255,255,0.1)'}"></div>${String(y).slice(2)}</button>`;
+  }).join('');
+  return `<div style="margin:2px 0 9px">`+
+    `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px"><span style="font-size:0.6rem;color:rgba(255,255,255,0.4)">${isKa?'ტენდენცია წლიდან':'Trend from'}</span><span style="font-size:0.62rem;color:#818cf8;font-family:ui-monospace,monospace">${_lstStartYr} → ${now}</span></div>`+
+    `<div style="display:flex;gap:2px;align-items:flex-end">${ticks}</div></div>`;
 }
 // Colormap legend for the heat overlay — same look as the relief legend. The overlay
 // uses a fixed 20–45 °C ramp so the colours are comparable across dates/parcels.
@@ -9545,37 +9572,38 @@ function _lstTrendStat(){
   return {perDecade:beta[1]*10, seDecade:se*10, r2, n, spanY, harmonic, significant:Math.abs(beta[1])>2*se};
 }
 function _lstTrendReadout(){
-  const isKa=lang==='ka';
+  const isKa=lang==='ka', now=_lstYearNow();
+  const sameYear=(_lstStartYr>=now);
+  const label=sameYear?(isKa?`${now} წელი`:`${now}`):(isKa?`ტენდენცია ${_lstStartYr}–${now}`:`Trend ${_lstStartYr}–${now}`);
+  const wrap=(valHtml,sub)=>`<div style="display:flex;align-items:baseline;gap:7px;flex-wrap:wrap;margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.06)">`+
+    `<span style="font-size:0.62rem;color:rgba(255,255,255,0.4)">${label}</span>${valHtml}`+
+    (sub?`<span style="font-size:0.55rem;color:rgba(255,255,255,0.3)">${sub}</span>`:'')+`</div>`;
   const st=_lstTrendStat();
-  if(!st)return `<div style="font-size:0.58rem;color:rgba(255,255,255,0.25);margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.06)">${isKa?'ტენდენციისთვის მეტი მონაცემია საჭირო (გაზარდე პერიოდი)':'Widen the range for a trend'}</div>`;
-  const pd=st.perDecade;
-  const weak=!st.harmonic||!st.significant; // short span or slope within noise
-  const col=weak?'rgba(255,255,255,0.5)':(pd>=0.5?'#ef4444':pd>=0.1?'#f97316':pd<=-0.5?'#38bdf8':pd<=-0.1?'#60a5fa':'rgba(255,255,255,0.6)');
-  const arrow=pd>=0.1?'↑':pd<=-0.1?'↓':'→';
-  const val=`${pd>=0?'+':''}${pd.toFixed(1)}${isFinite(st.seDecade)&&st.harmonic?'±'+st.seDecade.toFixed(1):''} °C/${isKa?'ათწლ.':'decade'}`;
-  const note=!st.harmonic?(isKa?'სეზონური':'seasonal — widen range')
-            :(!st.significant?(isKa?'უმნიშვნელო':'not significant'):(isKa?'დესეზონ.':'deseasonalised'));
-  return `<div style="display:flex;align-items:baseline;gap:7px;flex-wrap:wrap;margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.06)">`+
-    `<span style="font-size:0.62rem;color:rgba(255,255,255,0.4)">${isKa?'დათბობის ტენდენცია':'Warming trend'}</span>`+
-    `<span style="font-size:0.82rem;font-weight:700;color:${col}">${arrow} ${val}</span>`+
-    `<span style="font-size:0.55rem;color:rgba(255,255,255,0.32)">${note} · ${st.n} ${isKa?'პერიოდი':'period'}</span></div>`;
+  // Not enough span/data to separate a trend from the seasonal cycle.
+  if(!st||!st.harmonic)
+    return wrap(`<span style="font-size:0.8rem;font-weight:600;color:rgba(255,255,255,0.5)">—</span>`,
+      isKa?'აირჩიე ადრინდელი წელი (მინ. 2 წ)':'select an earlier year (min. 2 yrs)');
+  const pd=st.perDecade, se=st.seDecade;
+  // Slope within noise → call it steady rather than reporting a spurious direction.
+  if(!st.significant)
+    return wrap(`<span style="font-size:0.8rem;font-weight:700;color:rgba(255,255,255,0.62)">${isKa?'≈ სტაბილური':'≈ steady'}</span>`,
+      `${pd>=0?'+':''}${pd.toFixed(1)}±${se.toFixed(1)} °C/${isKa?'ათწლ.':'dec'} · ${st.n} ${isKa?'სცენა':'scenes'}`);
+  const warming=pd>0;
+  const col=pd>=0.5?'#ef4444':pd>0?'#f97316':pd<=-0.5?'#38bdf8':'#60a5fa';
+  const word=warming?(isKa?'დათბობა':'warming'):(isKa?'გაგრილება':'cooling');
+  return wrap(`<span style="font-size:0.82rem;font-weight:700;color:${col}">${warming?'↑':'↓'} ${pd>=0?'+':''}${pd.toFixed(1)} °C/${isKa?'ათწლ.':'dec'}</span>`,
+    `${word} · ±${se.toFixed(1)} · ${st.n} ${isKa?'სცენა':'scenes'}`);
 }
 function _renderLstPanel(){
   const el=document.getElementById("acc-lst-result"); if(!el)return;
   const isKa=lang==='ka';
   const segRow=`<div style="display:flex;gap:2px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.09);border-radius:8px;padding:2px;margin:2px 0 8px">`+
-    _lstSeg('all',isKa?'':'Scene')+_lstSeg('month',isKa?'თვე':'Month')+_lstSeg('quarter',isKa?'კვარტ.':'Qtr')+_lstSeg('year',isKa?'წელი':'Year')+`</div>`;
-  const now=_lstYearNow(), sy=_lstStartYear();
-  const slider=`<div style="margin:2px 0 9px">`+
-    `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><span style="font-size:0.6rem;color:rgba(255,255,255,0.4)">${isKa?'პერიოდი':'Look-back'}</span><span id="lst-range-lbl" style="font-size:0.62rem;color:#818cf8;font-family:ui-monospace,monospace">${sy}–${now} · ${_lstRangeYears}${isKa?' წ':'y'}</span></div>`+
-    `<input type="range" class="lst-range-slider" min="${LST_FIRST_YEAR}" max="${now}" step="1" value="${sy}" oninput="_lstSliderPreview(this.value)" onchange="_lstSetStartYear(this.value)">`+
-    `<div style="display:flex;justify-content:space-between;font-size:0.55rem;color:rgba(255,255,255,0.3);margin-top:2px"><span>${LST_FIRST_YEAR}</span><span>${now}</span></div>`+
-  `</div>`;
+    _lstSeg('all',isKa?'სცენა':'Scene')+_lstSeg('month',isKa?'თვე':'Month')+_lstSeg('quarter',isKa?'კვარტ.':'Qtr')+_lstSeg('year',isKa?'წელი':'Year')+`</div>`;
   const legend=`<div class="relief-legend" id="lst-legend" style="display:block;margin-top:8px"><canvas class="relief-legend-bar" id="lst-legend-bar" width="240" height="8"></canvas><div class="relief-legend-labels"><span>20°C</span><span>32°C</span><span>45°C</span></div></div>`;
   el.innerHTML=
     `<div id="lst-head" style="margin:2px 0 8px"></div>`+
     legend+
-    slider+
+    _lstTimeline()+
     segRow+
     `<div id="lst-trend">${_lstTrendSVG()}</div>`+
     `<div id="lst-trend-stat">${_lstTrendReadout()}</div>`+
@@ -9592,7 +9620,7 @@ function _lstUpdateHead(dateLabel,temp,cloud,nScenes){
   const pct=lst==null?0:Math.min(100,Math.max(0,((lst-10)/40)*100));
   const ring=`<svg width="54" height="54" viewBox="0 0 70 70" style="flex-shrink:0"><circle cx="35" cy="35" r="27" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="7"/><circle cx="35" cy="35" r="27" fill="none" stroke="${col}" stroke-width="7" stroke-linecap="round" stroke-dasharray="169.65" stroke-dashoffset="${169.65*(1-pct/100)}" transform="rotate(-90 35 35)" style="transition:stroke-dashoffset 0.8s cubic-bezier(0.23,1,0.32,1)"/><text x="35" y="39" text-anchor="middle" fill="${col}" font-size="13" font-weight="700" font-family="-apple-system,sans-serif">${loading?'…':(lst==null?'—':lst+'°')}</text></svg>`;
   const sub=[];
-  if(nScenes>1)sub.push((isKa?'საშ. ':'avg ')+nScenes+(isKa?' პერიოდი':' period'));
+  if(nScenes>1)sub.push((isKa?'საშ. ':'avg ')+nScenes+(isKa?' სცენა':' scenes'));
   else if(cloud!=null)sub.push((isKa?'ღრუბ. ':'cloud ')+Math.round(cloud)+'%');
   head.innerHTML=`<div style="display:flex;align-items:center;gap:12px">${ring}<div style="min-width:0"><div style="font-size:0.82rem;font-weight:600;color:rgba(255,255,255,0.85)">${dateLabel}</div><div style="font-size:0.62rem;color:rgba(255,255,255,0.4)">${sub.join(' · ')}</div></div></div>`;
 }
@@ -13218,6 +13246,10 @@ function _lstTempRGB(t){
 }
 let _lstScenes=null, _lstSeries=null, _lstBins=null, _lstSelBinIdx=null;
 let _lstSceneLoc=null, _lstRangeYears=1, _lstBin='all', _lstHistoric=false;
+// Full-archive scene metadata (one cheap STAC fetch), the years that have data, the
+// selected start year (window = startYr → now), and a per-scene mean cache so moving
+// the start year only reads scenes not seen yet.
+let _lstMeta=null, _lstYears=null, _lstStartYr=null, _lstMeanCache={};
 
 async function _ensureProj4(){
   if(window.proj4)return;
@@ -13328,7 +13360,7 @@ function _lstSignScenes(scenes,tok){
 async function fetchLSTScenes(lng,lat,years,cloud){
   const end=new Date(); const start=new Date(end); start.setFullYear(start.getFullYear()-years);
   const iso=d=>d.toISOString().slice(0,10);
-  const u=`${PROXY}/lst-scenes?lng=${lng.toFixed(5)}&lat=${lat.toFixed(5)}&start=${iso(start)}&end=${iso(end)}&cloud=${cloud}&limit=200`;
+  const u=`${PROXY}/lst-scenes?lng=${lng.toFixed(5)}&lat=${lat.toFixed(5)}&start=${iso(start)}&end=${iso(end)}&cloud=${cloud}&limit=300`;
   const r=await fetch(u); if(!r.ok)throw new Error('scenes_'+r.status);
   const scenes=(await r.json()).scenes||[];
   return _lstSignScenes(scenes, await _lstEnsureSas());
@@ -13490,6 +13522,7 @@ function renderLSTOverlay(raw,geojson){
 function clearLSTOverlay(){
   _lstOverlayCache=null;
   _lstScenes=null;_lstSeries=null;_lstBins=null;_lstSelBinIdx=null;_lstSceneLoc=null;_lstHistoric=false;
+  _lstMeta=null;_lstYears=null;_lstStartYr=null;_lstMeanCache={};
   if(!mapReady)return;
   try{if(map.getLayer("lst-overlay-layer"))map.removeLayer("lst-overlay-layer");}catch(_){}
   try{if(map.getSource("lst-overlay"))map.removeSource("lst-overlay");}catch(_){}
@@ -13567,7 +13600,7 @@ async function runClimateAnalysis(geojson){
         </svg>
         <div>
           <div style="font-size:0.78rem;color:rgba(255,255,255,0.7);display:flex;align-items:center;gap:5px;margin-bottom:2px">
-            ${lang==="ka"?"მიწის ზედაპირის ტემპერატურა. (ზაფხული)":"Land Surface Temperature. (Summer)"}
+            ${lang==="ka"?"მიწის ზედაპირის ტემპერატურა (ზაფხული)":"Land Surface Temperature (Summer)"}
           </div>
           <div style="font-size:0.65rem;color:rgba(255,255,255,0.25)">Landsat 8 · 30m · 2024</div>
         </div>
@@ -13663,7 +13696,7 @@ async function toggleLSTLayer(){
     if(v)v.innerHTML=`<span style="color:${lstColor};font-weight:600">${lst}°C</span>`;
     if(chart){
       chart.style.display="block";
-      chart.innerHTML=`<div style="display:flex;align-items:center;gap:16px"><svg width="70" height="70" viewBox="0 0 70 70" style="flex-shrink:0"><circle cx="35" cy="35" r="27" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="7"/><circle cx="35" cy="35" r="27" fill="none" stroke="${lstColor}" stroke-width="7" stroke-linecap="round" stroke-dasharray="169.65" stroke-dashoffset="169.65" transform="rotate(-90 35 35)" style="transition:stroke-dashoffset 1s cubic-bezier(0.23,1,0.32,1)" id="lst-ring"/><text x="35" y="38" text-anchor="middle" fill="${lstColor}" font-size="13" font-weight="700" font-family="-apple-system,sans-serif">${lst}°C</text></svg><div><div style="font-size:0.78rem;color:rgba(255,255,255,0.7);display:flex;align-items:center;gap:5px;margin-bottom:2px">${lang==="ka"?"ზედაპირის ტემპ. (ზაფხული)":"Surface Temp. (Summer)"}</div><div style="font-size:0.65rem;color:rgba(255,255,255,0.25)">Landsat 8 · 30m · 2024</div></div></div>`;
+      chart.innerHTML=`<div style="display:flex;align-items:center;gap:16px"><svg width="70" height="70" viewBox="0 0 70 70" style="flex-shrink:0"><circle cx="35" cy="35" r="27" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="7"/><circle cx="35" cy="35" r="27" fill="none" stroke="${lstColor}" stroke-width="7" stroke-linecap="round" stroke-dasharray="169.65" stroke-dashoffset="169.65" transform="rotate(-90 35 35)" style="transition:stroke-dashoffset 1s cubic-bezier(0.23,1,0.32,1)" id="lst-ring"/><text x="35" y="38" text-anchor="middle" fill="${lstColor}" font-size="13" font-weight="700" font-family="-apple-system,sans-serif">${lst}°C</text></svg><div><div style="font-size:0.78rem;color:rgba(255,255,255,0.7);display:flex;align-items:center;gap:5px;margin-bottom:2px">${lang==="ka"?"მიწის ზედაპირის ტემპერატურა (ზაფხული)":"Land Surface Temperature (Summer)"}</div><div style="font-size:0.65rem;color:rgba(255,255,255,0.25)">Landsat 8 · 30m · 2024</div></div></div>`;
       requestAnimationFrame(()=>requestAnimationFrame(()=>{const ring=document.getElementById("lst-ring");if(ring){const pct=Math.min(100,Math.max(0,((lst-10)/40)*100));ring.style.strokeDashoffset=169.65*(1-pct/100);}}));
     }
   }
