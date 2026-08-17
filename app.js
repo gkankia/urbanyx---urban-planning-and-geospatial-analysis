@@ -7286,6 +7286,16 @@ map.on("load",()=>{
     map.getCanvas().style.cursor=hits.length?'pointer':'';
   });
 
+  // If the search was opened from the icon and the cursor then moves over the map,
+  // snap it back to the icon — unless a parcel is selected or the field is focused.
+  map.on('mousemove',()=>{
+    const cs=document.getElementById('center-search');
+    if(!cs||!cs.classList.contains('compact')||cs.classList.contains('hidden'))return;
+    if(_currentParcelGeoJSON||_isDrawnArea)return;                                   // keep open for a selection
+    if(document.activeElement&&document.activeElement.id==='input-center')return;    // keep open while typing
+    cs.classList.add('hidden');
+  });
+
   map.on("click",async(e)=>{
     if(_measureMode)return; // measuring — ignore parcel selection
     if(_polyDrawing)return;
@@ -14233,11 +14243,39 @@ async function loadParcelFromDB(cadastral){
   logFeatureUse("map_click").catch(()=>{});
 }
 
+// Place / city / street / POI search via Mapbox Geocoding. Used everywhere outside
+// Georgia, and as a fallback inside Georgia when a query isn't a parcel.
+async function _geocodePlace(query){
+  try{
+    const c=map.getCenter();
+    const url=`https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json`+
+      `?access_token=${MAPBOX_TOKEN}&limit=1&language=${lang==='ka'?'ka':'en'}&proximity=${c.lng.toFixed(4)},${c.lat.toFixed(4)}`;
+    const res=await fetch(url); if(!res.ok)return false;
+    const data=await res.json();
+    const f=data.features&&data.features[0]; if(!f||!Array.isArray(f.center))return false;
+    const [lng,lat]=f.center;
+    if(Array.isArray(f.bbox)&&f.bbox.length===4){
+      map.fitBounds([[f.bbox[0],f.bbox[1]],[f.bbox[2],f.bbox[3]]],{padding:80,duration:1400,maxZoom:16.5,essential:true});
+    }else{
+      const pt=(f.place_type||[]).join(',');
+      map.flyTo({center:[lng,lat],zoom:/poi|address/.test(pt)?16.5:/street|neighborhood/.test(pt)?15:12,duration:1400,essential:true});
+    }
+    setStatus(f.place_name||query,"success");
+    return true;
+  }catch(e){ console.warn('geocode:',e); return false; }
+}
+
 async function search(){
   const code=getCode();if(!code)return;const tr=t();
   try{resetAnalysis();}catch(_){}
   setLoading(true);setStatus(tr.searching,"");
   try{
+    // Outside Georgia there are no parcels — treat every query as a place lookup.
+    const _c=map.getCenter();
+    if(!_inGeorgia(_c.lng,_c.lat)){
+      if(!await _geocodePlace(code.trim()))setStatus(tr.notFound,"error");
+      return;
+    }
     if(/^\d{9,11}$/.test(code.trim())){
       await searchByOwnerId(code);
     }else{
@@ -14257,6 +14295,8 @@ async function search(){
           govGeOk=true;
           await loadParcel(lbl,code);
         }catch(govErr){
+          // Not a Georgian parcel — try a place-name lookup before giving up.
+          if(govErr.message==="not_found"&&await _geocodePlace(code.trim()))return;
           if(govErr.message==="not_found"||govErr.message==="no_shape"||govGeOk)throw govErr;
           await loadParcelFromDB(code.trim());
         }
