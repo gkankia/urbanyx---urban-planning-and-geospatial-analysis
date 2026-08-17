@@ -7390,7 +7390,7 @@ map.on("load",()=>{
       await loadParcel(lbl,name);
     }catch(e){
       console.warn("map click:",e);
-      if(e.message==="no_shape")setStatus(lang==="ka"?"ამ ნაკვეთისთვის საზღვრის მონაცემები მიუწვდომელია.":"No boundary data available for this parcel.","error");
+      if(e.message==="no_shape")setStatus(lang==="ka"?"ძიება წარუმატებელია":"Search unsuccessful","error");
       else setStatus(t().govGeDown,"");
     }
   });
@@ -14099,7 +14099,7 @@ function getGeoBounds(geo){
 }
 
 async function searchByOwnerId(ownerId){
-  setStatus(lang==="ka"?"მფლობელის ID იძიება…":"Looking up owner ID…","");
+  setStatus(lang==="ka"?"ძიება…":"Searching…","");
   try{
     const ownerRes=await fetch(`${SUPABASE_URL}/rest/v1/owner_ids?owner_id=eq.${encodeURIComponent(ownerId)}&select=cadastral,owner_name`,{headers:{"apikey":SUPABASE_ANON_KEY}});
     const ownerRows=await ownerRes.json();
@@ -14134,7 +14134,7 @@ async function searchByOwnerId(ownerId){
 }
 
 async function searchByOwnerName(query){
-  setStatus(lang==="ka"?"მფლობელი იძიება…":"Searching owner name…","");
+  setStatus(lang==="ka"?"ნაკვეთის ძებნა…":"Searching…","");
   const norm=query.replace(/[“”„‘’«»"'\-–—]/g," ").replace(/\s+/g," ").trim();
   try{
     const res=await fetch(`${SUPABASE_URL}/rest/v1/parcels?owners=ilike.*${encodeURIComponent(norm)}*&shape_wkt=not.is.null&select=cadastral,shape_wkt,address,area,owners&limit=500`,{headers:{"apikey":SUPABASE_ANON_KEY,"Prefer":"count=exact"}});
@@ -14304,10 +14304,9 @@ async function search(){
     }
   }catch(e){
     console.error(e);
-    const msg=e.message==="not_found"?tr.notFound
-      :e.message==="not_in_db"?(lang==="ka"?"maps.gov.ge მიუწვდომელია და ნაკვეთი მონაცემთა ბაზაში ვერ მოიძებნა.":"maps.gov.ge unavailable and parcel not found in database.")
-      :e.message==="no_shape"?(lang==="ka"?"ამ ნაკვეთისთვის საზღვრის მონაცემები მიუწვდომელია.":"No boundary data available for this parcel.")
-      :tr.error+` (${e.message})`;
+    // Any "no result" outcome gets one general message; only unexpected errors show details.
+    const noResult=["not_found","no_shape","not_in_db"].includes(e.message);
+    const msg=noResult?(lang==="ka"?"ძიება წარუმატებელია":"Search unsuccessful"):tr.error+` (${e.message})`;
     setStatus(msg,"error");
   }
   finally{setLoading(false);}
