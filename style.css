@@ -23,13 +23,13 @@
   .score-num, .dash-stat-val, .mib-val, .lp-elev-stat .stat-val { font-family: var(--mono); font-variant-numeric: tabular-nums; }
   #map-wrap { position: absolute; top: 0; bottom: 0; right: 0; left: 0; }
   #map { position: absolute; inset: 0; }
-  #map-blur { position: absolute; inset: 0; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); background: rgba(0,0,0,0.4); z-index: 5; transition: opacity 0.8s ease; pointer-events: none; }
+  #map-blur { position: absolute; inset: 0; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); background: rgba(0,0,0,0.4); z-index: 15; transition: opacity 0.8s ease; pointer-events: none; }
   #map-blur.hidden { opacity: 0; }
-  #center-search { position: absolute; inset: 0; z-index: 10; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.4s ease, top 0.5s cubic-bezier(0.23,1,0.32,1), left 0.5s cubic-bezier(0.23,1,0.32,1), transform 0.5s cubic-bezier(0.23,1,0.32,1); pointer-events: none; }
+  #center-search { position: absolute; inset: 0; z-index: 20; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.4s ease, top 0.5s cubic-bezier(0.23,1,0.32,1), left 0.5s cubic-bezier(0.23,1,0.32,1), transform 0.5s cubic-bezier(0.23,1,0.32,1); pointer-events: none; }
   #center-search.hidden { opacity: 0; pointer-events: none; }
   #center-search.hidden .center-inner { pointer-events: none; }
   #center-search.compact.hidden { transform: translateX(-24px); }
-  #center-search.compact { inset: unset; top: 14px; left: 60px; right: auto; bottom: auto; align-items: flex-start; justify-content: flex-start; transform: none; z-index: 21; }
+  #center-search.compact { inset: unset; top: 14px; left: 14px; right: auto; bottom: auto; align-items: flex-start; justify-content: flex-start; transform: none; z-index: 21; }
   /* Icon ⇄ bar: hide the standalone search icon while the search bar is open */
   body:has(#center-search.compact:not(.hidden)) #search-fab { opacity: 0; pointer-events: none; }
   #center-search.compact .center-inner { max-width: 300px; padding: 0; gap: 8px; }
@@ -400,9 +400,8 @@
   .mapboxgl-ctrl-bottom-right { display: none; }
   .mapboxgl-ctrl-top-right .mapboxgl-ctrl-group:not(:has(.mapbox-gl-draw_polygon)) { display:none !important; }
   /* ── Custom zoom controls ──────────────────────────────────────────────── */
-  #map-zoom-controls { position:fixed; top:50%; right:16px; transform:translateY(-50%); z-index:20; display:flex; flex-direction:column; background:var(--glass-bg); backdrop-filter:var(--glass-blur); -webkit-backdrop-filter:var(--glass-blur); border:1px solid var(--glass-border); border-radius:10px; box-shadow:var(--glass-shadow); overflow:hidden; }
+  #map-zoom-controls { position:fixed; top:50%; right:16px; transform:translateY(-50%); z-index:10; display:flex; flex-direction:column; background:var(--glass-bg); backdrop-filter:var(--glass-blur); -webkit-backdrop-filter:var(--glass-blur); border:1px solid var(--glass-border); border-radius:10px; box-shadow:var(--glass-shadow); overflow:hidden; }
   #map-zoom-controls.mzc-loading { display:none; }
-  #map-blur:not(.hidden) ~ #map-zoom-controls { display:none !important; }
   .mzc-btn { width:40px; height:38px; background:none; border:none; color:rgba(255,255,255,0.55); font-size:1.15rem; font-weight:300; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background 0.15s, color 0.15s; font-family:inherit; user-select:none; }
   .mzc-btn:hover { background:rgba(255,255,255,0.07); color:rgba(255,255,255,0.9); }
   .mzc-btn:active { background:rgba(255,255,255,0.13); }
