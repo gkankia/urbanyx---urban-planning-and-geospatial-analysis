@@ -28,6 +28,20 @@ export default {
 
     const url = new URL(request.url);
 
+    // ── Edge geolocation (GET) ────────────────────────────────────────────────
+    // Approximate location from the caller's IP (Cloudflare `cf` object) so the app
+    // can open near the user without a browser geolocation permission prompt.
+    if (request.method === "GET" && url.pathname === "/geoip") {
+      const cf = request.cf || {};
+      const lat = parseFloat(cf.latitude), lng = parseFloat(cf.longitude);
+      return new Response(JSON.stringify({
+        lat: isFinite(lat) ? lat : null,
+        lng: isFinite(lng) ? lng : null,
+        city: cf.city || null,
+        country: cf.country || null,
+      }), { headers: { ...corsHeaders, "Content-Type": "application/json", "Cache-Control": "no-store" } });
+    }
+
     // ── WMS tile proxy (GET) ──────────────────────────────────────────────────
     if (request.method === "GET" && url.pathname === "/wms") {
       const z = parseInt(url.searchParams.get("z"));

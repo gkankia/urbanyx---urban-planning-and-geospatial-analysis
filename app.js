@@ -529,6 +529,12 @@ function setLang(l){
     const _energyC=document.getElementById('pro-cat-energy-content');if(_energyC)_energyC.innerHTML='';
     setupProCard(false);
   }
+  // Instantly re-render open dynamic surfaces in the new language.
+  try{ if(document.getElementById("dashboard-modal")?.classList.contains("open"))loadDashboardStats(); }catch(_){}
+  try{ if(_pinMode&&Array.isArray(_parcelCardLngLat)&&typeof _showLocationCard==='function')_showLocationCard(_parcelCardLngLat[0],_parcelCardLngLat[1]); }catch(_){}
+  try{ if((_currentParcelGeoJSON||_isDrawnArea)&&typeof _updateAnalysisGrid==='function')_updateAnalysisGrid(true); }catch(_){}
+  // Analysis result panels that can cheaply re-render from cached data.
+  try{ if(typeof _ttcRenderedStops!=='undefined'&&_ttcRenderedStops&&typeof _ttcRenderPanel==='function')_ttcRenderPanel(); }catch(_){}
 }
 
 function applyLang(){
@@ -610,6 +616,22 @@ function applyLang(){
     setTip("nav-tip-cat-relief",pc.relief);
   }
   const _ntl=document.getElementById("nav-tip-layers");if(_ntl)_ntl.textContent=lang==="ka"?"ფენები":"Layers";
+  // Geometry-tools toolbar tooltips + titles (were static English).
+  {
+    const ka=lang==="ka";
+    const T=[["geo-select","Select","არჩევა"],["geo-edit","Edit shape","შესწორება"],["geo-move","Move","გადაადგილება"],
+      ["geo-rotate","Rotate","ბრუნვა"],["geo-slice","Slice","გაჭრა"],["geo-paint","Colors","ფერები"],
+      ["geo-erase","Erase","წაშლა"],["geo-render","Render · soon","რენდერი · მალე"]];
+    T.forEach(([id,en,k])=>{const tip=document.getElementById(id+"-tip");if(tip)tip.textContent=ka?k:en;const btn=document.getElementById(id+"-btn");if(btn)btn.title=ka?k:en;});
+  }
+  // Parcel-card field labels — refresh in place for a selected Georgian parcel
+  // (pin / drawn-area cards set their own mode-specific labels).
+  if(typeof _pinMode!=="undefined"&&!_pinMode&&typeof _isDrawnArea!=="undefined"&&!_isDrawnArea){
+    const pset=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
+    pset("pfc-lbl-area",tr.area); pset("pfc-lbl-type",tr.type); pset("pfc-lbl-addr",tr.addr);
+    pset("pfc-lbl-owner",lang==="ka"?"მეპატრონე":"Owner");
+    pset("pfc-lbl-reg",lang==="ka"?"რეგისტრაციის თარიღი":"Registered");
+  }
   const plansBtn=document.getElementById("plans-btn");if(plansBtn)plansBtn.textContent=tr.plansBtn;
   const signinBtnEl=document.getElementById("signin-btn");if(signinBtnEl)signinBtnEl.textContent=tr.centerSignIn;
   // Center auth links
@@ -7248,7 +7270,27 @@ function toggle3D() {
 
 // ── Map ───────────────────────────────────────────────────────────────────────
 mapboxgl.accessToken=MAPBOX_TOKEN;
+// Approximate location from the network (IP) — no browser permission prompt, no dot.
+// Cloudflare edge geo via our Worker first, then a keyless public fallback.
+async function _ipLocate(){
+  try{
+    const r=await fetch(`${PROXY}/geoip`,{cache:'no-store'});
+    if(r.ok){const j=await r.json();const lat=+j.lat,lng=+j.lng;if(isFinite(lat)&&isFinite(lng)&&(lat||lng))return [lng,lat];}
+  }catch(_){}
+  try{
+    const r=await fetch('https://get.geojs.io/v1/ip/geo.json');
+    if(r.ok){const j=await r.json();const lat=parseFloat(j.latitude),lng=parseFloat(j.longitude);if(isFinite(lat)&&isFinite(lng))return [lng,lat];}
+  }catch(_){}
+  return null;
+}
 const map=new mapboxgl.Map({container:"map",style:"mapbox://styles/jorjone90/cmsg7wons00j701s879l50r8v",center:[44.805766,41.702563],zoom:14.84,bearing:-38.76,pitch:75.65,attributionControl:false,preserveDrawingBuffer:true});
+// On first load, drop the user near their own location at zoom 15.1 (Tbilisi is only
+// the fallback if IP lookup fails). Skipped once the user searches or interacts.
+_ipLocate().then(loc=>{
+  if(loc&&!mapMoved&&!hasSearched&&!_currentParcelGeoJSON){
+    map.jumpTo({center:loc,zoom:15.1}); // keep the configured bearing/pitch
+  }
+}).catch(()=>{});
 // Track app-added sources/layers so they survive a basemap (setStyle) switch.
 // (setStyle replaces the whole style, dropping everything the app added on top.)
 const _appSourceIds=new Set(), _appLayerIds=new Set();
