@@ -5907,14 +5907,22 @@ const _BASEMAP_STYLES={
   night:"mapbox://styles/mapbox/traffic-night-v2" // Mapbox Traffic — dark fallback
 };
 const _MAPBOX_STANDARD_DAY="mapbox://styles/mapbox/standard"; // Mapbox Standard, day light preset
-// The default "day" slot is Z.axis Hillshade inside Georgia and Mapbox Standard Day elsewhere.
-function _dayStyle(){ try{const c=map.getCenter();return _inGeorgia(c.lng,c.lat)?_BASEMAP_STYLES.day:_MAPBOX_STANDARD_DAY;}catch(_){return _BASEMAP_STYLES.day;} }
-function _dayBasemapLabel(){ try{const c=map.getCenter();if(!_inGeorgia(c.lng,c.lat))return lang==='ka'?'Mapbox Standard':'Mapbox Standard Day';}catch(_){} return t().layers.day; }
-// Set the day-slot label for the current location; if that slot is the active basemap
-// and we're outside Georgia, swap Hillshade → Mapbox Standard Day.
+let _dayIsStandardNow=false; // whether the day slot currently shows Mapbox Standard (vs Hillshade)
+// Account exception: admins / the owner keep Z.axis Hillshade everywhere, so the Georgia
+// experience stays testable from abroad.
+function _basemapExemptAccount(){ try{return !!currentUser&&(currentUser.isAdmin||currentUser.email==="giorgi@zaxis.ge");}catch(_){return false;} }
+// The day slot is Z.axis Hillshade inside Georgia (or always, for exempt accounts) and
+// Mapbox Standard Day elsewhere.
+function _dayInGeorgia(){ if(_basemapExemptAccount())return true; try{const c=map.getCenter();return _inGeorgia(c.lng,c.lat);}catch(_){return true;} }
+function _dayStyle(){ return _dayInGeorgia()?_BASEMAP_STYLES.day:_MAPBOX_STANDARD_DAY; }
+function _dayBasemapLabel(){ return _dayInGeorgia()?t().layers.day:(lang==='ka'?'Mapbox Standard':'Mapbox Standard Day'); }
+// Set the day-slot label; if that slot is active and the wanted style differs from what's
+// loaded, reload it (Hillshade ⇄ Mapbox Standard Day).
 function _applyLocationBasemap(){
   const _lbl=document.getElementById('lbl-bm-day'); if(_lbl)_lbl.textContent=_dayBasemapLabel();
-  try{ const c=map.getCenter(); if(_currentBasemap==='day'&&!_inGeorgia(c.lng,c.lat)&&mapReady)switchBasemap('day',true); }catch(_){}
+  if(!mapReady||_currentBasemap!=='day')return;
+  const wantStandard=!_dayInGeorgia();
+  if(wantStandard!==_dayIsStandardNow)switchBasemap('day',true);
 }
 // Is it currently daylight at the map's location? NOAA sunrise/sunset (computed in UTC).
 function _isDaylightNow(){
@@ -5951,6 +5959,7 @@ function switchBasemap(name,force){
   const _wasExtruding=_extrusionActive&&_isDrawnArea;
   const _preserved=_captureAppLayers(); // keep analysis overlays across the style swap
   const _dayIsStandard=(name==='day'&&_dayStyle()===_MAPBOX_STANDARD_DAY);
+  if(name==='day')_dayIsStandardNow=_dayIsStandard;
   map.setStyle(name==='night'?_trafficStyle():(name==='day'?_dayStyle():_BASEMAP_STYLES[name]));
   map.once("style.load",()=>{
     // Mapbox Standard (outside Georgia): pin the day light preset.
@@ -7508,8 +7517,8 @@ function _updateSearchPlaceholder(){
   try{ if(typeof map!=="undefined"&&map){const c=map.getCenter();inGe=_inGeorgia(c.lng,c.lat);} }catch(_){}
   const ka=lang==="ka";
   inp.placeholder = inGe
-    ? (ka?"ადგილი ან საკადასტრო კოდი":"Place or cadastral code")
-    : (ka?"ადგილის ძებნა":"Search a place");
+    ? (ka?"მოძებნე ადგილი ან საკადასტრო კოდი":"Search for a place or cadastral code")
+    : (ka?"მოძებნე ადგილი":"Search a place");
 }
 function getCode(){const el=document.getElementById("input-center");return el?el.value.trim():"";}
 function transitionToSide(code){
