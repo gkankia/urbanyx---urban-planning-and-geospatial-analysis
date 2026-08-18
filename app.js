@@ -587,7 +587,7 @@ function applyLang(){
   document.getElementById("lbl-lp-forestfunds").textContent=_lp.forestFund;
   document.getElementById("lbl-bm-dark").textContent=_lp.dark;
   document.getElementById("lbl-bm-satellite").textContent=_lp.satellite;
-  document.getElementById("lbl-bm-day").textContent=_lp.day;
+  document.getElementById("lbl-bm-day").textContent=(typeof _dayBasemapLabel==='function'?_dayBasemapLabel():_lp.day);
   document.getElementById("lbl-bm-night").textContent=_lp.night;
   document.getElementById("u-signout-btn").textContent=tr.signOut;
   const _nts=document.getElementById("nav-tip-signout");if(_nts)_nts.textContent=tr.signOut;
@@ -5903,9 +5903,19 @@ function navToggleLang(){
 const _BASEMAP_STYLES={
   dark:"mapbox://styles/mapbox/dark-v11",
   satellite:"mapbox://styles/mapbox/satellite-streets-v12",
-  day:"mapbox://styles/jorjone90/cmsg7wons00j701s879l50r8v", // Z.axis Hillshade
+  day:"mapbox://styles/jorjone90/cmsg7wons00j701s879l50r8v", // Z.axis Hillshade (Georgia only)
   night:"mapbox://styles/mapbox/traffic-night-v2" // Mapbox Traffic — dark fallback
 };
+const _MAPBOX_STANDARD_DAY="mapbox://styles/mapbox/standard"; // Mapbox Standard, day light preset
+// The default "day" slot is Z.axis Hillshade inside Georgia and Mapbox Standard Day elsewhere.
+function _dayStyle(){ try{const c=map.getCenter();return _inGeorgia(c.lng,c.lat)?_BASEMAP_STYLES.day:_MAPBOX_STANDARD_DAY;}catch(_){return _BASEMAP_STYLES.day;} }
+function _dayBasemapLabel(){ try{const c=map.getCenter();if(!_inGeorgia(c.lng,c.lat))return lang==='ka'?'Mapbox Standard':'Mapbox Standard Day';}catch(_){} return t().layers.day; }
+// Set the day-slot label for the current location; if that slot is the active basemap
+// and we're outside Georgia, swap Hillshade → Mapbox Standard Day.
+function _applyLocationBasemap(){
+  const _lbl=document.getElementById('lbl-bm-day'); if(_lbl)_lbl.textContent=_dayBasemapLabel();
+  try{ const c=map.getCenter(); if(_currentBasemap==='day'&&!_inGeorgia(c.lng,c.lat)&&mapReady)switchBasemap('day',true); }catch(_){}
+}
 // Is it currently daylight at the map's location? NOAA sunrise/sunset (computed in UTC).
 function _isDaylightNow(){
   try{
@@ -5926,8 +5936,8 @@ function _isDaylightNow(){
 }
 // Traffic basemap picks its light/dark variant from the local day/night.
 function _trafficStyle(){return _isDaylightNow()?"mapbox://styles/mapbox/traffic-day-v2":"mapbox://styles/mapbox/traffic-night-v2";}
-function switchBasemap(name){
-  if(name===_currentBasemap||!mapReady)return;
+function switchBasemap(name,force){
+  if((name===_currentBasemap&&!force)||!mapReady)return;
   _currentBasemap=name;
   ["dark","satellite","day","night"].forEach(id=>{
     document.getElementById("bm-"+id)?.classList.toggle("active",id===name);
@@ -5940,14 +5950,17 @@ function switchBasemap(name){
   mapReady=false;
   const _wasExtruding=_extrusionActive&&_isDrawnArea;
   const _preserved=_captureAppLayers(); // keep analysis overlays across the style swap
-  map.setStyle(name==='night'?_trafficStyle():_BASEMAP_STYLES[name]);
+  const _dayIsStandard=(name==='day'&&_dayStyle()===_MAPBOX_STANDARD_DAY);
+  map.setStyle(name==='night'?_trafficStyle():(name==='day'?_dayStyle():_BASEMAP_STYLES[name]));
   map.once("style.load",()=>{
+    // Mapbox Standard (outside Georgia): pin the day light preset.
+    if(_dayIsStandard){try{map.setConfigProperty('basemap','lightPreset','day');}catch(_){}}
     try{initCustomLayers();}catch(err){console.error("initCustomLayers (switch) failed:",err);}
     try{_restoreAppLayers(_preserved);}catch(err){console.warn("restore analysis layers failed:",err);}
     mapReady=true;
     map.setLanguage(lang==='ka'?'ka':'en');
     const _nll=document.getElementById('nav-lang-label');if(_nll)_nll.textContent=lang==='en'?'EN':'ქა';
-    // "day" is Z.axis Hillshade and "night" is Mapbox Traffic (classic styles) — no Standard config.
+    // "day" is Z.axis Hillshade (Georgia) or Mapbox Standard Day (elsewhere); "night" is Mapbox Traffic.
     if(_wasExtruding){
       const _swBld=_activeBld();
       if(_swBld?.threeEditor){try{map.removeLayer(_swBld.threeEditor.id);}catch(e){}try{_swBld.threeEditor.dispose();}catch(e){}  _swBld.threeEditor=null;}
@@ -7284,13 +7297,9 @@ async function _ipLocate(){
   return null;
 }
 const map=new mapboxgl.Map({container:"map",style:"mapbox://styles/jorjone90/cmsg7wons00j701s879l50r8v",center:[44.805766,41.702563],zoom:14.84,bearing:-38.76,pitch:75.65,attributionControl:false,preserveDrawingBuffer:true});
-// On first load, drop the user near their own location at zoom 15.1 (Tbilisi is only
-// the fallback if IP lookup fails). Skipped once the user searches or interacts.
-_ipLocate().then(loc=>{
-  if(loc&&!mapMoved&&!hasSearched&&!_currentParcelGeoJSON){
-    map.jumpTo({center:loc,zoom:15.1}); // keep the configured bearing/pitch
-  }
-}).catch(()=>{});
+// Kick off IP geolocation now; the map-load handler repositions to it and picks the
+// location-appropriate default basemap.
+const _ipLocPromise=_ipLocate();
 // Track app-added sources/layers so they survive a basemap (setStyle) switch.
 // (setStyle replaces the whole style, dropping everything the app added on top.)
 const _appSourceIds=new Set(), _appLayerIds=new Set();
@@ -7317,6 +7326,13 @@ map.on("load",()=>{
   mapReady=true;
   map.setLanguage(lang==='ka'?'ka':'en');
   _updateSearchPlaceholder();
+  // Reposition to the user's approximate (IP) location at zoom 15.1, then apply the
+  // location-appropriate default basemap (Hillshade in Georgia, Mapbox Standard Day elsewhere).
+  _ipLocPromise.then(loc=>{
+    if(loc&&!mapMoved&&!hasSearched&&!_currentParcelGeoJSON)map.jumpTo({center:loc,zoom:15.1}); // keep configured bearing/pitch
+    _updateSearchPlaceholder();
+    _applyLocationBasemap();
+  }).catch(()=>{try{_applyLocationBasemap();}catch(_){}});
   const _mzc=document.getElementById('map-zoom-controls');
   if(_mzc){_mzc.classList.remove('mzc-loading');_mzc.style.display='';_mzc.style.opacity='0';requestAnimationFrame(()=>{_mzc.style.transition='opacity 0.5s ease';_mzc.style.opacity='1';});}
 
