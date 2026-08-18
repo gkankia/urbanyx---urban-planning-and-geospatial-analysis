@@ -14265,49 +14265,49 @@ async function _geocodePlace(query){
   }catch(e){ console.warn('geocode:',e); return false; }
 }
 
+// maps.gov.ge cadastral-code / address → parcel loader (with DB fallback if the
+// portal is unreachable). Throws "not_found" when nothing matches.
+async function _loadGovParcel(code){
+  let govGeOk=false;
+  try{
+    const form=new FormData();form.append("keyword",code);form.append("keyword_description[lang]",lang);
+    const sRes=await fetch("https://maps.gov.ge/map/portal/search",{method:"POST",body:form});
+    if(!sRes.ok)throw new Error("search_fail");
+    const sData=await sRes.json();
+    if(!sData.status||!sData.result?.length)throw new Error("not_found");
+    const lbl=sData.result[0].details?.info_link?.split("lbl=")[1];if(!lbl)throw new Error("no_lbl");
+    govGeOk=true;
+    await loadParcel(lbl,code);
+  }catch(govErr){
+    if(govErr.message==="not_found"||govErr.message==="no_shape"||govGeOk)throw govErr;
+    await loadParcelFromDB(code.trim()); // portal down → try our DB
+  }
+}
+
 async function search(){
-  const code=getCode();if(!code)return;const tr=t();
+  const code=getCode();if(!code)return;const q=code.trim();const tr=t();
   try{resetAnalysis();}catch(_){}
   setLoading(true);setStatus(tr.searching,"");
   try{
-    // Outside Georgia there are no parcels — treat every query as a place lookup.
-    const _c=map.getCenter();
-    if(!_inGeorgia(_c.lng,_c.lat)){
-      if(!await _geocodePlace(code.trim()))setStatus(tr.notFound,"error");
-      return;
+    const c=map.getCenter(), inGe=_inGeorgia(c.lng,c.lat);
+    const isOwnerId=/^\d{9,11}$/.test(q);       // national ID
+    const isCadastral=/\d\.\d/.test(q);          // e.g. 01.15.07.002.057
+    // Parcel-specific lookups (Georgia only): owner ID or cadastral code.
+    if(inGe&&isOwnerId){ await searchByOwnerId(code); return; }
+    if(inGe&&isCadastral){ await _loadGovParcel(code); return; }
+    // Everything else is a place query → geocode (cities, streets, POIs, addresses),
+    // works both inside and outside Georgia.
+    if(await _geocodePlace(q)) return;
+    // Georgia fallbacks for text that isn't a recognised place: owner name, then address.
+    if(inGe){
+      if(q.length>=2 && await searchByOwnerName(q)) return;
+      try{ await _loadGovParcel(code); return; }catch(_){}
     }
-    if(/^\d{9,11}$/.test(code.trim())){
-      await searchByOwnerId(code);
-    }else{
-      let nameFound=false;
-      if(code.trim().length>=2&&!/^\d/.test(code.trim())&&!code.includes(".")){
-        nameFound=await searchByOwnerName(code.trim());
-      }
-      if(!nameFound){
-        let govGeOk=false;
-        try{
-          const form=new FormData();form.append("keyword",code);form.append("keyword_description[lang]",lang);
-          const sRes=await fetch("https://maps.gov.ge/map/portal/search",{method:"POST",body:form});
-          if(!sRes.ok)throw new Error("search_fail");
-          const sData=await sRes.json();
-          if(!sData.status||!sData.result?.length)throw new Error("not_found");
-          const lbl=sData.result[0].details?.info_link?.split("lbl=")[1];if(!lbl)throw new Error("no_lbl");
-          govGeOk=true;
-          await loadParcel(lbl,code);
-        }catch(govErr){
-          // Not a Georgian parcel — try a place-name lookup before giving up.
-          if(govErr.message==="not_found"&&await _geocodePlace(code.trim()))return;
-          if(govErr.message==="not_found"||govErr.message==="no_shape"||govGeOk)throw govErr;
-          await loadParcelFromDB(code.trim());
-        }
-      }
-    }
+    setStatus(lang==="ka"?"ძიება წარუმატებელია":"Search unsuccessful","error");
   }catch(e){
     console.error(e);
-    // Any "no result" outcome gets one general message; only unexpected errors show details.
-    const noResult=["not_found","no_shape","not_in_db"].includes(e.message);
-    const msg=noResult?(lang==="ka"?"ძიება წარუმატებელია":"Search unsuccessful"):tr.error+` (${e.message})`;
-    setStatus(msg,"error");
+    const noResult=["not_found","no_shape","not_in_db","no_lbl","search_fail"].includes(e.message);
+    setStatus(noResult?(lang==="ka"?"ძიება წარუმატებელია":"Search unsuccessful"):tr.error+` (${e.message})`,"error");
   }
   finally{setLoading(false);}
 }
