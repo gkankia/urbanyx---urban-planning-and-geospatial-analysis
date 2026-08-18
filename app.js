@@ -769,6 +769,9 @@ function updateUserUI(){
     const _navAvEl2=document.getElementById("nav-u-avatar");if(_navAvEl2){const _ti=_navAvEl2.querySelector(".avatar-initials");if(_ti)_ti.textContent="";}
     {const _pf=document.getElementById("pf-avatar");if(_pf)setAvatar(_pf,null,"?");}
   }
+  // Re-evaluate the default basemap now that the account is known (exempt accounts keep
+  // Z.axis Hillshade even from abroad).
+  try{ if(typeof _applyLocationBasemap==='function'&&mapReady)_applyLocationBasemap(); }catch(_){}
 }
 
 function _getRegPeriod(registeredAt){
