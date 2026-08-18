@@ -806,9 +806,9 @@
     </div>
     <!-- Preferences -->
     <div class="dash-section">
-      <div class="dash-section-title">Communication</div>
+      <div class="dash-section-title" id="lbl-dash-communication">Communication</div>
       <label class="dash-consent-row">
-        <span class="dash-consent-label">Marketing updates from Urbanyx and Z.axis</span>
+        <span class="dash-consent-label" id="dash-consent-label">Marketing updates from Urbanyx and Z.axis</span>
         <span class="dash-toggle">
           <input type="checkbox" id="dash-marketing-cb" onchange="toggleMarketingConsent(this.checked)">
           <span class="dash-toggle-slider"></span>
@@ -818,7 +818,7 @@
     <!-- Sign out -->
     <div class="dash-section" style="padding-bottom:0">
       <button class="dash-action-btn signout" style="width:100%" onclick="closeDashboard();logout()" id="dash-signout-btn"></button>
-      <button class="dash-delete-link" onclick="openDeletionRequest()">Request account deletion</button>
+      <button class="dash-delete-link" id="dash-delete-link" onclick="openDeletionRequest()">Request account deletion</button>
     </div>
   </div>
 </div>

@@ -360,7 +360,7 @@ const T = {
     pdfNoScore:"Run analysis to generate score",
     pdfNoImage:"No street imagery available",
     hist:{live:"Live",history:"History",coverage:(f,n)=>`Archive since ${f} · ${n} day${n==1?'':'s'} of data`,onTime:"On-time",onTimeSub:"−1…+5 min",medDelay:"Median delay",p90:"90th-pct delay",ewt:"Excess wait",worst:"Least reliable stops in area",noData:"No history for this area yet — data collection began 12 Jul 2026.",insufficient:"insufficient data",late:"late",traceHint:"Click a route chip below to paint its speed along the route",dirToggle:"⇄ direction",clearTrace:"Clear trace",loading:"Crunching history…",days:{all:"All days",weekday:"Weekdays",sat:"Sat",sun:"Sun"},bands:{all:"All day",am_peak:"AM peak",midday:"Midday",pm_peak:"PM peak",evening:"Evening"},chartTitle:"Median delay by hour",chartUnit:"min",obs:"obs",scoreLabel:"Area reliability",worstRoute:"Worst route",schedHeadway:"Scheduled headway",perDay:"/day avg",infoScore:"Weighted share of arrivals within +5 min of schedule across all observed stops in this isochrone (each stop weighted by its observation count). Grades: A ≥80%, B ≥70%, C ≥60%, D ≥50%, E ≥40%, F below 40%.",colorBy:"Color stops by",varOntime:"On-time",varLate:"Late >5 min",varDelay:"Median delay",varHeadway:"Headway",infoOnTime:"Share of arrivals within −60s…+300s of the scheduled time (industry standard). Sample size shown in the tooltip; stops with fewer than 30 matched observations are excluded from coloring.",infoMed:"Median of the daily median signed delays across the area's stops. Positive = late, negative = early. Derived from vehicle positions sampled every 2 minutes; individual arrivals are interpolated, giving roughly ±1 minute precision.",infoP90:"90th percentile of delay — the worst-case a rider should plan for. One in ten arrivals is later than this.",infoEwt:"Excess Wait Time: how much longer riders actually wait versus the scheduled headway (E[h²]/2E[h]). Only computed for the All-day view, since headways need the full day's arrivals.",infoBandEwt:"EWT and headway metrics are available in the All-day view only.",exportPdf:"PDF · Transport Assessment",exportCsv:"CSV",exportGeo:"GeoJSON"},
-    dash:{title:"Dashboard",usage:"Usage",usedToday:"Searches this month",remaining:"Remaining",limit:"Monthly limit",resetsAt:"Resets on",billing:"Plan & Billing",freePlan:"Free plan",proPlan:"Pro plan",freeDesc:"50 analysis tokens / month",proDesc:"1,000 tokens / month · Full analysis · Report and data export",upgrade:"Upgrade to Pro",manageBilling:"Manage billing",billingTitle:"Billing",billingSubFree:"Manage your plan",billingSubPro:"Your active subscription",billingLblPlan:"Current plan",billingLblHistory:"Billing history",billingPeriod:"/month",billingRenewal:"Next payment",billingTrialEnds:"Trial ends",billingDaysLeft:"days remaining",billingTrialNote:"Your 14-day free trial is active. If you cancel now, you keep full access until the trial ends.",billingPostTrialNote:"If you cancel, you keep Pro access until your renewal date. No further charges after that.",billingCanceling:"Cancellation scheduled — access continues until period end.",billingNoHistory:"No billing history yet",billingCancel:"Cancel subscription",billingCancelConfirm:"Are you sure you want to cancel? You will keep access until the current period ends.",billingCanceledTrial:"Your subscription has been cancelled. No charge was made.",billingCanceledRefund:"Your subscription has been cancelled and a refund has been issued for the unused period.",signOut:"Sign out",activity:"Activity this month",language:"Language"},
+    dash:{title:"Dashboard",usage:"Usage",usedToday:"Searches this month",remaining:"Remaining",limit:"Monthly limit",resetsAt:"Resets on",billing:"Plan & Billing",freePlan:"Free plan",proPlan:"Pro plan",freeDesc:"50 analysis tokens / month",proDesc:"1,000 tokens / month · Full analysis · Report and data export",upgrade:"Upgrade to Pro",manageBilling:"Manage billing",billingTitle:"Billing",billingSubFree:"Manage your plan",billingSubPro:"Your active subscription",billingLblPlan:"Current plan",billingLblHistory:"Billing history",billingPeriod:"/month",billingRenewal:"Next payment",billingTrialEnds:"Trial ends",billingDaysLeft:"days remaining",billingTrialNote:"Your 14-day free trial is active. If you cancel now, you keep full access until the trial ends.",billingPostTrialNote:"If you cancel, you keep Pro access until your renewal date. No further charges after that.",billingCanceling:"Cancellation scheduled — access continues until period end.",billingNoHistory:"No billing history yet",billingCancel:"Cancel subscription",billingCancelConfirm:"Are you sure you want to cancel? You will keep access until the current period ends.",billingCanceledTrial:"Your subscription has been cancelled. No charge was made.",billingCanceledRefund:"Your subscription has been cancelled and a refund has been issued for the unused period.",signOut:"Sign out",activity:"Activity this month",language:"Language",communication:"Communication",marketingConsent:"Marketing updates from Urbanyx and Z.axis",deleteAccount:"Request account deletion"},
     projects:{navTip:"My Projects",panelTitle:"My Projects",saveBtn:"Save current analysis",emptyMsg:"No saved projects yet.",openBtn:"Open",deleteConfirm:"Delete this project?",loadingMsg:"Loading…",savingMsg:"Saving…",saveModalTitle:"Save Project",saveModalHint:"Saves map view, selected features, imported layers and analysis results.",cancelBtn:"Cancel",confirmBtn:"Save",savedToast:"Project saved",deletedToast:"Project deleted",loadedToast:"Project loaded",errorSave:"Failed to save project",errorLoad:"Failed to load project",errorDelete:"Delete failed",layers:"layer",layersPlural:"layers"},
     activityLabels:{map_click:"Clicks",free_analysis:"Free analysis",pro_analysis:"Pro analysis",relief_analysis:"Relief",pdf_export:"PDF export",geojson_export:"GeoJSON export"},
     activityIcons:{map_click:"—",free_analysis:"○",pro_analysis:"◆",relief_analysis:"△",pdf_export:"↓",geojson_export:"⬡"},
@@ -493,7 +493,7 @@ const T = {
     pdfTitle:"ნაკვეთის ანალიზის ანგარიში",
     pdfGenerated:"შექმნილია Urbanyx-ის გამოყენებით",
     hist:{live:"მიმდინარე",history:"ისტორია",coverage:(f,n)=>`არქივი ${f}-დან · ${n} დღის მონაცემი`,onTime:"განრიგის მიხედვით",onTimeSub:"−1…+5 წთ",medDelay:"მედიანური დაგვიანება",p90:"90-ე პროც. დაგვ.",ewt:"ზედმეტი ლოდინი",worst:"ყველაზე არასანდო გაჩერებები",noData:"ამ არეალზე საკმარისი მონაცემი ჯერ არ არის შეგროვებული — დაიწყო 12 ივლ 2026.",insufficient:"არასაკმარისი მონაცემი",late:"გვიან",traceHint:"დააჭირე მარშრუტს შესაბამისი სიჩქარის სანახავად",dirToggle:"⇄ მიმართულება",clearTrace:"კვალის წაშლა",loading:"იტვირთება…",days:{all:"ყველა დღე",weekday:"სამუშაო დღეები",sat:"შაბ",sun:"კვ"},bands:{all:"მთელი დღე",am_peak:"დილის პიკის საათი",midday:"შუადღე",pm_peak:"საღამოს პიკის საათი",evening:"საღამო"},chartTitle:"მედიანური დაგვიანება საათობრივად",chartUnit:"წთ",obs:"დაკვ.",scoreLabel:"არეალის სანდოობა",worstRoute:"ყველაზე ცუდი მარშრუტი",schedHeadway:"დაგეგმილი ინტერვალი",perDay:"/საშ. დღეში",infoScore:"განრიგით 5 წუთზე მეტით დაგვიანებული ავტობუსების შეწონილი წილი იზოქრონის ყველა გაჩერებაზე (თითო გაჩერება იწონება დაკვირვებების რაოდენობით). შეფასება: A ≥80%, B ≥70%, C ≥60%, D ≥50%, E ≥40%, F 40%-ზე ქვემოთ.",colorBy:"გაჩერებების შეფერვა",varOntime:"განრიგის მიხედვით",varLate:"დაგვ. >5 წთ",varDelay:"მედ. დაგვიანება",varHeadway:"ინტერვალი",infoOnTime:"მოსვლების წილი განრიგით −60წმ…+300წმ ფარგლებში (მიღებული სტანდარტი). დაკვირვების ზომა მოცემულია თულთიფ ფანჯარაში; გაჩერებები, სადაც დაკვირვების ზომა 30-ზე ნაკლებია, შეფასებიდან გამორიცხულია.",infoMed:"დღიური მედიანური დაგვიანებების მედიანა მოცემულ ტერიტორიაზე არსებულ გაჩერებებზე. დადებითი = გვიან, უარყოფითი = ადრე. შეფასება ეყრდნობა ტრანსპორტის ცვალებად პოზიციას 2 წუთიანი ინტერვალით; ყოველი მოსვლა განზოგადობულია დაახლოებით ±1 წუთიანი სიზუსტით.",infoP90:"დაგვიანების 90-ე პროცენტილი — უარესი შემთხვევა, რომელიც მგზავრმა დაგეგმვისას უნდა გაითვალისწინოს. ათიდან ერთი მოსვლა ამაზე გვიანაა.",infoEwt:"ზედმეტი ლოდინი: რამდენად მეტს ელოდება მგზავრი გრაფიკით დაგეგმილ ინტერვალთან შედარებით. გამოთვლა ითვალისწინებს მთელი დღის მონაცემს, რადგანაც ინტერვალის გამოსაანგარიშებლად სრული დღის დაფარვაა საჭირო.",infoBandEwt:"ზედმეტი ლოდინი და ინტერვალი მხოლოდ მთელი დღის კონტექსტშია ხელმისაწვდომი.",exportPdf:"PDF · ტრანსპორტის ანგარიში",exportCsv:"CSV",exportGeo:"GeoJSON"},
-    dash:{title:"დეშბორდი",usage:"გამოყენება",usedToday:"ძიება ამ თვეში",remaining:"დარჩენილი",limit:"თვიური ლიმიტი",resetsAt:"განახლდება",billing:"ვერსია და გადახდა",freePlan:"უფასო ვერსია",proPlan:"Pro ვერსია",freeDesc:"ანალიზის 50 ტოკენი / თვეში",proDesc:"1,000 ტოკენი / თვეში · სრულყოფილი ანალიზი · კვლევითი ანალიზის და მონაცემთა გადმოწერა",upgrade:"Pro ვერსიაზე გადასვლა",manageBilling:"გადახდის მართვა",billingTitle:"გადახდა",billingSubFree:"ვერსიის მართვა",billingSubPro:"თქვენი გამოწერა",billingLblPlan:"მიმდინარე ვერსია",billingLblHistory:"გადახდების ისტორია",billingPeriod:"/თვეში",billingRenewal:"შემდეგი გადახდა",billingTrialEnds:"საცდელი პერიოდი მთავრდება",billingDaysLeft:"დღე რჩება",billingTrialNote:"14-დღიანი საცდელი პერიოდი აქტიურია. გაუქმების შემთხვევაში სრული წვდომა გაგრძელდება საცდელი პერიოდის ბოლომდე.",billingPostTrialNote:"გაუქმების შემთხვევაში Pro წვდომა შენარჩუნდება განახლების თარიღამდე. ამის შემდეგ თანხა არ ჩამოიჭრება.",billingCanceling:"გაუქმება დაგეგმილია — წვდომა გრძელდება პერიოდის ბოლომდე.",billingNoHistory:"გადახდების ისტორია ცარიელია",billingCancel:"გამოწერის გაუქმება",billingCancelConfirm:"დარწმუნებული ხარ? წვდომა შენარჩუნდება მიმდინარე პერიოდის ბოლომდე.",billingCanceledTrial:"გამოწერა გაუქმდა. თანხა არ ჩამოიჭრება.",billingCanceledRefund:"გამოწერა გაუქმდა და გამოუყენებელი პერიოდის თანხა დაბრუნდება.",signOut:"გასვლა",activity:"ამ თვის აქტივობა",language:"ენა"},
+    dash:{title:"დეშბორდი",usage:"გამოყენება",usedToday:"ძიება ამ თვეში",remaining:"დარჩენილი",limit:"თვიური ლიმიტი",resetsAt:"განახლდება",billing:"ვერსია და გადახდა",freePlan:"უფასო ვერსია",proPlan:"Pro ვერსია",freeDesc:"ანალიზის 50 ტოკენი / თვეში",proDesc:"1,000 ტოკენი / თვეში · სრულყოფილი ანალიზი · კვლევითი ანალიზის და მონაცემთა გადმოწერა",upgrade:"Pro ვერსიაზე გადასვლა",manageBilling:"გადახდის მართვა",billingTitle:"გადახდა",billingSubFree:"ვერსიის მართვა",billingSubPro:"თქვენი გამოწერა",billingLblPlan:"მიმდინარე ვერსია",billingLblHistory:"გადახდების ისტორია",billingPeriod:"/თვეში",billingRenewal:"შემდეგი გადახდა",billingTrialEnds:"საცდელი პერიოდი მთავრდება",billingDaysLeft:"დღე რჩება",billingTrialNote:"14-დღიანი საცდელი პერიოდი აქტიურია. გაუქმების შემთხვევაში სრული წვდომა გაგრძელდება საცდელი პერიოდის ბოლომდე.",billingPostTrialNote:"გაუქმების შემთხვევაში Pro წვდომა შენარჩუნდება განახლების თარიღამდე. ამის შემდეგ თანხა არ ჩამოიჭრება.",billingCanceling:"გაუქმება დაგეგმილია — წვდომა გრძელდება პერიოდის ბოლომდე.",billingNoHistory:"გადახდების ისტორია ცარიელია",billingCancel:"გამოწერის გაუქმება",billingCancelConfirm:"დარწმუნებული ხარ? წვდომა შენარჩუნდება მიმდინარე პერიოდის ბოლომდე.",billingCanceledTrial:"გამოწერა გაუქმდა. თანხა არ ჩამოიჭრება.",billingCanceledRefund:"გამოწერა გაუქმდა და გამოუყენებელი პერიოდის თანხა დაბრუნდება.",signOut:"გასვლა",activity:"ამ თვის აქტივობა",language:"ენა",communication:"კომუნიკაცია",marketingConsent:"სიახლეები Urbanyx-ისა და Z.axis-ისგან",deleteAccount:"ანგარიშის წაშლის მოთხოვნა"},
     projects:{navTip:"ჩემი პროექტები",panelTitle:"ჩემი პროექტები",saveBtn:"მიმდინარე ანალიზის შენახვა",emptyMsg:"შენახული პროექტები არ არის.",openBtn:"გახსნა",deleteConfirm:"პროექტის წაშლა?",loadingMsg:"იტვირთება…",savingMsg:"ინახება…",saveModalTitle:"პროექტის შენახვა",saveModalHint:"ინახება რუკის ხედი, შერჩეული ობიექტები, შემოტანილი ფენები და ანალიზის შედეგები.",cancelBtn:"გაუქმება",confirmBtn:"შენახვა",savedToast:"პროექტი შენახულია",deletedToast:"პროექტი წაშლილია",loadedToast:"პროექტი ჩაიტვირთა",errorSave:"შენახვა ვერ მოხერხდა",errorLoad:"ჩატვირთვა ვერ მოხერხდა",errorDelete:"წაშლა ვერ მოხერხდა",layers:"ფენა",layersPlural:"ფენები"},
     activityLabels:{map_click:"კლიკები",free_analysis:"უფასო ანალიზი",pro_analysis:"Pro ანალიზი",relief_analysis:"რელიეფი",pdf_export:"PDF გადმოწერა",geojson_export:"GeoJSON გადმოწერა"},
     activityIcons:{map_click:"—",free_analysis:"○",pro_analysis:"◆",relief_analysis:"△",pdf_export:"↓",geojson_export:"⬡"},
@@ -544,8 +544,7 @@ function applyLang(){
   const _brand=document.getElementById("brand");if(_brand)_brand.textContent=tr.brand;
   const _tmb=document.getElementById("test-mode-banner");if(_tmb)_tmb.textContent=(lang==='ka')?"სატესტო რეჟიმი. გთხოვთ, არ შეიყვანოთ ბარათის მონაცემები გადახდის პორტალზე! უკუკავშირისთვის, მოგვწერეთ info@zaxis.ge":"Test mode. Don't add card details on the payment page! Any feedback is welcome at info@zaxis.ge";
   _updateSearchPlaceholder();
-  {const _dl=document.getElementById("lbl-dash-language");if(_dl&&tr.dash)_dl.textContent=tr.dash.language;}
-  document.querySelectorAll("#dash-lang-toggle button").forEach(b=>b.classList.toggle("active",b.dataset.lang===lang));
+  try{ if(typeof _localizeDashboard==='function')_localizeDashboard(); }catch(_){} // flip all dashboard labels instantly
   {const _is=document.getElementById("input-side");if(_is)_is.placeholder=tr.placeholder;}
   document.getElementById("btn-center").textContent=tr.btn;
   {const _bs=document.getElementById("btn-side");if(_bs)_bs.textContent=tr.btn;}
@@ -1053,6 +1052,33 @@ function openPaywall(_skipTitleReset){
 }
 
 // ── Dashboard ─────────────────────────────────────────────────────────────────
+// All dashboard TEXT labels in one place so a language switch flips them instantly.
+// Dynamic figures (limit/reset/activity) are re-applied from the last fetched cache.
+let _dashCache=null; // {limit, resetDateObj, fc}
+function _localizeDashboard(){
+  const dash=t().dash; if(!dash)return;
+  const set=(id,v)=>{const e=document.getElementById(id);if(e&&v!=null)e.textContent=v;};
+  set("lbl-dash-usage",dash.usage); set("lbl-dash-used-today",dash.usedToday);
+  set("lbl-dash-remaining",dash.remaining); set("lbl-dash-billing",dash.billing);
+  set("lbl-dash-activity",dash.activity); set("lbl-dash-language",dash.language);
+  set("dash-signout-btn",dash.signOut); set("lbl-dash-communication",dash.communication);
+  set("dash-consent-label",dash.marketingConsent); set("dash-delete-link",dash.deleteAccount);
+  document.querySelectorAll("#dash-lang-toggle button").forEach(b=>b.classList.toggle("active",b.dataset.lang===lang));
+  if(currentUser){
+    set("dash-plan-name",currentUser.plan==="pro"?dash.proPlan:dash.freePlan);
+    set("dash-plan-desc",currentUser.plan==="pro"?dash.proDesc:dash.freeDesc);
+    set("dash-upgrade-btn",dash.upgrade); set("dash-billing-btn",dash.manageBilling);
+  }
+  if(_dashCache){
+    if(_dashCache.limit!=null)set("dash-limit-label",`${dash.limit}: ${_dashCache.limit.toLocaleString()}`);
+    if(_dashCache.resetDateObj)set("dash-reset-label",`${dash.resetsAt} ${_dashCache.resetDateObj.toLocaleDateString(lang==="ka"?"ka-GE":"en-GB",{month:"short",day:"numeric"})}`);
+    if(_dashCache.fc){
+      const tr2=t(), ORDER=["map_click","free_analysis","pro_analysis","relief_analysis","pdf_export","geojson_export"];
+      const items=ORDER.filter(k=>_dashCache.fc[k]), grid=document.getElementById("dash-activity-grid");
+      if(grid&&items.length)grid.innerHTML=items.map(k=>`<div class="dash-stat"><div class="dash-stat-val" style="font-size:1.1rem">${_dashCache.fc[k]}</div><div class="dash-stat-label">${tr2.activityIcons[k]} ${tr2.activityLabels[k]}</div></div>`).join("");
+    }
+  }
+}
 function openDashboard(){
   if(!currentUser)return;
   const tr=t();const dash=tr.dash;
@@ -1100,6 +1126,7 @@ function openDashboard(){
   document.getElementById("dash-limit-bar").style.width="0%";
   const _noticeEl=document.getElementById("dash-limit-notice");if(_noticeEl)_noticeEl.style.display="none";
   const _mcCb=document.getElementById("dash-marketing-cb");if(_mcCb)_mcCb.checked=_marketingConsent;
+  _localizeDashboard(); // ensure the hardcoded-HTML labels (Communication/Marketing/Delete) are localized
   modal.classList.add("open");
   loadDashboardStats();
 }
@@ -1115,8 +1142,9 @@ async function loadDashboardStats(){
     const color=pct>=90?"#fca5a5":pct>=70?"#fbbf24":"#a78bfa"; // healthy = brand purple; amber near limit; red when nearly full
     const _periodEnd=window._subPeriodEnd?new Date(window._subPeriodEnd):null;
     const _freeReset2=currentUser.registeredAt?_getRegPeriod(currentUser.registeredAt).resetDate:new Date(_now.getFullYear(),_now.getMonth()+1,1);
-    const resetDate=(_periodEnd&&currentUser.plan==='pro'?_periodEnd:_freeReset2)
-      .toLocaleDateString(lang==="ka"?"ka-GE":"en-GB",{month:"short",day:"numeric"});
+    const resetDateObj=(_periodEnd&&currentUser.plan==='pro'?_periodEnd:_freeReset2);
+    const resetDate=resetDateObj.toLocaleDateString(lang==="ka"?"ka-GE":"en-GB",{month:"short",day:"numeric"});
+    _dashCache={limit,resetDateObj,fc:(_dashCache&&_dashCache.fc)||null}; // for instant re-localization
     document.getElementById("dash-used-today").textContent=used;
     document.getElementById("dash-used-today").style.color=color;
     document.getElementById("dash-remaining").textContent=left;
@@ -1151,6 +1179,7 @@ async function loadDashboardStats(){
     if(feErr)console.error("feature_usage select failed:",feErr.message);
     const fc={};
     for(const r of featureRows||[])fc[r.event_type]=(fc[r.event_type]||0)+1;
+    if(_dashCache)_dashCache.fc=fc; // cache for instant language re-localization
     const ORDER=["map_click","free_analysis","pro_analysis","relief_analysis","pdf_export","geojson_export"];
     const items=ORDER.filter(k=>fc[k]);
     const actSection=document.getElementById("dash-activity-section");
