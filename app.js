@@ -98,7 +98,10 @@ function _updateAnalysisGrid(show){
   const la=document.getElementById('pfc-cat-lbl-acc');if(la)la.textContent=ka?'მისაწვდომობის ანალიზი':'Accessibility analysis';
   // Localized native tooltips (the nav-tip spans were removed with the old nav buttons).
   const _TT={'nav-zoning-btn':['Zoning','ზონირება'],'cat-btn-relief':['Relief','რელიეფი'],'cat-btn-climate':['Climate','კლიმატი'],'cat-btn-energy':['Clean Energy','სუფთა ენერგია'],'cat-btn-accessibility':['Isochrone','იზოქრონი'],'cat-btn-education':['Education','განათლება'],'cat-btn-mobility':['Mobility','მობილობა'],'cat-btn-morphology':['Morphology','ურბანული მორფოლოგია']};
-  Object.keys(_TT).forEach(id=>{const b=document.getElementById(id);if(b)b.title=_TT[id][ka?1:0];});
+  // Short visible captions under the analysis icons (they were unlabeled icons —
+  // a recurring "I can't tell what these do" finding). Falls back to the tooltip name.
+  const _CAP={'nav-zoning-btn':['Zoning','ზონირება'],'cat-btn-relief':['Relief','რელიეფი'],'cat-btn-climate':['Climate','კლიმატი'],'cat-btn-energy':['Energy','ენერგია'],'cat-btn-accessibility':['Isochrone','იზოქრონი'],'cat-btn-education':['Education','განათლება'],'cat-btn-mobility':['Mobility','მობილობა'],'cat-btn-morphology':['Morphology','მორფოლოგია']};
+  Object.keys(_TT).forEach(id=>{const b=document.getElementById(id);if(b){b.title=_TT[id][ka?1:0];const cap=b.querySelector('.pfc-cat-cap');if(cap)cap.textContent=(_CAP[id]||_TT[id])[ka?1:0];}});
   // Zoning is Georgia-only — hide it entirely at a location pin (outside Georgia).
   const _zb=document.getElementById('nav-zoning-btn');if(_zb)_zb.style.display=_pinMode?'none':'';
   const area=_currentParcelAreaM2||0;
@@ -361,6 +364,7 @@ const T = {
     pdfNoImage:"No street imagery available",
     hist:{live:"Live",history:"History",coverage:(f,n)=>`Archive since ${f} · ${n} day${n==1?'':'s'} of data`,onTime:"On-time",onTimeSub:"−1…+5 min",medDelay:"Median delay",p90:"90th-pct delay",ewt:"Excess wait",worst:"Least reliable stops in area",noData:"No history for this area yet — data collection began 12 Jul 2026.",insufficient:"insufficient data",late:"late",traceHint:"Click a route chip below to paint its speed along the route",dirToggle:"⇄ direction",clearTrace:"Clear trace",loading:"Crunching history…",days:{all:"All days",weekday:"Weekdays",sat:"Sat",sun:"Sun"},bands:{all:"All day",am_peak:"AM peak",midday:"Midday",pm_peak:"PM peak",evening:"Evening"},chartTitle:"Median delay by hour",chartUnit:"min",obs:"obs",scoreLabel:"Area reliability",worstRoute:"Worst route",schedHeadway:"Scheduled headway",perDay:"/day avg",infoScore:"Weighted share of arrivals within +5 min of schedule across all observed stops in this isochrone (each stop weighted by its observation count). Grades: A ≥80%, B ≥70%, C ≥60%, D ≥50%, E ≥40%, F below 40%.",colorBy:"Color stops by",varOntime:"On-time",varLate:"Late >5 min",varDelay:"Median delay",varHeadway:"Headway",infoOnTime:"Share of arrivals within −60s…+300s of the scheduled time (industry standard). Sample size shown in the tooltip; stops with fewer than 30 matched observations are excluded from coloring.",infoMed:"Median of the daily median signed delays across the area's stops. Positive = late, negative = early. Derived from vehicle positions sampled every 2 minutes; individual arrivals are interpolated, giving roughly ±1 minute precision.",infoP90:"90th percentile of delay — the worst-case a rider should plan for. One in ten arrivals is later than this.",infoEwt:"Excess Wait Time: how much longer riders actually wait versus the scheduled headway (E[h²]/2E[h]). Only computed for the All-day view, since headways need the full day's arrivals.",infoBandEwt:"EWT and headway metrics are available in the All-day view only.",exportPdf:"PDF · Transport Assessment",exportCsv:"CSV",exportGeo:"GeoJSON"},
     dash:{title:"Dashboard",usage:"Usage",usedToday:"Searches this month",remaining:"Remaining",limit:"Monthly limit",resetsAt:"Resets on",billing:"Plan & Billing",freePlan:"Free plan",proPlan:"Pro plan",freeDesc:"50 analysis tokens / month",proDesc:"1,000 tokens / month · Full analysis · Report and data export",upgrade:"Upgrade to Pro",manageBilling:"Manage billing",billingTitle:"Billing",billingSubFree:"Manage your plan",billingSubPro:"Your active subscription",billingLblPlan:"Current plan",billingLblHistory:"Billing history",billingPeriod:"/month",billingRenewal:"Next payment",billingTrialEnds:"Trial ends",billingDaysLeft:"days remaining",billingTrialNote:"Your 14-day free trial is active. If you cancel now, you keep full access until the trial ends.",billingPostTrialNote:"If you cancel, you keep Pro access until your renewal date. No further charges after that.",billingCanceling:"Cancellation scheduled — access continues until period end.",billingNoHistory:"No billing history yet",billingCancel:"Cancel subscription",billingCancelConfirm:"Are you sure you want to cancel? You will keep access until the current period ends.",billingCanceledTrial:"Your subscription has been cancelled. No charge was made.",billingCanceledRefund:"Your subscription has been cancelled and a refund has been issued for the unused period.",signOut:"Sign out",activity:"Activity this month",language:"Language",communication:"Communication",marketingConsent:"Marketing updates from Urbanyx and Z.axis",deleteAccount:"Request account deletion"},
+    proj:{projects:"Projects",data:"Data",newProject:"New Project",namePh:"Project name…",savedNow:"Saved just now",savedAgo:m=>`Saved ${m}m ago`,noData:"No imported data layers yet.<br>Use the Draw &amp; Import tool to add GeoJSON, Shapefile, CSV, or GeoTIFF."},
     projects:{navTip:"My Projects",panelTitle:"My Projects",saveBtn:"Save current analysis",emptyMsg:"No saved projects yet.",openBtn:"Open",deleteConfirm:"Delete this project?",loadingMsg:"Loading…",savingMsg:"Saving…",saveModalTitle:"Save Project",saveModalHint:"Saves map view, selected features, imported layers and analysis results.",cancelBtn:"Cancel",confirmBtn:"Save",savedToast:"Project saved",deletedToast:"Project deleted",loadedToast:"Project loaded",errorSave:"Failed to save project",errorLoad:"Failed to load project",errorDelete:"Delete failed",layers:"layer",layersPlural:"layers"},
     activityLabels:{map_click:"Clicks",free_analysis:"Free analysis",pro_analysis:"Pro analysis",relief_analysis:"Relief",pdf_export:"PDF export",geojson_export:"GeoJSON export"},
     activityIcons:{map_click:"—",free_analysis:"○",pro_analysis:"◆",relief_analysis:"△",pdf_export:"↓",geojson_export:"⬡"},
@@ -494,6 +498,7 @@ const T = {
     pdfGenerated:"შექმნილია Urbanyx-ის გამოყენებით",
     hist:{live:"მიმდინარე",history:"ისტორია",coverage:(f,n)=>`არქივი ${f}-დან · ${n} დღის მონაცემი`,onTime:"განრიგის მიხედვით",onTimeSub:"−1…+5 წთ",medDelay:"მედიანური დაგვიანება",p90:"90-ე პროც. დაგვ.",ewt:"ზედმეტი ლოდინი",worst:"ყველაზე არასანდო გაჩერებები",noData:"ამ არეალზე საკმარისი მონაცემი ჯერ არ არის შეგროვებული — დაიწყო 12 ივლ 2026.",insufficient:"არასაკმარისი მონაცემი",late:"გვიან",traceHint:"დააჭირე მარშრუტს შესაბამისი სიჩქარის სანახავად",dirToggle:"⇄ მიმართულება",clearTrace:"კვალის წაშლა",loading:"იტვირთება…",days:{all:"ყველა დღე",weekday:"სამუშაო დღეები",sat:"შაბ",sun:"კვ"},bands:{all:"მთელი დღე",am_peak:"დილის პიკის საათი",midday:"შუადღე",pm_peak:"საღამოს პიკის საათი",evening:"საღამო"},chartTitle:"მედიანური დაგვიანება საათობრივად",chartUnit:"წთ",obs:"დაკვ.",scoreLabel:"არეალის სანდოობა",worstRoute:"ყველაზე ცუდი მარშრუტი",schedHeadway:"დაგეგმილი ინტერვალი",perDay:"/საშ. დღეში",infoScore:"განრიგით 5 წუთზე მეტით დაგვიანებული ავტობუსების შეწონილი წილი იზოქრონის ყველა გაჩერებაზე (თითო გაჩერება იწონება დაკვირვებების რაოდენობით). შეფასება: A ≥80%, B ≥70%, C ≥60%, D ≥50%, E ≥40%, F 40%-ზე ქვემოთ.",colorBy:"გაჩერებების შეფერვა",varOntime:"განრიგის მიხედვით",varLate:"დაგვ. >5 წთ",varDelay:"მედ. დაგვიანება",varHeadway:"ინტერვალი",infoOnTime:"მოსვლების წილი განრიგით −60წმ…+300წმ ფარგლებში (მიღებული სტანდარტი). დაკვირვების ზომა მოცემულია თულთიფ ფანჯარაში; გაჩერებები, სადაც დაკვირვების ზომა 30-ზე ნაკლებია, შეფასებიდან გამორიცხულია.",infoMed:"დღიური მედიანური დაგვიანებების მედიანა მოცემულ ტერიტორიაზე არსებულ გაჩერებებზე. დადებითი = გვიან, უარყოფითი = ადრე. შეფასება ეყრდნობა ტრანსპორტის ცვალებად პოზიციას 2 წუთიანი ინტერვალით; ყოველი მოსვლა განზოგადობულია დაახლოებით ±1 წუთიანი სიზუსტით.",infoP90:"დაგვიანების 90-ე პროცენტილი — უარესი შემთხვევა, რომელიც მგზავრმა დაგეგმვისას უნდა გაითვალისწინოს. ათიდან ერთი მოსვლა ამაზე გვიანაა.",infoEwt:"ზედმეტი ლოდინი: რამდენად მეტს ელოდება მგზავრი გრაფიკით დაგეგმილ ინტერვალთან შედარებით. გამოთვლა ითვალისწინებს მთელი დღის მონაცემს, რადგანაც ინტერვალის გამოსაანგარიშებლად სრული დღის დაფარვაა საჭირო.",infoBandEwt:"ზედმეტი ლოდინი და ინტერვალი მხოლოდ მთელი დღის კონტექსტშია ხელმისაწვდომი.",exportPdf:"PDF · ტრანსპორტის ანგარიში",exportCsv:"CSV",exportGeo:"GeoJSON"},
     dash:{title:"დეშბორდი",usage:"გამოყენება",usedToday:"ძიება ამ თვეში",remaining:"დარჩენილი",limit:"თვიური ლიმიტი",resetsAt:"განახლდება",billing:"ვერსია და გადახდა",freePlan:"უფასო ვერსია",proPlan:"Pro ვერსია",freeDesc:"ანალიზის 50 ტოკენი / თვეში",proDesc:"1,000 ტოკენი / თვეში · სრულყოფილი ანალიზი · კვლევითი ანალიზის და მონაცემთა გადმოწერა",upgrade:"Pro ვერსიაზე გადასვლა",manageBilling:"გადახდის მართვა",billingTitle:"გადახდა",billingSubFree:"ვერსიის მართვა",billingSubPro:"თქვენი გამოწერა",billingLblPlan:"მიმდინარე ვერსია",billingLblHistory:"გადახდების ისტორია",billingPeriod:"/თვეში",billingRenewal:"შემდეგი გადახდა",billingTrialEnds:"საცდელი პერიოდი მთავრდება",billingDaysLeft:"დღე რჩება",billingTrialNote:"14-დღიანი საცდელი პერიოდი აქტიურია. გაუქმების შემთხვევაში სრული წვდომა გაგრძელდება საცდელი პერიოდის ბოლომდე.",billingPostTrialNote:"გაუქმების შემთხვევაში Pro წვდომა შენარჩუნდება განახლების თარიღამდე. ამის შემდეგ თანხა არ ჩამოიჭრება.",billingCanceling:"გაუქმება დაგეგმილია — წვდომა გრძელდება პერიოდის ბოლომდე.",billingNoHistory:"გადახდების ისტორია ცარიელია",billingCancel:"გამოწერის გაუქმება",billingCancelConfirm:"დარწმუნებული ხარ? წვდომა შენარჩუნდება მიმდინარე პერიოდის ბოლომდე.",billingCanceledTrial:"გამოწერა გაუქმდა. თანხა არ ჩამოიჭრება.",billingCanceledRefund:"გამოწერა გაუქმდა და გამოუყენებელი პერიოდის თანხა დაბრუნდება.",signOut:"გასვლა",activity:"ამ თვის აქტივობა",language:"ენა",communication:"კომუნიკაცია",marketingConsent:"სიახლეები Urbanyx-ისა და Z.axis-ისგან",deleteAccount:"ანგარიშის წაშლის მოთხოვნა"},
+    proj:{projects:"პროექტები",data:"მონაცემები",newProject:"ახალი პროექტი",namePh:"პროექტის სახელი…",savedNow:"შენახულია ახლახ",savedAgo:m=>`შენახულია ${m} წთ წინ`,noData:"იმპორტირებული მონაცემები ჯერ არ არის.<br>გამოიყენე „დახაზვა და იმპორტი“ GeoJSON, Shapefile, CSV ან GeoTIFF-ის დასამატებლად."},
     projects:{navTip:"ჩემი პროექტები",panelTitle:"ჩემი პროექტები",saveBtn:"მიმდინარე ანალიზის შენახვა",emptyMsg:"შენახული პროექტები არ არის.",openBtn:"გახსნა",deleteConfirm:"პროექტის წაშლა?",loadingMsg:"იტვირთება…",savingMsg:"ინახება…",saveModalTitle:"პროექტის შენახვა",saveModalHint:"ინახება რუკის ხედი, შერჩეული ობიექტები, შემოტანილი ფენები და ანალიზის შედეგები.",cancelBtn:"გაუქმება",confirmBtn:"შენახვა",savedToast:"პროექტი შენახულია",deletedToast:"პროექტი წაშლილია",loadedToast:"პროექტი ჩაიტვირთა",errorSave:"შენახვა ვერ მოხერხდა",errorLoad:"ჩატვირთვა ვერ მოხერხდა",errorDelete:"წაშლა ვერ მოხერხდა",layers:"ფენა",layersPlural:"ფენები"},
     activityLabels:{map_click:"კლიკები",free_analysis:"უფასო ანალიზი",pro_analysis:"Pro ანალიზი",relief_analysis:"რელიეფი",pdf_export:"PDF გადმოწერა",geojson_export:"GeoJSON გადმოწერა"},
     activityIcons:{map_click:"—",free_analysis:"○",pro_analysis:"◆",relief_analysis:"△",pdf_export:"↓",geojson_export:"⬡"},
@@ -524,6 +529,8 @@ function setLang(l){
   // build their labels into innerHTML once and don't self-update — force a
   // rebuild in the new language. Morphology/Energy skip rebuilding unless
   // their content is empty, so clear those two first.
+  // Snapshot switch-driven analyses BEFORE setupProCard resets those switches.
+  const _swSnap=(typeof _captureActiveAnalyses==='function')?_captureActiveAnalyses():null;
   if(typeof setupProCard==='function'){
     const _morphC=document.getElementById('pro-cat-morphology-content');if(_morphC)_morphC.innerHTML='';
     const _energyC=document.getElementById('pro-cat-energy-content');if(_energyC)_energyC.innerHTML='';
@@ -533,8 +540,9 @@ function setLang(l){
   try{ if(document.getElementById("dashboard-modal")?.classList.contains("open"))loadDashboardStats(); }catch(_){}
   try{ if(_pinMode&&Array.isArray(_parcelCardLngLat)&&typeof _showLocationCard==='function')_showLocationCard(_parcelCardLngLat[0],_parcelCardLngLat[1]); }catch(_){}
   try{ if((_currentParcelGeoJSON||_isDrawnArea)&&typeof _updateAnalysisGrid==='function')_updateAnalysisGrid(true); }catch(_){}
-  // Analysis result panels that can cheaply re-render from cached data.
   try{ if(typeof _ttcRenderedStops!=='undefined'&&_ttcRenderedStops&&typeof _ttcRenderPanel==='function')_ttcRenderPanel(); }catch(_){}
+  // Re-run/re-render every active analysis + planning panel so their results re-localize.
+  try{ if(typeof _relocalizeActiveAnalyses==='function')_relocalizeActiveAnalyses(_swSnap); }catch(_){}
 }
 
 function applyLang(){
@@ -631,6 +639,12 @@ function applyLang(){
     pset("pfc-lbl-owner",lang==="ka"?"მეპატრონე":"Owner");
     pset("pfc-lbl-reg",lang==="ka"?"რეგისტრაციის თარიღი":"Registered");
   }
+  // Projects / Data panel (was hardcoded English in a core flow).
+  if(tr.proj){const pj=tr.proj;const st=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
+    st("nav-lbl-projects",pj.projects);st("nav-tip-projects",pj.projects);st("mt-lbl-projects",pj.projects);st("pp-tab-projects",pj.projects);
+    st("nav-lbl-data",pj.data);st("nav-tip-data",pj.data);st("pp-tab-data",pj.data);
+    st("lbl-pp-save-btn",pj.newProject);
+    const _pn=document.getElementById("spm-name-input");if(_pn)_pn.placeholder=pj.namePh;}
   const plansBtn=document.getElementById("plans-btn");if(plansBtn)plansBtn.textContent=tr.plansBtn;
   const signinBtnEl=document.getElementById("signin-btn");if(signinBtnEl)signinBtnEl.textContent=tr.centerSignIn;
   // Center auth links
@@ -1331,12 +1345,13 @@ let _extrusionHeight = 12;
 let _selectedFloors = new Set();
 let _floorOverrides = {}; // {floorIdx:{useType,color:[r,g,b],ring:null|[...]}}
 const FLOOR_USES=[
-  {id:'residential',label:'Residential',color:[0xe8/255,0x96/255,0x30/255],hex:'#e89630'},
-  {id:'commercial',label:'Commercial',color:[0x34/255,0xd3/255,0x99/255],hex:'#34d399'},
-  {id:'office',label:'Office',color:[0x60/255,0xa5/255,0xfa/255],hex:'#60a5fa'},
-  {id:'parking',label:'Parking',color:[0x94/255,0xa3/255,0xb8/255],hex:'#94a3b8'},
-  {id:'amenity',label:'Amenity',color:[0xc0/255,0x84/255,0xfc/255],hex:'#c084fc'},
+  {id:'residential',label:'Residential',ka:'საცხოვრებელი',color:[0xe8/255,0x96/255,0x30/255],hex:'#e89630'},
+  {id:'commercial',label:'Commercial',ka:'კომერციული',color:[0x34/255,0xd3/255,0x99/255],hex:'#34d399'},
+  {id:'office',label:'Office',ka:'ოფისი',color:[0x60/255,0xa5/255,0xfa/255],hex:'#60a5fa'},
+  {id:'parking',label:'Parking',ka:'პარკინგი',color:[0x94/255,0xa3/255,0xb8/255],hex:'#94a3b8'},
+  {id:'amenity',label:'Amenity',ka:'კეთილმოწყობა',color:[0xc0/255,0x84/255,0xfc/255],hex:'#c084fc'},
 ];
+const _fuLabel=u=>u?(lang==='ka'&&u.ka?u.ka:u.label):'';
 let _dbPreviewEnabled = false;
 let _dbPreviewTimer = null;
 // ── Multi-building ────────────────────────────────────────────────────────────
@@ -1764,7 +1779,7 @@ function _updateCombinedMetrics(){
         FLOOR_USES.forEach(u=>{const a=useArea[u.id];if(!a)return;
           const pct=Math.round(a/totalFloorM2*100);
           const row=document.createElement('div');row.style.cssText='display:flex;justify-content:space-between;align-items:center;gap:6px';
-          row.innerHTML='<span style="display:flex;align-items:center;gap:4px;font-size:0.62rem;color:rgba(255,255,255,0.45);min-width:0"><span style="width:6px;height:6px;border-radius:50%;background:'+u.hex+';flex-shrink:0;display:inline-block"></span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+u.label+'</span></span><span style="font-size:0.62rem;white-space:nowrap;color:rgba(255,255,255,0.65)">'+fmtM2(a)+'&nbsp;<span style="color:'+u.hex+';font-weight:700">'+pct+'%</span></span>';
+          row.innerHTML='<span style="display:flex;align-items:center;gap:4px;font-size:0.62rem;color:rgba(255,255,255,0.45);min-width:0"><span style="width:6px;height:6px;border-radius:50%;background:'+u.hex+';flex-shrink:0;display:inline-block"></span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+_fuLabel(u)+'</span></span><span style="font-size:0.62rem;white-space:nowrap;color:rgba(255,255,255,0.65)">'+fmtM2(a)+'&nbsp;<span style="color:'+u.hex+';font-weight:700">'+pct+'%</span></span>';
           bd.appendChild(row);});
       }
     }
@@ -1940,7 +1955,7 @@ function _refreshFloorPanel(){
     const fi=[..._selectedFloors][0];
     const ov=_floorOverrides[fi]||{};
     const activeUse=FLOOR_USES.find(u=>u.id===ov.useType);
-    if(numEl)numEl.textContent='Floor '+(fi+1)+(activeUse?' · '+activeUse.label:'');
+    if(numEl)numEl.textContent=(lang==='ka'?'სართული ':'Floor ')+(fi+1)+(activeUse?' · '+_fuLabel(activeUse):'');
     if(swatchEl)swatchEl.style.background=activeUse?activeUse.hex:'#94a3b4';
   }
   // Reflect the current floor color in the custom-color picker
@@ -1960,7 +1975,7 @@ function _refreshFloorPanel(){
       const singleOv=!isMulti?(_floorOverrides[[..._selectedFloors][0]]||{}):{};
       btn.className='floor-use-btn'+((isMulti?dominantUse:singleOv.useType)===u.id?' active':'');
       btn.style.setProperty('--fu-c',u.hex);
-      btn.innerHTML=`<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${u.hex};margin-right:4px;vertical-align:middle;flex-shrink:0"></span>${u.label}`;
+      btn.innerHTML=`<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${u.hex};margin-right:4px;vertical-align:middle;flex-shrink:0"></span>${_fuLabel(u)}`;
       btn.onclick=()=>_applyUseToSelection(u.id);
       btnsEl.appendChild(btn);
     });
@@ -2772,7 +2787,7 @@ function _updateMetricsExtrusion(){
     const pct=Math.round(a/totalM2*100);
     const row=document.createElement('div');
     row.style.cssText='display:flex;justify-content:space-between;align-items:center;gap:6px';
-    row.innerHTML='<span style="display:flex;align-items:center;gap:4px;font-size:0.62rem;color:rgba(255,255,255,0.45);min-width:0"><span style="width:6px;height:6px;border-radius:50%;background:'+u.hex+';flex-shrink:0;display:inline-block"></span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+u.label+'</span></span><span style="font-size:0.62rem;white-space:nowrap;color:rgba(255,255,255,0.65)">'+fmtM2(a)+'&nbsp;<span style="color:'+u.hex+';font-weight:700">'+pct+'%</span></span>';
+    row.innerHTML='<span style="display:flex;align-items:center;gap:4px;font-size:0.62rem;color:rgba(255,255,255,0.45);min-width:0"><span style="width:6px;height:6px;border-radius:50%;background:'+u.hex+';flex-shrink:0;display:inline-block"></span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+_fuLabel(u)+'</span></span><span style="font-size:0.62rem;white-space:nowrap;color:rgba(255,255,255,0.65)">'+fmtM2(a)+'&nbsp;<span style="color:'+u.hex+';font-weight:700">'+pct+'%</span></span>';
     bd.appendChild(row);
   });
   const unassigned=useArea['__none__'];
@@ -3640,7 +3655,7 @@ function _ppSetTab(tab){
 function _renderPPDataTab(){
   const list=document.getElementById('pp-data-list');if(!list)return;
   if(!_importedLayers.length){
-    list.innerHTML='<div class="pp-data-empty">No imported data layers yet.<br>Use the Draw &amp; Import tool to add GeoJSON, Shapefile, CSV, or GeoTIFF.</div>';
+    list.innerHTML=`<div class="pp-data-empty">${t().proj?t().proj.noData:'No imported data layers yet.'}</div>`;
     return;
   }
   list.innerHTML=_importedLayers.map(l=>`<div class="pp-data-card"><div class="pp-data-card-info"><div class="pp-data-dot" style="background:${l.color}"></div><div><div class="pp-data-name">${l.name.replace(/</g,'&lt;')}</div><div class="pp-data-meta">${l.count.toLocaleString()} features · ${Object.keys(l.columns||{}).length} columns</div></div></div><button class="pp-data-open-btn" onclick="closeProjectsPanel();_dpTab='table';openDataPanel('${l.uid}')">Open Table</button></div>`).join('');
@@ -3715,9 +3730,10 @@ function _updateAutoSaveChip(state){
   if(!dot||!nameEl||!statusEl)return;
   nameEl.textContent=_openedProjectName;
   dot.classList.remove('asc-saving','asc-error');
-  if(state==='saving'){dot.classList.add('asc-saving');statusEl.textContent='· Saving...';}
-  else if(state==='error'){dot.classList.add('asc-error');statusEl.textContent='· Save failed';}
-  else{statusEl.textContent='· Saved just now';}
+  const _pj=t().proj||{};
+  if(state==='saving'){dot.classList.add('asc-saving');statusEl.textContent='· '+(lang==='ka'?'ინახება...':'Saving...');}
+  else if(state==='error'){dot.classList.add('asc-error');statusEl.textContent='· '+(lang==='ka'?'შენახვა ვერ მოხერხდა':'Save failed');}
+  else{statusEl.textContent='· '+(_pj.savedNow||'Saved just now');}
 }
 
 function _tickAutoSaveTime(){
@@ -3725,7 +3741,7 @@ function _tickAutoSaveTime(){
   const statusEl=document.getElementById('asc-status');
   if(!statusEl)return;
   const mins=Math.round((Date.now()-_lastSavedAt)/60000);
-  statusEl.textContent=mins<1?'· Saved just now':`· Saved ${mins}m ago`;
+  {const _pj=t().proj||{};statusEl.textContent='· '+(mins<1?(_pj.savedNow||'Saved just now'):(_pj.savedAgo?_pj.savedAgo(mins):`Saved ${mins}m ago`));}
 }
 
 async function _autoSaveProject(){
@@ -3804,6 +3820,53 @@ async function _reRunActiveAnalyses(){
   if(on('zoning-assess-sw')&&typeof toggleZoningAssessment==='function')await cyc(toggleZoningAssessment);
   // Nearby (only if not already re-run by the isochrone cascade above)
   if(!isoOn&&typeof _nearbyRan!=='undefined'&&_nearbyRan&&typeof runNearbyAnalysis==='function'){try{_nearbyWalkCenter=parcelCentroid;const r=runNearbyAnalysis({center:parcelCentroid});if(r instanceof Promise)await r;}catch(_){}}
+  }finally{_reRunBusy=false;_reRunLast=Date.now();}
+}
+// Snapshot which switch-driven analyses are active. Must be taken BEFORE setupProCard()
+// rebuilds/clears the Climate/Education/Morphology/Energy panels (which resets those
+// switches); the overlay/flag-driven ones survive that rebuild and are read live below.
+function _captureActiveAnalyses(){
+  const on=id=>!!document.getElementById(id)?.classList.contains('on');
+  return {iso:on('acc-iso-sw'),connectivity:on('acc-connectivity-sw'),orientation:on('acc-orientation-sw'),zoning:on('zoning-assess-sw')};
+}
+// Re-render every active analysis + planning panel in the current language. Panels are
+// rebuilt from cached data (off→on) so their baked-in labels come back translated — the
+// same proven path as _reRunActiveAnalyses, but for a parcel OR a drawn area, and driven
+// by the pre-rebuild snapshot instead of the (now-reset) live switches.
+async function _relocalizeActiveAnalyses(sw){
+  // Planning: concept masterplan legend re-renders instantly from its cached data.
+  try{ if(typeof _conceptOn!=='undefined'&&_conceptOn&&_conceptLastData&&typeof _showConceptLegend==='function')_showConceptLegend(_conceptLastData,(_conceptTreeData&&_conceptTreeData.features?_conceptTreeData.features.length:0)); }catch(_){}
+  if(!(_currentParcelGeoJSON||_isDrawnArea))return;
+  if(_reRunBusy)return; _reRunBusy=true;
+  try{
+    if(_isDrawnArea){const bld=(typeof _activeBld==='function')?_activeBld():null;if(bld&&bld.geojson){_currentParcelGeoJSON=bld.geojson;_currentParcelAreaM2=bld.areaM2;parcelCentroid=getCentroid(bld.geojson);}}
+    sw=sw||{};
+    // setupProCard() just rebuilt several panels and cleared their switches. Restore each
+    // active switch's 'on' state (from the snapshot + persisted overlay flags) so the
+    // switch-driven toggles below see the SAME live state as _reRunActiveAnalyses — making
+    // the off→on cyc parity correct instead of flipping an active analysis off.
+    const setOn=(id,v)=>{const e=document.getElementById(id);if(e)e.classList.toggle('on',!!v);};
+    setOn('acc-iso-sw',sw.iso);
+    setOn('acc-connectivity-sw',sw.connectivity);
+    setOn('acc-orientation-sw',sw.orientation);
+    setOn('acc-canopy-sw',typeof _canopyOverlayCache!=='undefined'&&!!_canopyOverlayCache);
+    setOn('acc-lst-sw',typeof _lstOverlayCache!=='undefined'&&!!_lstOverlayCache);
+    setOn('acc-solar-sw',typeof _solarOverlayCache!=='undefined'&&!!_solarOverlayCache);
+    setOn('acc-wind-sw',typeof _windData!=='undefined'&&!!_windData);
+    setOn('acc-osm-sw',typeof _osmActive!=='undefined'&&!!_osmActive);
+    const cyc=async(fn,...a)=>{if(typeof fn!=='function')return;try{let r=fn(...a);if(r instanceof Promise)await r;r=fn(...a);if(r instanceof Promise)await r;}catch(_){}};
+    const isoOn=!!sw.iso&&!!parcelCentroid;
+    if(isoOn)await cyc(typeof toggleAccIsochrone==='function'?toggleAccIsochrone:null); // cascades to schools/KG/mobility/transit/parking/nearby
+    if(typeof _canopyOverlayCache!=='undefined'&&_canopyOverlayCache)await cyc(typeof toggleAccCanopy==='function'?toggleAccCanopy:null);
+    if(typeof _lstOverlayCache!=='undefined'&&_lstOverlayCache)await cyc(typeof toggleAccLST==='function'?toggleAccLST:null);
+    if(typeof _reliefActiveType!=='undefined'&&_reliefActiveType&&typeof toggleAccRelief==='function')await cyc(toggleAccRelief,_reliefActiveType);
+    if(typeof _solarOverlayCache!=='undefined'&&_solarOverlayCache&&typeof runSolarAnalysis==='function'){try{const r=runSolarAnalysis();if(r instanceof Promise)await r;}catch(_){}}
+    if(typeof _windData!=='undefined'&&_windData&&typeof runWindAnalysis==='function'){try{const r=runWindAnalysis();if(r instanceof Promise)await r;}catch(_){}}
+    if(sw.connectivity)await cyc(typeof toggleAccConnectivity==='function'?toggleAccConnectivity:null);
+    if(sw.orientation)await cyc(typeof toggleAccOrientation==='function'?toggleAccOrientation:null);
+    if(typeof _osmActive!=='undefined'&&_osmActive)await cyc(typeof toggleAccOSM==='function'?toggleAccOSM:null);
+    if(sw.zoning&&typeof toggleZoningAssessment==='function')await cyc(toggleZoningAssessment);
+    if(!isoOn&&typeof _nearbyRan!=='undefined'&&_nearbyRan&&typeof runNearbyAnalysis==='function'){try{if(typeof _nearbyWalkCenter!=='undefined')_nearbyWalkCenter=parcelCentroid;const r=runNearbyAnalysis({center:parcelCentroid});if(r instanceof Promise)await r;}catch(_){}}
   }finally{_reRunBusy=false;_reRunLast=Date.now();}
 }
 function _buildActionLog(){
@@ -4719,7 +4782,7 @@ function _selectImportedFeature(feature,uid){
   const nameKey=propKeys.find(k=>/^(name|title|id|fid|objectid|code|label|nom|nombre)$/i.test(k));
   const featureName=nameKey?String(props[nameKey]):entry.name;
   const geomLabel=isPolygon?(lang==='ka'?'პოლიგონი':'Polygon'):isLine?(lang==='ka'?'ხაზი':'Line'):(lang==='ka'?'წერტილი':'Point');
-  const areaDisplay=isPolygon&&_currentParcelAreaM2?Number(_currentParcelAreaM2).toLocaleString()+' '+tr.sqm:geomLabel;
+  const areaDisplay=isPolygon&&_currentParcelAreaM2?Math.round(Number(_currentParcelAreaM2)).toLocaleString()+' '+tr.sqm:geomLabel;
   const attrKeys=propKeys.filter(k=>k!==nameKey).slice(0,2);
 
   document.getElementById('val-code').textContent=featureName;
@@ -5061,16 +5124,17 @@ function computePolygonAreaM2(coords){
 
 // ── OSM + SPACE SYNTAX ANALYSIS ──────────────────────────────────────────────
 const OSM_CATS={
-  food:     {label:'Food & Drink',color:'#f97316'},
-  retail:   {label:'Retail',     color:'#ec4899'},
-  education:{label:'Education',  color:'#6366f1'},
-  health:   {label:'Health',     color:'#ef4444'},
-  public:   {label:'Public Svc.',color:'#14b8a6'},
-  leisure:  {label:'Leisure',    color:'#22c55e'},
-  tourism:  {label:'Tourism',    color:'#eab308'},
-  office:   {label:'Office',     color:'#a855f7'},
-  other:    {label:'Other',      color:'rgba(255,255,255,0.3)'}
+  food:     {label:'Food & Drink',ka:'კვება',       color:'#f97316'},
+  retail:   {label:'Retail',      ka:'ვაჭრობა',      color:'#ec4899'},
+  education:{label:'Education',    ka:'განათლება',    color:'#6366f1'},
+  health:   {label:'Health',      ka:'ჯანდაცვა',     color:'#ef4444'},
+  public:   {label:'Public Svc.', ka:'საჯარო სერვისი',color:'#14b8a6'},
+  leisure:  {label:'Leisure',     ka:'დასვენება',    color:'#22c55e'},
+  tourism:  {label:'Tourism',     ka:'ტურიზმი',      color:'#eab308'},
+  office:   {label:'Office',      ka:'ოფისი',        color:'#a855f7'},
+  other:    {label:'Other',       ka:'სხვა',         color:'rgba(255,255,255,0.3)'}
 };
+const _osmCatLabel=cat=>{const c=OSM_CATS[cat];return c?(lang==='ka'&&c.ka?c.ka:c.label):cat;};
 function _osmCat(tags){
   if(!tags)return null;
   const a=tags.amenity,s=tags.shop,o=tags.office,l=tags.leisure,t=tags.tourism;
@@ -6379,8 +6443,9 @@ function _buildZoneChart(zones){
       if(z.k1!=null){const fp=Math.round(zA*z.k1);const adjFp=Math.min(fp,Math.round(nb*z.pct/100));
         tc+=`<div style="display:grid;grid-template-columns:auto 1fr auto;gap:1px 5px;margin-bottom:2px"><span style="font-size:0.56rem;color:rgba(255,255,255,0.25);font-family:monospace">K1=${fK(z.k1)}</span><span style="font-size:0.56rem;color:rgba(255,255,255,0.45)">Max footprint</span><span style="font-size:0.56rem;color:rgba(255,255,255,0.8);text-align:right">${fM(fp)}</span></div>`;
         if(adjFp<fp)tc+=`<div style="display:grid;grid-template-columns:auto 1fr auto;gap:1px 5px;margin-bottom:2px"><span></span><span style="font-size:0.54rem;color:rgba(239,68,68,0.6)">adj. for setback</span><span style="font-size:0.54rem;color:rgba(239,68,68,0.75);text-align:right">${fM(adjFp)}</span></div>`;}
-      if(z.k2!=null)tc+=`<div style="display:grid;grid-template-columns:auto 1fr auto;gap:1px 5px;margin-bottom:2px"><span style="font-size:0.56rem;color:rgba(255,255,255,0.25);font-family:monospace">K2=${fK(z.k2)}</span><span style="font-size:0.56rem;color:rgba(255,255,255,0.45)">Max floor area</span><span style="font-size:0.56rem;color:rgba(255,255,255,0.8);text-align:right">${fM(Math.round(zA*z.k2))}</span></div>`;
-      if(z.k1!=null&&z.k2!=null&&z.k1>0){const maxFloors=Math.floor((z.k2/z.k1)+1e-9);tc+=`<div style="display:grid;grid-template-columns:auto 1fr auto;gap:1px 5px;margin-bottom:2px"><span style="font-size:0.56rem;color:rgba(255,255,255,0.25);font-family:monospace">K2÷K1</span><span style="font-size:0.56rem;color:rgba(255,255,255,0.45)">Max height (floors)</span><span style="font-size:0.56rem;color:rgba(255,255,255,0.8);text-align:right">${maxFloors}</span></div>`;}
+      const _noData=lang==='ka'?'მონაცემი არ არის':'no data'; // K2/K3 = 0 in the source means unspecified, not a real 0-limit
+      if(z.k2!=null)tc+=`<div style="display:grid;grid-template-columns:auto 1fr auto;gap:1px 5px;margin-bottom:2px"><span style="font-size:0.56rem;color:rgba(255,255,255,0.25);font-family:monospace">K2=${z.k2>0?fK(z.k2):'—'}</span><span style="font-size:0.56rem;color:rgba(255,255,255,0.45)">Max floor area</span><span style="font-size:0.56rem;color:${z.k2>0?'rgba(255,255,255,0.8)':'rgba(251,191,36,0.85)'};text-align:right">${z.k2>0?fM(Math.round(zA*z.k2)):_noData}</span></div>`;
+      if(z.k1!=null&&z.k2>0&&z.k1>0){const maxFloors=Math.floor((z.k2/z.k1)+1e-9);tc+=`<div style="display:grid;grid-template-columns:auto 1fr auto;gap:1px 5px;margin-bottom:2px"><span style="font-size:0.56rem;color:rgba(255,255,255,0.25);font-family:monospace">K2÷K1</span><span style="font-size:0.56rem;color:rgba(255,255,255,0.45)">Max height (floors)</span><span style="font-size:0.56rem;color:rgba(255,255,255,0.8);text-align:right">${maxFloors}</span></div>`;}
       if(z.k3!=null)tc+=`<div style="display:grid;grid-template-columns:auto 1fr auto;gap:1px 5px"><span style="font-size:0.56rem;color:rgba(255,255,255,0.25);font-family:monospace">K3=${fK(z.k3)}</span><span style="font-size:0.56rem;color:rgba(52,211,153,0.6)">Min greening</span><span style="font-size:0.56rem;color:rgba(52,211,153,0.85);text-align:right">${fM(Math.round(zA*z.k3))}</span></div>`;
       tipHtml=`<div style="position:relative;display:inline-flex;align-items:center;cursor:help;flex-shrink:0;margin-left:3px" onmouseenter="this.lastElementChild.style.visibility='visible';this.lastElementChild.style.opacity='1'" onmouseleave="this.lastElementChild.style.visibility='hidden';this.lastElementChild.style.opacity='0'"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg><div style="visibility:hidden;opacity:0;transition:opacity 0.12s;position:absolute;bottom:calc(100% + 5px);right:-4px;background:rgba(12,12,18,0.98);border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:7px 8px;min-width:160px;z-index:200;box-shadow:0 4px 20px rgba(0,0,0,0.6);pointer-events:none">${tc}</div></div>`;
     }
@@ -6419,8 +6484,8 @@ function _buildBuildingParams(zones,parcelAreaM2){
     if(z.k1!=null){const fp=Math.round(z.area*z.k1);const adjFp=Math.min(fp,Math.round(netBuild*z.pct/100));totFp+=fp;hasFp=true;
       h+=`<span style="font-size:0.58rem;color:rgba(255,255,255,0.28);font-family:monospace">K1 = ${fK(z.k1)}</span><span style="font-size:0.58rem;color:rgba(255,255,255,0.45)">Max footprint</span><span style="font-size:0.58rem;color:rgba(255,255,255,0.8);text-align:right">${fM(fp)}</span>`;
       if(adjFp<fp)h+=`<span></span><span style="font-size:0.56rem;color:rgba(239,68,68,0.6)">adj. for setback</span><span style="font-size:0.56rem;color:rgba(239,68,68,0.75);text-align:right">${fM(adjFp)}</span>`;}
-    if(z.k2!=null){const fa=Math.round(z.area*z.k2);totFa+=fa;hasFa=true;
-      h+=`<span style="font-size:0.58rem;color:rgba(255,255,255,0.28);font-family:monospace">K2 = ${fK(z.k2)}</span><span style="font-size:0.58rem;color:rgba(255,255,255,0.45)">Max floor area</span><span style="font-size:0.58rem;color:rgba(255,255,255,0.8);text-align:right">${fM(fa)}</span>`;}
+    if(z.k2!=null){const _hasK2=z.k2>0;const fa=_hasK2?Math.round(z.area*z.k2):0;if(_hasK2){totFa+=fa;hasFa=true;}const _nd=lang==='ka'?'მონაცემი არ არის':'no data';
+      h+=`<span style="font-size:0.58rem;color:rgba(255,255,255,0.28);font-family:monospace">K2 = ${_hasK2?fK(z.k2):'—'}</span><span style="font-size:0.58rem;color:rgba(255,255,255,0.45)">Max floor area</span><span style="font-size:0.58rem;color:rgba(255,255,255,0.8);text-align:right">${_hasK2?fM(fa):_nd}</span>`;}
     if(z.k3!=null){const gr=Math.round(z.area*z.k3);totGr+=gr;hasGr=true;
       h+=`<span style="font-size:0.58rem;color:rgba(255,255,255,0.28);font-family:monospace">K3 = ${fK(z.k3)}</span><span style="font-size:0.58rem;color:rgba(52,211,153,0.65)">Min greening</span><span style="font-size:0.58rem;color:rgba(52,211,153,0.85);text-align:right">${fM(gr)}</span>`;}
     h+=`</div>`;
@@ -6516,7 +6581,10 @@ function runZoningAnalysis(){
   _updateSetbackLayer(_zt);
   _fetchFunctionalZone(_zt).then(zones=>{
     if(!zones.length){
-      if(zr)zr.style.display='none';
+      // Out of coverage (zoning data is Tbilisi-only) — say so instead of a silent empty.
+      const _zk=_zpKa();
+      if(zr)zr.style.display='block';
+      if(zList)zList.innerHTML=`<div style="color:rgba(251,191,36,0.85);font-size:0.66rem;line-height:1.45">${_zk?'ამ მუნიციპალიტეტისთვის ზონირების მონაცემი არ გვაქვს (ხელმისაწვდომია მხოლოდ თბილისში).':'No zoning data for this municipality (Tbilisi only).'}</div>`;
       btn?.classList.remove('active');
       _updateSetbackLayer(null);
       _updateZoneLayer(null);
@@ -6837,7 +6905,10 @@ function _computeUVI(c){
   if(!wsum)return null;
   const score=Math.round(parts.reduce((a,p)=>a+p.w*p.s,0)/wsum*100);
   const grade=score>=80?'A':score>=70?'B':score>=60?'C':score>=50?'D':score>=40?'E':'F';
-  return {score,grade,parts};
+  // Diversity is the component most likely to be still-loading or unavailable (rural
+  // parcels have no land-use data). Flag the score as partial so it doesn't present as a
+  // final grade and then silently change value when diversity arrives.
+  return {score,grade,parts,partial:_lastDiversity==null};
 }
 function _refreshNearbyCompositeIfShown(){
   const row=document.getElementById('pfc-nearby-row');
@@ -7107,8 +7178,8 @@ function _renderNearby(c){
   if(uvi){
     tile=`<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 9px;margin-bottom:7px;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.28);border-radius:7px">`
       +`<div style="min-width:0"><div style="font-size:0.56rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:rgba(165,180,252,0.85)">${UVI_NAME}</div>`
-      +`<div style="font-size:0.5rem;color:rgba(255,255,255,0.35);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${uvi.parts.map(p=>p.label).join(' · ')}</div></div>`
-      +`<div style="text-align:right;white-space:nowrap"><span style="font-size:1.15rem;font-weight:800;color:${_relColor(uvi.grade)}">${uvi.score}</span><span style="font-size:0.72rem;font-weight:700;color:${_relColor(uvi.grade)};margin-left:3px">${uvi.grade}</span></div>`
+      +`<div style="font-size:0.5rem;color:rgba(255,255,255,0.35);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${uvi.parts.map(p=>p.label).join(' · ')}${uvi.partial?` · <span style="color:#fbbf24;font-weight:700">${isKa?'არასრული':'partial'}</span>`:''}</div></div>`
+      +`<div style="text-align:right;white-space:nowrap"><span style="font-size:1.15rem;font-weight:800;color:${uvi.partial?'rgba(255,255,255,0.45)':_relColor(uvi.grade)}">${uvi.score}</span><span style="font-size:0.72rem;font-weight:700;color:${uvi.partial?'rgba(255,255,255,0.45)':_relColor(uvi.grade)};margin-left:3px">${uvi.grade}</span></div>`
       +`</div>`;
   }
   const html=tile+items.join('');
@@ -8440,12 +8511,12 @@ let _conceptPropData=[]; // glTF scatter props (people/cars): [{pid,cx,cy,type}]
 let _conceptOn=false, _conceptSummary='', _conceptParcel=null, _conceptLastData=null;
 let _conceptSaved=false; // true once the concept has been written into a saved project
 const _CONCEPT_USE={
-  house:['#f59e0b','House'],residential:['#e89630','Residential'],apartment:['#e89630','Apartment'],
-  office:['#60a5fa','Office'],commercial:['#34d399','Commercial'],mixed:['#a78bfa','Mixed'],
-  amenity:['#c084fc','Amenity'],pavilion:['#c084fc','Pavilion'],shed:['#94a3b8','Shed'],garage:['#9ca3af','Garage'],
-  parking:['#9ca3af','Parking'],pool:['#1ca3e0','Pool'],terrace:['#c9a97e','Terrace'],patio:['#c9a97e','Patio'],
-  driveway:['#8b8681','Driveway'],playground:['#fb923c','Playground'],garden:['#5cb85c','Garden'],lawn:['#5cb85c','Lawn'],
-  sport:['#f97316','Sport'],plaza:['#cbd5e1','Plaza']
+  house:['#f59e0b','House','სახლი'],residential:['#e89630','Residential','საცხოვრებელი'],apartment:['#e89630','Apartment','ბინა'],
+  office:['#60a5fa','Office','ოფისი'],commercial:['#34d399','Commercial','კომერციული'],mixed:['#a78bfa','Mixed','შერეული'],
+  amenity:['#c084fc','Amenity','კეთილმოწყობა'],pavilion:['#c084fc','Pavilion','პავილიონი'],shed:['#94a3b8','Shed','დამხმარე ნაგებობა'],garage:['#9ca3af','Garage','ავტოფარეხი'],
+  parking:['#9ca3af','Parking','პარკინგი'],pool:['#1ca3e0','Pool','აუზი'],terrace:['#c9a97e','Terrace','ტერასა'],patio:['#c9a97e','Patio','ეზო'],
+  driveway:['#8b8681','Driveway','მისასვლელი'],playground:['#fb923c','Playground','სათამაშო მოედანი'],garden:['#5cb85c','Garden','ბაღი'],lawn:['#5cb85c','Lawn','გაზონი'],
+  sport:['#f97316','Sport','სპორტი'],plaza:['#cbd5e1','Plaza','მოედანი']
 };
 function _conceptUseColor(u){const e=_CONCEPT_USE[String(u||'').toLowerCase()];return e?e[0]:'#6366f1';}
 function _hexToRgb01(h){h=String(h).replace('#','');return [parseInt(h.slice(0,2),16)/255,parseInt(h.slice(2,4),16)/255,parseInt(h.slice(4,6),16)/255];}
@@ -8883,7 +8954,7 @@ function _showConceptLegend(concept,treeCount){
   const ka=lang==='ka';
   const seen=new Set(),rows=[];
   const add=use=>{const k=String(use||'').toLowerCase();if(!k||seen.has(k))return;seen.add(k);
-    const e=_CONCEPT_USE[k];const col=e?e[0]:_conceptUseColor(k);const lbl=e?e[1]:(k.charAt(0).toUpperCase()+k.slice(1));
+    const e=_CONCEPT_USE[k];const col=e?e[0]:_conceptUseColor(k);const lbl=e?((ka&&e[2])?e[2]:e[1]):(k.charAt(0).toUpperCase()+k.slice(1));
     rows.push({col,lbl});};
   (concept.buildings||[]).forEach(b=>add(b.use));
   (concept.areas||[]).forEach(a=>add(a.use));
@@ -10591,7 +10662,7 @@ async function toggleAccOSM(){
     const catBars=catKeys.filter(k=>catCounts[k]>0).sort((a,b)=>(catCounts[b]||0)-(catCounts[a]||0)).map(cat=>{
       const n=catCounts[cat]||0;
       const pct=total>0?Math.round((n/total)*100):0;
-      return`<div class="cat-row"><div class="cat-header"><span class="cat-name"><span style="width:8px;height:8px;border-radius:50%;background:${OSM_CATS[cat].color};display:inline-block;flex-shrink:0"></span>${OSM_CATS[cat].label}</span><span class="cat-count">${n} · ${pct}%</span></div><div class="bar-track"><div class="bar-fill" style="background:${OSM_CATS[cat].color};width:0%" data-w="${pct}"></div></div></div>`;
+      return`<div class="cat-row"><div class="cat-header"><span class="cat-name"><span style="width:8px;height:8px;border-radius:50%;background:${OSM_CATS[cat].color};display:inline-block;flex-shrink:0"></span>${_osmCatLabel(cat)}</span><span class="cat-count">${n} · ${pct}%</span></div><div class="bar-track"><div class="bar-fill" style="background:${OSM_CATS[cat].color};width:0%" data-w="${pct}"></div></div></div>`;
     }).join('');
     if(lg){
       lg.style.display='block';
@@ -11443,9 +11514,19 @@ function colorFromStops(stops,v,vmin,vmax){
   const lo=Math.floor(seg),hi=Math.ceil(seg);
   return lerpColor(stops[lo],stops[hi],seg-lo);
 }
+// Slope coloured by ABSOLUTE degree bands (matching the legend classes), not a min-max
+// stretch — otherwise a flat parcel whose slope only spans 0–2.5° gets spread across the
+// whole green→red ramp and reads as "steep/red" when it is in fact flat.
+function _slopeColorAbs(v){
+  const anchors=[[0,[52,211,153]],[3,[134,239,172]],[8,[251,191,36]],[15,[249,115,22]],[30,[239,68,68]]];
+  if(v<=anchors[0][0])return anchors[0][1];
+  const last=anchors[anchors.length-1]; if(v>=last[0])return last[1];
+  for(let i=1;i<anchors.length;i++){if(v<=anchors[i][0]){const a=anchors[i-1],b=anchors[i];return lerpColor(a[1],b[1],(v-a[0])/(b[0]-a[0]||1));}}
+  return last[1];
+}
 function valueToColor(v,type,vmin,vmax){
   if(type==="height") return colorFromStops([[20,80,160],[60,120,200],[80,160,100],[180,220,80],[240,200,100],[220,120,60],[200,80,40],[240,240,240]],v,vmin,vmax);
-  if(type==="slope")  return colorFromStops([[40,200,100],[230,230,50],[230,100,30],[200,30,30]],v,vmin,vmax);
+  if(type==="slope")  return _slopeColorAbs(v);
   // aspect: circular hue — use a simple 8-direction rainbow
   const hue=(v/360)*360;
   const r=Math.round(128+127*Math.cos((hue)*Math.PI/180));
@@ -14169,7 +14250,7 @@ async function loadParcel(lbl, code){
   ["val-type","val-addr","val-owner"].forEach(id=>{const row=document.getElementById(id)?.closest('.info-row');if(row)row.style.display='';});
   document.getElementById("val-code").textContent=name;
   document.getElementById("lbl-area").textContent=isLine?tr.lineDesc:tr.area;
-  document.getElementById("val-area").textContent=isLine?(attrs.objectDesc||"—"):attrs.area?Number(attrs.area).toLocaleString()+" "+tr.sqm:"—";
+  document.getElementById("val-area").textContent=isLine?(attrs.objectDesc||"—"):attrs.area?Math.round(Number(attrs.area)).toLocaleString()+" "+tr.sqm:"—";
   document.getElementById("val-type").textContent=isLine?(attrs.objectType||"—"):attrs.parcelType||"—";
   document.getElementById("lbl-addr").textContent=isLine?tr.lineCoverage:tr.addr;
   document.getElementById("val-addr").textContent=isLine?(attrs.coverageZone||attrs.address||"—"):attrs.address||"—";
@@ -14305,7 +14386,7 @@ function zoomToOwnerParcel(idx){
   const isLine=p.geo.type==="LineString"||p.geo.type==="MultiLineString";
   document.getElementById("val-code").textContent=p.cadastral;
   {const _r=!isLine&&p.geo?(p.geo.type==="Polygon"?p.geo.coordinates[0]:p.geo.type==="MultiPolygon"?p.geo.coordinates[0][0]:null):null;_currentParcelAreaM2=_r?Math.round(computePolygonAreaM2(_r)):null;}
-  document.getElementById("val-area").textContent=isLine?"—":p.area?Number(p.area).toLocaleString()+" "+t().sqm:"—";
+  document.getElementById("val-area").textContent=isLine?"—":p.area?Math.round(Number(p.area)).toLocaleString()+" "+t().sqm:"—";
   document.getElementById("val-type").textContent="—";
   document.getElementById("val-addr").textContent=p.address||"—";
   document.getElementById("val-owner").textContent="—";
@@ -14333,7 +14414,7 @@ async function loadParcelFromDB(cadastral){
   const tr=t();
   document.getElementById("val-code").textContent=data.cadastral;
   document.getElementById("lbl-area").textContent=tr.area;
-  document.getElementById("val-area").textContent=data.area?Number(data.area).toLocaleString()+" "+tr.sqm:"—";
+  document.getElementById("val-area").textContent=data.area?Math.round(Number(data.area)).toLocaleString()+" "+tr.sqm:"—";
   document.getElementById("val-type").textContent=data.parcel_type||"—";
   document.getElementById("lbl-addr").textContent=tr.addr;
   document.getElementById("val-addr").textContent=data.address||"—";
@@ -14363,11 +14444,24 @@ async function loadParcelFromDB(cadastral){
 async function _geocodePlace(query){
   try{
     const c=map.getCenter();
+    const inGe=_inGeorgia(c.lng,c.lat);
+    // Ask for several candidates and (inside Georgia) restrict to the country, so an
+    // ambiguous street/town name can't silently resolve abroad.
     const url=`https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json`+
-      `?access_token=${MAPBOX_TOKEN}&limit=1&language=${lang==='ka'?'ka':'en'}&proximity=${c.lng.toFixed(4)},${c.lat.toFixed(4)}`;
+      `?access_token=${MAPBOX_TOKEN}&limit=5&language=${lang==='ka'?'ka':'en'}&proximity=${c.lng.toFixed(4)},${c.lat.toFixed(4)}`+
+      (inGe?`&country=ge`:``);
     const res=await fetch(url); if(!res.ok)return false;
     const data=await res.json();
-    const f=data.features&&data.features[0]; if(!f||!Array.isArray(f.center))return false;
+    let feats=(data.features||[]).filter(x=>Array.isArray(x.center)); if(!feats.length)return false;
+    // Disambiguate toward the current view: among candidates of near-equal relevance
+    // (e.g. a "Chavchavadze Ave" in both Tbilisi and Telavi) pick the one nearest what
+    // the user is actually looking at, instead of trusting Mapbox relevance alone.
+    if(feats.length>1){
+      const topRel=(feats[0].relevance!=null?feats[0].relevance:1);
+      const dist=x=>{try{return turf.distance([c.lng,c.lat],x.center);}catch(_){return 1e9;}};
+      feats=feats.filter(x=>(x.relevance!=null?x.relevance:1)>=topRel-0.15).sort((a,b)=>dist(a)-dist(b));
+    }
+    const f=feats[0];
     const [lng,lat]=f.center;
     if(Array.isArray(f.bbox)&&f.bbox.length===4){
       map.fitBounds([[f.bbox[0],f.bbox[1]],[f.bbox[2],f.bbox[3]]],{padding:80,duration:1400,maxZoom:16.5,essential:true});
@@ -14375,9 +14469,30 @@ async function _geocodePlace(query){
       const pt=(f.place_type||[]).join(',');
       map.flyTo({center:[lng,lat],zoom:/poi|address/.test(pt)?16.5:/street|neighborhood/.test(pt)?15:12,duration:1400,essential:true});
     }
+    // Name the matched place so the user can catch a wrong hit rather than trust silence.
     setStatus(f.place_name||query,"success");
+    _showMatchedPlaceChip(f.place_name||query);
     return true;
   }catch(e){ console.warn('geocode:',e); return false; }
+}
+// Visible, dismissible "found: …" confirmation under the search box, so a mis-geocode is
+// caught by the user instead of quietly moving the map to the wrong place.
+let _matchChipTimer=null;
+function _showMatchedPlaceChip(name){
+  try{
+    let chip=document.getElementById('matched-place-chip');
+    if(!chip){
+      chip=document.createElement('div'); chip.id='matched-place-chip';
+      document.body.appendChild(chip); // fixed-position toast, independent of which search bar is active
+    }
+    const isKa=lang==='ka';
+    chip.innerHTML=`<span class="mpc-label">${isKa?'ნაპოვნია':'Found'}:</span> <span class="mpc-name"></span>`
+      +`<button class="mpc-x" aria-label="${isKa?'დახურვა':'Dismiss'}">✕</button>`;
+    chip.querySelector('.mpc-name').textContent=name;
+    chip.querySelector('.mpc-x').onclick=()=>{chip.remove();};
+    chip.style.display='flex';
+    clearTimeout(_matchChipTimer); _matchChipTimer=setTimeout(()=>{try{chip.remove();}catch(_){}} ,9000);
+  }catch(_){}
 }
 
 // maps.gov.ge cadastral-code / address → parcel loader (with DB fallback if the

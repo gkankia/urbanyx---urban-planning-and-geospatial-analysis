@@ -538,6 +538,7 @@ export default {
         (enPrompt ? `Design brief: ${enPrompt}. ` : "Design a sensible small development. ") +
         "Respond ONLY as JSON with this shape: " +
         `{"summary": string, "buildings": [{"cx": number, "cy": number, "w": number, "d": number, "rot": number, "floors": integer, "use": string}], "areas": [{"cx": number, "cy": number, "w": number, "d": number, "rot": number, "use": string}], "trees": [{"x": number, "y": number, "type": string}], "props": [{"x": number, "y": number, "type": string}]}. ` +
+        (lang === "ka" ? "Write the \"summary\" value in Georgian (ქართულ ენაზე); keep every \"use\" and \"type\" value exactly as the English enum values below. " : "") +
         "buildings = enclosed structures to be EXTRUDED; use one of: house, apartment, residential, office, commercial, mixed, shed, garage, pavilion, amenity (floors >= 1). " +
         "areas = FLAT ground features; use one of: pool, terrace, patio, driveway, parking, playground, garden, lawn, sport, plaza. " +
         "tree type = one of: broadleaf, conifer, palm, shrub. prop type = one of: car, minivan, bus, truck, fountain, bench, planter, rock. " +

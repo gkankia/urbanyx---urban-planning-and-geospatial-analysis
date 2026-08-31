@@ -1,0 +1,1214 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>Urbanyx ��� UX &amp; Rigour Evaluation, Persona C: The Power User</title>
+  
+<style>
+:root{
+  --ink:#1e2430;--muted:#5b6472;--accent:#5b5bd6;--bg:#ffffff;--soft:#f4f5f8;
+  --border:#e3e6ec;--warn:#b4541a;--ok:#1e7d4f;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;background:var(--bg);color:var(--ink);
+  font:16px/1.65 "Helvetica Neue",Arial,"Noto Sans Georgian","BPG Arial",sans-serif;
+}
+main{max-width:960px;margin:0 auto;padding:48px 28px 96px}
+h1{font-size:1.9rem;line-height:1.25;margin:0 0 .4em;letter-spacing:-.01em}
+h1+p strong{color:var(--ink)}
+h2{
+  font-size:1.35rem;margin:2.6em 0 .7em;padding-top:1.2em;
+  border-top:2px solid var(--border);letter-spacing:-.01em;
+}
+h2:first-of-type{border-top:none;padding-top:0}
+h3{font-size:1.05rem;margin:1.8em 0 .5em}
+p{margin:.55em 0}
+strong{font-weight:650}
+hr{border:none;border-top:2px solid var(--border);margin:2.5em 0}
+blockquote{margin:1em 0;padding:.2em 1em;border-left:4px solid var(--accent);background:var(--soft);border-radius:0 8px 8px 0}
+ul,ol{padding-left:1.4em}
+li{margin:.35em 0}
+code{background:var(--soft);border:1px solid var(--border);border-radius:5px;padding:.08em .35em;font-size:.88em;font-family:"SF Mono",Menlo,Consolas,monospace}
+table{border-collapse:collapse;width:100%;margin:1.2em 0;font-size:.88rem}
+th{
+  background:var(--soft);text-align:left;font-weight:650;
+  border:1px solid var(--border);padding:.55em .7em;vertical-align:bottom;
+}
+td{border:1px solid var(--border);padding:.55em .7em;vertical-align:top}
+tbody tr:nth-child(even){background:#fafbfd}
+.table-wrap{overflow-x:auto}
+em{color:var(--muted)}
+a{color:var(--accent)}
+footer{margin-top:4em;color:var(--muted);font-size:.85rem;border-top:1px solid var(--border);padding-top:1.2em}
+@media (max-width:640px){
+  main{padding:28px 14px 64px}
+  body{font-size:15px}
+  table{font-size:.8rem}
+}
+@media print{
+  main{max-width:100%;padding:0}
+  h2{break-after:avoid}
+  table{break-inside:auto}
+  tr{break-inside:avoid}
+}
+
+</style>
+</head>
+<body>
+<main>
+
+<h1
+id="urbanyx-urbanyxzaxisgeapp--ux--rigour-evaluation-persona-c-the-power-user">Urbanyx
+(urbanyx.zaxis.ge/app) — UX &amp; Rigour Evaluation, Persona C: The
+Power User</h1>
+<p><strong>Persona:</strong> Salome Kapanadze, 29. Land acquisition
+&amp; analysis at a Tbilisi developer building 4–9 storey residential.
+Economics degree, lives in Excel, some SQL, a third of a QGIS course.
+Reads cadastral extracts, talks to architects weekly, knows k1/k2 and
+what a განაშენიანების რეგულირების გეგმა constrains. Her job: <em>is this
+parcel worth acquiring, and at what price?</em> Her frustration is
+shallowness, not difficulty.</p>
+<p><strong>Method:</strong> task-based usability <strong>and
+rigour</strong> evaluation with think-aloud protocol. Session
+2026-08-18/19 (Tbilisi), viewport 859×939 CSS px, signed in on a
+pre-existing Pro account. Numbers in this report were extracted from the
+live DOM or read at ≥2× magnification, not transcribed from thumbnails.
+Network hosts were read from the browser's own request log (passive
+observation of requests the page made — no endpoint was called by the
+evaluator). Every inference is labelled <strong>[inferred]</strong>.</p>
+<p><strong>Layers:</strong> persona reactions in quotes
+(<code>"..."</code>), evaluator observations in plain text.</p>
+<hr />
+<h2 id="1-verdict">1. Verdict</h2>
+<p><strong>Usable for developer-side land analysis today: no — as an
+analysis tool. Yes-with-caveats as a fast zoning-and-registry
+lookup.</strong></p>
+<ul>
+<li><strong>The zoning module is the product.</strong> It is
+deterministic, internally consistent and arithmetically correct: four
+zones hand-checked, every K1/K2/K3 product reconciles to the displayed
+m², and zone areas sum to the site area (48,100 vs 48,101 m²). Re-run
+from a fresh session on restored geometry, all values were
+identical.</li>
+<li><strong>The flagship "URBAN LIVABILITY INDEX" is not a property of
+the site.</strong> Identical geometry, same session: <strong>71
+B</strong> with nearby analysis alone, <strong>80 A</strong> after
+switching on «მისაწვდომობის ზონა» (15-min walk isochrone) — because the
+catchment silently changes from the site to a ~1.5 km walking zone and
+the component set changes from three to four. Nothing on the score card
+states the catchment. Any figure she quotes from it is unfalsifiable
+without her toggle state.</li>
+<li><strong>Nulls are rendered as zeros in numbers she would
+model.</strong> Three of four zones report «K2=0.00 → Max floor area 0
+m² · Max height (floors) 0» while simultaneously allowing a footprint
+(სსზ-3: K1=0.70 → 7,577 m²). "No data" and "building prohibited" are
+indistinguishable on screen.</li>
+<li><strong>There is no price, no comparable, no transaction
+anywhere</strong> — a DOM scan for 14 price/market terms
+(<code>ფასი, ლარი, ₾, GEL, USD, ღირებულებ, საბაზრო, price, valuation, market value, ტრანზაქც, გარიგებ, comparable, ანალოგ</code>)
+returned <strong>zero hits</strong>. Tasks 3 and 9 (comparables, price
+trend) have no surface to test.</li>
+<li><strong>No methodology, no provenance, no freshness, no API, no
+CRS</strong> — absent in the app and absent on the public site. The only
+data source she can name is one the tool disclosed by failing: a toast
+reading «maps.gov.ge მიუწვდომელია — სცადეთ მოგვიანებით...».</li>
+</ul>
+<h2 id="2-rigour-verdict">2. Rigour verdict</h2>
+<p><strong>Arithmetic: passes. Definitions: fails.</strong></p>
+<p>The hand-check (Task 4) reconciles exactly. For a 4.81 ha drawn site
+in Dighomi Massive, «საცხოვრებელი ზონა-6» reports Zone area 24,759 m²,
+and 24,759 × 0.50 = 12,379.5 → displayed <strong>12,379 m²</strong>; ×
+2.50 = 61,897.5 → <strong>61,897 m²</strong>; × 0.30 = 7,427.7 →
+<strong>7,428 m²</strong>; K2÷K1 = 2.50/0.50 → <strong>5
+floors</strong>. All four zone tooltips reconcile the same way, and the
+four zone areas (24,759 + 10,825 + 6,669 + 5,847 = 48,100 m²) match the
+site area shown in the compliance block (48,101 m²). Reproducibility
+(Task 5) is clean for this module: project saved, browser reloaded,
+project reopened, zoning re-run — every figure identical, to the
+digit.</p>
+<p>The failure is upstream of the arithmetic, in what the numbers
+<em>mean</em>. The same 4.81 ha site scores <strong>71 B</strong> or
+<strong>80 A</strong> depending on an unrelated toggle, with the count
+basis changing underneath (stops 6 → 34, parking 20 → 80, kindergartens
+1 → 6) and the component list shrinking from four to three when a data
+source fails — signalled only by a word vanishing from a 9-px subtitle
+and a tip that reads «მიწათსარგებლობის (მრავალფეროვნების) მონაცემი ვერ
+ჩაიტვირთა». A composite index published with a silently missing
+component, on an undisclosed catchment, is not defensible to a CFO.
+<code>"ციფრი, რომელიც შვიდ ქულით იცვლება იმის მიხედვით, რომელი ღილაკი მაქვს ჩართული, ჩემს მოდელში ვერ შევა."</code></p>
+<p>Separately, the geocoder is not deterministic across sessions: the
+identical query «დევი აბაშიძის ქუჩა თბილისი» resolved to Dighomi Massive
+(44.7797, 41.7641) in one session and to the Ortachala/Navtlughi side of
+the city (44.8377, 41.6874) in another — ~9 km apart, no matched-place
+label either time. Proximity biasing from the current map centre is the
+likely mechanism <strong>[inferred]</strong>; the effect is that a saved
+query is not a saved location.</p>
+<h2 id="3-ceiling-statement">3. Ceiling statement</h2>
+<p>The ceiling is the point where a number has to be defended or
+combined. She can get, in about a minute per site: the cadastral code,
+area, use type, address string, owner string, registration date, the
+zone mix of a drawn site, and each zone's K1/K2/K3 turned into m² of
+footprint, floor area, floors and required greening — plus slope
+statistics, an elevation profile, land-surface temperature with a
+capture date, and a walking isochrone. That is a real acceleration of
+the first hour of due diligence. Everything after that is manual: there
+is no netting of unbuildable zones into a single site capacity, no
+setbacks or building lines, no deduction of existing structures, no
+parcel list or owner count under a drawn area (so no assembly
+feasibility), no attribute query to build a shortlist, no price or
+comparable of any kind, no confidence interval on anything, no source or
+date to cite, and no API or auditable export to move data into her
+model. So she leaves the tool at exactly the moment her actual question
+starts — <em>what can we build, sell, and pay?</em> — and reopens Excel
+for the capacity stack, the registry (napr.gov.ge) for encumbrances and
+owner detail, myhome.ge/ss.ge and her own transaction notes for pricing,
+and QGIS for anything geometric she needs to keep.</p>
+<h2 id="4-adoption-answers-phase-6-as-salome">4. Adoption answers (Phase
+6, as Salome)</h2>
+<ul>
+<li><strong>Would this replace a step of your due diligence, or sit
+alongside it?</strong> "ერთ ნაბიჯს ცვლის — პირველ სკრინინგს: ზონა,
+კოეფიციენტები, დახრილობა, მეპატრონე. ბოლოს არაფერს ცვლის. მოცულობის
+დათვლა, ფასი, დატვირთვები — ეს სულ ჩემია."</li>
+<li><strong>How many hours per parcel would it save,
+realistically?</strong> "ერთი ნაკვეთზე ორმოცდაათი წუთი-საათი. თუ ოცი
+ნაკვეთია — მთელი დღე, იმ პირობით, რომ ციფრებს ვენდობი. ახლა ვერ ვენდობი,
+ამიტომ ორჯერ ვამოწმებ და მოგება ნახევრდება."</li>
+<li><strong>Which number would you not put in an internal memo?</strong>
+"URBAN LIVABILITY INDEX-ს. ერთსა და იმავე ტერიტორიაზე 71 B და 80 A
+მივიღე — მხოლოდ იმიტომ, რომ იზოქრონი ჩავრთე. და „K2=0.00, მაქს. სართული
+0“ — ეს ან ნიშნავს „აკრძალულია“, ან ნიშნავს „მონაცემი არ გვაქვს“, და ვერ
+მიგებინებია რომელი. ორივეს არ დავწერ."</li>
+<li><strong>Would you champion buying it internally? What would the
+business case need?</strong> "თვეში €15 არ არის საკითხი — ჩვენი ერთი დღე
+უფრო ძვირია. ბიზნეს-ქეისისთვის მჭირდება: (1) მეთოდოლოგიის გვერდი — რა
+შედის ინდექსში, რა რადიუსში, რომელი წლის მონაცემია; (2) წყარო და
+განახლების თარიღი ყველა ფენაზე; (3) ექსპორტი, რომელსაც გავხსნი და ვნახავ
+CRS-ს და სვეტებს; (4) ერთი ნაკვეთის ბარათი, სადაც ჯამური ასაშენებელი
+ფართი ერთ რიცხვად წერია. ამის გარეშე შესყიდვას ვერ დავიცავ — რას ვიხდი,
+მონაცემს თუ ლამაზ ინტერფეისს?"</li>
+<li><strong>The one missing capability that moves it from interesting to
+necessary?</strong> "ასეთი ფილტრი: „აჩვენე ყველა ნაკვეთი 800 კვ.მ.-ზე
+მეტი, საცხოვრებელ ზონაში, k2 ≥ 2, დახრილობა &lt; 10%, ამ ორ უბანში“ — და
+შედეგი ცხრილად, ექსპორტით. ეს დღეს არ არსებობს; მე რუკაზე თითით
+ვეძებ."</li>
+<li><strong>One sentence to your head of development.</strong>
+"სკრინინგისთვის კარგი ხელსაწყოა — ზონირებას და კოეფიციენტებს წუთში
+აჩვენებს — მაგრამ ერთი ციფრიც ისეთი არ არის, რომელსაც CFO-სთან დაცვას
+ვკადრებდი, სანამ მეთოდოლოგიას არ დაწერენ."</li>
+</ul>
+<h2 id="5-what-works">5. What works</h2>
+<ol type="1">
+<li>Zoning coefficients converted to m² per zone, with the intersected
+zone area shown — hand-checked exact on four zones (§2), and the four
+zone areas sum to the site area.</li>
+<li>Deterministic and restorable: project saved → reload → reopen →
+re-run produced byte-identical zoning output; drawn geometry restored
+exactly (4.81 ha, 902 m, 278 m × 174 m).</li>
+<li>Zoning survived the upstream registry outage — parcel clicks were
+dead («maps.gov.ge მიუწვდომელია») while zoning, slope and area analysis
+on drawn geometry kept working <strong>[inferred: zoning is not served
+from maps.gov.ge]</strong>.</li>
+<li>Slope module is the only one that states its basis: «წყარო: თბილისის
+მაღალი გარჩევადობის ციფრული რელიეფის მოდელი. მნიშვნელობები ინდიკატიურია
+და არ ცვლის საველე აზომვას».</li>
+<li>Rural cadastral coverage is real (Kakheti parcel
+<code>53.03.34.014</code>, 7,633 კვ.მ., «სასოფლო-სამეურნეო», named
+owner, 2011 registration), so the screening step is not Tbilisi-only
+even though most analytics are.</li>
+</ol>
+<h2 id="6-prioritised-issues-table">6. Prioritised issues table</h2>
+<p>Severity: 0 cosmetic · 1 minor · 2 slows her down · 3 she distrusts
+or cannot use the output · 4 the output is wrong or unreproducible.
+Correctness/reproducibility first regardless of frequency.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr class="header">
+<th>#</th>
+<th>Where</th>
+<th>What happened</th>
+<th>Expected</th>
+<th>Sev</th>
+<th>Freq</th>
+<th>Fix effort</th>
+<th>Recommendation</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1</td>
+<td>«URBAN LIVABILITY INDEX» card, drawn 4.81 ha site, Dighomi</td>
+<td>Same geometry, same session: <strong>71 B</strong> (subtitle
+«განათლება · ტრანსპორტი · პარკირება»); after enabling «მისაწვდომობის
+ზონა» (ფეხით, 15 min) → <strong>80 A</strong> (subtitle gains
+«მრავალფეროვნება»). Counts changed with it: stops 6→34, routes 13→30,
+kindergartens 1→6, parking 20→80 (capacity 335→1,182). Catchment is
+never printed on the card</td>
+<td>One number per site, or an explicit catchment ("within 15-min walk")
+and a fixed component set</td>
+<td><strong>4</strong></td>
+<td>Every analysis</td>
+<td>Medium</td>
+<td>Print the catchment and component list on the card; freeze the index
+definition; recompute or grey out the score when the basis changes</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td>Zone tooltips (სსზ-3, სარეკრეაციო ზონა-2, სატრანსპორტო ზონა-1)</td>
+<td>«K2=0.00 Max floor area 0 m²», «K2÷K1 Max height (floors) 0» — while
+K1 is non-zero (სსზ-3: 0.70 → footprint 7,577 m²). Nothing distinguishes
+"no coefficient in the dataset" from "zero permitted"</td>
+<td>Missing data shown as «—»/"no data", genuine zeros labelled as
+prohibitions</td>
+<td><strong>4</strong></td>
+<td>Every multi-zone site</td>
+<td>Small</td>
+<td>Render nulls as «მონაცემი არ არის», and where a zone truly forbids
+building, say so in words</td>
+</tr>
+<tr class="odd">
+<td>3</td>
+<td>Composite index with a failed component</td>
+<td>Tip states «მიწათსარგებლობის (მრავალფეროვნების) მონაცემი ვერ
+ჩაიტვირთა», yet the score renders as a normal, complete 0–100 letter
+grade</td>
+<td>Partial-data badge on the number itself, or suppression</td>
+<td><strong>4</strong></td>
+<td>Common</td>
+<td>Small</td>
+<td>Badge the score «არასრული მონაცემი» and disable comparison until
+complete</td>
+</tr>
+<tr class="even">
+<td>4</td>
+<td>Search / geocoding</td>
+<td>Identical query «დევი აბაშიძის ქუჩა თბილისი» → Dighomi (44.7797,
+41.7641) in one session, Ortachala/Navtlughi (44.8377, 41.6874) in
+another. No result label either time. Mapbox geocoding with proximity
+bias is the likely cause <strong>[inferred]</strong></td>
+<td>Same query → same place, and the matched place named</td>
+<td><strong>4</strong></td>
+<td>Every session</td>
+<td>Medium</td>
+<td>Show and require confirmation of the matched feature; pin proximity
+to an explicit city selector; expose a "recent searches" list of
+resolved places</td>
+</tr>
+<tr class="odd">
+<td>5</td>
+<td>Whole product</td>
+<td>No price, valuation, comparable or transaction data (14-term DOM
+scan → 0 hits). Tasks 3 and 9 could not be run</td>
+<td>At minimum, a stated absence: "this tool does not price
+property"</td>
+<td>4 (for her job)</td>
+<td>Her core question</td>
+<td>Large</td>
+<td>Either integrate transaction/listing data with sample sizes and
+dates, or state the scope limit on the doorway</td>
+</tr>
+<tr class="even">
+<td>6</td>
+<td>Everywhere</td>
+<td>No methodology page, no source names, no update dates, no CRS, no
+sample sizes, no confidence intervals — in-app scan
+(<code>მეთოდ, methodolog, წყარო, source, განახლ, updated, ნიმუშ, sample, confidence, ±, CRS, EPSG, WGS</code>)
+hit nothing but a password-reset string; public site confirms all
+absent</td>
+<td>Per-layer provenance and a methodology page</td>
+<td><strong>3</strong></td>
+<td>Constant</td>
+<td>Medium</td>
+<td>Publish a methodology page and attach source + as-of date to every
+metric</td>
+</tr>
+<tr class="odd">
+<td>7</td>
+<td>Buildable-area workflow</td>
+<td>Four zones are reported separately with no site total; K1/K2 are
+applied to the gross intersected zone area including 12% სატრანსპორტო
+and 14% სარეკრეაციო land; no setbacks, no building lines, no deduction
+of existing buildings, no insolation/yard norms</td>
+<td>One net site capacity with the unbuildable share removed and
+constraints itemised</td>
+<td><strong>3</strong></td>
+<td>Every parcel</td>
+<td>Medium–large</td>
+<td>Add a capacity block: gross → per-zone → net buildable → GFA, with
+each deduction shown</td>
+</tr>
+<tr class="even">
+<td>8</td>
+<td>«ზონირების შესაბამისობა»</td>
+<td>Shows ✓ against 600 m² / 15 m / 25 m minimums, with a footnote «*
+700 m² / 20 m / 30 m for multi-apartment» — i.e. the thresholds that
+actually apply to her 4–9 storey product are in the footnote, not in the
+check</td>
+<td>Check against the use she selects</td>
+<td><strong>3</strong></td>
+<td>Every site</td>
+<td>Small</td>
+<td>Add a use selector; run the check against the selected use</td>
+</tr>
+<tr class="odd">
+<td>9</td>
+<td>Assembly / multi-parcel</td>
+<td>Could not select two parcels after 3 attempts (shift+click,
+ctrl+click, drawn overlay). A drawn area reports only area, perimeter
+and «მოხმარებლის დამატებული» — no parcel list, no owner count, no
+fragmentation. The string «არჩეული ნაკვეთები» exists in the DOM but I
+could not trigger it</td>
+<td>Enumerate parcels under a polygon with owners and areas</td>
+<td><strong>3</strong></td>
+<td>Every assembly</td>
+<td>Medium</td>
+<td>Expose multi-select and a parcel table under drawn areas (this is
+the highest-value missing feature — §10)</td>
+</tr>
+<tr class="even">
+<td>10</td>
+<td>Registry dependency</td>
+<td>Parcel selection dead for ~15 minutes with «maps.gov.ge მიუწვდომელია
+— სცადეთ მოგვიანებით...»; later attempts failed
+<strong>silently</strong> with no toast at all. Passive network log
+shows parcel data comes from
+<code>maps.gov.ge/lr/bo/mg/getinfo.alpha</code> and search from
+<code>/map/portal/search</code></td>
+<td>Consistent error state; cached last-known values</td>
+<td><strong>3</strong></td>
+<td>Occasional, unpredictable</td>
+<td>Medium</td>
+<td>Same message every time, with a retry and a "last successful fetch"
+timestamp</td>
+</tr>
+<tr class="odd">
+<td>11</td>
+<td>Exports</td>
+<td>Offered: PDF report, «აქტიური ფენები · GeoJSON», «აქტიური რასტრები ·
+GeoTIFF», a 3D OBJ, and a render PNG (<code>urbanyx-render.png</code>).
+No CRS statement anywhere; no field dictionary; the PDF gave no
+completion confirmation when exercised (2026-08-17). File contents
+<strong>NOT TESTED</strong> (no filesystem access to the browser
+host)</td>
+<td>Documented schema + CRS; XLSX/CSV for tabular work</td>
+<td>3</td>
+<td>Every handoff</td>
+<td>Medium</td>
+<td>Publish an export schema (fields, units, CRS EPSG:4326/32638), add
+CSV/XLSX of the analysis table</td>
+</tr>
+<tr class="even">
+<td>12</td>
+<td>Filtering / shortlist</td>
+<td>No attribute query of any kind: no area, zone, k2, slope or district
+filter; «Data» tab is an import list («No imported data layers yet…»),
+not a query surface</td>
+<td>Filter parcels by attributes, export the result set</td>
+<td><strong>3</strong></td>
+<td>Weekly</td>
+<td>Large</td>
+<td>Ship a parcel query builder over the fields already held</td>
+</tr>
+<tr class="odd">
+<td>13</td>
+<td>Constraint layers</td>
+<td>Layer list is «ნაკვეთები / ხაზები / ტყე» + 4 basemaps. No flood,
+geology, seismic, protected-area or utility layers (scan for
+<code>წყალდიდობ, flood, გეოლოგ, სეისმ, დაცული, protected, კომუნიკაც, წყალმომარაგებ, გაზ, ელექტრო, კანალიზაც</code>
+→ 0 hits)</td>
+<td>Named constraint layers, or a stated list of what is not
+covered</td>
+<td>3</td>
+<td>Every acquisition</td>
+<td>Large</td>
+<td>State the constraint layers you do not have; add flood + protected
+zones first</td>
+</tr>
+<tr class="even">
+<td>14</td>
+<td>Coverage disclosure</td>
+<td>Zoning toggled ON over a Kakheti parcel rendered nothing at all — no
+donut, no "outside coverage" message (measured in the 2026-08-18 session
+on <code>53.03.34.014</code>)</td>
+<td>"No zoning data for this municipality"</td>
+<td>3</td>
+<td>Regional deals</td>
+<td>Small</td>
+<td>Per-module coverage state</td>
+</tr>
+<tr class="odd">
+<td>15</td>
+<td>Units &amp; precision</td>
+<td><code>ha</code> (drawn areas) vs <code>კვ.მ.</code> (parcels) vs
+<code>m²</code> (zones) in one workflow; parcel area printed to three
+decimals with comma thousands («18,096.184 კვ.მ.», 2026-08-18
+session)</td>
+<td>One unit system; no false precision</td>
+<td>2</td>
+<td>Constant</td>
+<td>Small</td>
+<td>Normalise to m² with <code>ჰა</code> in parentheses; round to whole
+m²</td>
+</tr>
+<tr class="even">
+<td>16</td>
+<td>State &amp; shareability</td>
+<td>URL is always <code>/app</code> — no parcel or analysis is
+addressable; reload discards everything; saved projects restore geometry
+but <strong>not</strong> analyses (zoning had to be re-run); the
+analysis panel drifts as content loads, so clicks land on the previous
+element</td>
+<td>URL-addressable state; analyses restored with the project</td>
+<td>2</td>
+<td>Constant</td>
+<td>Medium</td>
+<td>Encode parcel/viewport/analysis in the URL; persist analysis results
+in the project</td>
+</tr>
+<tr class="odd">
+<td>17</td>
+<td>Stale panel vs map</td>
+<td>After navigating to another district the previous parcel's card
+stayed open (Kakheti card visible while the map showed Saburtalo,
+2026-08-18)</td>
+<td>Card clears or is marked stale</td>
+<td>2</td>
+<td>Frequent</td>
+<td>Small</td>
+<td>Clear on viewport change</td>
+</tr>
+<tr class="even">
+<td>18</td>
+<td>Large-area behaviour</td>
+<td>A 2,392 ha (23.9 km²) drawn area was accepted with no warning, no
+size limit, no cost/quota hint. Geometry maths held (4.84 × 4.93 km ≈
+2,386 ha vs 2,392 ha shown, 0.25%)</td>
+<td>A stated limit, or a warning that analysis will be
+coarse/expensive</td>
+<td>1–2</td>
+<td>Rare</td>
+<td>Small</td>
+<td>Warn above a threshold and state what degrades</td>
+</tr>
+<tr class="odd">
+<td>19</td>
+<td>LST layer supply chain</td>
+<td>Passive network log shows the land-surface-temperature layer served
+from <code>spring-recipe-402c.gkankia.workers.dev/lst</code> — an
+unbranded personal-style worker domain</td>
+<td>A named, contractual data source</td>
+<td>1–2 (procurement)</td>
+<td>n/a</td>
+<td>Small</td>
+<td>Move to a branded endpoint and name the satellite product + revisit
+interval</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="7-methodology-transparency-table">7. Methodology transparency
+table</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr class="header">
+<th>Headline metric</th>
+<th>What it claims</th>
+<th>What is disclosed</th>
+<th>What is missing</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>URBAN LIVABILITY INDEX (0–100 + letter)</td>
+<td>Site quality across «განათლება · ტრანსპორტი · პარკირება [·
+მრავალფეროვნება]»</td>
+<td>One ⓘ sentence describing that it counts nearby infrastructure
+within walking distance; the component list in a 9-px subtitle</td>
+<td>Weights, normalisation, catchment radius (varies with an unrelated
+toggle — §6 #1), grade bands, behaviour when a component fails, whether
+scores are comparable between parcels</td>
+</tr>
+<tr class="even">
+<td>Zone shares (%)</td>
+<td>Share of the site in each zone</td>
+<td>Percentages + intersected zone area in m²</td>
+<td>Plan name/version/date, geometry vintage, how boundary slivers are
+handled</td>
+</tr>
+<tr class="odd">
+<td>K1 / K2 / K3 → footprint, floor area, floors, greening</td>
+<td>Regulatory capacity per zone</td>
+<td>Coefficient values and the resulting m²; arithmetic verifiable and
+exact</td>
+<td>Legal source (which plan/ordinance), effective date, whether 0.00
+means "prohibited" or "unknown", any site-level netting</td>
+</tr>
+<tr class="even">
+<td>«ზონირების შესაბამისობა» ✓</td>
+<td>Site meets minimum lot dimensions</td>
+<td>Thresholds 600 m² / 15 m / 25 m and a multi-apartment footnote
+(700/20/30)</td>
+<td>Which use the ✓ refers to; no way to select the intended use</td>
+</tr>
+<tr class="odd">
+<td>Counts: სკოლები / ბაღები / გაჩერებები / მარშრუტები /
+ავტოსადგომები</td>
+<td>POI and transit supply</td>
+<td>Raw counts, route numbers, parking free/paid split and capacity</td>
+<td>Radius, POI source, snapshot date, treatment of duplicates/closed
+POIs</td>
+</tr>
+<tr class="even">
+<td>«სანდოობა: E · 48%»</td>
+<td>Some transit quality grade</td>
+<td>Nothing — no definition anywhere</td>
+<td>What it measures, its scale, its inputs</td>
+</tr>
+<tr class="odd">
+<td>Slope min/avg/max + class bars</td>
+<td>Terrain constraint</td>
+<td>Source model named; disclaimer that it is indicative and not a
+survey; class thresholds (&lt;3°, 15–30°…)</td>
+<td>DEM date and resolution; colour ramp is per-parcel relative, so flat
+land can render red (measured 2026-08-18: max 2.5° across a full
+green→red ramp)</td>
+</tr>
+<tr class="even">
+<td>Land-surface temperature</td>
+<td>Thermal condition + 2013–2026 trend</td>
+<td>Capture date (e.g. 2026-07-28) and cloudiness % — the only dated
+metric in the product</td>
+<td>Satellite/product name, pixel size, cloud-masking rule, points per
+year, whether the series is smoothed <strong>(NOT TESTED further this
+session)</strong></td>
+</tr>
+<tr class="odd">
+<td>AI «განვითარების კონცეფცია»</td>
+<td>A massing concept for the parcel</td>
+<td>Prompt-driven; output is 3D masses + an English paragraph</td>
+<td>Whether it respects the zone's K1/K2/height at all — <strong>NOT
+TESTED</strong> (see §14)</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="8-provenance--freshness-table">8. Provenance &amp; freshness
+table</h2>
+<p>Sources below were identified by reading the browser's own network
+log (passive observation) and by the app's own error toast. None of this
+is documented in the product.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr class="header">
+<th>Layer / metric</th>
+<th>Apparent source</th>
+<th>Stated update date</th>
+<th>Discoverable in UI?</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Parcel geometry, area, type, address, owner, registration date</td>
+<td><code>maps.gov.ge/lr/bo/mg/getinfo.alpha</code> (National Agency of
+Public Registry portal) <strong>[inferred from network log + outage
+toast]</strong></td>
+<td>None (registration date ≠ extract date)</td>
+<td>Only when it breaks: «maps.gov.ge მიუწვდომელია — სცადეთ
+მოგვიანებით...»</td>
+</tr>
+<tr class="even">
+<td>Cadastral-code search</td>
+<td><code>maps.gov.ge/map/portal/search</code>
+<strong>[inferred]</strong></td>
+<td>None</td>
+<td>No</td>
+</tr>
+<tr class="odd">
+<td>Basemap, 3D buildings, place/address geocoding</td>
+<td><code>api.mapbox.com</code> <strong>[inferred]</strong></td>
+<td>None</td>
+<td>Mapbox attribution logo only</td>
+</tr>
+<tr class="even">
+<td>Zoning polygons + K1/K2/K3</td>
+<td>Not identified; served independently of maps.gov.ge (worked during
+the outage) <strong>[inferred]</strong></td>
+<td>None</td>
+<td>No</td>
+</tr>
+<tr class="odd">
+<td>Land-surface temperature</td>
+<td><code>spring-recipe-402c.gkankia.workers.dev/lst</code>
+<strong>[inferred]</strong></td>
+<td>Per-image capture date shown (2026-07-28)</td>
+<td>Date yes, source no</td>
+</tr>
+<tr class="even">
+<td>Account, quota, subscriptions, search overrides</td>
+<td><code>supabase.co/rest/v1/{profiles, subscriptions, rpc/get_search_count, search_overrides}</code>
+<strong>[inferred]</strong></td>
+<td>n/a</td>
+<td>No</td>
+</tr>
+<tr class="odd">
+<td>Slope / elevation / aspect</td>
+<td>«თბილისის მაღალი გარჩევადობის ციფრული რელიეფის მოდელი» (named in the
+module)</td>
+<td>None</td>
+<td>Source yes, date no</td>
+</tr>
+<tr class="even">
+<td>POI / transit / parking counts</td>
+<td>Not identified</td>
+<td>None</td>
+<td>No</td>
+</tr>
+</tbody>
+</table></div>
+<p>Freshness scan of the running app for any date-like or "updated"
+string returned nothing but «პაროლის განახლება».
+<strong>Interpretation:</strong> the product exposes no data-vintage
+information at all, which for this persona converts every metric into an
+unciteable figure. <strong>Recommendation:</strong> attach
+<code>source</code> + <code>as_of</code> to every layer and print them
+in the panel and in exports.</p>
+<h2 id="9-export-audit">9. Export audit</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr class="header">
+<th>Format offered (verbatim)</th>
+<th>Verdict</th>
+<th>Specific defect</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>«PDF რეპორტის ექსპორტი»</td>
+<td>Partly usable (mechanism only)</td>
+<td>Requires creating and opening a project first («ექსპორტისთვის
+გახსენი პროექტი»); on exercise it showed «რეპორტი მზადდება...» and then
+no completion state. Contents <strong>NOT TESTED</strong> — no
+filesystem access to the browser host</td>
+</tr>
+<tr class="even">
+<td>«აქტიური ფენები · GeoJSON»</td>
+<td>Unknown / not auditable</td>
+<td>No CRS statement, no field dictionary in the UI; contents
+<strong>NOT TESTED</strong> (same reason)</td>
+</tr>
+<tr class="odd">
+<td>«აქტიური რასტრები · GeoTIFF»</td>
+<td>Unknown / not auditable</td>
+<td>Same; also unclear whether it carries the relative colour ramp or
+raw values</td>
+</tr>
+<tr class="even">
+<td>«3D OBJ» («Export 3D model for SketchUp, Rhino, Blender»)</td>
+<td>Unknown / not auditable</td>
+<td>OBJ has no georeferencing by design — for her architect this needs a
+stated origin/offset and units; none visible</td>
+</tr>
+<tr class="odd">
+<td>Render image (<code>urbanyx-render.png</code>)</td>
+<td>Usable as a picture only</td>
+<td>Marketing-grade output, not analysis data; «კონცეფციის რენდერი» is
+labelled COMING SOON</td>
+</tr>
+<tr class="even">
+<td>CSV / XLSX of any analysis table</td>
+<td><strong>Absent</strong></td>
+<td>Import supports CSV; export does not. The one format she works in
+daily cannot be produced</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Interpretation:</strong> the export set is built for a design
+handoff (OBJ, PNG, PDF) and an occasional GIS user (GeoJSON, GeoTIFF),
+not for a financial analyst. <strong>Recommendation:</strong> add a
+per-site CSV/XLSX containing the parcel fields, the zone table with
+K-coefficients and derived m², and the analysis counts, each with
+<code>source</code> and <code>as_of</code> columns.</p>
+<h2 id="10-missing-capabilities-ranked-by-workflow-impact">10. Missing
+capabilities, ranked by workflow impact</h2>
+<ol type="1">
+<li><strong>Site capacity as one defensible number</strong> (net
+buildable footprint and GFA after removing unbuildable zones, setbacks
+and existing structures). <em>Missing.</em></li>
+<li><strong>Parcel query / shortlist builder</strong> (area, zone, k2,
+slope, district, then export the set). <em>Missing.</em></li>
+<li><strong>Assembly view</strong>: parcels under a polygon with owner,
+area, count, fragmentation. <em>Present but undiscoverable</em> —
+«არჩეული ნაკვეთები» exists in the DOM; not reachable by shift/ctrl-click
+after 3 attempts.</li>
+<li><strong>Price / comparables with sample, radius, date range,
+listings-vs-sales flag.</strong> <em>Missing.</em></li>
+<li><strong>Methodology + provenance disclosure, per metric.</strong>
+<em>Missing.</em></li>
+<li><strong>Tabular export (CSV/XLSX) with a documented schema and
+CRS.</strong> <em>Missing.</em></li>
+<li><strong>Encumbrance data</strong> (mortgage, lien, co-owner count) —
+parcel card carries only «მეპატრონე». <em>Missing.</em></li>
+<li><strong>URL-addressable analyses</strong> for sharing with a
+colleague or citing in a memo. <em>Missing.</em></li>
+<li><strong>Confidence/uncertainty on any estimated figure.</strong>
+<em>Missing.</em></li>
+<li><strong>Constraint layers</strong> (flood, geology, seismic,
+protected areas, utilities). <em>Missing.</em></li>
+</ol>
+<h2 id="11-quick-wins-under-a-day-each">11. Quick wins (under a day
+each)</h2>
+<ol type="1">
+<li>Print the catchment on the score card: replace the subtitle with
+e.g. «15 წთ ფეხით · განათლება · ტრანსპორტი · პარკირება ·
+მრავალფეროვნება» and recompute the label when the isochrone toggle
+changes.</li>
+<li>Render missing coefficients as «მონაცემი არ არის» instead of
+<code>0.00</code>, and suppress the derived «0 m²» rows in that
+case.</li>
+<li>Badge a partial index: when the tip says a component failed to load,
+show «არასრული» next to the number.</li>
+<li>Add a matched-place chip after search: «ნაპოვნია: დევი აბაშიძის
+ქუჩა, დიღმის მასივი, თბილისი» + «არა ეს?».</li>
+<li>Add a use selector to «ზონირების შესაბამისობა» (ინდივიდუალური /
+მრავალბინიანი) and check against the corresponding thresholds (600/15/25
+vs 700/20/30) instead of footnoting them.</li>
+<li>Show a site-level zoning summary row under the donut: total site
+area, buildable-zone share, sum of max footprint, sum of max floor area
+— with unbuildable zones excluded and labelled.</li>
+<li>State units and CRS in one line in the export menu («GeoJSON ·
+EPSG:4326 · წყარო: …»).</li>
+<li>Show the last successful <code>maps.gov.ge</code> fetch time in the
+parcel card, and use the same error text every time the service is
+unavailable.</li>
+<li>Make the relief colour ramp absolute (0–3°, 3–8°, 8–15°, 15–30°,
+30°+) so flat sites stop rendering red.</li>
+<li>Keep the analysis panel anchored while content loads (reserve
+height) so clicks don't land on the previous control.</li>
+</ol>
+<h2 id="12-structural-problems">12. Structural problems</h2>
+<ul>
+<li><strong>The product models "place quality", she models "residual
+land value".</strong> Its centre of gravity is an amenity index and a
+concept generator; hers is a capacity stack (site → zoning → net
+buildable → sellable m² → revenue → land price). The two only touch at
+the zoning module, which is the one piece she would pay for.</li>
+<li><strong>Analysis is presented as display.</strong> The livability
+card, the donut and the POI dots look like analysis but expose no
+parameters and cannot be re-based, filtered or exported. The one
+genuinely analytical output (zoning coefficients) is buried in hover
+tooltips — the least citable, least exportable surface in a UI.</li>
+<li><strong>Nothing is addressable, so nothing is auditable.</strong> No
+URL state, no analysis IDs, no run timestamps, no source/as-of fields.
+Two colleagues cannot verify they are looking at the same computation,
+which for a procurement decision is disqualifying independent of data
+quality.</li>
+<li><strong>The tool is a thin client over the public registry portal,
+without owning the risk.</strong> Parcel data comes from
+<code>maps.gov.ge</code> live; when that portal is down the core
+function dies (sometimes loudly, sometimes silently), and there is no
+cache, no last-known-good timestamp, and no statement in the product
+that this dependency exists.</li>
+<li><strong>Metering is invisible while the unit of value is a
+"search".</strong> Quota lives in <code>rpc/get_search_count</code> and
+surfaces only in the account modal («თვიური ლიმიტი: 1,000»); a Free
+account's 50 analyses/month is not shown where the analysis is run. For
+a team buying seats, cost per screened parcel is not observable in the
+product.</li>
+</ul>
+<h2 id="13-task-appendix">13. Task appendix</h2>
+<p><strong>Phase 1 — capability scan (5 min).</strong> Inventory from
+the interactive DOM (101 controls): search (place or cadastral code); 4
+basemaps (მუქი / სატელიტი / Z.axis Hillshade / ტრანსპორტი); 3 data
+layers (ნაკვეთები / ხაზები / ტყე); import GeoJSON / Shapefile(.zip) /
+CSV(lat-lon) / GeoTIFF; draw Polygon / Square / Circle / Line; measure
+distance and area; 3D toggle +
+extrude/edit/move/rotate/slice/colour/erase + «3D OBJ» export; 8
+analyses (ზონირება, რელიეფი, კლიმატი, სუფთა ენერგია, იზოქრონი,
+განათლება, მობილობა, ურბანული მორფოლოგია) plus «ახლომახლო ანალიზი» and a
+free «საფეხმავლო ანალიზი»; AI «განვითარების კონცეფცია» + render (coming
+soon); Projects with PDF/GeoJSON/GeoTIFF export; Data (imports) tab;
+account/quota/pricing. <strong>What question does the tool think it
+answers?</strong> "How good is this location, and what could it look
+like?" <strong>Is that my question?</strong> No — mine is "what can be
+built and what is it worth". <strong>Where would methodology
+be?</strong> Nowhere: no docs link, no methodology page, no source list,
+in-app or on the public site (fetched 2026-08-18: API, docs, sources,
+methodology, update frequency, CRS all absent; pricing €0 / €15 mo /
+€150 yr, with a note that Georgian cards are charged in GEL).</p>
+<p><strong>Phase 2 — exploration (10 min), pipeline as inferred at
+minute 10.</strong> Mapbox for basemap/3D/geocoding →
+<code>maps.gov.ge</code> for parcels (getinfo.alpha) and code search →
+an unidentified store for zoning polygons and coefficients → a
+Cloudflare Worker for LST → Supabase for identity, subscription and
+search-quota. Guessing flags: everything except Mapbox and maps.gov.ge
+is <strong>[inferred]</strong> from request hosts; the zoning source is
+unknown but demonstrably independent of maps.gov.ge (it worked through
+the outage). Things that look like analysis but are display: the letter
+grades, «სანდოობა: E · 48%», the POI dot layer (no legend, no export),
+the donut (no totals). Numbers with no unit/date/source: every count,
+the index, «სანდოობა», the zone percentages.</p>
+<p><strong>Task 1 — buildable area.</strong> Site: 4.81 ha drawn between
+დევი აბაშიძის ქუჩა and ევგენი მიქელაძის ქუჩა, Dighomi Massive
+(mid-density, 4–9 storey stock — her product). Steps: draw Square →
+ანალიზი → ზონირება → «შეფასება» → hover each zone ⓘ. Time ≈ 4 min
+including two mis-clicks caused by the panel shifting. Result:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr class="header">
+<th>Zone</th>
+<th>Share</th>
+<th>Zone area</th>
+<th>K1</th>
+<th>Max footprint</th>
+<th>K2</th>
+<th>Max floor area</th>
+<th>Floors</th>
+<th>K3</th>
+<th>Min greening</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>საცხოვრებელი ზონა-6</td>
+<td>51%</td>
+<td>24,759 m²</td>
+<td>0.50</td>
+<td>12,379 m²</td>
+<td>2.50</td>
+<td>61,897 m²</td>
+<td>5</td>
+<td>0.30</td>
+<td>7,428 m²</td>
+</tr>
+<tr class="even">
+<td>სსზ-3</td>
+<td>23%</td>
+<td>10,825 m²</td>
+<td>0.70</td>
+<td>7,577 m²</td>
+<td>0.00</td>
+<td>0 m²</td>
+<td>0</td>
+<td>0.20</td>
+<td>2,165 m²</td>
+</tr>
+<tr class="odd">
+<td>სარეკრეაციო ზონა-2</td>
+<td>14%</td>
+<td>6,669 m²</td>
+<td>0.20</td>
+<td>1,334 m²</td>
+<td>0.00</td>
+<td>0 m²</td>
+<td>0</td>
+<td>0.80</td>
+<td>5,335 m²</td>
+</tr>
+<tr class="even">
+<td>სატრანსპორტო ზონა-1</td>
+<td>12%</td>
+<td>5,847 m²</td>
+<td>0.00</td>
+<td>0 m²</td>
+<td>0.00</td>
+<td>0 m²</td>
+<td>0</td>
+<td>0.10</td>
+<td>585 m²</td>
+</tr>
+</tbody>
+</table></div>
+<p>Compliance block: «ფართობი 48,101 / 600 m² ✓ · სიგანე 172.8 / 15 m ✓
+· სიღრმე 278.3 / 25 m ✓ · * 700 m² / 20 m / 30 m for multi-apartment».
+Outcome: <strong>Partial.</strong> Confidence in the output:
+<strong>medium</strong> — coefficients verifiable, but the site total is
+absent and the K2=0.00 zones are ambiguous. Inputs she must still source
+elsewhere: setbacks/building lines, existing building areas to demolish
+or retain, insolation and yard norms, parking norms per unit, permitted
+use mix, plot consolidation rules, and the plan version these
+coefficients come from.
+<code>"K1 და K2 მაქვს, სართულიც. მაგრამ „რა გამოვა“ ისევ ჩემს ექსელშია — და აქ ოთხი ზონა ცალკეა, ჯამი არავინ დამითვლის."</code>
+In real life: she would take these four numbers into Excel and build the
+capacity stack there.</p>
+<p><strong>Task 2 — assembly feasibility.</strong> Selected parcel
+<code>01.17.13.025.006</code> (376 კვ.მ., «ქალაქი თბილისი , ქუჩა ანჩური
+, N 23», owner «იზოლდა გეთიაშვილი», reg. 15 მარტი 2016). Attempted to
+add an adjacent parcel with shift+click, then ctrl+click; a third
+attempt used a drawn polygon over several parcels. No second parcel was
+ever added and no aggregate panel appeared; the drawn area reports only
+«ფართობი / პერიმეტრი / ტიპი: მოხმარებლის დამატებული». Could not locate a
+working multi-select after 3 attempts, although «არჩეული ნაკვეთები»
+exists as a string in the DOM. Outcome: <strong>Failed.</strong>
+Confidence: <strong>unusable</strong> for assembly. Manual work left:
+the entire assembly analysis — parcel-by-parcel clicking, owner names
+copied by hand, areas summed in Excel, fragmentation judged by eye.</p>
+<p><strong>Task 3 — comparables, interrogated.</strong> DOM scan for
+<code>ფასი, ლარი, ₾, GEL, USD, ღირებულებ, საბაზრო, price, valuation, market value, ტრანზაქც, გარიგებ, comparable, ანალოგ</code>
+→ 0 hits in the running app. Outcome: <strong>Failed — capability
+absent.</strong> Nothing to interrogate: no sample size, no radius, no
+date range, no listings-vs-sales distinction, no outlier rule, no error
+range, because there is no estimate.</p>
+<p><strong>Task 4 — hand-check.</strong> Working: 24,759 × 0.50 =
+12,379.5 vs displayed 12,379 ✓; 24,759 × 2.50 = 61,897.5 vs 61,897 ✓;
+24,759 × 0.30 = 7,427.7 vs 7,428 ✓; 2.50 ÷ 0.50 = 5 vs 5 ✓; 10,825 ×
+0.70 = 7,577.5 vs 7,577 ✓; 10,825 × 0.20 = 2,165 vs 2,165 ✓; 6,669 ×
+0.20 = 1,333.8 vs 1,334 ✓; 6,669 × 0.80 = 5,335.2 vs 5,335 ✓; 5,847 ×
+0.10 = 584.7 vs 585 ✓. Zone areas 24,759 + 10,825 + 6,669 + 5,847 =
+48,100 vs site 48,101 m² ✓ (1 m² rounding). Geometry cross-check: 278 m
+× 174 m = 48,372 m² vs 4.81 ha shown (0.56%, within label rounding); on
+a second, 2,392.05 ha site, 4.84 km × 4.93 km = 2,386 ha (0.25%).
+Outcome: <strong>Success — it reconciles.</strong> Confidence:
+<strong>high</strong> on the arithmetic. (An earlier suspicion of a
+mismatched zone area, formed from a low-resolution screenshot in the
+Persona A session, did <strong>not</strong> survive verification at
+magnification and is withdrawn rather than reported.)</p>
+<p><strong>Task 5 — reproducibility.</strong> Saved project «REPRO-TEST
+digomi 4.81ha zoning» → full page reload → reopened the project →
+geometry restored identically (4.81 ha, 902 m, 278 m × 174 m; analyses
+<strong>not</strong> restored) → re-ran zoning: 51 / 23 / 14 / 12%,
+compliance 48,101 / 172.8 / 278.3, and both inspected tooltips
+byte-identical (24,759 / 0.50 / 12,379 / 2.50 / 61,897 / 5 / 0.30 /
+7,428 and 10,825 / 0.70 / 7,577 / 0.00 / 0 / 0 / 0.20 / 2,165). Outcome:
+<strong>Success for zoning.</strong> Then the same geometry with
+«მისაწვდომობის ზონა» enabled produced <strong>80 A</strong> against the
+earlier <strong>71 B</strong> — reproducible per configuration, but the
+configuration is neither displayed nor part of the saved project.
+Outcome for the index: <strong>Failed.</strong></p>
+<p><strong>Task 6 — cross-check against reality.</strong> Not run as a
+like-for-like comparison: the tool's parcel attributes come from
+<code>maps.gov.ge</code> itself <strong>[inferred from the network
+log]</strong>, so comparing the app against the public registry viewer
+compares a source with itself. A registry-portal comparison for
+<em>encumbrances</em> (which the app never shows) would be the
+meaningful test — <strong>NOT TESTED</strong> (see §14). Corroborating
+observation from this session: the registry portal was unavailable for a
+period, and the app surfaced that in the parcel path only.</p>
+<p><strong>Task 7 — terrain and constraints.</strong> Present: slope
+(min/avg/max, class bars, source note, GeoTIFF download), elevation,
+aspect, elevation profile, land-surface temperature with capture date
+and a 2013–2026 trend, «სუფთა ენერგია». Absent: flood, geology/seismic,
+protected areas, utilities/servicing — no layer, no toggle, no mention
+(0 hits on 11 terms). Absence is silent: nothing tells her these
+constraints are simply not covered. Outcome: <strong>Partial.</strong>
+Confidence: <strong>medium</strong> for slope (source stated,
+"indicative" disclaimer), <strong>low</strong> for anything she needs to
+certify.</p>
+<p><strong>Task 8 — get the data out.</strong> See §9. Exports offered
+and reachable; contents unverifiable in this environment. Outcome:
+<strong>Partial / NOT TESTED for fidelity.</strong></p>
+<p><strong>Task 9 — time series.</strong> The only series in the product
+is land-surface temperature: a year slider spanning 2013 → 2026, a
+per-image capture date (2026-07-28) and cloudiness (39%) observed in the
+earlier session, plus «პერიოდი / თვე / კვარტ. / წელი» granularity
+buttons. Sample per point, cloud-mask rule, smoothing and satellite
+product are undisclosed. There is <strong>no</strong> price or activity
+trend of any kind. Outcome: <strong>Partial.</strong> Would she put it
+in a CEO slide?
+<code>"თერმულ რუკას — შესაძლოა, ერთ სლაიდში, თარიღით. ფასის ტრენდი კი არ არსებობს, ესე იგი სლაიდიც არ არსებობს."</code></p>
+<p><strong>Task 10 — filter to a shortlist.</strong> No attribute query
+exists; the «Data» tab is an import list («No imported data layers yet.
+Use the Draw &amp; Import tool to add GeoJSON, Shapefile, CSV, or
+GeoTIFF.»). Criteria supported natively: none of hers. Outcome:
+<strong>Failed.</strong></p>
+<p><strong>Task 11 — API and integration.</strong> No API, SDK, docs,
+webhook or bulk export in the app (control inventory + vocabulary scan)
+and none on the public site (fetched 2026-08-18). Integration path is
+manual file export only. Outcome: <strong>Failed — absent.</strong></p>
+<p><strong>Task 12 — ceiling test.</strong> See §3. The ceiling is
+reached the moment two numbers must be combined, or one number must be
+cited.</p>
+<p><strong>Phase 4 — stress notes.</strong> <em>Invalid numeric
+input:</em> no free numeric fields exist in the analysis path (isochrone
+times are fixed presets 10/15/20/45/60; colours are pickers), so there
+is nothing to poison — the only free-text input is the AI concept
+prompt. <em>Very large area:</em> 2,392.05 ha accepted silently, no
+limit, no warning; perimeter 19.56 km. <em>Very small area:</em> a 6,807
+m² strip (28 m × 244 m) analysed normally; its single zone reconciled
+(6,735 × 0.20 = 1,347 m² greening ✓). <em>Coverage boundary:</em>
+attempted a deliberate straddle at the Tbilisi/Mtskheta edge; the run
+was lost to a browser-extension failure and is reported as <strong>NOT
+TESTED</strong> rather than guessed — the related out-of-coverage
+behaviour (zoning silently blank in Kakheti) was measured on 2026-08-18.
+<em>Reload mid-analysis:</em> state lost silently, no prompt, no resume;
+analyses are not part of the saved project. <em>URL:</em> never changes
+from <code>/app</code>; no analysis is shareable by link.
+<em>Back/forward:</em> back reloads the app to the doorway with a stale
+value in the search field. <em>Rapid toggling:</em> enabling the
+isochrone changed the index and every count without any indication that
+the previous numbers were superseded — the card simply shows different
+values under the same labels. <em>Cache/staleness:</em> no "last
+refreshed" indicator anywhere.</p>
+<p><strong>Phase 5 — heuristic scores.</strong></p>
+<div class="table-wrap"><table>
+<thead>
+<tr class="header">
+<th>Criterion</th>
+<th>Score</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Methodological transparency</strong></td>
+<td><strong>1</strong></td>
+<td>§7: one ⓘ sentence for the flagship index; no weights, no radius, no
+bands; the catchment changes with an unrelated toggle</td>
+</tr>
+<tr class="even">
+<td><strong>Data provenance &amp; freshness</strong></td>
+<td><strong>1</strong></td>
+<td>§8: sources identifiable only from network traffic and an outage
+toast; zero date/"updated" strings in the app</td>
+</tr>
+<tr class="odd">
+<td><strong>Uncertainty communication</strong></td>
+<td><strong>1</strong></td>
+<td>No confidence interval, no ± , no sample size anywhere; failed
+components still produce a complete-looking grade</td>
+</tr>
+<tr class="even">
+<td><strong>Interoperability</strong></td>
+<td><strong>2</strong></td>
+<td>GeoJSON/GeoTIFF/OBJ/PDF offered, but no CRS, no schema, no CSV/XLSX;
+contents unauditable</td>
+</tr>
+<tr class="odd">
+<td><strong>Efficiency for repeat use</strong></td>
+<td><strong>2</strong></td>
+<td>Projects save geometry and restore reliably; but no URL state, no
+saved searches, no saved filters, analyses must be re-run, keyboard
+support absent</td>
+</tr>
+<tr class="even">
+<td><strong>Internal consistency</strong></td>
+<td><strong>4</strong></td>
+<td>Zone areas sum to site area; all K-derived values reconcile;
+identical results across sessions. Deductions: three unit systems and
+the same labels reused for two different catchments</td>
+</tr>
+<tr class="odd">
+<td><strong>Match to domain language</strong></td>
+<td><strong>3</strong></td>
+<td>k1/k2/k3, ზონირების შესაბამისობა, სასოფლო/არასასოფლო are right; «Max
+footprint / Max floor area / Min greening / Zone area» are English
+inside a Georgian panel; «სსზ-1/-3» never expanded; «სანდოობა»
+undefined</td>
+</tr>
+<tr class="even">
+<td>Visibility of system status</td>
+<td>3</td>
+<td>Good progress toasts and a spinner; but silent parcel-fetch
+failures, silent supersession of results, no completion state on PDF
+export</td>
+</tr>
+<tr class="odd">
+<td>Consistency</td>
+<td>2</td>
+<td>Panel drifts as it loads; two search placeholders;
+«ახლომახლო»/«ახლომდებარე» for one feature; ha vs კვ.მ. vs m²</td>
+</tr>
+<tr class="even">
+<td>Error prevention &amp; recovery</td>
+<td>2</td>
+<td>Min-area rule for relief is enforced with a clear tooltip (good);
+wrong-place geocoding, out-of-coverage zoning and registry outages give
+no recoverable path</td>
+</tr>
+<tr class="odd">
+<td>Aesthetic restraint</td>
+<td>4</td>
+<td>Dense information without visual noise; the map stays readable</td>
+</tr>
+<tr class="even">
+<td>Help &amp; documentation</td>
+<td>1</td>
+<td>No docs, no methodology, no glossary, no examples — in-app or
+public</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="14-not-tested">14. Not tested</h2>
+<ul>
+<li><strong>Export file contents</strong> (GeoJSON fields/CRS, GeoTIFF
+values, OBJ georeferencing, PDF layout) — downloads land on the browser
+host, which this evaluator cannot read; no device bridge was available
+in this session.</li>
+<li><strong>Municipal-boundary straddle</strong> — the deliberate
+straddle run was lost to repeated browser-extension failures; not
+re-attempted rather than reported from inference.</li>
+<li><strong>AI concept vs zoning constraints</strong> (does
+«განვითარების კონცეფცია» respect K2/height?) — not run; this is the
+highest-value remaining test and is listed as a question in §15.</li>
+<li><strong>Registry cross-check for encumbrances</strong> on
+napr.gov.ge — the tool's own parcel data appears to come from the same
+portal, so only an encumbrance comparison would be informative; not run
+this session.</li>
+<li><strong>LST sample size, cloud-mask rule, smoothing, points per
+year</strong> — the trend UI was observed in an earlier session but not
+interrogated at this depth.</li>
+<li><strong>zaxis.ge parent site</strong> — fetch blocked by robots.txt;
+not retrieved by other means.</li>
+<li><strong>Anonymous/free-tier limits in practice</strong> (50
+analyses/month) — the session ran on a Pro account and was not signed
+out.</li>
+<li><strong>Data Explorer tab beyond its empty state</strong>,
+keyboard-only operation, and «განათლება / მობილობა / ურბანული მორფოლოგია
+/ სუფთა ენერგია» modules — time-boxed out.</li>
+</ul>
+<h2 id="15-questions-for-the-product-team">15. Questions for the product
+team</h2>
+<ol type="1">
+<li>What exactly goes into URBAN LIVABILITY INDEX — components, weights,
+normalisation and grade bands — and what is the catchment in each mode?
+Why does the same site score 71 B and 80 A depending on the isochrone
+toggle, and are scores intended to be comparable between parcels?</li>
+<li>When a component fails to load («მიწათსარგებლობის მონაცემი ვერ
+ჩაიტვირთა»), is the index renormalised over the remaining components or
+is the missing one scored as zero?</li>
+<li>Does <code>K2=0.00</code> mean "not permitted" or "no value in our
+dataset"? Which zones genuinely prohibit building, and can the two cases
+be distinguished in the data?</li>
+<li>Which land-use plan (name, version, approval date) do the zone
+polygons and K1/K2/K3 come from, and how often is it refreshed?</li>
+<li>Is the «ზონირების შესაბამისობა» ✓ evaluated against single-family or
+multi-apartment thresholds? Can the user select the intended use?</li>
+<li>Are setbacks, building lines, insolation and yard norms on the
+roadmap? Without them the buildable figure is an upper bound only — is
+that how you intend it to be read?</li>
+<li>What is the parcel data dependency on <code>maps.gov.ge</code>, is
+there any caching or SLA, and can the UI show the last successful fetch
+time? Why does the failure sometimes toast and sometimes fail
+silently?</li>
+<li>What CRS and field schema do the GeoJSON/GeoTIFF exports use, and is
+a documented CSV/XLSX export planned?</li>
+<li>Is there an API or bulk-export path for a team that wants to screen
+hundreds of parcels, and what would that cost per parcel against the
+1,000-analysis quota?</li>
+<li>Where does the land-surface-temperature layer come from (satellite
+product, resolution, revisit, cloud masking), and is
+<code>spring-recipe-402c.gkankia.workers.dev</code> a production
+endpoint?</li>
+<li>What is <code>search_overrides</code> in your backend — are
+geocoding results manually patched, and could that explain the same
+query resolving to two different streets in different sessions?</li>
+<li>Does the AI concept generator respect the parcel's zoning envelope
+(K1/K2/height), and if not, how should a developer read its output?</li>
+<li>Is a parcel query/filter (area, zone, k2, slope, district) planned?
+For this persona it is the difference between "interesting" and
+"necessary".</li>
+</ol>
+<hr />
+<p><em>Prepared by an automated evaluator role-playing Persona C per the
+supplied brief. Interface strings are quoted verbatim from the live UI
+at urbanyx.zaxis.ge/app on 2026-08-18/19; derived figures were
+recomputed by hand and the working is shown in §13. Data sources were
+identified by passively reading the browser's own request log — no
+endpoint was called by the evaluator, and no undocumented API was
+probed. Inferences are marked <strong>[inferred]</strong>; where a
+result could not be established it is listed in §14 rather than
+reconstructed.</em></p>
+</main>
+</body>
+</html>

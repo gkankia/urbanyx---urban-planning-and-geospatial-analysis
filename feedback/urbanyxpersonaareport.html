@@ -1,0 +1,1066 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>Urbanyx ��� UX Evaluation, Persona A: The Working Agent</title>
+  
+  
+<style>
+:root{
+  --ink:#1e2430;--muted:#5b6472;--accent:#5b5bd6;--bg:#ffffff;--soft:#f4f5f8;
+  --border:#e3e6ec;--warn:#b4541a;--ok:#1e7d4f;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;background:var(--bg);color:var(--ink);
+  font:16px/1.65 "Helvetica Neue",Arial,"Noto Sans Georgian","BPG Arial",sans-serif;
+}
+main{max-width:960px;margin:0 auto;padding:48px 28px 96px}
+h1{font-size:1.9rem;line-height:1.25;margin:0 0 .4em;letter-spacing:-.01em}
+h1+p strong{color:var(--ink)}
+h2{
+  font-size:1.35rem;margin:2.6em 0 .7em;padding-top:1.2em;
+  border-top:2px solid var(--border);letter-spacing:-.01em;
+}
+h2:first-of-type{border-top:none;padding-top:0}
+h3{font-size:1.05rem;margin:1.8em 0 .5em}
+p{margin:.55em 0}
+strong{font-weight:650}
+hr{border:none;border-top:2px solid var(--border);margin:2.5em 0}
+blockquote{margin:1em 0;padding:.2em 1em;border-left:4px solid var(--accent);background:var(--soft);border-radius:0 8px 8px 0}
+ul,ol{padding-left:1.4em}
+li{margin:.35em 0}
+code{background:var(--soft);border:1px solid var(--border);border-radius:5px;padding:.08em .35em;font-size:.88em;font-family:"SF Mono",Menlo,Consolas,monospace}
+table{border-collapse:collapse;width:100%;margin:1.2em 0;font-size:.88rem}
+th{
+  background:var(--soft);text-align:left;font-weight:650;
+  border:1px solid var(--border);padding:.55em .7em;vertical-align:bottom;
+}
+td{border:1px solid var(--border);padding:.55em .7em;vertical-align:top}
+tbody tr:nth-child(even){background:#fafbfd}
+.table-wrap{overflow-x:auto}
+em{color:var(--muted)}
+a{color:var(--accent)}
+footer{margin-top:4em;color:var(--muted);font-size:.85rem;border-top:1px solid var(--border);padding-top:1.2em}
+@media (max-width:640px){
+  main{padding:28px 14px 64px}
+  body{font-size:15px}
+  table{font-size:.8rem}
+}
+@media print{
+  main{max-width:100%;padding:0}
+  h2{break-after:avoid}
+  table{break-inside:auto}
+  tr{break-inside:avoid}
+}
+
+</style>
+</head>
+<body>
+<main>
+
+<h1
+id="urbanyx-urbanyxzaxisgeapp--ux-evaluation-persona-a-the-working-agent">Urbanyx
+(urbanyx.zaxis.ge/app) — UX Evaluation, Persona A: The Working
+Agent</h1>
+<p><strong>Persona:</strong> Nino Beridze, 34, mid-size Tbilisi agency,
+7 years, myhome.ge/ss.ge/WhatsApp/Excel user, impatient, Georgian-first.
+<strong>Method:</strong> task-based usability evaluation with
+think-aloud protocol, desktop (~1320px viewport) + narrow-viewport
+mobile simulation (~280px and ~580px). Session date: 2026-08-17. Account
+used: logged-in Pro account (pre-existing). Test mode banner active
+throughout: «სატესტო რეჟიმი. გთხოვთ, არ შეიყვანოთ ბარათის მონაცემები
+გადახდის პორტალზე! უკუკავშირისთვის, მოგვწერეთ <a
+href="mailto:info@zaxis.ge">info@zaxis.ge</a>». <strong>Layers:</strong>
+persona reactions in quotes (<code>"..."</code>), evaluator observations
+in plain text.</p>
+<hr />
+<h2 id="1-verdict">1. Verdict</h2>
+<p><strong>Usable by a working agent today: NO for her core money-making
+tasks; YES-with-caveats as a supporting "know-the-location"
+tool.</strong></p>
+<ul>
+<li>The tool contains <strong>no prices, no listings, no
+comparables</strong> anywhere that could be located during a full sweep
+of the UI. Pricing a plot (her task #2 in importance) and building a
+buyer shortlist are impossible. It solves a planner's problem, not an
+agent's.</li>
+<li>What it does — parcel lookup by cadastral code with registry data,
+street photos, livability/zoning/slope/temperature analysis, K1/K2 build
+limits, isochrones, AI development concepts, PDF/GeoJSON export,
+save/restore projects — mostly <strong>works</strong>, and several
+outputs (zoning donut, slope stats, LST with date) are better than
+anything in her current toolkit.</li>
+<li><strong>Trust is undermined by the product's own behavior</strong>:
+the headline URBAN LIVABILITY INDEX changed value in front of the
+evaluator without explanation (75 B → 61 C during one load; 9 F → 32 F
+on a later recompute of the same parcel), and for most numbers neither
+source nor date is discoverable. Per this persona's brief, that is
+trust-blocking.</li>
+<li><strong>Discoverability fails the 20-second rule</strong>
+repeatedly: search accepts only cadastral codes (typing «დიღომი» →
+«ძიება წარუმატებელია»), the eight analysis buttons are unlabeled icons,
+POI dots have no legend, and the info popup keeps repositioning so
+buttons move out from under the cursor.</li>
+<li>The interface is <strong>half Georgian, half English</strong> (panel
+headers, AI outputs, tooltips, dates, empty states), which slows this
+persona down and looks unfinished to her clients.</li>
+</ul>
+<h2 id="2-adoption-answers-phase-6-as-nino-verbatim">2. Adoption answers
+(Phase 6, as Nino, verbatim)</h2>
+<ul>
+<li><strong>Would you open this again next week without a
+reminder?</strong> "ალბათ არა. გამახსენდება მხოლოდ მაშინ, თუ დეველოპერი
+მკითხავს „რა შენდება აქ?“ — ზონირება და K1/K2 აქ მართლა ერთი წუთით
+ვნახე, ეგ მომეწონა. ყოველდღიური საქმისთვის აქ ჩემთვის არაფერია — ფასები
+არ აქვს."</li>
+<li><strong>Which single task does it do better than your current
+workflow?</strong> "„რა შეიძლება აშენდეს ამ ნაკვეთზე“ — ზონა,
+კოეფიციენტები, მაქსიმალური სართულები ერთ ფანჯარაში. ახლა ამისთვის ან
+მერიაში ვრეკავ, ან არქიტექტორ ნაცნობს ვწერ და ორი დღე ველოდები."</li>
+<li><strong>Which task does it do worse than free alternatives?</strong>
+"მისამართის პოვნა. Google Maps-ში „დიღომის მასივი“ რომ ჩავწერო, მიგდებს.
+აქ საკადასტრო კოდი უნდა ვიცოდე — კლიენტს კოდი იშვიათად აქვს ხელთ. და
+ფასების ნახვა — myhome.ge უფასოა და ფასები იქ არის."</li>
+<li><strong>Would you pay for it, how much per month, and what would
+have to be true first?</strong> "€12.50 თვეში (დაახლოებით 38 ლარი) არ
+არის დიდი ფული, მაგრამ ახლა ვერ გადავიხდი — ვერ ვენდობი ციფრს, რომელიც
+თვალწინ 75-დან 61-ზე ჩამოვიდა. ჯერ: (1) ქართულად იყოს ბოლომდე, (2) უბნის
+სახელით ძებნა, (3) ყველა ციფრს ეწეროს საიდან არის და როდის განახლდა.
+მერე 30-40 ლარად ვიფიქრებდი, თუ კლიენტთან „საწონად“ გამომადგება."</li>
+<li><strong>What would you tell a colleague about it in one
+sentence?</strong> "მაგარი რუკაა დეველოპერებისთვის — ზონირებას და
+კოეფიციენტებს გაჩვენებს, მაგრამ ფასებს და განცხადებებს არ ელოდო."</li>
+<li><strong>The one thing that, if it stays as-is, means you stop using
+it:</strong> "ძებნა რომ უბნის სახელს ვერ ცნობს. კოდით ძებნა ჩემი სამუშაო
+დღის 5%-ია; დანარჩენ დროს ადგილს სახელით ვეძებ."</li>
+</ul>
+<h2 id="3-what-works-evidence-in-brackets">3. What works (evidence in
+brackets)</h2>
+<ol type="1">
+<li><strong>Cadastral-code lookup is fast and rich</strong> — typing the
+example-format code <code>01.15.07.002.057</code> flew to the parcel and
+returned area, type, address, owner, registration date + 360° street
+photos [Task 2].</li>
+<li><strong>Zoning assessment on a drawn area is a real
+differentiator</strong> — donut of zone shares («საცხოვრებელი ზონა-6
+73%») and per-zone tooltips computing K1/K2/K3 into m² («K1=0.50 Max
+footprint 29,266 m²… Max height (floors) 5») [Task 3/6].</li>
+<li><strong>Project save/restore works</strong> — «პროექტის შენახვა»
+stored the drawn area, analyses and POIs; «გახსნა» restored them, with
+an auto-save chip («Saved just now») [Task 9].</li>
+<li><strong>Land-surface-temperature module shows provenance done
+right</strong> — value 21.9°, capture date 2026-07-28, cloudiness 39%,
+trend slider 2013–2026 [Phase 5 trust audit].</li>
+<li><strong>Mobile layout genuinely adapts</strong> — bottom tab bar
+(ნაკვეთი/ანალიზი/პროექტები/პროფილი), bottom-sheet parcel card,
+double-tap zoom and parcel select all worked at 280px width [Task
+10].</li>
+</ol>
+<h2 id="4-prioritised-issues-table">4. Prioritised issues table</h2>
+<p>Severity: 0 cosmetic · 1 minor · 2 slows her down · 3 fails task /
+distrusts output · 4 abandons tool. Sorted by severity × frequency.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr class="header">
+<th>#</th>
+<th>Where</th>
+<th>What happened</th>
+<th>Expected</th>
+<th>Sev</th>
+<th>Freq for her</th>
+<th>Fix effort (guess)</th>
+<th>Recommendation</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1</td>
+<td>Search field (top-left), placeholder
+<code>01.15.07.002.057</code></td>
+<td>Typed «დიღომი» → toast «ძიება წარუმატებელია». Typed misspelled
+«დიღომმი» → same. No suggestions, no hint about what search accepts</td>
+<td>Neighbourhood/address search like Google Maps or myhome.ge</td>
+<td>4</td>
+<td>Every session</td>
+<td>Medium (geocoder integration)</td>
+<td>Add place/address geocoding + autocomplete; on failure say
+<em>what</em> is searchable</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td>Whole product</td>
+<td>No listing prices, sale comps, or valuation anywhere (checked all 8
+analysis modules, layers, zoning «შეფასება» = zoning compliance, not
+appraisal)</td>
+<td>Persona expected at least some price layer to price a plot</td>
+<td>4</td>
+<td>Core job, daily</td>
+<td>Large (data acquisition)</td>
+<td>Integrate market data or clearly position product as
+planning-only</td>
+</tr>
+<tr class="odd">
+<td>3</td>
+<td>«URBAN LIVABILITY INDEX» card</td>
+<td>Score visibly mutated: 75 B → 61 C during one load (Lev Tolstoi
+parcel); same rural parcel showed 9 F then 32 F after re-render. A blue
+tip admitted partial data: «მიწათსარგებლობის (მრავალფეროვნების) მონაცემი
+ვერ ჩაიტვირთა»</td>
+<td>A number that stays put, or an explicit loading state until
+final</td>
+<td>3</td>
+<td>Every analysis</td>
+<td>Small–medium</td>
+<td>Don't render the score until all components load; if a component
+fails, flag the score as partial</td>
+</tr>
+<tr class="even">
+<td>4</td>
+<td>All count/score outputs</td>
+<td>No source or freshness for livability, ბაღები, გაჩერებები,
+მარშრუტები, ავტოსადგომები, zoning shares. Only slope (source note) and
+LST (date) cite anything. «სანდოობა: E · 46%» is never explained</td>
+<td>Persona's rule: won't quote a number without source + age</td>
+<td>3</td>
+<td>Every client-facing use</td>
+<td>Medium</td>
+<td>Per-metric ⓘ with source name + last-updated date; explain the A–F
+scale and «სანდოობა»</td>
+</tr>
+<tr class="odd">
+<td>5</td>
+<td>Parcel/area popup</td>
+<td>Popup is map-anchored and repositions as content loads; 4 misclicks
+during evaluation, one of which (aiming at «განვითარების კონცეფცია»)
+selected a different parcel and silently discarded the finished
+«ახლომახლო» analysis</td>
+<td>Stationary panel; click targets that don't move</td>
+<td>3</td>
+<td>Constant</td>
+<td>Medium</td>
+<td>Dock the popup as a fixed side panel (it already becomes a bottom
+sheet on mobile)</td>
+</tr>
+<tr class="even">
+<td>6</td>
+<td>Analysis state</td>
+<td>Unrelated actions silently clear results: clicking the search icon
+wiped the visible analysis sections; clicking the project chip removed
+the restored isochrone</td>
+<td>State survives navigation, or warns before clearing</td>
+<td>3</td>
+<td>Frequent</td>
+<td>Medium</td>
+<td>Keep analysis state per-shape; confirm before discarding</td>
+</tr>
+<tr class="odd">
+<td>7</td>
+<td>ანალიზი tab</td>
+<td>8 analysis buttons are icon-only (puzzle, mountain, thermometer,
+turbine, pin, books, map, buildings); no visible labels; hover tooltip
+did not appear during 2–3s hovers. Names exist only for screen readers
+(ზონირება, რელიეფი, კლიმატი, სუფთა ენერგია, იზოქრონი, განათლება,
+მობილობა, ურბანული მორფოლოგია)</td>
+<td>Labeled buttons</td>
+<td>3</td>
+<td>Every session, first weeks</td>
+<td>Small</td>
+<td>Show text labels under icons (space exists); fix tooltip
+trigger</td>
+</tr>
+<tr class="even">
+<td>8</td>
+<td>Nearby analysis map overlay</td>
+<td>Colored POI dots (pink/green/orange/purple) appear with no legend
+anywhere; hovering one showed English tooltip «Health»</td>
+<td>Legend chip mapping colors to categories, in Georgian</td>
+<td>2–3</td>
+<td>Every nearby analysis</td>
+<td>Small</td>
+<td>Add a collapsible legend when dots are shown</td>
+</tr>
+<tr class="odd">
+<td>9</td>
+<td>Language</td>
+<td>Mixed-language UI throughout: Projects/Data panel and empty states
+(«No imported data layers yet…»), Plan tab («Generate a development
+concept…»), AI concept output in English («Concept site layout featuring
+two 6-floor residential buildings…»), half-English legend
+(Residential/Lawn vs გამწვანება/ხეები), editor tooltips SELECT/EDIT
+SHAPE/MOVE/ROTATE/SLICE/COLORS/ERASE (but «3D რეჟიმი» in Georgian),
+«Saved just now», «Project name...», dates «Aug 17, 2026». EN/ქა toggle
+exists in DOM but was not found in the visible UI during the
+session</td>
+<td>Georgian-first UI for a Georgian-market persona</td>
+<td>2–3</td>
+<td>Constant</td>
+<td>Medium</td>
+<td>Finish ka localization; localize AI output (prompt was Georgian,
+answer came back English)</td>
+</tr>
+<tr class="even">
+<td>10</td>
+<td>Code search auto-zoom</td>
+<td>Searching a 100 m² parcel zoomed to ~z19.6: a giant blue polygon on
+a featureless green background; impossible to tell where in the city you
+are</td>
+<td>Zoom that keeps street context</td>
+<td>2</td>
+<td>Common</td>
+<td>Small</td>
+<td>Cap the fly-to zoom (~17) and show an inset/locator</td>
+</tr>
+<tr class="odd">
+<td>11</td>
+<td>Map navigation feel</td>
+<td>Scroll-zoom ≈ 20 wheel-ticks per zoom level; −/+ buttons move
+~0.2–0.5 level per click with animation queuing; grey tile patchwork for
+1–2 s on fast pan/zoom-out</td>
+<td>Google-Maps-speed zoom</td>
+<td>2</td>
+<td>Constant</td>
+<td>Small–medium</td>
+<td>Increase zoom-per-tick/click; consider raster prefetch</td>
+</tr>
+<tr class="even">
+<td>12</td>
+<td>Comparing areas</td>
+<td>No compare view. Drawing/analyzing area B leaves area A's score
+nowhere visible; evaluator had to note 72 B on paper to compare with 62
+C</td>
+<td>Side-by-side or pinned scorecards</td>
+<td>2</td>
+<td>Weekly (listing pitches)</td>
+<td>Medium</td>
+<td>Pin completed analysis cards; simple 2-area compare</td>
+</tr>
+<tr class="odd">
+<td>13</td>
+<td>Export</td>
+<td>«ექსპორტი» on a closed project → toast «ექსპორტისთვის გახსენი
+პროექტი» (extra step); after PDF export, toast «რეპორტი მზადდება...»
+appears but there is <strong>no completion confirmation</strong>;
+GeoJSON export gave no feedback at all</td>
+<td>Progress + success confirmation</td>
+<td>2</td>
+<td>Whenever sharing</td>
+<td>Small</td>
+<td>Add "downloaded ✓" toast with filename</td>
+</tr>
+<tr class="even">
+<td>14</td>
+<td>Empty search result (Latin script)</td>
+<td>Typing «digomi» flew the map near Dighomi and displayed a mini-card
+titled «ნაკვეთი» with all fields «—» — looks like a result but contains
+nothing; no error</td>
+<td>Either a geocoded match or an explicit "not found"</td>
+<td>2</td>
+<td>Occasional</td>
+<td>Small</td>
+<td>Never render an all-dash card; treat as not-found</td>
+</tr>
+<tr class="odd">
+<td>15</td>
+<td>Zoning section labels</td>
+<td>Permits empty-state on a <em>drawn area</em> says «ამ ნაკვეთზე
+მშენებლობის ნებართვა ვერ მოიძებნა» (calls the area a parcel); zone code
+«სსზ-2» unexplained; slope category labels truncate («ოდნავ დახრილ…»,
+«საშუალოდ დახ…»)</td>
+<td>Correct object naming; expandable abbreviations; labels that
+fit</td>
+<td>1–2</td>
+<td>Regular</td>
+<td>Small</td>
+<td>Copy pass on the analysis panel</td>
+</tr>
+<tr class="even">
+<td>16</td>
+<td>Feature naming</td>
+<td>The same feature is «ახლომახლო ანალიზი» on the button and
+«ახლომდებარე ანალიზი» in its own ⓘ tooltip</td>
+<td>One name</td>
+<td>1</td>
+<td>Regular</td>
+<td>Trivial</td>
+<td>Pick one term</td>
+</tr>
+<tr class="odd">
+<td>17</td>
+<td>First-run overlay</td>
+<td>Hint «დააკლიკეთ ან მოხაზეთ რუკაზე» renders pale grey on a blurred
+light map — near-invisible; the logged-in overlay still offers
+«შესვლა»/«ანგარიშის შექმნა» links</td>
+<td>Legible hint; state-aware links</td>
+<td>1</td>
+<td>Once per load</td>
+<td>Trivial</td>
+<td>Contrast fix</td>
+</tr>
+<tr class="even">
+<td>18</td>
+<td>Keyboard</td>
+<td>After clicking the map, <code>-</code> and arrow keys changed
+nothing visibly; Tab produced a visible focus ring only on the mobile
+bottom-nav; no visible focus on desktop rail buttons</td>
+<td>Standard Mapbox keyboard nav + visible focus</td>
+<td>1–2 (0 for this persona, matters for a11y)</td>
+<td>Rare</td>
+<td>Small–medium</td>
+<td>Enable/verify keyboard handlers and focus styles</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="5-quick-wins-each--1-day-guess">5. Quick wins (each &lt; 1 day,
+guess)</h2>
+<ol type="1">
+<li><strong>Label the analysis icons.</strong> Add visible captions
+under the 8 icon buttons in «ნაკვეთის ანალიზი» / «მისაწვდომობის ანალიზი»
+using the names already in the a11y tree (ზონირება, რელიეფი, კლიმატი,
+სუფთა ენერგია, იზოქრონი, განათლება, მობილობა, მორფოლოგია).</li>
+<li><strong>Hold the livability score until it's final.</strong> Render
+a skeleton/spinner in the «URBAN LIVABILITY INDEX» card until all
+components (incl. მრავალფეროვნება) resolve; never let 75 B become 61 C
+on screen.</li>
+<li><strong>Explain the grades in place.</strong> One tooltip on the
+score: "0–100, A(90+)…F(&lt;40)"; one on «სანდოობა: E · 46%» saying what
+it measures (transit reliability? data confidence?).</li>
+<li><strong>Search failure copy.</strong> Replace «ძიება წარუმატებელია»
+with: «ძიება მუშაობს საკადასტრო კოდით (მაგ. 01.15.07.002.057). უბნის
+სახელით ძებნა მალე დაემატება.» — sets expectations in one line.</li>
+<li><strong>POI dot legend.</strong> Small legend chip bottom-left when
+nearby-analysis dots render; Georgian category names (the data already
+knows «Health» etc.).</li>
+<li><strong>Finish the visible-string translation of the Projects
+panel</strong>: Projects→პროექტები, Data→მონაცემები, «New Project»,
+«Project name...», «Saved just now», «No imported data layers
+yet…».</li>
+<li><strong>Export confirmation toast</strong> with the generated
+filename after PDF/GeoJSON export.</li>
+<li><strong>Fix the popup jump on tooltip open/section load</strong>
+(reserve height instead of reflowing), or dock the panel.</li>
+</ol>
+<h2 id="6-structural-problems">6. Structural problems</h2>
+<ul>
+<li><strong>This is a planning/GIS product wearing a map, not an agent
+tool.</strong> Its center of gravity — zoning, coefficients, slope, LST,
+isochrones, morphology, GeoTIFF import/export, SketchUp export — serves
+architects, developers, and analysts (the signup form's own sector list
+starts with «არქიტექტურა / ურბანული დიზაინი»). The agent's daily loop
+(find listings → price them → convince clients) is untouched: no
+listings, no prices, no comps, no trends. For Nino it can only ever be a
+<em>supplement</em>, so its value must be measured against the 2–3
+questions a month where zoning/build-potential matters.</li>
+<li><strong>Coverage boundaries contradict her territory.</strong> The
+pricing table itself states: ზონირების ანალიზი «მხოლოდ თბილისი», რელიეფი
+«მხოლოდ თბილისი», კლიმატი/სუფთა ენერგია «საქართველო ნაწილობრივ, თბილისი
+სრულად». Her Mtskheta/Kakheti/Adjara deals fall outside the strongest
+features, and the tool never says so up front — she'd discover it by
+silent empty results.</li>
+<li><strong>The information architecture accumulates instead of
+organizing.</strong> Analysis sections stack vertically in one
+ever-longer popup (nearby + zoning + donut + compliance + permits +
+relief + climate…), while unrelated clicks can silently clear them.
+There is no notion of "my current analysis" she can hold on to, compare,
+or return to except full project save.</li>
+<li><strong>The metering model (tokens) is invisible until the account
+modal.</strong> «36 ძიება ამ თვეში / 964 დარჩენილი / თვიური ლიმიტი:
+1,000» — nothing in the working UI shows that actions consume a budget;
+a Free user (50 parcel analyses/month) would hit the wall without
+warning.</li>
+<li><strong>Anchor mismatch for the buyer-shortlist job:</strong>
+isochrones are computed <em>from the selected parcel/area</em>, and
+travel-time options are 10/15/20/45/60 min. "Within 25 minutes of Vake"
+(from a point <em>to</em> candidate areas, at 25 min) cannot be
+expressed; there is no way to enumerate candidate parcels by criteria
+(size range, buildability) at all.</li>
+</ul>
+<h2 id="7-terminology--localisation-audit">7. Terminology &amp;
+localisation audit</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr class="header">
+<th>On-screen (verbatim)</th>
+<th>Where</th>
+<th>Issue / what a Georgian agent says</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>«URBAN LIVABILITY INDEX»</td>
+<td>score card</td>
+<td>English headline for the product's main number; she'd say «უბნის
+შეფასება/ქულა»</td>
+</tr>
+<tr class="even">
+<td>«იზოქრონი»</td>
+<td>analysis button (a11y name)</td>
+<td>GIS jargon; agents say «რამდენ წუთშია მისასვლელი»</td>
+</tr>
+<tr class="odd">
+<td>«ურბანული მორფოლოგია»</td>
+<td>analysis button</td>
+<td>planner jargon; meaningless to her</td>
+</tr>
+<tr class="even">
+<td>«შენონის ინდექსი»</td>
+<td>zoning/diversity panel (DOM)</td>
+<td>academic statistics term surfaced raw</td>
+</tr>
+<tr class="odd">
+<td>«სანდოობა: E · 46%»</td>
+<td>transit block</td>
+<td>unexplained grade; unclear referent</td>
+</tr>
+<tr class="even">
+<td>«სსზ-2»</td>
+<td>zoning legend</td>
+<td>unexpanded abbreviation</td>
+</tr>
+<tr class="odd">
+<td>K1/K2/K3 («K1=0.50 Max footprint…»)</td>
+<td>zone tooltip</td>
+<td>✔ coefficients match Georgian practice (k1/k2/k3) — but the
+explanatory labels are English</td>
+</tr>
+<tr class="even">
+<td>«Projects / Data / New Project / Project name... / Saved just
+now»</td>
+<td>left panel, save flow</td>
+<td>English in a core flow</td>
+</tr>
+<tr class="odd">
+<td>«No imported data layers yet. Use the Draw &amp; Import tool to add
+GeoJSON, Shapefile, CSV, or GeoTIFF.»</td>
+<td>Data tab</td>
+<td>English + heavy GIS jargon</td>
+</tr>
+<tr class="even">
+<td>«Generate a development concept for this parcel, then render it
+photorealistically.»</td>
+<td>გეგმა tab</td>
+<td>English description above a Georgian button («განვითარების
+კონცეფცია»)</td>
+</tr>
+<tr class="odd">
+<td>«Concept site layout featuring two 6-floor residential buildings…» +
+legend «Residential / Lawn / გამწვანება / ხეები»</td>
+<td>AI concept result</td>
+<td>Georgian prompt in → English answer out; half-translated legend</td>
+</tr>
+<tr class="even">
+<td>SELECT / EDIT SHAPE / MOVE / ROTATE / SLICE / COLORS / ERASE vs «3D
+რეჟიმი»</td>
+<td>editor toolbar tooltips</td>
+<td>mixed languages within one toolbar</td>
+</tr>
+<tr class="odd">
+<td>«Health»</td>
+<td>POI dot tooltip</td>
+<td>English category name on map</td>
+</tr>
+<tr class="even">
+<td>«Aug 17, 2026 · 41.7639, 44.773», «განახლდება Aug 18»</td>
+<td>project card, account modal</td>
+<td>Latin month dates + raw coordinates as a project subtitle</td>
+</tr>
+<tr class="odd">
+<td>«geoTIFF გადმოტვირთვა», «↓ ასპექტი»</td>
+<td>relief section</td>
+<td>mixed script; «ასპექტი» jargon (ferdobis mimartuleba)</td>
+</tr>
+<tr class="even">
+<td>«ნაკვეთის ასარჩევად მიახლოვდით (მასშტაბი 15+)»</td>
+<td>toast</td>
+<td>actionable ✔ but «მასშტაბი 15+» is dev-speak</td>
+</tr>
+<tr class="odd">
+<td>«ახლომახლო ანალიზი» vs «ახლომდებარე ანალიზი»</td>
+<td>button vs its ⓘ</td>
+<td>same feature, two names</td>
+</tr>
+<tr class="even">
+<td>«ამ ნაკვეთზე მშენებლობის ნებართვა ვერ მოიძებნა» shown for a drawn
+area</td>
+<td>permits</td>
+<td>object-type mismatch («ნაკვეთი» vs «არეალი»)</td>
+</tr>
+<tr class="odd">
+<td>Units: «570 კვ.მ.» (parcel) vs «8.05 ha» (drawn area) vs «100 m²»
+(zone tooltip) vs «547m» (edge labels)</td>
+<td>throughout</td>
+<td>three unit notations (კვ.მ. / ha / m²); ha not written «ჰა»</td>
+</tr>
+<tr class="even">
+<td>«მოიცავს Pro ვერსიის 14-დღიან საცდელ პერიოდს», price
+«€12.50/თვე»</td>
+<td>pricing modal</td>
+<td>EUR pricing for a GEL-earning persona; payment disclaimer («We do
+not store your credit card details…») English</td>
+</tr>
+</tbody>
+</table></div>
+<h2
+id="8-trust-audit--numbers-a-client-might-hear-and-whether-source--freshness-are-discoverable">8.
+Trust audit — numbers a client might hear, and whether source &amp;
+freshness are discoverable</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr class="header">
+<th>#</th>
+<th>Number (verbatim)</th>
+<th>Where</th>
+<th>"Where is this from?"</th>
+<th>"When was it updated?"</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1</td>
+<td>ფართობი 570 კვ.მ. / მისამართი / მეპატრონე / «რეგისტრაციის თარიღი 23
+მაისი 2025»</td>
+<td>parcel card</td>
+<td>✖ registry implied, never named (NAPR?)</td>
+<td>Partial — registration date only, not extract date</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td>URBAN LIVABILITY INDEX «72 B»</td>
+<td>drawn area, Dighomi Massive</td>
+<td>✖ ⓘ gives a one-sentence method («აჩვენებს… ინფრასტრუქტურას ფეხით
+სავალ მანძილზე…»), no data source, no weights; changed 75→61
+elsewhere</td>
+<td>✖ none</td>
+</tr>
+<tr class="odd">
+<td>3</td>
+<td>«გაჩერებები 42 / მარშრუტები (31): 299, 302…»</td>
+<td>isochrone recompute</td>
+<td>✖ transit source unnamed; «სანდოობა: E · 46%» unexplained</td>
+<td>✖ none</td>
+</tr>
+<tr class="even">
+<td>4</td>
+<td>«ავტოსადგომები 77 · 77 უფასო · 0 ფასიანი · ტევადობა: 1151 ავტ.»</td>
+<td>same</td>
+<td>✖</td>
+<td>✖</td>
+</tr>
+<tr class="odd">
+<td>5</td>
+<td>«საცხოვრებელი ზონა-6 73%» + «K1=0.50 Max footprint 29,266 m²… Max
+height (floors) 5»</td>
+<td>zoning assessment</td>
+<td>✖ implied Tbilisi land-use plan, not cited</td>
+<td>✖ (plan version/year matters legally!)</td>
+</tr>
+<tr class="even">
+<td>6</td>
+<td>Slope «მინ 0.0° / საშ 0.9° / მაქს 18.9° / მოსწორებული &lt;3°:
+96%»</td>
+<td>relief</td>
+<td>✔ «წყარო: თბილისის მაღალი გარჩევადობის ციფრული რელიეფის მოდელი.
+მნიშვნელობები ინდიკატიურია და არ ცვლის საველე აზომვას.»</td>
+<td>✖ no DEM date</td>
+</tr>
+<tr class="odd">
+<td>7</td>
+<td>LST «21.9° · ღრუბლიანობა 39%»</td>
+<td>climate</td>
+<td>Partial — satellite not named</td>
+<td>✔ «2026-07-28» + trend 2013–2026 — best in product</td>
+</tr>
+<tr class="even">
+<td>8</td>
+<td>Street photos «ქუჩის სურათები — ნაკვეთიდან 20 მეტრის მანძილზე»</td>
+<td>parcel card</td>
+<td>✖ provider unnamed</td>
+<td>✖ capture date absent (photos look summer, could be years old)</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Bottom line for the persona:</strong> of the eight
+client-quotable numbers, only slope and temperature would survive her
+"საიდან არის და რამდენი წლისაა?" test. The two flagship numbers
+(livability score, zoning K-limits) fail it.</p>
+<h2 id="9-mobile-findings-viewport-280px-and-580px-simulated">9. Mobile
+findings (viewport ~280px and ~580px, simulated)</h2>
+<ul>
+<li>Layout switches to a real mobile UI: bottom tab bar «ნაკვეთი /
+ანალიზი / პროექტები / პროფილი», analysis becomes a draggable bottom
+sheet. Tap targets in the sheet are generous; text legible.</li>
+<li><strong>Double-tap zoom works and parcel select works</strong> —
+double-tapping down to street level selected parcel
+<code>01.72.14.047.002</code> and opened its sheet (34 კვ.მ., «ყოფილი
+დიღმის სასწავლო-საცდელი მეურნეობა», owner named, reg. 20 ნოემბერი
+2024).</li>
+<li><strong>The open sheet covers the entire map</strong> — you cannot
+see the parcel you just tapped while reading its data; on a plot with a
+client this forces constant open/close.</li>
+<li><strong>Top bar collision:</strong> the project chip («დიღმის მასივი
+— … · Saved just now») overlaps/hides the search control at narrow
+width.</li>
+<li>At ~280px the right-rail zoom controls are absent (they reappear at
+~580px); with no visible zoom buttons the phone user depends on gestures
+only — fine on a real touch device, but worth verifying pinch behavior
+in the field.</li>
+<li>«Locate me» (GPS) was <strong>not</strong> tested (evaluation
+environment has no meaningful geolocation) — field task "pull the parcel
+under your feet" therefore unverified end-to-end.</li>
+<li>Performance at narrow width felt equal to desktop; tile patchwork on
+fast zoom-out is visible but brief.</li>
+</ul>
+<h2 id="9a-heuristic-pass-15-one-piece-of-evidence-each">9a. Heuristic
+pass (1–5, one piece of evidence each)</h2>
+<p><strong>Nielsen:</strong></p>
+<div class="table-wrap"><table>
+<thead>
+<tr class="header">
+<th>Heuristic</th>
+<th>Score</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Visibility of system status</td>
+<td>3</td>
+<td>Good toasts («ნაკვეთის ძებნა...», «იგეგმება... (~5–10 წმ)»,
+«ტემპერატურის ჩამოტვირთვა 4/40») — but PDF export ends with no
+completion signal and the score mutates while loading</td>
+</tr>
+<tr class="even">
+<td>Match to real-world language</td>
+<td>2</td>
+<td>K1/K2/K3 ✔ but «იზოქრონი», «მორფოლოგია», «შენონის ინდექსი», «URBAN
+LIVABILITY INDEX», «Health» ✖</td>
+</tr>
+<tr class="odd">
+<td>User control &amp; undo</td>
+<td>2</td>
+<td>Shape shortcuts exist («მალსახმობები: ⌘C · ⌘X · ⌘V · ⌘Z · ⇧⌘Z»), but
+analyses are cleared silently by unrelated clicks and there is no undo
+for that; reload loses unsaved state without warning</td>
+</tr>
+<tr class="even">
+<td>Consistency</td>
+<td>2</td>
+<td>Same feature named «ახლომახლო»/«ახლომდებარე»; photo captions differ
+(«ნაკვეთიდან 20 მეტრის მანძილზე» vs «უახლოეს არეალში»); three unit
+notations; two languages</td>
+</tr>
+<tr class="odd">
+<td>Error prevention</td>
+<td>2</td>
+<td>Search accepts free text but only codes succeed; nothing prevents
+drawing over water/void; misclick on moving popup switches parcels
+destructively</td>
+</tr>
+<tr class="even">
+<td>Recognition over recall</td>
+<td>2</td>
+<td>Icon-only analysis grid forces memorization; comparing areas
+requires remembering the previous score</td>
+</tr>
+<tr class="odd">
+<td>Flexibility &amp; shortcuts</td>
+<td>3</td>
+<td>Enter submits search; shape clipboard shortcuts; but no keyboard map
+nav observed, no recent-searches list</td>
+</tr>
+<tr class="even">
+<td>Aesthetic &amp; minimalist design</td>
+<td>4</td>
+<td>Visually clean, restrained default map; long stacked analysis popup
+is the exception</td>
+</tr>
+<tr class="odd">
+<td>Error recovery</td>
+<td>2</td>
+<td>«ძიება წარუმატებელია» offers no next step; empty «ნაკვეთი — —» card
+after Latin search is a dead end</td>
+</tr>
+<tr class="even">
+<td>Help &amp; documentation</td>
+<td>2</td>
+<td>ⓘ tooltips exist on some modules (nearby, zone details, min-area
+constraint); no glossary, no onboarding tour, no docs link found</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Map-specific (weighted):</strong></p>
+<div class="table-wrap"><table>
+<thead>
+<tr class="header">
+<th>Criterion</th>
+<th>Score</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Legend legibility / self-explanatory colour scales</td>
+<td>2</td>
+<td>Slope ramp labeled 0°–18.9° ✔, LST ramp 20–45°C ✔; POI dots and
+zoning map colours have no on-map legend (donut legend colours ≠ map
+fill colours) ✖</td>
+</tr>
+<tr class="even">
+<td>Zoom/data coherence</td>
+<td>3</td>
+<td>Parcel-select gated with an explanatory toast ✔; but auto-fly to max
+zoom strands the user on a featureless basemap, and analysis dots vanish
+only with their popup, not predictably</td>
+</tr>
+<tr class="odd">
+<td>Discoverability of draw/measure/select</td>
+<td>2</td>
+<td>Pencil flyout found only by clicking an unlabeled icon; Measure
+lives behind a tape icon (never surfaced during persona flow); no hint
+that drawing enables area analysis</td>
+</tr>
+<tr class="even">
+<td>Clarity of units</td>
+<td>3</td>
+<td>Units always present (კვ.მ., ha, m, min, °, °C) but notation is
+inconsistent (კვ.მ./m²/ha) and currency never appears at all</td>
+</tr>
+<tr class="odd">
+<td>Data provenance</td>
+<td>2</td>
+<td>2 of 8 quotable numbers carry source or date (slope source note; LST
+date+cloudiness); everything else unattributed — heavily weighted
+failure for this persona</td>
+</tr>
+<tr class="even">
+<td>Density at default zoom</td>
+<td>4</td>
+<td>Default city view is readable, not drowned in pins; analysis dots
+add clutter only after opt-in</td>
+</tr>
+<tr class="odd">
+<td>Performance as felt</td>
+<td>3</td>
+<td>Analyses return in 3–8 s with progress; pan is smooth; zoom controls
+feel sluggish (≈20 wheel-ticks/level) and fast pan shows 1–2 s grey
+tiles</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="10-task-appendix-raw-notes">10. Task appendix (raw notes)</h2>
+<p><strong>Phase 1 — First impression.</strong> 5s: a 3D-tilted,
+Georgian-labeled map of old Tbilisi; a magnifier top-left; yellow
+test-mode banner; unlabeled icon rails left (folder / database+ /
+pencil) and right (+ − layers locate cube tape). "რუკაა. ლამაზია.
+საძიებო… და მერე რა ვქნა?" What is it: a map tool. For whom: unclear —
+nothing on screen says. First action: the magnifier. Trust: neutral;
+banner in Georgian is reassuring, the word «სატესტო» slightly not. 60s:
+rails still unlabeled; no onboarding; nothing indicates parcels are
+clickable until you try. Still unclear: what the product
+<em>does</em>.</p>
+<p><strong>Phase 2 — Unguided exploration (~10 min).</strong> Click log:
+magnifier → placeholder <code>01.15.07.002.057</code> + «ძიება» → typed
+«დიღომი» → spinner «ნაკვეთის ძებნა...» → toast «ძიება წარუმატებელია»
+(dead end #1) → clicked map at z14.8 → toast «ნაკვეთის ასარჩევად
+მიახლოვდით (მასშტაბი 15+)» (good feedback) → zoomed, clicked → «ნაკვეთი
+მოიძებნა», parcel <code>01.16.05.034.002</code> popup
+(ნაკვეთი/ანალიზი/გეგმა tabs; area/type/address/owner/reg-date; street
+photos strip captioned «ქუჩის სურათები — ნაკვეთიდან 20 მეტრის მანძილზე»)
+→ ანალიზი tab: big button «ახლომახლო ანალიზი», two icon grids;
+disabled-state tooltip «რელიეფი და სუფთა ენერგია საჭიროებს მინიმუმ 1000
+მ² ფართობის ნაკვეთს» (good) → ran nearby analysis: orange building
+highlights + transit pins; index rendered <strong>75 B</strong> then
+settled at <strong>61 C</strong>; «ბაღები 1, გაჩერებები 13, მარშრუტები
+(12)…, სანდოობა: E · 46%, ავტოსადგომები 49 (3 უფასო · 46 ფასიანი,
+ტევადობა: 255 ავტ.)»; tip: «მიწათსარგებლობის (მრავალფეროვნების) მონაცემი
+ვერ ჩაიტვირთა — ჩართე მისაწვდომობის ანალიზი მის ჩასართავად.» → გეგმა tab
+(English description) → click aimed at «განვითარების კონცეფცია» landed
+on map because popup had shifted → different parcel selected, analysis
+lost (dead end #2) → retried via element refs: AI dialog «განვითარების
+კონცეფცია» with Georgian placeholder; typed «ორი საცხოვრებელი კორპუსი, 6
+სართული, მწვანე ეზო»; progress «იგეგმება... (~5–10 წმ)»; result: 3D
+masses on parcel + English description + half-English legend +
+«კონცეფციის რენდერი — COMING SOON» → left rail: folder = Projects/Data
+(English headers, «შენახული პროექტები არ არის.»), database+ = «IMPORT
+DATA geoJSON/SHP zip/CSV/geoTIFF», pencil = «DRAW SHAPE»
+Polygon/Square/Circle/Line → editor toolbar appears bottom (SELECT/3D
+რეჟიმი/EDIT SHAPE/MOVE/ROTATE/SLICE/COLORS/ERASE) → clicking the
+generated «Lawn» showed its own card (1,180 m², «მომხმარებლის
+დამატებული»). Minute-10 mental model: "პარცელების ენციკლოპედიაა: აჭერ
+ნაკვეთს და გეუბნება რა არის, რა შენდება და რა არის გვერდით. გაყიდვებთან
+კავშირი არ ჩანს."</p>
+<p><strong>Task 1 — Orient (Dighomi Massive).</strong> Search by name
+failed (above). Manual: ~6 drags + zoom-outs from old town,
+landmark-hunting by street labels; overshot to Lisi once; found «დიღმის
+მასივი» label. Time ≈ 4 min, ~10 interactions, 2 dead ends.
+<strong>Outcome: Success-with-struggle.</strong> Max confusion: no way
+to jump to a named place. "სერიოზულად? სახელით ვერ გადამიყვანა?
+myhome-ზე უბანს ორ წამში ვპოულობ." Real life: she'd have closed it here
+on a busy day.</p>
+<p><strong>Task 2 — Single-parcel lookup.</strong> Used the
+placeholder-format code <code>01.15.07.002.057</code> (Enter works).
+Flew + selected: 100 კვ.მ., არასასოფლო სამეურნეო, ინოვაციების ქუჩა N5,
+owner შპს «თბილისი ესეთ მენეჯმენტი», reg. 4 მარტი 2026; photos «უახლოეს
+არეალში» (caption differs from the 20 m one — inconsistent); nearby
+analysis: <strong>9 F</strong>, 5 stops, 2 routes; later re-render
+showed <strong>32 F</strong> (score instability #2). Auto-zoom left a
+context-free green screen. Time ≈ 1 min. <strong>Outcome:
+Success</strong> (data), with two trust/context defects. "კოდით
+ნამდვილად კარგად მუშაობს. ოღონდ F-ი რა არის, ვის ეუბნები F-ს?"</p>
+<p><strong>Task 3 — Area analysis (headline job).</strong> Pencil →
+Square → drag over ~8 ha of Dighomi Massive between დევი აბაშიძის ქ. and
+ევგენი მიქელაძის ქ. Popup «დახაზული არეალი»: 8.05 ha / 1.39 km.
+«ახლომახლო ანალიზი» → <strong>72 B</strong>; ბაღები 2, გაჩერებები 3,
+მარშრუტები (25), სანდოობა E · 49%, ავტოსადგომები 18 (18 უფასო · 0
+ფასიანი, ტევადობა 326 ავტ. · 1 დატვირთვა); unlabeled POI dots appear. ⓘ
+hover (after one missed click — popup shifted) gives a one-line method.
+Client sentence attempt: <em>"ამ უბანში სკოლა-ბაღები, ტრანსპორტი და
+პარკინგი ფეხით მისადგომია — შეფასება 72/100."</em> — possible,
+<strong>but</strong> she cannot answer "who says?" or "since when?", and
+«სანდოობა E» reads like a warning. <strong>Outcome:
+Success-with-struggle</strong> (number produced, defensibility fails).
+Time ≈ 3 min incl. one misclick.</p>
+<p><strong>Task 4 — Price a plot (~1,000 m²).</strong> Searched every
+surface for price/valuation: all 8 analysis modules, zoning «შეფასება»
+(= zoning <em>compliance</em>), layers (ნაკვეთები/ხაზები/ტყე), Data
+Explorer absent from visible rail, pricing modal (product's own
+subscription only). Nothing. <strong>Outcome: Failed — capability
+absent.</strong> Escalation per brief: <em>the tool offers no price, no
+comparables, no data date to even mis-trust.</em> "ფასს ისევ myhome-იდან
+და ჩემი ბლოკნოტიდან ვიტყვი."</p>
+<p><strong>Task 5 — Buyer shortlist (800–1,500 m², ≤25 min from Vake,
+buildable, mid-market).</strong> No listings inventory; no parcel filter
+by size/status; isochrone runs <em>from the drawn area</em> (not from
+Vake) with fixed steps 10/15/20/45/60 (no 25) in 3 modes (ფეხით
+🚶/ველოსიპედით 🚲/ავტომობილით 🚗); no way to enumerate parcels inside a
+zone. Workaround would be: eyeball areas → click parcels one by one →
+check zoning each time. <strong>Outcome: Failed</strong> (as a shortlist
+tool). "თორმეტ ნაკვეთს სათითაოდ დავაწკაპუნებ? მანამდე კლიენტი
+გამექცევა."</p>
+<p><strong>Task 6 — Development potential.</strong> Zoning on drawn
+area: donut «საცხოვრებელი ზონა-6 73% / სარეკრეაციო ზონა-2 14% /
+სატრანსპორტო ზონა-1 12% / სსზ-2 1%»; per-zone ⓘ computes K1→Max
+footprint m², K2→Max floor area m², max floors, K3→Min greening m²;
+compliance block «ფართობი 80,494 / 600 m² ✓, სიგანე 147.0 / 15 m ✓,
+სიღრმე 647.4 / 25 m ✓ (*700 m²/20 m/30 m for multi-apartment)». Permits
+toggle: «ამ ნაკვეთზე მშენებლობის ნებართვა ვერ მოიძებნა» (honest empty
+state). Relief → slope: min/avg/max + class bars + GeoTIFF downloads +
+source note. Terminology: K1/K2/K3 ✔ matches agent/developer speech;
+«ასპექტი», «იზოქრონი», English labels ✖. Utilities (water/sewer/power)
+absent. Building-level card (Height/Floors/K2 limit/SketchUp export)
+exists in DOM but no path to it was found from normal clicking — could
+not locate after 3 attempts. <strong>Outcome:
+Success-with-struggle</strong> — best feature in the product for her.
+"აი ეს მომწონს. დეველოპერს ერთ სქრინში ვაჩვენებ ზონას და
+კოეფიციენტებს."</p>
+<p><strong>Task 7 — Compare two areas.</strong> Drew second square in
+Didube (47.47 ha) → nearby analysis <strong>62 C</strong> (სკოლები 1,
+ბაღები 1, გაჩერებები 4, მარშრუტები 16, სანდოობა E · 44%, ავტოსადგომები
+18: 0 უფასო · 18 ფასიანი, ტევადობა 162 · 1 დატვირთვა). Dighomi's 72 B
+was no longer visible anywhere — compared from evaluator's notes.
+Verdict she can give: "დიღმის მასივი დიდუბეს ჯობია ინფრასტრუქტურით (72
+vs 62)" — but no price/trend data, so "which is the better <em>buy</em>"
+is unanswerable from the tool. <strong>Outcome: Partial.</strong></p>
+<p><strong>Task 8 — Client deliverable.</strong> Saved project → card
+shows «გახსნა / ✦ ექსპორტი»; export on closed project → «ექსპორტისთვის
+გახსენი პროექტი»; after opening: export menu = «PDF რეპორტის ექსპორტი /
+აქტიური ფენები · GeoJSON / აქტიური რასტრები · GeoTIFF». PDF: toast
+«რეპორტი მზადდება...», then silence — no success toast, no filename;
+GeoJSON: no feedback at all. Account modal confirms «1 ↓ PDF გადმოწერა»
+this month, so generation happens. PDF content/quality could not be
+inspected in the evaluation environment. No share-link, no
+image/screenshot export, nothing WhatsApp-native. <strong>Outcome:
+Partial</strong> (mechanism exists; feedback and content unverified).
+"თუ PDF ლამაზია, ეს ჩემთვის ოქროა — მაგრამ ჯერ ვერ ვნახე გადმოიწერა თუ
+არა."</p>
+<p><strong>Task 9 — Return visit.</strong> «პროექტის შენახვა» dialog
+(English placeholder) → saved «დიღმის მასივი — ნინოს ტესტი» → toast
+«პროექტი შენახულია» → card with thumbnail + «Aug 17, 2026 · 41.7639,
+44.773». Reload earlier in session: map reset to default old-town view,
+unsaved state gone silently (drawn area survived only after explicit
+save). «გახსნა» restored view + drawn area + analyses + dots, chip
+«Saved just now». Clicking the chip appeared to drop the restored
+isochrone (unclear why). <strong>Outcome:
+Success-with-struggle.</strong></p>
+<p><strong>Task 10 — Field use (mobile).</strong> See §9.
+Parcel-under-feet flow works by tapping; GPS untested. <strong>Outcome:
+Partial (environment limits).</strong></p>
+<p><strong>Phase 4 — Stress notes.</strong> Misspelled «დიღომმი» → flat
+failure, no suggestion. Latin «digomi» → flew near Dighomi + empty
+«ნაკვეთი — —» card (no error). Georgian into the English-placeholder AI
+field → worked (answer returned in English). Rural/low-coverage probe
+(Innovation St. parcel): analyses return sparse numbers (5 stops),
+livability 9 F↔︎32 F instability, otherwise no "no data" messaging;
+max-zoom basemap is featureless green (looks broken). Min zoom:
+country-level hillshade, neighbor countries washed out; labels survive;
+grey tile patches ~1–2 s during fast pan/zoom. Reload mid-analysis:
+unsaved state lost silently (no warning). ~900px window: not
+independently testable (side-panel evaluation chrome); at ~580px and
+~280px responsive layouts engaged cleanly. Numeric input abuse: no free
+numeric inputs exist in the tested UI (only sliders/color/date pickers)
+— nothing to break. Keyboard-only: see issue #18.</p>
+<h2 id="11-not-tested-and-why">11. Not tested (and why)</h2>
+<ul>
+<li><strong>PDF report content/quality</strong> — file lands in the
+browser's download folder; evaluation environment cannot open it.
+Mechanism verified only to the "generating" toast.</li>
+<li><strong>GeoTIFF export, GeoJSON file contents</strong> — same
+reason.</li>
+<li><strong>«კონცეფციის რენდერი»</strong> — labeled COMING SOON.</li>
+<li><strong>Payment/upgrade flow beyond the pricing modal</strong> —
+test-mode banner forbids card entry; evaluator rules forbid
+credentials.</li>
+<li><strong>Account creation / logout / password reset</strong> — rules
+of engagement (no account creation; logout would strand the provided
+session).</li>
+<li><strong>«Locate me» GPS + true touch gestures (pinch)</strong> — no
+meaningful geolocation/touch in the environment.</li>
+<li><strong>განათლება, მობილობა, ურბანული მორფოლოგია modules;
+ველოსიპედით/ავტომობილით isochrones; measure tools; data import
+(geoJSON/SHP/CSV/geoTIFF); satellite/dark basemaps</strong> — time-boxed
+out; nearby/zoning/relief/climate/isochrone-walk judged sufficient for
+persona coverage.</li>
+<li><strong>Kakheti/Adjara coverage sweep</strong> — only one
+out-of-center probe done; pricing table's own coverage notes taken as
+declared truth.</li>
+</ul>
+<h2 id="12-questions-for-the-product-team">12. Questions for the product
+team</h2>
+<ol type="1">
+<li>Who is the primary user? The signup sector list says
+architects/planners/developers first — is the real-estate agent a target
+persona at all, or an accidental visitor?</li>
+<li>The livability index changes value during load and between
+recomputations of the same object (75 B→61 C; 9 F→32 F). Is the score
+deterministic? What are the component weights?</li>
+<li>What exactly does «სანდოობა: E · 46%» measure — transit punctuality,
+data completeness, or model confidence?</li>
+<li>What are the sources and update dates for: registry parcels, transit
+stops/routes, parking, POI categories, zoning polygons, DEM? Are you
+allowed to display private owners' names?</li>
+<li>Is place-name/address geocoding on the roadmap for search, and
+when?</li>
+<li>Zoning is «მხოლოდ თბილისი» — what's the expansion plan (Batumi,
+Mtskheta at minimum for this persona)?</li>
+<li>Why is the AI concept output English when the prompt is
+Georgian?</li>
+<li>Is the PDF report intended as a client-facing deliverable (branding,
+language, disclaimer) or an internal dump? Can it get a shareable link
+instead of a file?</li>
+<li>Do drawn areas/analyses count against the 1,000 token quota? Where
+is that shown to the user before they hit the limit?</li>
+<li>The project card subtitle is raw coordinates + English date — is the
+card meant to be shown to clients?</li>
+</ol>
+<hr />
+<p><em>Prepared by an automated evaluator role-playing Persona A per the
+supplied brief. All quoted strings were read from the live UI at
+urbanyx.zaxis.ge/app on 2026-08-17. Where behavior could not be
+determined with confidence (e.g., what cleared the restored isochrone),
+the ambiguity is stated rather than resolved by guesswork.</em></p>
+</main>
+</body>
+</html>
