@@ -38,14 +38,30 @@
   #center-search.hidden .or-click-row { display: none !important; }
   .center-inner { pointer-events: all; display: flex; flex-direction: column; align-items: center; gap: 16px; width: 100%; max-width: 520px; padding: 0 20px; transition: max-width 0.5s, gap 0.5s; }
   .brand { color: white; font-size: 1.1rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.9; text-shadow: 0 2px 12px rgba(0,0,0,0.4); }
-  .search-bar { width: 100%; display: flex; align-items: center; background: var(--glass-bg); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur); border: 1px solid var(--glass-border); border-radius: 50px; padding: 6px 6px 6px 16px; gap: 8px; box-shadow: var(--glass-shadow); transition: border 0.2s, background 0.2s; }
-  .search-bar:focus-within { border-color: rgba(255,255,255,0.5); background: rgba(255,255,255,0.18); }
-  .search-bar input { flex: 1; background: none; border: none; outline: none; color: white; font-size: 0.95rem; font-family: inherit; min-width: 0; }
-  .search-bar input::placeholder { color: rgba(255,255,255,0.45); }
-  .search-btn { background: white; color: #0a0a0a; border: none; border-radius: 50px; padding: 8px 18px; font-size: 0.82rem; font-weight: 600; cursor: pointer; white-space: nowrap; font-family: inherit; transition: opacity 0.15s, transform 0.1s; flex-shrink: 0; }
-  .search-btn:hover { opacity: 0.85; }
+  /* ── Search: dark "liquid glass" so white text is legible over ANY basemap ── */
+  .search-wrap { position: relative; width: 100%; }
+  .search-bar { width: 100%; display: flex; align-items: center; background: rgba(16,16,20,0.6); backdrop-filter: blur(24px) saturate(180%); -webkit-backdrop-filter: blur(24px) saturate(180%); border: 1px solid rgba(255,255,255,0.14); border-radius: 50px; padding: 7px 7px 7px 16px; gap: 9px; box-shadow: 0 8px 32px rgba(0,0,0,0.30), inset 0 1px 0 rgba(255,255,255,0.13); transition: border-color 0.28s ease, background 0.28s ease, box-shadow 0.32s ease, transform 0.32s cubic-bezier(0.23,1,0.32,1); }
+  /* Focus KEEPS the dark glass (never flips to white) and adds an accent glow + subtle lift. */
+  .search-bar:focus-within { background: rgba(22,22,28,0.72); border-color: rgba(167,139,250,0.55); box-shadow: 0 12px 44px rgba(0,0,0,0.42), inset 0 1px 0 rgba(255,255,255,0.16), 0 0 0 3px rgba(167,139,250,0.22); transform: translateY(-1px); }
+  .search-ic { flex-shrink: 0; color: rgba(255,255,255,0.5); transition: color 0.2s; }
+  .search-bar:focus-within .search-ic { color: rgba(199,180,252,0.9); }
+  .search-bar input { flex: 1; background: none; border: none; outline: none; color: #fff; font-size: 0.95rem; font-family: inherit; min-width: 0; text-shadow: 0 1px 2px rgba(0,0,0,0.35); }
+  .search-bar input::placeholder { color: rgba(255,255,255,0.5); }
+  .search-btn { background: #fff; color: #0a0a0a; border: none; border-radius: 50px; padding: 8px 18px; font-size: 0.82rem; font-weight: 600; cursor: pointer; white-space: nowrap; font-family: inherit; transition: opacity 0.15s, transform 0.1s; flex-shrink: 0; box-shadow: 0 2px 8px rgba(0,0,0,0.22); }
+  .search-btn:hover { opacity: 0.9; }
   .search-btn:active { transform: scale(0.97); }
   .search-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  /* smooth Apple-style growth when focused / showing results (compact map bar) */
+  #center-search.compact:focus-within .center-inner { max-width: 392px; }
+  /* Suggestions dropdown — floats under the bar, matches the glass */
+  #search-suggest { position: absolute; top: calc(100% + 8px); left: 0; right: 0; z-index: 30; background: rgba(16,16,20,0.72); backdrop-filter: blur(26px) saturate(180%); -webkit-backdrop-filter: blur(26px) saturate(180%); border: 1px solid rgba(255,255,255,0.12); border-radius: 16px; box-shadow: 0 16px 44px rgba(0,0,0,0.46), inset 0 1px 0 rgba(255,255,255,0.08); overflow: hidden; padding: 5px; display: none; opacity: 0; transform: translateY(-8px) scale(0.98); transform-origin: top center; transition: opacity 0.2s ease, transform 0.24s cubic-bezier(0.23,1,0.32,1); }
+  #search-suggest.open { display: block; opacity: 1; transform: translateY(0) scale(1); }
+  .ss-item { display: flex; align-items: center; gap: 11px; padding: 9px 12px; border-radius: 11px; cursor: pointer; color: rgba(255,255,255,0.88); font-size: 0.86rem; transition: background 0.12s; }
+  .ss-item:hover, .ss-item.active { background: rgba(167,139,250,0.18); }
+  .ss-ic { flex-shrink: 0; opacity: 0.65; width: 16px; text-align: center; }
+  .ss-tx { min-width: 0; flex: 1; }
+  .ss-nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ss-sub { font-size: 0.7rem; color: rgba(255,255,255,0.42); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 1px; }
   .status { display: none; }
   #map-status {
     position: absolute;
@@ -323,6 +339,28 @@
   .dash-action-btn.billing { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); color: rgba(255,255,255,0.7); }
   .dash-action-btn.signout { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); color: rgba(255,255,255,0.35); font-size: 0.75rem; }
   .dash-action-btn:hover { opacity: 0.82; }
+  /* Pricing/metering retired (sales-led, Paddle dormant): hide every pricing + usage
+     surface. The paywall modal is also no-op'd in JS; this is defence in depth. */
+  #plans-btn, #free-badge, #paywall-modal, #billing-modal,
+  #dash-plan-badge, #bill-plan-badge, #dash-trial-banner, #u-plan,
+  #dash-usage-section, #dash-activity-section, #dash-billing-section { display:none !important; }
+  /* First-run onboarding walkthrough */
+  #onboarding-modal { position:fixed; inset:0; z-index:120; display:none; align-items:center; justify-content:center; background:rgba(6,6,10,0.72); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); padding:20px; }
+  .ob-card { position:relative; width:360px; max-width:calc(100vw - 40px); background:rgba(18,18,22,0.98); border:1px solid rgba(255,255,255,0.1); border-radius:18px; padding:30px 26px 22px; box-shadow:0 24px 64px rgba(0,0,0,0.6); text-align:center; color:#fff; animation:mpc-in 0.22s ease; }
+  .ob-skip { position:absolute; top:12px; right:14px; background:none; border:none; color:rgba(255,255,255,0.4); font-size:0.75rem; font-family:inherit; cursor:pointer; padding:4px 6px; }
+  .ob-skip:hover { color:rgba(255,255,255,0.75); }
+  .ob-icon { font-size:2.4rem; line-height:1; margin:6px 0 14px; }
+  .ob-title { font-size:1.05rem; font-weight:700; margin-bottom:8px; }
+  .ob-text { font-size:0.85rem; line-height:1.5; color:rgba(255,255,255,0.62); min-height:52px; }
+  .ob-dots { display:flex; justify-content:center; gap:6px; margin:16px 0 18px; }
+  .ob-dot { width:6px; height:6px; border-radius:50%; background:rgba(255,255,255,0.2); transition:background 0.15s,width 0.15s; }
+  .ob-dot.on { width:18px; border-radius:3px; background:#a78bfa; }
+  .ob-nav { display:flex; justify-content:space-between; align-items:center; gap:10px; }
+  .ob-btn { font-family:inherit; font-size:0.82rem; font-weight:600; border-radius:9px; padding:9px 18px; cursor:pointer; transition:background 0.15s,opacity 0.15s; }
+  .ob-back { background:none; border:1px solid rgba(255,255,255,0.14); color:rgba(255,255,255,0.7); }
+  .ob-back:hover { background:rgba(255,255,255,0.06); }
+  .ob-next { background:#a78bfa; border:1px solid #a78bfa; color:#12121a; }
+  .ob-next:hover { background:#b8a4fb; }
   /* Matched-place confirmation chip (geocoder result naming) */
   #matched-place-chip { position:fixed; top:16px; left:50%; transform:translateX(-50%); z-index:60; display:flex; align-items:center; gap:8px; max-width:min(92vw,520px); padding:8px 10px 8px 14px; background:rgba(20,20,22,0.92); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); border:1px solid rgba(255,255,255,0.14); border-radius:50px; box-shadow:0 6px 24px rgba(0,0,0,0.4); font-size:0.82rem; color:#fff; animation:mpc-in 0.2s ease; }
   #matched-place-chip .mpc-label { color:rgba(255,255,255,0.5); flex-shrink:0; }

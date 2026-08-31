@@ -395,9 +395,13 @@
 
 <div id="center-search">
   <div class="center-inner">
-    <div class="search-bar">
-      <input type="text" id="input-center" placeholder="01.15.07.002.057" spellcheck="false" onkeydown="if(event.key==='Enter') search()">
-      <button class="search-btn" id="btn-center" onclick="search()">Search</button>
+    <div class="search-wrap">
+      <div class="search-bar">
+        <svg class="search-ic" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" id="input-center" placeholder="01.15.07.002.057" spellcheck="false" autocomplete="off" oninput="_searchInput(event)" onkeydown="_ssKey(event)" onblur="setTimeout(_ssClose,160)">
+        <button class="search-btn" id="btn-center" onclick="search()">Search</button>
+      </div>
+      <div id="search-suggest"></div>
     </div>
     <div class="status" id="status-center"></div>
     <div class="or-click-row" style="color:rgba(255,255,255,0.35);font-size:0.75rem;display:flex;align-items:center;gap:10px;text-shadow:0 1px 6px rgba(0,0,0,0.5)">
@@ -783,7 +787,7 @@
       <div id="dash-activity-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:6px"></div>
     </div>
     <!-- Billing -->
-    <div class="dash-section">
+    <div class="dash-section" id="dash-billing-section">
       <div class="dash-section-title" id="lbl-dash-billing"></div>
       <div class="dash-plan-row">
         <div>

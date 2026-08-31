@@ -42,8 +42,10 @@ let _freeAnalysisCount = 0;
 let _proParcelCount = 0;
 let _proAnalysisCount = 0;
 function _isTrialing(){return currentUser?._subStatus==="trialing";}
-function _parcelLimit(){return currentUser?.plan==="pro"?(_isTrialing()?TRIAL_PARCEL_LIMIT:PRO_PARCEL_LIMIT):FREE_PARCEL_LIMIT;}
-function _analysisLimit(){return currentUser?.plan==="pro"?(_isTrialing()?TRIAL_ANALYSIS_LIMIT:PRO_ANALYSIS_LIMIT):FREE_ANALYSIS_LIMIT;}
+function _parcelLimit(){return Number.POSITIVE_INFINITY;} // metering retired — unlimited parcel lookups
+// Pricing/metering retired (sales-led, case-by-case; Paddle dormant): every signed-in
+// account has full, unmetered access. Kept as a function so all call sites still work.
+function _analysisLimit(){return Number.POSITIVE_INFINITY;}
 function _ymNow(){const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");}
 // Counters reset at the start of each calendar month (month stamp per user)
 function _resetIfNewMonth(uid,stampKey,keys){
@@ -843,6 +845,8 @@ async function fetchUserMonthlyLimit(){
 
 async function updateSearchCounter(){
   if(!currentUser)return;
+  // Metering retired — never surface a limit warning or set a blocking cache.
+  {const w=document.getElementById("limit-warning");if(w)w.style.display="none";return;}
   try{
     const _now=new Date();
     const [used,{limit}]=await Promise.all([fetchSearchUsage(),fetchUserMonthlyLimit()]);
@@ -967,12 +971,69 @@ async function onAuthSuccess(session){
     const{data}=await sb.from("profiles").select("is_admin,marketing_consent").eq("id",u.id).single();
     if(data){isAdmin=!!data.is_admin;_marketingConsent=!!data.marketing_consent;}
   }catch(e){console.warn("Profile fetch:",e);}
+  plan='pro'; // pricing retired — grant every signed-in account full access (all Pro-gated features)
   currentUser={id:u.id,email:u.email,name:u.user_metadata?.full_name||"",plan,isAdmin,accessToken:session.access_token,avatarUrl:u.user_metadata?.avatar_url||null,_subStatus:window._subStatus||"free",registeredAt:u.created_at||null};
   localStorage.removeItem("gstP");localStorage.removeItem("gstA"); // clean up legacy guest counters
   if(currentUser.plan==="pro"){_loadProCounts(currentUser.id);}else{_loadFreeCounts(currentUser.id);}
   updateUserUI();
   flushPendingLogs().then(()=>updateSearchCounter());
   if(_afterAuthCb){const cb=_afterAuthCb;_afterAuthCb=null;cb();}
+  try{_maybeShowOnboarding();}catch(_){}
+}
+
+// ── First-run onboarding walkthrough ────────────────────────────────────────────
+// A short, skippable slide intro shown once per user (Lika's ask). Persisted in
+// localStorage; reopenable via _showOnboarding().
+let _obIndex=0;
+function _obSlides(){
+  const ka=lang==='ka';
+  return ka?[
+    {icon:'🔎',t:'ძებნა',d:'იპოვე ნაკვეთი საკადასტრო კოდით, ან ადგილი სახელით — საძიებო ველიდან.'},
+    {icon:'📄',t:'ნაკვეთის მონაცემები',d:'დააჭირე ნაკვეთს რუკაზე ამონაწერის, მესაკუთრის, ფართობისა და ქუჩის სურათებისთვის.'},
+    {icon:'📊',t:'ანალიზი',d:'ჩართე ზონირების, რელიეფის, კლიმატის, იზოქრონისა და სხვა ანალიზი „ანალიზის“ ჩანართიდან.'},
+    {icon:'✏️',t:'დაგეგმვა',d:'შექმენი რედაქტირებადი 3D განვითარების კონცეფცია ნაკვეთისთვის „დაგეგმვის“ ჩანართში.'},
+    {icon:'⤓',t:'ექსპორტი და შენახვა',d:'გადმოწერე PDF ან GeoJSON და შეინახე ნამუშევარი პროექტებად.'}
+  ]:[
+    {icon:'🔎',t:'Search',d:'Find any parcel by its cadastral code, or a place by name — from the search field.'},
+    {icon:'📄',t:'Parcel data',d:'Click a parcel on the map for registry data, ownership, area and street photos.'},
+    {icon:'📊',t:'Analysis',d:'Turn on zoning, relief, climate, isochrones and more from the Analysis tab.'},
+    {icon:'✏️',t:'Plan',d:'Generate an editable 3D development concept for the parcel in the Plan tab.'},
+    {icon:'⤓',t:'Export & save',d:'Export PDF or GeoJSON, and save your work as projects.'}
+  ];
+}
+function _maybeShowOnboarding(){
+  try{
+    if(!currentUser)return;
+    if(localStorage.getItem('ob_seen_'+currentUser.id)==='1')return;
+    setTimeout(()=>{ if(currentUser&&localStorage.getItem('ob_seen_'+currentUser.id)!=='1')_showOnboarding(); },900);
+  }catch(_){}
+}
+function _obMarkSeen(){ try{ if(currentUser)localStorage.setItem('ob_seen_'+currentUser.id,'1'); }catch(_){} }
+function _showOnboarding(){
+  _obIndex=0;
+  let ov=document.getElementById('onboarding-modal');
+  if(!ov){ ov=document.createElement('div'); ov.id='onboarding-modal'; document.body.appendChild(ov); }
+  ov.style.display='flex';
+  _obRender();
+}
+function _obClose(){ const ov=document.getElementById('onboarding-modal'); if(ov)ov.style.display='none'; _obMarkSeen(); }
+function _obNav(d){ const n=_obSlides().length; _obIndex=Math.max(0,Math.min(n-1,_obIndex+d)); _obRender(); }
+function _obRender(){
+  const ov=document.getElementById('onboarding-modal'); if(!ov)return;
+  const ka=lang==='ka'; const slides=_obSlides(); const s=slides[_obIndex]; const last=_obIndex===slides.length-1;
+  const dots=slides.map((_,i)=>`<span class="ob-dot${i===_obIndex?' on':''}"></span>`).join('');
+  ov.innerHTML=`<div class="ob-card" onclick="event.stopPropagation()">
+    <button class="ob-skip" onclick="_obClose()">${ka?'გამოტოვება':'Skip'}</button>
+    <div class="ob-icon">${s.icon}</div>
+    <div class="ob-title">${s.t}</div>
+    <div class="ob-text">${s.d}</div>
+    <div class="ob-dots">${dots}</div>
+    <div class="ob-nav">
+      <button class="ob-btn ob-back" onclick="_obNav(-1)" ${_obIndex===0?'style="visibility:hidden"':''}>${ka?'უკან':'Back'}</button>
+      <button class="ob-btn ob-next" onclick="${last?'_obClose()':'_obNav(1)'}">${last?(ka?'დაწყება':'Get started'):(ka?'შემდეგი':'Next')}</button>
+    </div>
+  </div>`;
+  ov.onclick=()=>_obClose();
 }
 
 async function logout(){
@@ -996,6 +1057,7 @@ async function logout(){
 
 // ── Paywall ───────────────────────────────────────────────────────────────────
 function _openPaywallLimit(ctx){
+  return; // pricing/metering retired — never interrupt with a limit paywall
   const pw=t().pw;
   const titles={free_parcel:pw.freeLimitTitle,free_analysis:pw.freeAnalysisLimitTitle,trial_parcel:pw.trialLimitTitle,trial_analysis:pw.trialAnalysisLimitTitle,pro_parcel:pw.proLimitTitle,pro_analysis:pw.proAnalysisLimitTitle};
   const subs={free_parcel:pw.freeLimitSub,free_analysis:pw.freeAnalysisLimitSub,trial_parcel:pw.trialLimitSub,trial_analysis:pw.trialAnalysisLimitSub,pro_parcel:pw.proLimitSub,pro_analysis:pw.proAnalysisLimitSub};
@@ -1050,6 +1112,7 @@ function setPwBilling(mode){
   }
 }
 function openPaywall(_skipTitleReset){
+  return; // pricing retired — the paywall/pricing modal is never shown
   if(!_skipTitleReset){
     const pw=t().pw;
     const titleEl=document.getElementById("pw-title");
@@ -5604,6 +5667,7 @@ async function updatePassword(){
 }
 
 function openBillingPortal(){
+  return; // billing retired (Paddle dormant) — the billing portal is never shown
   if(!currentUser)return;
   const tr=t(),bd=tr.dash;
   const isPro=currentUser.plan==='pro';
@@ -7868,7 +7932,8 @@ function _showLocationCard(lng,lat){
   if(_va)_va.textContent='~'+(_currentParcelAreaM2/10000).toFixed(1)+' ha';
   const _lt=document.getElementById('pfc-lbl-type'),_vt=document.getElementById('pfc-type');
   if(_lt)_lt.textContent=ka?'კოორდინატები':'Coordinates';
-  if(_vt)_vt.textContent=lat.toFixed(5)+', '+lng.toFixed(5);
+  // Coordinates are geographic lat/lng — state the CRS so the number is quotable.
+  if(_vt)_vt.innerHTML=lat.toFixed(5)+', '+lng.toFixed(5)+' <span style="opacity:0.5;white-space:nowrap">· WGS 84 (EPSG:4326)</span>';
   const _pr=document.getElementById('pfc-perim-row');if(_pr)_pr.style.display='none';
   const _ar=document.getElementById('pfc-lbl-addr')?.closest('.pfc-row');if(_ar)_ar.style.display='none';
   const _or=document.getElementById('pfc-lbl-owner')?.closest('.pfc-row');if(_or)_or.style.display='none';
@@ -14495,6 +14560,65 @@ function _showMatchedPlaceChip(name){
   }catch(_){}
 }
 
+// ── Search suggestions (place autocomplete) ─────────────────────────────────────
+let _ssItems=[], _ssActive=-1, _ssTimer=null, _ssSeq=0;
+const _ssEsc=s=>String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+function _searchInput(e){
+  const q=(e.target.value||'').trim();
+  clearTimeout(_ssTimer);
+  // No place suggestions for a national ID or a cadastral code — those are exact lookups.
+  if(q.length<2||/^\d{9,11}$/.test(q)||/\d\.\d/.test(q)){ _ssClose(); return; }
+  _ssTimer=setTimeout(()=>_ssFetch(q),240);
+}
+async function _ssFetch(q){
+  const seq=++_ssSeq;
+  try{
+    const c=map.getCenter(), inGe=_inGeorgia(c.lng,c.lat);
+    const url=`https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(q)}.json`+
+      `?access_token=${MAPBOX_TOKEN}&autocomplete=true&limit=6&language=${lang==='ka'?'ka':'en'}&proximity=${c.lng.toFixed(4)},${c.lat.toFixed(4)}`+(inGe?`&country=ge`:``);
+    const r=await fetch(url); if(!r.ok||seq!==_ssSeq)return;
+    const d=await r.json(); if(seq!==_ssSeq)return;
+    _ssItems=(d.features||[]).filter(f=>Array.isArray(f.center));
+    _ssRender();
+  }catch(_){}
+}
+function _ssRender(){
+  const box=document.getElementById('search-suggest'); if(!box)return;
+  if(!_ssItems.length){ _ssClose(); return; }
+  _ssActive=-1;
+  box.innerHTML=_ssItems.map((f,i)=>{
+    const parts=(f.place_name||f.text||'').split(',');
+    const nm=parts[0]||f.text||''; const sub=parts.slice(1).join(',').trim();
+    const pt=(f.place_type||[]).join(',');
+    const ic=/poi/.test(pt)?'📍':/address/.test(pt)?'🏠':/place|region|district|locality/.test(pt)?'🏙':'📍';
+    return `<div class="ss-item" data-i="${i}" onmousedown="event.preventDefault();_ssPick(${i})"><span class="ss-ic">${ic}</span><span class="ss-tx"><div class="ss-nm">${_ssEsc(nm)}</div>${sub?`<div class="ss-sub">${_ssEsc(sub)}</div>`:''}</span></div>`;
+  }).join('');
+  box.classList.add('open');
+}
+function _ssClose(){ const box=document.getElementById('search-suggest'); if(box){box.classList.remove('open'); box.innerHTML='';} _ssItems=[]; _ssActive=-1; }
+function _ssHi(){ const box=document.getElementById('search-suggest'); if(!box)return; [...box.querySelectorAll('.ss-item')].forEach((el,i)=>el.classList.toggle('active',i===_ssActive)); }
+function _ssPick(i){
+  const f=_ssItems[i]; if(!f)return;
+  const inp=document.getElementById('input-center'); if(inp)inp.value=f.place_name||f.text||'';
+  _ssClose();
+  const [lng,lat]=f.center;
+  try{
+    if(Array.isArray(f.bbox)&&f.bbox.length===4)map.fitBounds([[f.bbox[0],f.bbox[1]],[f.bbox[2],f.bbox[3]]],{padding:80,duration:1200,maxZoom:16.5,essential:true});
+    else{const pt=(f.place_type||[]).join(',');map.flyTo({center:[lng,lat],zoom:/poi|address/.test(pt)?16.5:/street|neighborhood/.test(pt)?15:12,duration:1200,essential:true});}
+  }catch(_){}
+  try{ if(typeof setStatus==='function')setStatus(f.place_name||'',"success"); }catch(_){}
+  try{ if(typeof _showMatchedPlaceChip==='function')_showMatchedPlaceChip(f.place_name||f.text||''); }catch(_){}
+}
+function _ssKey(e){
+  const box=document.getElementById('search-suggest');
+  const open=box&&box.classList.contains('open')&&_ssItems.length;
+  if(!open){ if(e.key==='Enter')search(); return; }
+  if(e.key==='ArrowDown'){ e.preventDefault(); _ssActive=Math.min(_ssItems.length-1,_ssActive+1); _ssHi(); }
+  else if(e.key==='ArrowUp'){ e.preventDefault(); _ssActive=Math.max(0,_ssActive-1); _ssHi(); }
+  else if(e.key==='Enter'){ e.preventDefault(); if(_ssActive>=0)_ssPick(_ssActive); else { _ssClose(); search(); } }
+  else if(e.key==='Escape'){ _ssClose(); }
+}
+
 // maps.gov.ge cadastral-code / address → parcel loader (with DB fallback if the
 // portal is unreachable). Throws "not_found" when nothing matches.
 async function _loadGovParcel(code){
@@ -14515,6 +14639,7 @@ async function _loadGovParcel(code){
 }
 
 async function search(){
+  try{_ssClose();}catch(_){}
   const code=getCode();if(!code)return;const q=code.trim();const tr=t();
   try{resetAnalysis();}catch(_){}
   setLoading(true);setStatus(tr.searching,"");
@@ -14545,6 +14670,7 @@ async function search(){
 // ── Search limit ──────────────────────────────────────────────────────────────
 let _limitCache={allowed:true,ts:0};
 async function checkSearchLimit(){
+  return true; // metering retired — searches are never blocked (server logging stays, dormant)
   if(!currentUser)return true;
   if(Date.now()-_limitCache.ts<120000)return _limitCache.allowed;
   try{
