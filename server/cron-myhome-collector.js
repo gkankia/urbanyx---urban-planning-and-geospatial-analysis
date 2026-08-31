@@ -10,10 +10,18 @@ const api = require("./myhome-api");
 //
 // TWO PHASES, because the API hands out coordinates grudgingly:
 //
-//   discovery   List endpoint at per_page=500. Cheap: ~700 requests covers the
-//               whole ~344k corpus, and every field except lat/lng is there.
-//               Sorted last_updated DESC, so an incremental pass stops as soon
-//               as it crosses the previous watermark — usually 1–2 requests.
+//   discovery   List endpoint, every field except lat/lng. Sorted last_updated
+//               DESC, so an INCREMENTAL pass stops as soon as it crosses the
+//               previous watermark — usually 1–2 requests, always shallow.
+//
+//               A BACKFILL cannot just page to the end: the API's pagination is
+//               offset-based and degrades hard with depth. Measured on the live
+//               feed at per_page=20 — offset 0: 0.6 s, offset 25k: 2.4 s,
+//               offset 60k+: 10.6 s, and per_page>=200 past offset 25k times out
+//               entirely. So the backfill PARTITIONS the corpus by
+//               city → district → urban → property type → deal type until each
+//               slice is small enough to page shallowly, and walks the slices.
+//               A narrow slice stays ~1.4 s/100 rows at any depth.
 //
 //   enrichment  Detail endpoint, one request per listing, for rows that still
 //               have no coordinates. Coordinates don't change after publication,
@@ -38,7 +46,12 @@ const SUPABASE_KEY  = process.env.SUPABASE_SERVICE_KEY;
 const ENABLED       = String(process.env.MYHOME_SYNC_ENABLED || "").toLowerCase() === "true";
 const CRON_EXPR     = process.env.MYHOME_SYNC_CRON || "17 * * * *";       // hourly, off the hour
 const ENRICH_CRON   = process.env.MYHOME_ENRICH_CRON || "*/20 * * * *";
-const PER_PAGE      = Number(process.env.MYHOME_PER_PAGE || 500);
+// 100 measured fastest per row on narrow slices (~70 rows/s); 500 is slower per
+// row even on page 1 (9.4 s) and unusable at depth.
+const PER_PAGE      = Number(process.env.MYHOME_PER_PAGE || 100);
+// Keep every slice shallow enough that offset never costs us. 5000 rows at
+// per_page=100 is 50 pages — the deepest offset stays where responses are <1 s.
+const MAX_SLICE     = Number(process.env.MYHOME_MAX_SLICE || 5000);
 const MAX_PAGES_INC = Number(process.env.MYHOME_MAX_PAGES_INCREMENTAL || 40);
 const MAX_PAGES_BF  = Number(process.env.MYHOME_MAX_PAGES_BACKFILL || 1200);
 const ENRICH_PER_RUN = Number(process.env.MYHOME_ENRICH_PER_RUN || 300);
@@ -204,6 +217,134 @@ async function discover({ mode = "incremental", dryRun = false } = {}) {
   }
 }
 
+// ── phase 1b: partitioned backfill ────────────────────────────────────────────
+
+/**
+ * Split the corpus into slices small enough to page without paying the offset
+ * penalty. Counts are cheap (~0.4 s) and we only subdivide what is actually too
+ * big, so a small town costs one count and a page or two while Tbilisi gets
+ * broken down by district and urban.
+ *
+ * Yields { filters, total } for each slice, deepest-necessary first.
+ */
+async function* planSlices(dicts, filters = {}, dims = null) {
+  const total = (await api.fetchCount(filters)).total;
+  if (!total) return;
+  if (total <= MAX_SLICE) { yield { filters, total }; return; }
+
+  // Dimensions in the order that splits the corpus most evenly.
+  if (!dims) {
+    dims = [
+      { key: "cities",     values: [...dicts.cities.keys()] },
+      { key: "districts",  values: null },   // resolved from the chosen city
+      { key: "urbans",     values: null },   // resolved from the chosen district
+      { key: "real_estate_types", values: [...dicts.realEstateType.keys()] },
+      { key: "deal_types", values: [1, 2, 3, 7, 10] },
+      { key: "room_types", values: [...dicts.roomType.keys()] },
+    ];
+  }
+  const idx = dims.findIndex((d) => !(d.key in filters));
+  // Categorical dimensions exhausted (Saburtalo rentals are still 46k at this
+  // point) — fall back to bisecting on price, which subdivides without limit.
+  if (idx === -1) { yield* splitByPrice(filters, total); return; }
+
+  const dim = dims[idx];
+  let values = dim.values;
+  if (dim.key === "districts") {
+    values = [...dicts.districts.entries()]
+      .filter(([, d]) => d.cityId === Number(filters.cities)).map(([id]) => id);
+  } else if (dim.key === "urbans") {
+    values = [...dicts.urbans.entries()]
+      .filter(([, u]) => u.districtId === Number(filters.districts)).map(([id]) => id);
+  }
+  // Nothing to split on at this level (e.g. a city with no districts) — skip it.
+  if (!values || !values.length) {
+    const rest = dims.filter((_, i) => i !== idx);
+    yield* planSlices(dicts, filters, rest);
+    return;
+  }
+  for (const v of values) yield* planSlices(dicts, { ...filters, [dim.key]: v }, dims);
+}
+
+/**
+ * Recursively halve a price range until each band is small enough to page.
+ * Bands are GEL and half-open [from, to); the first band starts at 0 so
+ * nothing priced is missed, and a band that cannot be split further is yielded
+ * as-is rather than dropped.
+ */
+async function* splitByPrice(filters, total, lo = 0, hi = 100000000, depth = 0) {
+  if (total <= MAX_SLICE || depth > 12 || hi - lo <= 1) {
+    yield { filters: { ...filters, currency_id: 1, price_from: lo, price_to: hi }, total, oversized: total > MAX_SLICE };
+    return;
+  }
+  // Geometric midpoint: prices are log-distributed, so halving the range
+  // arithmetically would put almost everything in the lower band.
+  const mid = Math.max(lo + 1, Math.round(Math.sqrt(Math.max(lo, 1) * hi)));
+  // price_from/price_to are inclusive at both ends, so the lower band stops one
+  // short of the midpoint — otherwise boundary listings get fetched twice.
+  for (const [a, b] of [[lo, mid - 1], [mid, hi]]) {
+    const n = (await api.fetchCount({ ...filters, currency_id: 1, price_from: a, price_to: b })).total;
+    if (n) yield* splitByPrice(filters, n, a, b, depth + 1);
+  }
+}
+
+/**
+ * One-shot full mirror. Resumable: every completed slice is recorded in
+ * myhome_sync_log, and a re-run skips the slices already done, so an
+ * interrupted backfill picks up where it stopped instead of starting over.
+ */
+async function backfill({ resume = true } = {}) {
+  const dicts = await api.getDictionaries();
+  const runId = await openRun("backfill");
+  const stats = { pages: 0, seen: 0, upserted: 0, suspect_geo: 0 };
+
+  let done = new Set();
+  if (resume) {
+    const { data } = await sb.from("myhome_sync_log")
+      .select("notes").eq("mode", "backfill-slice").eq("ok", true).limit(50000);
+    done = new Set((data || []).map((r) => r.notes));
+  }
+  console.log(`[myhome] backfill starting — ${done.size} slices already done`);
+
+  try {
+    for await (const slice of planSlices(dicts, { ...FILTERS })) {
+      const key = JSON.stringify(slice.filters);
+      if (done.has(key)) continue;
+
+      let sliceRows = 0;
+      for (let page = 1; page <= Math.ceil(MAX_SLICE / PER_PAGE) + 1; page++) {
+        const raw = await api.fetchPage({ page, perPage: PER_PAGE, filters: slice.filters });
+        stats.pages++;
+        if (!raw.length) break;
+
+        const rows = [];
+        for (const r of raw) {
+          const n = api.normalize(r, dicts);
+          if (!n) continue;
+          stats.seen++;
+          rows.push(pick({ ...n, updated_at: isoOrNull(n.updated_at), delisted_at: null }, DISCOVERY_COLUMNS));
+        }
+        if (rows.length) { stats.upserted += await upsertRows(rows); sliceRows += rows.length; }
+        if (raw.length < PER_PAGE) break;
+      }
+
+      await sb.from("myhome_sync_log").insert({
+        mode: "backfill-slice", ok: true, finished_at: new Date().toISOString(),
+        seen: sliceRows, upserted: sliceRows, notes: key,
+      });
+      console.log(`[myhome] slice ${key} → ${sliceRows}/${slice.total} rows (running total ${stats.upserted})`);
+    }
+
+    await closeRun(runId, { ...stats, ok: true });
+    console.log(`[myhome] backfill complete — ${stats.upserted} rows over ${stats.pages} pages`);
+    return stats;
+  } catch (e) {
+    await closeRun(runId, { ...stats, ok: false, notes: e.message });
+    console.error("[myhome] backfill failed (re-run to resume):", e.message);
+    throw e;
+  }
+}
+
 // ── phase 2: coordinate enrichment ────────────────────────────────────────────
 
 /**
@@ -301,9 +442,11 @@ if (require.main === module) {
     console.error("[myhome] refusing to run: Supabase credentials missing (use --dry-run to test the fetch path)");
     process.exit(1);
   }
-  const job = argv.includes("--enrich")
-    ? enrich({ dryRun })
-    : discover({ mode: argv.includes("--backfill") ? "backfill" : "incremental", dryRun });
+  const job = argv.includes("--enrich") ? enrich({ dryRun })
+    : argv.includes("--backfill") ? (dryRun
+        ? discover({ mode: "backfill", dryRun: true })      // fetch path only
+        : backfill({ resume: !argv.includes("--restart") }))
+    : discover({ mode: "incremental", dryRun });
   job.then(() => process.exit(0)).catch(() => process.exit(1));
 } else if (sb && ENABLED) {
   cron.schedule(CRON_EXPR,   () => discover({ mode: "incremental" }).catch(() => {}));
@@ -312,4 +455,4 @@ if (require.main === module) {
   console.log(`[myhome] scheduled — discovery '${CRON_EXPR}', enrichment '${ENRICH_CRON}', delist sweep Mondays 06:40 Tbilisi`);
 }
 
-module.exports = { discover, enrich, markDelisted };
+module.exports = { discover, backfill, enrich, markDelisted, planSlices };

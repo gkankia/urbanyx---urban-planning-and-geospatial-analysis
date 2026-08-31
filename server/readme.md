@@ -207,9 +207,20 @@ fields are dropped from the payload entirely. That's deterministic and clearly
 deliberate, so the collector treats it as a limit to respect, not a puzzle to
 route around:
 
-- **discovery** — list at `per_page=500`, everything except coordinates.
-  ~700 requests covers the whole ~344k corpus. Sorted `last_updated DESC`, so an
-  incremental pass stops at the previous watermark; a quiet hour is 1–2 requests.
+- **discovery** — list endpoint, everything except coordinates. Sorted
+  `last_updated DESC`, so an *incremental* pass stops at the previous watermark:
+  a quiet hour is 1–2 requests, and it never pages deep.
+
+  A *backfill* can't simply page to the end. Pagination is offset-based and
+  degrades hard with depth — measured on the live feed at `per_page=20`:
+  offset 0 → 0.6 s, offset 25k → 2.4 s, offset 60k+ → 10.6 s, and `per_page>=200`
+  past offset 25k times out outright. Paging the corpus that way would take
+  ~19 hours and fail before finishing. So `--backfill` **partitions** by
+  city → district → urban → property type → deal type → room count, and finally
+  bisects on price when the categorical dimensions run out (Saburtalo apartment
+  rentals alone are 46,571 rows; they decompose into 27 slices, largest 4,661).
+  A narrow slice stays fast at any page depth. Measured end to end on Kutaisi:
+  **73 rows/s**, so the full ~344k corpus is roughly 2 hours.
 - **enrichment** — detail endpoint, one request per listing, only for rows with
   no coordinates yet. Coordinates don't change after publication, so it's a
   one-off cost per listing. Budget it with `MYHOME_ENRICH_PER_RUN` and scope it
@@ -239,12 +250,19 @@ cp .env.example .env          # set SUPABASE_* and MYHOME_SYNC_ENABLED=true
 # 2. sanity check the fetch path, writes nothing
 node cron-myhome-collector.js --dry-run
 
-# 3. one full discovery sweep (do this once, by hand)
+# 3. one full discovery sweep — run it in a terminal you can leave open (~2 h).
+#    Resumable: every finished slice is logged, so a re-run skips what's done.
+#    Add --restart to force it to begin again from scratch.
 node cron-myhome-collector.js --backfill
 
-# 4. coordinates, in batches
+# 4. coordinates, in batches (the cron does this too, once the server is up)
 node cron-myhome-collector.js --enrich
 ```
+
+`MYHOME_ENRICH_PRIORITY_TYPES` decides what gets coordinates first — it is set
+to `4` (land plots), so the ~19.5k plots geocode in about a day and the
+parcel-analysis feature is usable long before the full corpus is mapped.
+Everything else is enriched after the priority queue drains.
 
 After that `server.js` runs both phases on schedule, plus a weekly sweep that
 marks listings absent for 30 days as `delisted_at` (nothing is ever hard-deleted,
