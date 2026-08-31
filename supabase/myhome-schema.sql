@@ -202,6 +202,7 @@ AS $$
           'id', id, 'title', title, 'url', url,
           'deal_type', deal_type, 'deal_type_id', deal_type_id,
           'property_type', property_type, 'property_type_id', property_type_id,
+          'building_status_id', building_status_id, 'condition', condition,
           'price_gel', price_gel, 'price_usd', price_usd,
           'price_per_sqm_gel', price_per_sqm_gel,
           'area', area, 'rooms', rooms, 'floor', floor, 'total_floors', total_floors,

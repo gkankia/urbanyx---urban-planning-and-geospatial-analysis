@@ -7021,8 +7021,8 @@ function _reClear(){
   _reActive=false; _reSeq++;
   document.getElementById('cat-btn-realestate')?.classList.remove('active');
   const row=document.getElementById('pfc-realestate-row'); if(row)row.style.display='none';
-  try{ if(map.getLayer('re-pins'))map.removeLayer('re-pins'); if(map.getLayer('re-iso-line'))map.removeLayer('re-iso-line'); }catch(_){}
-  try{ if(map.getSource('re-pins'))map.removeSource('re-pins'); if(map.getSource('re-iso'))map.removeSource('re-iso'); }catch(_){}
+  try{ ['re-iso-line','re-iso-fill'].forEach(id=>{if(map.getLayer(id))map.removeLayer(id);}); }catch(_){}
+  try{ if(map.getSource('re-iso'))map.removeSource('re-iso'); }catch(_){}
 }
 async function _reRun(center){
   const seq=++_reSeq; _reActive=true;
@@ -7043,45 +7043,52 @@ async function _reRun(center){
   const feats=((fc&&fc.features)||[]).filter(f=>{ try{return f.geometry&&turf.booleanPointInPolygon(f.geometry.coordinates,poly);}catch(_){return false;} });
   const groups={};
   for(const f of feats){ const p=f.properties||{}; const id=_reTypeId(p); if(!id)continue;
-    (groups[id]=groups[id]||{ppsqm:[],usd:[],area:[]});
-    const ps=+p.price_per_sqm_gel; if(isFinite(ps)&&ps>0)groups[id].ppsqm.push(ps);
-    const pu=+p.price_usd; if(isFinite(pu)&&pu>0)groups[id].usd.push(pu);
+    (groups[id]=groups[id]||{ppsqm:[],area:[],nw:[],ex:[]});
+    const ps=+p.price_per_sqm_gel; if(!(isFinite(ps)&&ps>0))continue;
+    groups[id].ppsqm.push(ps);
     const ar=+p.area; if(isFinite(ar)&&ar>0)groups[id].area.push(ar);
+    // Buildings (apartments/houses): split by build status — new (built/under-construction) vs existing (old).
+    if(id===1||id===2){ const bs=+p.building_status_id; if(bs===2||bs===3)groups[id].nw.push(ps); else if(bs===1)groups[id].ex.push(ps); }
   }
   _reLast={groups,total:feats.length,center};
   _reRenderPanel();
-  _rePlot(feats,iso);
+  _reOutline(iso); // just the 15-min catchment outline; individual listings are not plotted
 }
 function _reFmtGel(v){ if(v==null)return '—'; return '₾'+Math.round(v).toLocaleString('en-US'); }
-function _reFmtK(v){ if(v==null)return '—'; return v>=1000?'$'+(v/1000).toFixed(v>=100000?0:1)+'k':'$'+Math.round(v); }
 function _reRenderPanel(){
   if(!_reLast)return; const isKa=lang==='ka'; const {groups,total}=_reLast;
-  const ids=Object.keys(groups).map(Number).sort((a,b)=>(groups[b].ppsqm.length+groups[b].usd.length)-(groups[a].ppsqm.length+groups[a].usd.length));
-  const head=`<div class="re-head"><span class="re-title">${isKa?'უძრავი ქონება':'Real estate'}</span><span class="re-sub">${isKa?'15 წთ ფეხით':'15-min walk'} · ${total} ${isKa?'განცხადება':'listings'}</span></div>`;
+  const m2=isKa?'მ²':'m²';
+  const head=`<div class="re-head"><span class="re-title">${isKa?'უძრავი ქონება':'Real estate'}</span><span class="re-sub">${isKa?'მედ. ფასი · 15 წთ ფეხით':'median price · 15-min walk'}</span></div>`;
   if(!total){ _reShow(head+`<div class="re-empty">${isKa?'ამ ზონაში გაყიდვის განცხადება ვერ მოიძებნა':'No sale listings found in this area'}</div>`); return; }
-  const colL=isKa?'ტიპი':'Type', colN='n', colP=isKa?'მედ. ₾/მ²':'Med. ₾/m²';
-  let rows=`<div class="re-tr re-th"><span>${colL}</span><span>${colN}</span><span>${colP}</span><span>${isKa?'მედ. ფასი':'Med. price'}</span></div>`;
+  // Rank types by how much price data backs each median.
+  const ids=Object.keys(groups).map(Number).filter(id=>_reMedian(groups[id].ppsqm)!=null).sort((a,b)=>groups[b].ppsqm.length-groups[a].ppsqm.length);
+  let rows='';
   for(const id of ids){ const g=groups[id]; const ty=_RE_TYPES[id]||{en:'Other',ka:'სხვა',c:'rgba(255,255,255,0.4)'};
-    const n=Math.max(g.ppsqm.length,g.usd.length,g.area.length);
-    rows+=`<div class="re-tr"><span class="re-ty"><i style="background:${ty.c}"></i>${isKa?ty.ka:ty.en}</span><span>${n}</span><span class="re-v">${_reFmtGel(_reMedian(g.ppsqm))}</span><span class="re-v">${_reFmtK(_reMedian(g.usd))}</span></div>`;
+    const med=_reMedian(g.ppsqm), n=g.ppsqm.length;
+    const nw=_reMedian(g.nw), ex=_reMedian(g.ex);
+    let sub=''; const bits=[];
+    if(nw!=null)bits.push(`${isKa?'ახალი':'new'} ${_reFmtGel(nw)}`);
+    if(ex!=null)bits.push(`${isKa?'მეორადი':'existing'} ${_reFmtGel(ex)}`);
+    if(bits.length>=(nw!=null&&ex!=null?2:1)&&(nw!=null||ex!=null))sub=`<div class="re-sub2">${bits.join('&nbsp;·&nbsp;')}</div>`;
+    rows+=`<div class="re-item"><span class="re-ty"><i style="background:${ty.c}"></i>${isKa?ty.ka:ty.en}</span><span class="re-big">${_reFmtGel(med)}<small>/${m2}</small></span><span class="re-n" title="${n} ${isKa?'განცხადება':'listings'}">${n}</span></div>${sub}`;
   }
-  const note=`<div class="re-src">${isKa?'წყარო: myhome.ge · გაყიდვის განცხადებები':'Source: myhome.ge · sale listings'}</div>`;
-  _reShow(head+`<div class="re-table">${rows}</div>`+note);
+  if(!rows)rows=`<div class="re-empty">${isKa?'ფასის მონაცემი არასაკმარისია':'Not enough price data in this area'}</div>`;
+  const note=`<div class="re-src">${isKa?`წყარო: myhome.ge · გაყიდვა · მედიანა ₾/${m2} · ${total} განცხადება`:`Source: myhome.ge · for sale · median ₾/${m2} · ${total} listings`}</div>`;
+  _reShow(head+`<div class="re-list">${rows}</div>`+note);
 }
 function _reShow(html){ const row=document.getElementById('pfc-realestate-row'), body=document.getElementById('pfc-realestate-body');
   if(body)body.innerHTML=html; if(row)row.style.display='block';
   const card=document.getElementById('parcel-float-card'); if(card&&card.style.display==='none')card.style.display='flex'; }
-function _rePlot(feats,iso){
+function _reOutline(iso){
   try{
-    const pins={type:'FeatureCollection',features:feats.map(f=>({type:'Feature',geometry:f.geometry,properties:{c:(_RE_TYPES[_reTypeId(f.properties||{})]||{c:'#94a3b8'}).c}}))};
-    if(map.getSource('re-pins'))map.getSource('re-pins').setData(pins);
-    else{ map.addSource('re-pins',{type:'geojson',data:pins});
-      map.addLayer({id:'re-pins',type:'circle',source:'re-pins',paint:{'circle-radius':['interpolate',['linear'],['zoom'],11,3,16,5.5],'circle-color':['get','c'],'circle-stroke-width':1,'circle-stroke-color':'rgba(0,0,0,0.55)','circle-opacity':0.9}}); }
     const isoFc={type:'FeatureCollection',features:[{type:'Feature',geometry:iso,properties:{}}]};
     if(map.getSource('re-iso'))map.getSource('re-iso').setData(isoFc);
-    else{ map.addSource('re-iso',{type:'geojson',data:isoFc});
-      map.addLayer({id:'re-iso-line',type:'line',source:'re-iso',paint:{'line-color':'#a78bfa','line-width':1.5,'line-dasharray':[2,2],'line-opacity':0.5}},'re-pins'); }
-  }catch(e){ console.warn('re plot:',e); }
+    else{
+      map.addSource('re-iso',{type:'geojson',data:isoFc});
+      map.addLayer({id:'re-iso-fill',type:'fill',source:'re-iso',paint:{'fill-color':'#a78bfa','fill-opacity':0.06}});
+      map.addLayer({id:'re-iso-line',type:'line',source:'re-iso',paint:{'line-color':'#a78bfa','line-width':1.5,'line-dasharray':[2,2],'line-opacity':0.55}});
+    }
+  }catch(e){ console.warn('re outline:',e); }
 }
 let _nearbyWalkCenter=null,_nearbyRan=false;
 // Show the "Run nearby analysis" button in the float card (does NOT run it yet).

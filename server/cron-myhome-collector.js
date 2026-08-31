@@ -42,6 +42,11 @@ const PER_PAGE      = Number(process.env.MYHOME_PER_PAGE || 500);
 const MAX_PAGES_INC = Number(process.env.MYHOME_MAX_PAGES_INCREMENTAL || 40);
 const MAX_PAGES_BF  = Number(process.env.MYHOME_MAX_PAGES_BACKFILL || 1200);
 const ENRICH_PER_RUN = Number(process.env.MYHOME_ENRICH_PER_RUN || 300);
+// Property types to geocode first, e.g. "4" for land plots. Everything else is
+// still enriched — just after the priority queue drains — so the map fills in
+// where the product needs it first instead of in last-updated order.
+const ENRICH_PRIORITY = String(process.env.MYHOME_ENRICH_PRIORITY_TYPES || "")
+  .split(",").map((x) => Number(x.trim())).filter(Number.isFinite);
 const CHUNK         = 500;            // rows per upsert
 const OVERLAP_MS    = 10 * 60 * 1000; // re-read a 10 min tail; cheap insurance
                                       // against clock skew and late edits
@@ -209,16 +214,30 @@ async function discover({ mode = "incremental", dryRun = false } = {}) {
 async function enrich({ limit = ENRICH_PER_RUN, dryRun = false } = {}) {
   const dicts = await api.getDictionaries();
 
-  let q = sb.from("myhome_listings")
-    .select("id")
-    .is("detail_fetched_at", null)
-    .is("delisted_at", null)
-    .order("updated_at", { ascending: false })
-    .limit(limit);
-  if (FILTERS.cities) q = q.eq("city_id", Number(String(FILTERS.cities).split(",")[0]));
+  const queue = async (n, priorityPass) => {
+    let q = sb.from("myhome_listings")
+      .select("id")
+      .is("detail_fetched_at", null)
+      .is("delisted_at", null)
+      .order("updated_at", { ascending: false })
+      .limit(n);
+    if (FILTERS.cities) q = q.eq("city_id", Number(String(FILTERS.cities).split(",")[0]));
+    if (ENRICH_PRIORITY.length) {
+      q = priorityPass
+        ? q.in("property_type_id", ENRICH_PRIORITY)
+        : q.not("property_type_id", "in", `(${ENRICH_PRIORITY.join(",")})`);
+    }
+    const { data, error } = await q;
+    if (error) throw new Error(`enrich queue read failed: ${error.message}`);
+    return data;
+  };
 
-  const { data: pending, error } = await q;
-  if (error) throw new Error(`enrich queue read failed: ${error.message}`);
+  // Priority types first; only once they're exhausted does the run spend its
+  // remaining budget on everything else.
+  let pending = await queue(limit, true);
+  if (ENRICH_PRIORITY.length && pending.length < limit) {
+    pending = pending.concat(await queue(limit - pending.length, false));
+  }
   if (!pending.length) { console.log("[myhome] enrichment queue empty"); return { fetched: 0, suspect: 0 }; }
 
   const runId = dryRun ? null : await openRun("enrich");
