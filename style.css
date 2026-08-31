@@ -1173,7 +1173,7 @@
     #top-right { right:8px; top:8px; gap:5px; }
     #top-right .u-info { display:none; }
     #user-pill { padding:4px; }
-    #btn-3d, #plans-btn, #layers-btn, #zaxis-footer { display:none; }
+    #btn-3d, #plans-btn, #layers-btn, #zaxis-footer, #coord-readout { display:none; }
   }
 
   @media (max-width:820px) and (orientation:landscape) {

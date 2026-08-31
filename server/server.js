@@ -281,6 +281,9 @@ require("./cron-transit-collector");
 // ── Transit nightly derivation (R2 archive → Supabase aggregates) ─────────────
 require("./cron-transit-derive");
 
+// ── Myhome.ge listing mirror (idle unless MYHOME_SYNC_ENABLED=true) ───────────
+require("./cron-myhome-collector");
+
 // ── Start ─────────────────────────────────────────────────────────────────────
 const httpServer = app.listen(PORT, () => console.log(`Urbanyx server running on port ${PORT}`));
 

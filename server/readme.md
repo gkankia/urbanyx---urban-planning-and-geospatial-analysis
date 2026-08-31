@@ -166,3 +166,133 @@ The system is structured so adding new paid features is minimal:
 1. Add an `analysis_count` + `reset_at` column to `subscriptions`
 2. Increment in `runAnalysis()` via a server endpoint
 3. Gate based on count before running
+---
+
+## 8. Myhome.ge listing mirror
+
+Mirrors the public myhome.ge real-estate feed into Supabase so the map layer
+queries our own Postgres instead of a third party on every pan.
+
+**Files**
+
+| File | Role |
+|---|---|
+| `server/myhome-api.js` | API client, enum dictionaries, `normalize()`, pin sanity check |
+| `server/cron-myhome-collector.js` | discovery + enrichment + delist sweep |
+| `supabase/myhome-schema.sql` | tables, indexes, RLS, `myhome_listings_bbox()` RPC |
+
+### The API
+
+Undocumented but public — it's what myhome.ge's own frontend calls. No auth; the
+only required header is `X-Website-Key: myhome`.
+
+```
+GET https://api-statements.tnet.ge/v1/statements/count
+GET https://api-statements.tnet.ge/v1/statements?page=1&per_page=500
+GET https://api-statements.tnet.ge/v1/statements/{id}
+GET https://api-statements.tnet.ge/v1/statements/statement-parameters
+```
+
+Filters (verified against `/count`): `deal_types`, `real_estate_types`, `cities`,
+`districts`, `urbans`, `statuses`, `conditions`, `room_types`, `bedroom_types`,
+`price_from`/`price_to` + `currency_id`, `area_from`/`area_to`,
+`floor_from`/`floor_to`. Note `rooms` and `bedrooms` are silently ignored —
+it's `room_types` and `bedroom_types`, and those ids are **not** counts
+(`room_type_id` 7 means 6 rooms).
+
+### Why two phases
+
+The list endpoint returns `lat`/`lng` only when `per_page <= 3`; at 4 or more the
+fields are dropped from the payload entirely. That's deterministic and clearly
+deliberate, so the collector treats it as a limit to respect, not a puzzle to
+route around:
+
+- **discovery** — list at `per_page=500`, everything except coordinates.
+  ~700 requests covers the whole ~344k corpus. Sorted `last_updated DESC`, so an
+  incremental pass stops at the previous watermark; a quiet hour is 1–2 requests.
+- **enrichment** — detail endpoint, one request per listing, only for rows with
+  no coordinates yet. Coordinates don't change after publication, so it's a
+  one-off cost per listing. Budget it with `MYHOME_ENRICH_PER_RUN` and scope it
+  with `MYHOME_FILTERS`.
+
+At the default 300/run every 20 min that's ~21k listings/day of geocoding —
+Tbilisi's ~293k listings take about two weeks to fill in. Raise the budget if
+you need it faster, but the client throttles itself to ~3 req/s regardless.
+
+### Pins are unreliable
+
+A meaningful share of listings are geocoded to the wrong part of the country —
+one Gldani flat in the sample sits 11 km away in Old Tbilisi. `normalize()`
+measures each pin against the centroid of the listing's own urban/district/city
+and writes `geo_offset_m` + `geo_suspect`. Correct pins land within a few hundred
+metres. The bbox RPC excludes suspect pins by default; pass
+`p_include_suspect => true` to see them.
+
+### Running it
+
+```bash
+cd server
+cp .env.example .env          # set SUPABASE_* and MYHOME_SYNC_ENABLED=true
+
+# 1. create the tables — paste supabase/myhome-schema.sql into the SQL Editor
+
+# 2. sanity check the fetch path, writes nothing
+node cron-myhome-collector.js --dry-run
+
+# 3. one full discovery sweep (do this once, by hand)
+node cron-myhome-collector.js --backfill
+
+# 4. coordinates, in batches
+node cron-myhome-collector.js --enrich
+```
+
+After that `server.js` runs both phases on schedule, plus a weekly sweep that
+marks listings absent for 30 days as `delisted_at` (nothing is ever hard-deleted,
+so time-on-market and price history stay analysable).
+
+### Consuming it from the map
+
+```js
+// app.js — one round trip per viewport, GeoJSON assembled in Postgres
+async function loadMyhome() {
+  const b = map.getBounds();
+  const { data, error } = await sb.rpc('myhome_listings_bbox', {
+    min_lng: b.getWest(),  min_lat: b.getSouth(),
+    max_lng: b.getEast(),  max_lat: b.getNorth(),
+    p_deal_type: 1,               // 1 sale · 2 rent · 3 lease · 7 daily
+    p_property_type: 1,           // 1 apartment · 2 house · 4 plot · 5 commercial
+    p_max_price_usd: 150000,
+    p_limit: 2000
+  });
+  if (error) return console.error('[myhome]', error.message);
+
+  if (!map.getSource('myhome')) {
+    map.addSource('myhome', { type: 'geojson', data, cluster: true, clusterRadius: 50 });
+    map.addLayer({
+      id: 'myhome-pts', type: 'circle', source: 'myhome',
+      filter: ['!', ['has', 'point_count']],
+      paint: {
+        'circle-radius': 5,
+        'circle-color': ['interpolate', ['linear'], ['coalesce', ['get', 'price_per_sqm_gel'], 0],
+                          0, '#2b8cbe', 3000, '#f6a623', 8000, '#d7191c'],
+        'circle-stroke-width': 1, 'circle-stroke-color': '#fff'
+      }
+    });
+  } else {
+    map.getSource('myhome').setData(data);
+  }
+}
+map.on('moveend', loadMyhome);
+```
+
+`myhome_urban_stats` is a ready-made view of median/p10/p90 GEL per m² by
+neighbourhood and deal type — that's the layer to drive a choropleth from.
+
+### Before this goes to production
+
+The API is public but undocumented, and there's no published licence for the
+data. Worth having someone read myhome.ge's terms before Urbanyx depends on it
+commercially. Two things the collector deliberately does not do: it doesn't touch
+`/v1/statements/phone/show` (owner phone numbers are personal data under the
+Georgian PDP law and the GDPR — resolve them on demand if you ever need them,
+don't warehouse them), and it doesn't defeat the `per_page` coordinate limit.

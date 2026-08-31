@@ -71,12 +71,16 @@ CREATE TABLE IF NOT EXISTS myhome_listings (
   -- listing's OWN urban/district/city, and geo_suspect marks the ones past the
   -- threshold for that level. Keep them, don't trust them — render suspect pins
   -- differently or snap them to the area centroid.
+  -- lat/lng arrive from the DETAIL endpoint only: the bulk list response drops
+  -- coordinates at per_page >= 4. Rows land here geo-less from discovery and are
+  -- filled in by the enrichment pass; detail_fetched_at is that queue's marker.
   lat                 double precision,
   lng                 double precision,
   geo_ref             text,                              -- 'urban' | 'district' | 'city' | null
   geo_offset_m        integer,
   geo_suspect         boolean     NOT NULL DEFAULT false,
-  geo_reason          text,                              -- 'missing' | 'outside_georgia' | 'far_from_centroid'
+  geo_reason          text,                              -- 'missing' | 'outside_georgia' | 'far_from_centroid' | 'pending'
+  detail_fetched_at   timestamptz,                       -- null ⇒ still in the enrichment queue
 
   image_url           text,
   image_count         smallint    NOT NULL DEFAULT 0,
@@ -100,6 +104,8 @@ CREATE INDEX IF NOT EXISTS idx_mhl_price     ON myhome_listings (deal_type_id, p
 CREATE INDEX IF NOT EXISTS idx_mhl_updated   ON myhome_listings (updated_at DESC);
 CREATE INDEX IF NOT EXISTS idx_mhl_urban     ON myhome_listings (urban_id, deal_type_id) WHERE delisted_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_mhl_amenities ON myhome_listings USING gin (amenities);
+-- Drives the enrichment queue: listings still waiting on a detail fetch.
+CREATE INDEX IF NOT EXISTS idx_mhl_enrich    ON myhome_listings (city_id, updated_at DESC) WHERE detail_fetched_at IS NULL AND delisted_at IS NULL;
 
 -- Processing ledger — one row per sync run; the collector reads the newest
 -- successful run's watermark to know where to stop paging.
@@ -107,7 +113,7 @@ CREATE TABLE IF NOT EXISTS myhome_sync_log (
   id            bigserial PRIMARY KEY,
   started_at    timestamptz NOT NULL DEFAULT now(),
   finished_at   timestamptz,
-  mode          text        NOT NULL,          -- 'backfill' | 'incremental'
+  mode          text        NOT NULL,          -- 'backfill' | 'incremental' | 'enrich'
   pages         integer     NOT NULL DEFAULT 0,
   seen          integer     NOT NULL DEFAULT 0,
   upserted      integer     NOT NULL DEFAULT 0,

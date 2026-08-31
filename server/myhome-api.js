@@ -10,16 +10,25 @@
 //   GET /v1/statements/{id}                  → full detail (description, owner)
 //   GET /v1/statements/statement-parameters  → every enum dictionary + geo tree
 //
-// Two things that shape the design here:
-//   1. The list rows already contain coordinates, all three prices, area, floor
-//      and image URLs. A 344k-row backfill is ~700 requests at per_page=500,
-//      not 344k. Detail calls are only needed for description text.
-//   2. Default sort is last_updated DESC and deep pagination works, so
+// Three things that shape the design here:
+//   1. COORDINATES ARE NOT IN BULK LIST RESPONSES. The list endpoint returns
+//      lat/lng only when per_page <= 3; at per_page >= 4 the fields are dropped
+//      entirely (verified — it is deterministic, not intermittent). Read that as
+//      a deliberate limit on bulk coordinate harvesting and respect it: pull
+//      metadata in bulk from the list endpoint, then enrich coordinates one
+//      listing at a time from the detail endpoint, scoped to the area you
+//      actually serve. Do not loop the list at per_page=3 to get around it.
+//   2. Everything else IS in the list rows — all three prices, area, floor,
+//      rooms, address, images — so change detection costs ~700 requests for the
+//      whole ~344k corpus at per_page=500, and detail calls are only needed
+//      once per listing (coordinates rarely change after publication).
+//   3. Default sort is last_updated DESC and deep pagination works, so
 //      incremental sync = walk pages until you cross the watermark, then stop.
 //
-// Pins are NOT trustworthy. Roughly 1 in N listings is geocoded to the wrong
-// side of the city. normalize() measures the distance from the listing's own
-// urban/district centroid and flags the outliers — see geoCheck() below.
+// Pins are NOT trustworthy either. Some listings are geocoded to the wrong side
+// of the country (a Gldani flat pinned in Old Tbilisi, 11 km out). normalize()
+// measures the distance from the listing's own urban/district centroid and
+// flags the outliers — see geoCheck() below.
 
 const BASE = "https://api-statements.tnet.ge";
 const HEADERS = {
@@ -29,6 +38,7 @@ const HEADERS = {
 };
 
 const MAX_PER_PAGE   = 500;   // server honours this; 1000 starts truncating
+const GEO_PER_PAGE   = 3;     // lat/lng only present at per_page <= 3 (see above)
 const MIN_INTERVAL_MS = 350;  // be a polite guest — ~3 req/s ceiling
 const MAX_RETRIES     = 4;
 
@@ -91,7 +101,10 @@ async function fetchCount(filters = {}) {
   return { total: d.total, lastPage: d.last_page, perPage: d.per_page };
 }
 
-/** One page of listings. Rows already include lat/lng, price, area, images. */
+/**
+ * One page of listings: price, area, rooms, address, images — but NOT lat/lng
+ * unless perPage <= GEO_PER_PAGE. Use fetchDetail() for coordinates.
+ */
 async function fetchPage({ page = 1, perPage = MAX_PER_PAGE, filters = {} } = {}) {
   const d = await apiGet("/v1/statements", { ...filters, page, per_page: Math.min(perPage, MAX_PER_PAGE) });
   return Array.isArray(d && d.data) ? d.data : [];
@@ -188,7 +201,12 @@ function haversineM(lat1, lng1, lat2, lng2) {
  * differently, or fall back to the area centroid, rather than dropping them.
  */
 function geoCheck(lat, lng, { urbanId, districtId, cityId }, dicts) {
-  if (lat == null || lng == null || (lat === 0 && lng === 0)) {
+  // undefined = this payload never carried coordinates (a bulk list row);
+  // null/0 = the listing itself has none. Only the latter is a data problem.
+  if (lat === undefined || lng === undefined) {
+    return { ref: null, offsetM: null, suspect: false, reason: "pending" };
+  }
+  if (lat === null || lng === null || (lat === 0 && lng === 0)) {
     return { ref: null, offsetM: null, suspect: true, reason: "missing" };
   }
   if (lat < GE_BBOX.minLat || lat > GE_BBOX.maxLat || lng < GE_BBOX.minLng || lng > GE_BBOX.maxLng) {
@@ -219,7 +237,9 @@ function normalize(raw, dicts) {
   const p = raw.price || {};
   const gel = p["1"] || {}, usd = p["2"] || {}, eur = p["3"] || {};
 
-  const lat = num(raw.lat), lng = num(raw.lng);
+  const hasGeo = "lat" in raw;                       // list rows omit the key entirely
+  const lat = hasGeo ? num(raw.lat) : undefined;
+  const lng = hasGeo ? num(raw.lng) : undefined;
   const geo = geoCheck(lat, lng, {
     urbanId: raw.urban_id, districtId: raw.district_id, cityId: raw.city_id,
   }, dicts);
@@ -239,7 +259,8 @@ function normalize(raw, dicts) {
   return {
     id: raw.id,
     uuid: raw.uuid || null,
-    url: raw.dynamic_slug ? `https://www.myhome.ge/udzravi-qoneba/${raw.dynamic_slug}/` : null,
+    // The public URL is slug + '-' + id; the slug on its own 404s.
+    url: raw.dynamic_slug ? `https://www.myhome.ge/udzravi-qoneba/${raw.dynamic_slug}-${raw.id}/` : null,
     title: raw.dynamic_title || null,
 
     deal_type_id: raw.deal_type_id ?? null,
@@ -261,8 +282,10 @@ function normalize(raw, dicts) {
     area: num(raw.area),
     area_unit: label(dicts.areaType, raw.area_type_id) || "m2",
     yard_area: num(raw.yard_area),
-    rooms: count(dicts.roomType, raw.room_type_id),
-    bedrooms: count(dicts.bedroomType, raw.bedroom_type_id ?? raw.bedroom),
+    // List rows carry plain counts (`room`, `bedroom`); detail rows carry enum
+    // ids where the mapping is NOT identity — room_type_id 7 means 6 rooms.
+    rooms: num(raw.room) ?? count(dicts.roomType, raw.room_type_id),
+    bedrooms: num(raw.bedroom) ?? count(dicts.bedroomType, raw.bedroom_type_id),
     bathrooms: count(dicts.bathroomType, raw.bathroom_type_id),
     floor: num(raw.floor),
     total_floors: num(raw.total_floors),
@@ -288,7 +311,9 @@ function normalize(raw, dicts) {
     address: raw.address ? String(raw.address).trim() : null,
     metro_station_id: raw.metro_station_id ?? null,
 
-    lat, lng,
+    lat: lat === undefined ? null : lat,
+    lng: lng === undefined ? null : lng,
+    geo_pending: geo.reason === "pending",
     geo_ref: geo.ref,
     geo_offset_m: geo.offsetM,
     geo_suspect: geo.suspect,
@@ -329,7 +354,7 @@ function toFeature(row) {
 }
 
 module.exports = {
-  BASE, MAX_PER_PAGE, GEO_LIMIT_M,
+  BASE, MAX_PER_PAGE, GEO_PER_PAGE, GEO_LIMIT_M,
   fetchCount, fetchPage, fetchDetail, getDictionaries,
   normalize, toFeature, geoCheck, haversineM,
 };

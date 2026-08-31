@@ -7652,6 +7652,7 @@ map.on("load",()=>{
   map.on("move",_updateMiniCardPositions);
   map.on("mousemove",_updateCoordReadout);
   map.on("mouseout",_hideCoordReadout);
+  _hideCoordReadout(); // show the CRS from the start (before the cursor first enters the map)
   // Keep the zoom figure live even when zooming without moving the mouse.
   map.on("zoom",()=>{const el=document.getElementById('coord-readout');if(el&&el.style.display!=='none'&&_coordLL)_renderCoord(el,_coordLL.lng,_coordLL.lat,_mapboxElev(_coordLL.lng,_coordLL.lat));});
   map.on("mouseenter","parcel-fill",()=>{map.getCanvas().style.cursor="pointer";});
@@ -8268,7 +8269,7 @@ function _mapboxElev(lng,lat){try{return map.queryTerrainElevation({lng,lat},{ex
 function _renderCoord(el,lng,lat,elev){
   const elevStr=(elev!=null&&isFinite(elev))?Math.round(elev)+' m':'—';
   const zoomStr=(mapReady&&typeof map!=='undefined')?map.getZoom().toFixed(1):'—';
-  el.textContent='long/x: '+lng.toFixed(6)+'   lat/y: '+lat.toFixed(6)+'   elev: '+elevStr+'   zoom: '+zoomStr;
+  el.textContent='long/x: '+lng.toFixed(6)+'   lat/y: '+lat.toFixed(6)+'   elev: '+elevStr+'   zoom: '+zoomStr+'   crs: WGS 84 (EPSG:4326)';
 }
 // Coalesced async sampling of the precise DEM — only resolves the latest position.
 function _sampleDEM(){
@@ -8301,7 +8302,9 @@ function _updateCoordReadout(e){
     if(!_demMeta)_ensureDEM(); // preload so the DEM is ready when the cursor enters Tbilisi
   }
 }
-function _hideCoordReadout(){const el=document.getElementById('coord-readout');if(el)el.style.display='none';}
+// Cursor left the map: keep the readout visible but collapse it to just the CRS, so the
+// coordinate reference system is always on screen (GIS status-bar behaviour).
+function _hideCoordReadout(){const el=document.getElementById('coord-readout');if(el){el.textContent='crs: WGS 84 (EPSG:4326)';el.style.display='block';}}
 
 // ── Photorealistic AI render of the extruded building (Gemini via Worker) ─────
 function _renderI18n(){
