@@ -296,3 +296,107 @@ commercially. Two things the collector deliberately does not do: it doesn't touc
 `/v1/statements/phone/show` (owner phone numbers are personal data under the
 Georgian PDP law and the GDPR — resolve them on demand if you ever need them,
 don't warehouse them), and it doesn't defeat the `per_page` coordinate limit.
+
+### 8.1 Isochrone analysis
+
+`supabase/myhome-isochrone-rpc.sql` (run after `myhome-schema.sql`) adds PostGIS,
+a generated `geom` column, and the two RPCs the parcel-analysis panel calls.
+
+**Why the mirror is not optional here.** The myhome API has no geographic filter
+— bbox, bounds, ne/sw, lat ranges, polygon, radius and five other spellings all
+return the unfiltered total. Combined with coordinates being withheld above
+`per_page=3`, answering "what's inside this isochrone" live would mean fetching
+every candidate listing's detail on every user click. There is no live path.
+
+```js
+const iso = await (await fetch(
+  `https://api.mapbox.com/isochrone/v1/mapbox/walking/${lng},${lat}` +
+  `?contours_minutes=15&polygons=true&access_token=${MAPBOX_TOKEN}`)).json();
+
+const { data } = await sb.rpc('myhome_area_stats', {
+  area_geojson: iso.features[0].geometry,   // Polygon or MultiPolygon both work
+  p_property_type: 4,                       // 4 = land plot; omit for all types
+  p_min_sample: 5,
+  p_max_age_days: 365
+});
+
+// data.stats[i] → { property_type, n, median_sqm_gel, p25_sqm_gel, p75_sqm_gel,
+//                   median_price_gel, median_area_m2, reliable }
+// data.coverage → { mapped_in_area, not_geocoded_yet, pins_rejected }
+```
+
+`myhome_area_listings()` takes the same polygon and returns the individual
+listings as GeoJSON, so the panel can show what a median was computed from.
+
+Three things the RPC does that matter for the numbers being right:
+
+- **Suspect pins are excluded.** A listing geocoded 11 km from its own district
+  would otherwise land in the wrong isochrone and move the median.
+- **Hectares are normalised.** Plots are sometimes listed in Ha, and myhome's
+  `price_square` follows the listed unit — so a plot reports GEL per *hectare*
+  in the same field an apartment reports GEL per m². On the test corpus, ignoring
+  this put the land median at 153 GEL/m² instead of the correct 68.
+- **Coverage is reported.** `not_geocoded_yet` is the enrichment backlog in the
+  same neighbourhoods. Show it — a median over 200 of 2,000 local listings should
+  not be presented with the same confidence as one over 1,900.
+
+Medians, not means: asking prices have a long right tail. `reliable` is false
+below `p_min_sample` (default 5) — surface the range or nothing at all rather
+than a median of three.
+
+Measured on a 300k-row table: ~25 ms for a 15-minute walking isochrone holding
+~2,100 listings, GiST index-backed.
+
+### 8.2 Cadastral codes → parcels
+
+Land-plot listings carry their NAPR cadastral code in the detail endpoint's
+`rs_code` field. Measured on a 71-plot sample: **~63 % of plots have one, and
+apartments essentially never do** — it's a plot-level key. `rs_code` is
+detail-only, so the enrichment pass already picks it up at no extra cost.
+
+The field is free text, so `parseCadastralCodes()` in `myhome-api.js` handles
+what's actually in it:
+
+- both legitimate shapes — 4-segment regional (`27.15.42.174`) and 5-segment
+  urban (`01.72.14.095.073`), plus the odd 4-digit tail (`72.16.25.1023`)
+- several codes in one field, space- or slash-separated — one listing covering
+  adjoining parcels (`69.04.54.204   69.04.54.211   69.04.54.212`)
+- a stray 3-digit leading segment (`001.72.…`), normalised back to two
+- codes that appear in the `address` field instead of `rs_code`
+
+Stored as `rs_codes text[]` (GIN-indexed) with `rs_code_primary` for the simple
+case. Run `supabase/myhome-cadastral-link.sql`, then:
+
+```sql
+SELECT myhome_link_parcels();        -- returns (attempted, linked)
+SELECT * FROM myhome_cadastral_coverage;
+```
+
+**Why this is worth more than a nicer join.** A matched listing stops depending
+on myhome's pin entirely:
+
+- `geom_best` prefers the registry parcel's centroid over the advertised pin, so
+  isochrone containment is decided by where the land actually is. Both RPCs use
+  it, and `stats[].n_from_registry` reports how many of the listings behind a
+  median came from registry geometry rather than a pin.
+- Listings we flagged `geo_suspect` are **rescued** rather than dropped, if their
+  cadastral code matches. `myhome_cadastral_coverage.bad_pins_rescued` counts them.
+- `myhome_area_discrepancies` lists plots where the advertised area disagrees
+  with the registry's by more than 15 % — a genuine finding to surface in the
+  analysis panel, and a smoke test that the join is hitting the right parcels.
+
+Run the coverage view before wiring any of this into the UI. If `match_pct` comes
+back low, the likely cause is code shape: myhome carries both the 4- and
+5-segment forms, and a parcel import holding only one will silently miss the
+other. That's a normalisation fix on the parcels side, not a myhome problem.
+
+`myhome_link_parcels()` marks misses as attempted so it doesn't retry them
+forever. After growing the parcel import, reset them:
+
+```sql
+UPDATE myhome_listings SET parcel_linked_at = NULL WHERE parcel_geom IS NULL;
+```
+
+Deployment order is `myhome-schema.sql` → `myhome-isochrone-rpc.sql` →
+`myhome-cadastral-link.sql`. The last one is safe to run before the `parcels`
+table exists — it notices and does nothing.

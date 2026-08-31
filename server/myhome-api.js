@@ -181,6 +181,38 @@ async function getDictionaries({ locale = "en", maxAgeMs = 12 * 3600000 } = {}) 
   return _dicts;
 }
 
+// ── cadastral codes ───────────────────────────────────────────────────────────
+
+// Georgian cadastral (NAPR) codes come in two legitimate shapes:
+//   NN.NN.NN.NNN      regional/rural  — e.g. 27.15.42.174
+//   NN.NN.NN.NNN.NNN  urban           — e.g. 01.72.14.095.073
+// plus the occasional 4-digit final segment (72.16.25.1023).
+//
+// The field is free text, so it also carries several codes at once, separated by
+// runs of spaces or slashes, and sometimes a stray leading zero (001.72.…).
+// Measured on a 71-plot sample: ~63 % of land plots carry a code, apartments
+// essentially never do — this is a plot-level join key.
+const CADASTRAL_RE = /\b\d{2,3}(?:\.\d{2,4}){3,4}\b/g;
+
+/**
+ * Pull every cadastral code out of a listing's rs_code field and, as a fallback,
+ * its address (some listings put the code where the street should go).
+ * Returns a de-duplicated array in the canonical dotted form.
+ */
+function parseCadastralCodes(...sources) {
+  const out = new Set();
+  for (const src of sources) {
+    if (!src) continue;
+    for (const m of String(src).match(CADASTRAL_RE) || []) {
+      // 001.72.… → 01.72.… ; a 3-digit lead is only ever a typo'd 2-digit one
+      const parts = m.split(".");
+      if (parts[0].length === 3 && parts[0].startsWith("0")) parts[0] = parts[0].slice(1);
+      out.add(parts.join("."));
+    }
+  }
+  return [...out];
+}
+
 // ── normalisation ─────────────────────────────────────────────────────────────
 
 const num = (v) => (v === null || v === undefined || v === "" ? null : Number(v));
@@ -253,6 +285,9 @@ function normalize(raw, dicts) {
     return Number.isFinite(n) ? n : null;
   };
 
+  // rs_code is detail-only — bulk list rows don't carry it.
+  const rsCodes = parseCadastralCodes(raw.rs_code, raw.address);
+
   const images = Array.isArray(raw.images) ? raw.images : [];
   const main = images.find((i) => i && i.is_main) || images[0] || null;
 
@@ -310,6 +345,8 @@ function normalize(raw, dicts) {
     street_id: raw.street_id ?? null,
     address: raw.address ? String(raw.address).trim() : null,
     metro_station_id: raw.metro_station_id ?? null,
+    rs_codes: rsCodes,
+    rs_code_primary: rsCodes[0] || null,
 
     lat: lat === undefined ? null : lat,
     lng: lng === undefined ? null : lng,
@@ -356,5 +393,5 @@ function toFeature(row) {
 module.exports = {
   BASE, MAX_PER_PAGE, GEO_PER_PAGE, GEO_LIMIT_M,
   fetchCount, fetchPage, fetchDetail, getDictionaries,
-  normalize, toFeature, geoCheck, haversineM,
+  normalize, toFeature, geoCheck, haversineM, parseCadastralCodes,
 };

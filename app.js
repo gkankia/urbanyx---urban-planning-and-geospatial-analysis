@@ -99,10 +99,10 @@ function _updateAnalysisGrid(show){
   const lp=document.getElementById('pfc-cat-lbl-parcel');if(lp)lp.textContent=ka?'ნაკვეთის ანალიზი':'Parcel analysis';
   const la=document.getElementById('pfc-cat-lbl-acc');if(la)la.textContent=ka?'მისაწვდომობის ანალიზი':'Accessibility analysis';
   // Localized native tooltips (the nav-tip spans were removed with the old nav buttons).
-  const _TT={'nav-zoning-btn':['Zoning','ზონირება'],'cat-btn-relief':['Relief','რელიეფი'],'cat-btn-climate':['Climate','კლიმატი'],'cat-btn-energy':['Clean Energy','სუფთა ენერგია'],'cat-btn-accessibility':['Isochrone','იზოქრონი'],'cat-btn-education':['Education','განათლება'],'cat-btn-mobility':['Mobility','მობილობა'],'cat-btn-morphology':['Morphology','ურბანული მორფოლოგია']};
+  const _TT={'nav-zoning-btn':['Zoning','ზონირება'],'cat-btn-relief':['Relief','რელიეფი'],'cat-btn-climate':['Climate','კლიმატი'],'cat-btn-energy':['Clean Energy','სუფთა ენერგია'],'cat-btn-accessibility':['Isochrone','იზოქრონი'],'cat-btn-education':['Education','განათლება'],'cat-btn-mobility':['Mobility','მობილობა'],'cat-btn-morphology':['Morphology','ურბანული მორფოლოგია'],'cat-btn-realestate':['Real estate','უძრავი ქონება']};
   // Short visible captions under the analysis icons (they were unlabeled icons —
   // a recurring "I can't tell what these do" finding). Falls back to the tooltip name.
-  const _CAP={'nav-zoning-btn':['Zoning','ზონირება'],'cat-btn-relief':['Relief','რელიეფი'],'cat-btn-climate':['Climate','კლიმატი'],'cat-btn-energy':['Energy','ენერგია'],'cat-btn-accessibility':['Isochrone','იზოქრონი'],'cat-btn-education':['Education','განათლება'],'cat-btn-mobility':['Mobility','მობილობა'],'cat-btn-morphology':['Morphology','მორფოლოგია']};
+  const _CAP={'nav-zoning-btn':['Zoning','ზონირება'],'cat-btn-relief':['Relief','რელიეფი'],'cat-btn-climate':['Climate','კლიმატი'],'cat-btn-energy':['Energy','ენერგია'],'cat-btn-accessibility':['Isochrone','იზოქრონი'],'cat-btn-education':['Education','განათლება'],'cat-btn-mobility':['Mobility','მობილობა'],'cat-btn-morphology':['Morphology','მორფოლოგია'],'cat-btn-realestate':['Real estate','ქონება']};
   Object.keys(_TT).forEach(id=>{const b=document.getElementById(id);if(b){b.title=_TT[id][ka?1:0];const cap=b.querySelector('.pfc-cat-cap');if(cap)cap.textContent=(_CAP[id]||_TT[id])[ka?1:0];}});
   // Zoning is Georgia-only — hide it entirely at a location pin (outside Georgia).
   const _zb=document.getElementById('nav-zoning-btn');if(_zb)_zb.style.display=_pinMode?'none':'';
@@ -3899,6 +3899,7 @@ function _captureActiveAnalyses(){
 async function _relocalizeActiveAnalyses(sw){
   // Planning: concept masterplan legend re-renders instantly from its cached data.
   try{ if(typeof _conceptOn!=='undefined'&&_conceptOn&&_conceptLastData&&typeof _showConceptLegend==='function')_showConceptLegend(_conceptLastData,(_conceptTreeData&&_conceptTreeData.features?_conceptTreeData.features.length:0)); }catch(_){}
+  try{ if(_reActive&&_reLast&&typeof _reRenderPanel==='function')_reRenderPanel(); }catch(_){} // real-estate panel re-renders from cache
   if(!(_currentParcelGeoJSON||_isDrawnArea))return;
   if(_reRunBusy)return; _reRunBusy=true;
   try{
@@ -6983,6 +6984,105 @@ async function _fetchWalkArea(lng,lat,meters){
   const res=await fetch(url);if(!res.ok)throw new Error("walk_area_fail");
   const j=await res.json();return j.features?.[0]?.geometry||null;
 }
+
+// ── Real-estate market analysis (myhome.ge mirror, 15-min walk catchment) ────────
+const _RE_TYPES={
+  1:{en:'Apartment',ka:'ბინა',c:'#a78bfa'}, 2:{en:'House',ka:'სახლი',c:'#34d399'},
+  3:{en:'Country house',ka:'აგარაკი',c:'#22c55e'}, 4:{en:'Land plot',ka:'მიწის ნაკვეთი',c:'#f59e0b'},
+  5:{en:'Commercial',ka:'კომერციული',c:'#60a5fa'}, 6:{en:'Hotel',ka:'სასტუმრო',c:'#ec4899'}
+};
+let _reActive=false, _reSeq=0, _reLast=null; // {groups,total,center}
+const _reMedian=a=>{ if(!a||!a.length)return null; const s=[...a].sort((x,y)=>x-y); const m=s.length>>1; return s.length%2?s[m]:(s[m-1]+s[m])/2; };
+function _reTypeId(p){ if(p.property_type_id!=null)return +p.property_type_id; // fall back to matching the text label
+  const t=String(p.property_type||'').toLowerCase();
+  if(/apart|ბინ/.test(t))return 1; if(/country|აგარ/.test(t))return 3; if(/house|სახლ/.test(t))return 2;
+  if(/plot|land|ნაკვ|მიწ/.test(t))return 4; if(/commerc|კომერ/.test(t))return 5; if(/hotel|სასტ/.test(t))return 6; return 0; }
+async function _fetchWalk15(lng,lat){
+  const url=`https://api.mapbox.com/isochrone/v1/mapbox/walking/${lng},${lat}?contours_minutes=15&polygons=true&denoise=1&access_token=${MAPBOX_TOKEN}`;
+  const r=await fetch(url); if(!r.ok)return null; const j=await r.json(); return j.features?.[0]?.geometry||null;
+}
+function _reCenter(){
+  if(Array.isArray(parcelCentroid)&&parcelCentroid.length===2)return parcelCentroid;
+  const p=_parcelCardLngLat;
+  if(Array.isArray(p)&&p.length===2)return p;
+  if(p&&typeof p==='object'&&p.lng!=null&&p.lat!=null)return [p.lng,p.lat];
+  return null;
+}
+function _reToggle(){
+  const btn=document.getElementById('cat-btn-realestate');
+  if(_reActive){ _reClear(); return; }
+  const c=_reCenter();
+  if(!c){ showToast(lang==='ka'?'ჯერ აირჩიე ნაკვეთი ან ადგილი':'Select a parcel or location first'); return; }
+  if(!_inGeorgia(c[0],c[1])){ showToast(lang==='ka'?'უძრავი ქონების მონაცემი მხოლოდ საქართველოშია':'Real-estate data is available in Georgia only'); return; }
+  btn?.classList.add('active');
+  _reRun(c);
+}
+function _reClear(){
+  _reActive=false; _reSeq++;
+  document.getElementById('cat-btn-realestate')?.classList.remove('active');
+  const row=document.getElementById('pfc-realestate-row'); if(row)row.style.display='none';
+  try{ if(map.getLayer('re-pins'))map.removeLayer('re-pins'); if(map.getLayer('re-iso-line'))map.removeLayer('re-iso-line'); }catch(_){}
+  try{ if(map.getSource('re-pins'))map.removeSource('re-pins'); if(map.getSource('re-iso'))map.removeSource('re-iso'); }catch(_){}
+}
+async function _reRun(center){
+  const seq=++_reSeq; _reActive=true;
+  const [lng,lat]=center;
+  const isKa=lang==='ka';
+  _reShow(`<div class="re-note"><span class="re-spin"></span> ${isKa?'იტვირთება უძრავი ქონების მონაცემი…':'Loading real-estate data…'}</div>`);
+  let iso; try{ iso=await _fetchWalk15(lng,lat); }catch(_){}
+  if(seq!==_reSeq)return;
+  if(!iso){ _reShow(`<div class="re-empty">${isKa?'ვერ მოხერხდა 15-წუთიანი ზონის დათვლა':'Could not compute the 15-minute walk area'}</div>`); return; }
+  const poly=turf.feature(iso), bb=turf.bbox(poly);
+  let fc;
+  try{
+    const {data,error}=await sb.rpc('myhome_listings_bbox',{min_lng:bb[0],min_lat:bb[1],max_lng:bb[2],max_lat:bb[3],p_deal_type:1,p_limit:5000});
+    if(error)throw error; fc=data;
+  }catch(e){ console.warn('real-estate rpc:',e); if(seq!==_reSeq)return;
+    _reShow(`<div class="re-empty">${isKa?'მონაცემი ვერ ჩაიტვირთა':'Could not load listings'}</div>`); return; }
+  if(seq!==_reSeq)return;
+  const feats=((fc&&fc.features)||[]).filter(f=>{ try{return f.geometry&&turf.booleanPointInPolygon(f.geometry.coordinates,poly);}catch(_){return false;} });
+  const groups={};
+  for(const f of feats){ const p=f.properties||{}; const id=_reTypeId(p); if(!id)continue;
+    (groups[id]=groups[id]||{ppsqm:[],usd:[],area:[]});
+    const ps=+p.price_per_sqm_gel; if(isFinite(ps)&&ps>0)groups[id].ppsqm.push(ps);
+    const pu=+p.price_usd; if(isFinite(pu)&&pu>0)groups[id].usd.push(pu);
+    const ar=+p.area; if(isFinite(ar)&&ar>0)groups[id].area.push(ar);
+  }
+  _reLast={groups,total:feats.length,center};
+  _reRenderPanel();
+  _rePlot(feats,iso);
+}
+function _reFmtGel(v){ if(v==null)return '—'; return '₾'+Math.round(v).toLocaleString('en-US'); }
+function _reFmtK(v){ if(v==null)return '—'; return v>=1000?'$'+(v/1000).toFixed(v>=100000?0:1)+'k':'$'+Math.round(v); }
+function _reRenderPanel(){
+  if(!_reLast)return; const isKa=lang==='ka'; const {groups,total}=_reLast;
+  const ids=Object.keys(groups).map(Number).sort((a,b)=>(groups[b].ppsqm.length+groups[b].usd.length)-(groups[a].ppsqm.length+groups[a].usd.length));
+  const head=`<div class="re-head"><span class="re-title">${isKa?'უძრავი ქონება':'Real estate'}</span><span class="re-sub">${isKa?'15 წთ ფეხით':'15-min walk'} · ${total} ${isKa?'განცხადება':'listings'}</span></div>`;
+  if(!total){ _reShow(head+`<div class="re-empty">${isKa?'ამ ზონაში გაყიდვის განცხადება ვერ მოიძებნა':'No sale listings found in this area'}</div>`); return; }
+  const colL=isKa?'ტიპი':'Type', colN='n', colP=isKa?'მედ. ₾/მ²':'Med. ₾/m²';
+  let rows=`<div class="re-tr re-th"><span>${colL}</span><span>${colN}</span><span>${colP}</span><span>${isKa?'მედ. ფასი':'Med. price'}</span></div>`;
+  for(const id of ids){ const g=groups[id]; const ty=_RE_TYPES[id]||{en:'Other',ka:'სხვა',c:'rgba(255,255,255,0.4)'};
+    const n=Math.max(g.ppsqm.length,g.usd.length,g.area.length);
+    rows+=`<div class="re-tr"><span class="re-ty"><i style="background:${ty.c}"></i>${isKa?ty.ka:ty.en}</span><span>${n}</span><span class="re-v">${_reFmtGel(_reMedian(g.ppsqm))}</span><span class="re-v">${_reFmtK(_reMedian(g.usd))}</span></div>`;
+  }
+  const note=`<div class="re-src">${isKa?'წყარო: myhome.ge · გაყიდვის განცხადებები':'Source: myhome.ge · sale listings'}</div>`;
+  _reShow(head+`<div class="re-table">${rows}</div>`+note);
+}
+function _reShow(html){ const row=document.getElementById('pfc-realestate-row'), body=document.getElementById('pfc-realestate-body');
+  if(body)body.innerHTML=html; if(row)row.style.display='block';
+  const card=document.getElementById('parcel-float-card'); if(card&&card.style.display==='none')card.style.display='flex'; }
+function _rePlot(feats,iso){
+  try{
+    const pins={type:'FeatureCollection',features:feats.map(f=>({type:'Feature',geometry:f.geometry,properties:{c:(_RE_TYPES[_reTypeId(f.properties||{})]||{c:'#94a3b8'}).c}}))};
+    if(map.getSource('re-pins'))map.getSource('re-pins').setData(pins);
+    else{ map.addSource('re-pins',{type:'geojson',data:pins});
+      map.addLayer({id:'re-pins',type:'circle',source:'re-pins',paint:{'circle-radius':['interpolate',['linear'],['zoom'],11,3,16,5.5],'circle-color':['get','c'],'circle-stroke-width':1,'circle-stroke-color':'rgba(0,0,0,0.55)','circle-opacity':0.9}}); }
+    const isoFc={type:'FeatureCollection',features:[{type:'Feature',geometry:iso,properties:{}}]};
+    if(map.getSource('re-iso'))map.getSource('re-iso').setData(isoFc);
+    else{ map.addSource('re-iso',{type:'geojson',data:isoFc});
+      map.addLayer({id:'re-iso-line',type:'line',source:'re-iso',paint:{'line-color':'#a78bfa','line-width':1.5,'line-dasharray':[2,2],'line-opacity':0.5}},'re-pins'); }
+  }catch(e){ console.warn('re plot:',e); }
+}
 let _nearbyWalkCenter=null,_nearbyRan=false;
 // Show the "Run nearby analysis" button in the float card (does NOT run it yet).
 // cfg.center — [lng,lat] origin for the walking-catchment analysis (defaults to
@@ -7700,6 +7800,7 @@ function resetAnalysis(){
   _currentParcelGeoJSON=null;
   _currentParcelAreaM2=null;
   parcelCentroid=null;
+  try{ if(typeof _reClear==='function')_reClear(); }catch(_){} // drop any real-estate layer/panel from the previous selection
   ["analyse-btn","score-card","pro-analysis-card","export-btn","owner-results-card","wind-card"].forEach(id=>{
     const el=document.getElementById(id);if(el)el.style.display="none";
   });

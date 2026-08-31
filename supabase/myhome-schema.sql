@@ -65,6 +65,14 @@ CREATE TABLE IF NOT EXISTS myhome_listings (
   address             text,
   metro_station_id    integer,
 
+  -- Cadastral (NAPR) codes, from the detail endpoint's rs_code field and, as a
+  -- fallback, the address. An array because the field is free text and a single
+  -- listing can cover several adjoining parcels. ~63 % of land plots carry one;
+  -- apartments essentially never do. This is the join key to the parcels table
+  -- — see myhome-cadastral-link.sql.
+  rs_codes            text[]      NOT NULL DEFAULT '{}',
+  rs_code_primary     text,
+
   -- ── geometry ──
   -- Myhome pins are unreliable: a sizeable minority are geocoded to the wrong
   -- part of the country. geo_offset_m is the distance from the centroid of the
@@ -104,6 +112,8 @@ CREATE INDEX IF NOT EXISTS idx_mhl_price     ON myhome_listings (deal_type_id, p
 CREATE INDEX IF NOT EXISTS idx_mhl_updated   ON myhome_listings (updated_at DESC);
 CREATE INDEX IF NOT EXISTS idx_mhl_urban     ON myhome_listings (urban_id, deal_type_id) WHERE delisted_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_mhl_amenities ON myhome_listings USING gin (amenities);
+CREATE INDEX IF NOT EXISTS idx_mhl_rs_codes  ON myhome_listings USING gin (rs_codes);
+CREATE INDEX IF NOT EXISTS idx_mhl_rs_primary ON myhome_listings (rs_code_primary) WHERE rs_code_primary IS NOT NULL;
 -- Drives the enrichment queue: listings still waiting on a detail fetch.
 CREATE INDEX IF NOT EXISTS idx_mhl_enrich    ON myhome_listings (city_id, updated_at DESC) WHERE detail_fetched_at IS NULL AND delisted_at IS NULL;
 
@@ -190,7 +200,8 @@ AS $$
         'geometry', jsonb_build_object('type', 'Point', 'coordinates', jsonb_build_array(lng, lat)),
         'properties', jsonb_build_object(
           'id', id, 'title', title, 'url', url,
-          'deal_type', deal_type, 'property_type', property_type,
+          'deal_type', deal_type, 'deal_type_id', deal_type_id,
+          'property_type', property_type, 'property_type_id', property_type_id,
           'price_gel', price_gel, 'price_usd', price_usd,
           'price_per_sqm_gel', price_per_sqm_gel,
           'area', area, 'rooms', rooms, 'floor', floor, 'total_floors', total_floors,

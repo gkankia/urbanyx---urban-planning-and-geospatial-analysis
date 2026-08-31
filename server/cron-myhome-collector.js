@@ -80,6 +80,7 @@ const ENRICH_COLUMNS = [
   "condition_id", "condition", "bathrooms", "ceiling_height", "balconies",
   "heating", "hot_water", "parking", "material", "project_type", "amenities",
   "lat", "lng", "geo_ref", "geo_offset_m", "geo_suspect", "geo_reason",
+  "rs_codes", "rs_code_primary",
   "description", "views", "published_at", "detail_fetched_at",
 ];
 

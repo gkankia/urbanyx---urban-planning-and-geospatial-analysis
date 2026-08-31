@@ -510,6 +510,21 @@
   .pfc-cat-btn img { width:34px; height:34px; opacity:0.72; transition:opacity 0.13s; pointer-events:none; }
   .pfc-cat-cap { font-size:0.5rem; line-height:1.08; text-align:center; color:rgba(255,255,255,0.6); pointer-events:none; word-break:break-word; }
   .pfc-cat-btn.active .pfc-cat-cap { color:rgba(199,210,254,0.95); }
+  /* Real-estate market panel */
+  #pfc-realestate-body .re-head { display:flex; align-items:baseline; justify-content:space-between; gap:8px; margin-bottom:6px; }
+  #pfc-realestate-body .re-title { font-size:0.72rem; font-weight:700; color:rgba(255,255,255,0.85); }
+  #pfc-realestate-body .re-sub { font-size:0.56rem; color:rgba(255,255,255,0.4); white-space:nowrap; }
+  #pfc-realestate-body .re-table { display:flex; flex-direction:column; }
+  #pfc-realestate-body .re-tr { display:grid; grid-template-columns:1.35fr 0.45fr 1fr 0.95fr; gap:6px; align-items:center; padding:3.5px 0; font-size:0.63rem; color:rgba(255,255,255,0.82); }
+  #pfc-realestate-body .re-th { color:rgba(255,255,255,0.38); font-size:0.52rem; text-transform:uppercase; letter-spacing:0.03em; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:3px; }
+  #pfc-realestate-body .re-tr > span:not(.re-ty) { text-align:right; }
+  #pfc-realestate-body .re-ty { display:flex; align-items:center; gap:6px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  #pfc-realestate-body .re-ty i { width:7px; height:7px; border-radius:2px; flex-shrink:0; display:inline-block; }
+  #pfc-realestate-body .re-v { font-variant-numeric:tabular-nums; color:rgba(255,255,255,0.92); }
+  #pfc-realestate-body .re-src { margin-top:6px; font-size:0.53rem; color:rgba(255,255,255,0.3); }
+  #pfc-realestate-body .re-note { display:flex; align-items:center; gap:7px; font-size:0.66rem; color:rgba(255,255,255,0.5); padding:4px 0; }
+  #pfc-realestate-body .re-empty { font-size:0.64rem; color:rgba(255,255,255,0.45); padding:6px 0; line-height:1.4; }
+  #pfc-realestate-body .re-spin { display:inline-block; width:10px; height:10px; flex-shrink:0; border:1.5px solid rgba(167,139,250,0.3); border-top-color:#a78bfa; border-radius:50%; animation:spin 0.7s linear infinite; }
   .pfc-cat-btn:hover { background:rgba(255,255,255,0.09); border-color:rgba(255,255,255,0.16); }
   .pfc-cat-btn:hover img { opacity:1; }
   .pfc-cat-btn.active { background:rgba(99,102,241,0.22); border-color:rgba(165,180,252,0.5); }
