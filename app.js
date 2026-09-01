@@ -7018,68 +7018,75 @@ function _reToggle(){
   _reRun(c);
 }
 function _reClear(){
-  _reActive=false; _reSeq++;
+  _reActive=false; _reParcelsOn=false; _reSeq++;
   document.getElementById('cat-btn-realestate')?.classList.remove('active');
   const row=document.getElementById('pfc-realestate-row'); if(row)row.style.display='none';
   try{ ['re-iso-line','re-iso-fill'].forEach(id=>{if(map.getLayer(id))map.removeLayer(id);}); }catch(_){}
   try{ if(map.getSource('re-iso'))map.removeSource('re-iso'); }catch(_){}
+  if(typeof _reClearParcels==='function')_reClearParcels();
 }
 async function _reRun(center){
   const seq=++_reSeq; _reActive=true;
-  const [lng,lat]=center;
-  const isKa=lang==='ka';
-  _reShow(`<div class="re-note"><span class="re-spin"></span> ${isKa?'იტვირთება უძრავი ქონების მონაცემი…':'Loading real-estate data…'}</div>`);
+  const [lng,lat]=center; const isKa=lang==='ka';
+  _reParcelsOn=false; _reClearParcels();
+  _reShow(`<div class="re-note"><span class="re-spin"></span> ${isKa?'იტვირთება ბაზრის მონაცემი…':'Loading market data…'}</div>`);
   let iso; try{ iso=await _fetchWalk15(lng,lat); }catch(_){}
   if(seq!==_reSeq)return;
   if(!iso){ _reShow(`<div class="re-empty">${isKa?'ვერ მოხერხდა 15-წუთიანი ზონის დათვლა':'Could not compute the 15-minute walk area'}</div>`); return; }
-  // Aggregate SERVER-SIDE: pass the isochrone ring to Postgres and get back only the
-  // summary (~1–2 KB), instead of shipping thousands of listing rows (Supabase egress).
-  const ring=(iso.type==='Polygon')?iso.coordinates[0]:(iso.type==='MultiPolygon'?iso.coordinates[0][0]:null);
-  if(!ring||ring.length<4){ _reShow(`<div class="re-empty">${isKa?'ვერ მოხერხდა 15-წუთიანი ზონის დათვლა':'Could not compute the 15-minute walk area'}</div>`); return; }
-  let summary;
+  // Server-side aggregation (myhome-isochrone-rpc.sql): stats + breakdowns, both tiny.
+  let res, breaks={};
   try{
-    const {data,error}=await sb.rpc('myhome_area_stats',{p_ring:ring,p_deal_type:_reDeal});
-    if(error)throw error; summary=data;
+    const [a,b]=await Promise.all([
+      sb.rpc('myhome_area_stats',{area_geojson:iso,p_deal_type:_reDeal,p_min_sample:5}),
+      sb.rpc('myhome_area_breakdowns',{area_geojson:iso,p_deal_type:_reDeal})
+    ]);
+    if(a.error)throw a.error; res=a.data; if(b&&!b.error&&b.data)breaks=b.data;
   }catch(e){ console.warn('real-estate rpc:',e); if(seq!==_reSeq)return;
     _reShow(`<div class="re-empty">${isKa?'ბაზრის მონაცემი ვერ ჩაიტვირთა':'Could not load market data'}</div>`); return; }
   if(seq!==_reSeq)return;
-  _reLast={summary:summary||{total:0,types:[]},center};
-  _reRenderPanel();
-  _reOutline(iso); // just the 15-min catchment outline
+  _reLast={res:res||{},breaks,center,iso};
+  _reRenderPanel(); _reOutline(iso);
 }
 function _reFmtGel(v){ if(v==null)return '—'; return '₾'+Math.round(v).toLocaleString('en-US'); }
+function _reCompact(v,sym){ if(v==null)return ''; v=+v; if(!isFinite(v)||v<=0)return ''; if(v>=1e6)return sym+(v/1e6).toFixed(1)+'M'; if(v>=1e3)return sym+Math.round(v/1e3)+'k'; return sym+Math.round(v); }
 const _reEsc=s=>String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
-// One breakdown line — medians already computed server-side. pairs: [[label, median|null], …]
 function _reKVline(title,pairs){
   const parts=[]; for(const [lbl,v] of pairs){ if(v==null)continue; parts.push(`${_reEsc(lbl)}&nbsp;${_reFmtGel(v)}`); }
   if(parts.length<2)return '';
-  return `<div class="re-cut"><span class="re-cut-l">${title}</span><span class="re-cut-v">${parts.join('&nbsp;·&nbsp;')}</span></div>`;
+  return `<div class="re-cut"><span class="re-cut-l">${_reEsc(title)}</span><span class="re-cut-v">${parts.join('&nbsp;·&nbsp;')}</span></div>`;
 }
-function _reDetail(t,isKa){
-  let h=''; const st=t.status||{}, rm=t.rooms||{}, cd=t.cond||[];
-  if(t.pt===1||t.pt===2)h+=_reKVline(isKa?'მდგომ.':'Status',[[isKa?'ახალი':'new',st.new&&st.new.med],[isKa?'მეორადი':'existing',st.existing&&st.existing.med]]);
+function _reDetail(pt,isKa){
+  const bk=(_reLast&&_reLast.breaks&&_reLast.breaks[pt])||null; if(!bk)return '';
+  let h=''; const st=bk.status||{}, rm=bk.rooms||{}, cd=bk.cond||[];
+  if(pt===1||pt===2)h+=_reKVline(isKa?'მდგომ.':'Status',[[isKa?'ახალი':'new',st.new&&st.new.med],[isKa?'მეორადი':'existing',st.existing&&st.existing.med]]);
   h+=_reKVline(isKa?'მდგომარეობა':'Condition',cd.slice(0,4).map(c=>[c.k,c.med]));
-  if(t.pt===1){ const order=['1','2','3','4+']; h+=_reKVline(isKa?'ოთახები':'Rooms',order.filter(k=>rm[k]).map(k=>[`${k}${isKa?' ოთ':'r'}`,rm[k].med])); }
+  if(pt===1){ const order=['1','2','3','4+']; h+=_reKVline(isKa?'ოთახები':'Rooms',order.filter(k=>rm[k]).map(k=>[`${k}${isKa?' ოთ':'r'}`,rm[k].med])); }
   return h;
 }
 function _reRenderPanel(){
-  if(!_reLast||!_reLast.summary)return; const isKa=lang==='ka'; const s=_reLast.summary; const total=s.total||0, types=s.types||[];
+  if(!_reLast||!_reLast.res)return; const isKa=lang==='ka'; const r=_reLast.res;
   const m2=isKa?'მ²':'m²'; const rent=_reDeal===2; const unit=rent?(isKa?`/${m2}·თვე`:`/${m2}·mo`):`/${m2}`;
+  const stats=(r.stats||[]).filter(s=>s.median_sqm_gel!=null).sort((a,b)=>(b.n_priced||b.n||0)-(a.n_priced||a.n||0));
+  const total=r.total_in_area||0;
   const head=`<div class="re-head"><span class="re-title">${isKa?'უძრავი ქონება':'Real estate'}</span><span class="re-sub">${isKa?'მედ. ₾/'+m2+' · 15 წთ':'median ₾/'+m2+' · 15-min'}</span></div>`;
   const toggle=`<div class="re-deal"><button class="re-dbtn${!rent?' on':''}" onclick="event.stopPropagation();_reSetDeal(1)">${isKa?'იყიდება':'For sale'}</button><button class="re-dbtn${rent?' on':''}" onclick="event.stopPropagation();_reSetDeal(2)">${isKa?'ქირავდება':'For rent'}</button></div>`;
-  if(!total||!types.length){ _reShow(head+toggle+`<div class="re-empty">${rent?(isKa?'ამ ზონაში ქირავნობის განცხადება ვერ მოიძებნა':'No rental listings in this area'):(isKa?'ამ ზონაში გაყიდვის განცხადება ვერ მოიძებნა':'No sale listings in this area')}</div>`); return; }
+  if(!stats.length){ _reShow(head+toggle+`<div class="re-empty">${rent?(isKa?'ამ ზონაში ქირავნობის განცხადება ვერ მოიძებნა':'No rental listings in this area'):(isKa?'ამ ზონაში გაყიდვის განცხადება ვერ მოიძებნა':'No sale listings in this area')}</div>`); return; }
   let rows='';
-  for(const t of types){ if(t.med==null)continue; const ty=_RE_TYPES[t.pt]||{en:'Other',ka:'სხვა',c:'rgba(255,255,255,0.4)'};
-    const detail=_reDetail(t,isKa);
-    rows+=`<div class="re-item${detail?'':' re-nox'}"${detail?` onclick="_reExpand(${t.pt})"`:''}><span class="re-ty"><i style="background:${ty.c}"></i>${isKa?ty.ka:ty.en}</span><span class="re-big">${_reFmtGel(t.med)}<small>${unit}</small></span><span class="re-n" title="${t.n} ${isKa?'განცხადება':'listings'}">${t.n}</span><span class="re-caret"${detail?'':' style="visibility:hidden"'}>▸</span></div>`;
-    if(detail)rows+=`<div class="re-detail" id="re-detail-${t.pt}" hidden>${detail}</div>`;
+  for(const s of stats){ const pt=s.property_type_id; const ty=_RE_TYPES[pt]||{en:s.property_type||'Other',ka:s.property_type||'სხვა',c:'rgba(255,255,255,0.4)'};
+    const med=s.median_sqm_gel, n=s.n_priced||s.n||0, detail=_reDetail(pt,isKa);
+    const dim=(s.reliable===false)?' style="opacity:0.6"':'';
+    rows+=`<div class="re-item${detail?'':' re-nox'}"${detail?` onclick="_reExpand(${pt})"`:''}${dim}><span class="re-ty"><i style="background:${ty.c}"></i>${isKa?ty.ka:ty.en}</span><span class="re-big">${_reFmtGel(med)}<small>${unit}</small></span><span class="re-n" title="${n} ${isKa?'ფასიანი':'priced'}">${n}</span><span class="re-caret"${detail?'':' style="visibility:hidden"'}>▸</span></div>`;
+    if(detail)rows+=`<div class="re-detail" id="re-detail-${pt}" hidden>${detail}</div>`;
   }
-  if(!rows)rows=`<div class="re-empty">${isKa?'ფასის მონაცემი არასაკმარისია':'Not enough price data in this area'}</div>`;
-  const note=`<div class="re-src">${isKa?`წყარო: myhome.ge · ${rent?'ქირავნობა':'გაყიდვა'} · ${total} განცხ.`:`Source: myhome.ge · ${rent?'rent':'sale'} · ${total} listings`}</div>`;
-  _reShow(head+toggle+`<div class="re-list">${rows}</div>`+note);
+  const hasPlots=stats.some(s=>s.property_type_id===4);
+  const plotBtn=hasPlots?`<button class="re-plotbtn${_reParcelsOn?' on':''}" onclick="event.stopPropagation();_reToggleParcels()">${_reParcelsOn?(isKa?'ნაკვეთების დამალვა':'Hide plots on map'):(isKa?'ნაკვეთების ჩვენება რუკაზე':'Show plots on map')}</button>`:'';
+  const cov=r.coverage||{}; const notMapped=+cov.not_geocoded_yet||0;
+  const covNote=notMapped>0?`<div class="re-cov">${isKa?`+${notMapped} განცხადება ჯერ არ არის რუკაზე`:`+${notMapped} listings not mapped yet`}</div>`:'';
+  const note=`<div class="re-src">${isKa?`წყარო: myhome.ge · ${rent?'ქირავნობა':'გაყიდვა'} · ${total} განცხ.`:`Source: myhome.ge · ${rent?'rent':'sale'} · ${total} in area`}</div>`;
+  _reShow(head+toggle+`<div class="re-list">${rows}</div>`+plotBtn+covNote+note);
 }
-function _reExpand(id){ const d=document.getElementById('re-detail-'+id); if(!d)return; d.hidden=!d.hidden; const it=d.previousElementSibling; if(it)it.classList.toggle('re-open',!d.hidden); }
-function _reSetDeal(deal){ if(deal===_reDeal)return; _reDeal=deal; if(_reLast&&_reLast.center)_reRun(_reLast.center); }
+function _reExpand(pt){ const d=document.getElementById('re-detail-'+pt); if(!d)return; d.hidden=!d.hidden; const it=d.previousElementSibling; if(it)it.classList.toggle('re-open',!d.hidden); }
+function _reSetDeal(deal){ if(deal===_reDeal)return; _reDeal=deal; _reParcelsOn=false; _reClearParcels(); if(_reLast&&_reLast.center)_reRun(_reLast.center); }
 function _reShow(html){ const row=document.getElementById('pfc-realestate-row'), body=document.getElementById('pfc-realestate-body');
   if(body)body.innerHTML=html; if(row)row.style.display='block';
   const card=document.getElementById('parcel-float-card'); if(card&&card.style.display==='none')card.style.display='flex'; }
@@ -7093,6 +7100,53 @@ function _reOutline(iso){
       map.addLayer({id:'re-iso-line',type:'line',source:'re-iso',paint:{'line-color':'#a78bfa','line-width':1.5,'line-dasharray':[2,2],'line-opacity':0.55}});
     }
   }catch(e){ console.warn('re outline:',e); }
+}
+// ── Land-plot parcels on the map: myhome has no geometry, so fetch each polygon
+// live from maps.gov.ge by cadastral code (origin-gated → works on the deployed
+// domain, not localhost) and label it with the listing price. ──
+async function _reFetchParcelGeom(code){
+  try{
+    const form=new FormData(); form.append("keyword",code); form.append("keyword_description[lang]","ka");
+    const sRes=await fetch("https://maps.gov.ge/map/portal/search",{method:"POST",body:form});
+    if(!sRes.ok)return null; const sData=await sRes.json();
+    const lbl=sData.result?.[0]?.details?.info_link?.split("lbl=")[1]; if(!lbl)return null;
+    const shpRes=await fetch(`https://maps.gov.ge/lr/bo/mg/getinfo.alpha?lbl=${lbl}&res=shp&lang=ka`);
+    if(!shpRes.ok)return null; const shpData=await shpRes.json();
+    const shape=shpData.data?.[0]?.shape; if(!shape)return null;
+    return wktToGeoJSON(shape);
+  }catch(_){ return null; }
+}
+async function _reToggleParcels(){
+  const isKa=lang==='ka';
+  if(_reParcelsOn){ _reParcelsOn=false; _reClearParcels(); _reRenderPanel(); return; }
+  if(!_reLast||!_reLast.iso)return;
+  const btn=document.querySelector('.re-plotbtn'); if(btn){btn.textContent=isKa?'იტვირთება…':'Loading plots…'; btn.classList.add('on');}
+  let list;
+  try{ const {data,error}=await sb.rpc('myhome_area_parcels',{area_geojson:_reLast.iso,p_deal_type:_reDeal}); if(error)throw error; list=(data||[]).slice(0,40); }
+  catch(e){ console.warn('re parcels rpc:',e); _reRenderPanel(); return; }
+  if(!list.length){ showToast(isKa?'ამ ზონაში ნაკვეთი კოდით ვერ მოიძებნა':'No plots with a cadastral code here'); _reRenderPanel(); return; }
+  const seq=_reSeq; _reParcelsOn=true;
+  const feats=[]; let idx=0;
+  const worker=async()=>{ while(idx<list.length){ const it=list[idx++]; const g=await _reFetchParcelGeom(it.cadastral); if(seq!==_reSeq)return;
+    if(g){ feats.push({type:'Feature',geometry:g,properties:{label:_reCompact(it.price_usd,'$')||_reCompact(it.price_gel,'₾'),cadastral:it.cadastral,url:it.url||''}}); _rePlotParcels({type:'FeatureCollection',features:feats.slice()}); } } };
+  await Promise.all([worker(),worker(),worker(),worker()]);
+  if(seq!==_reSeq)return;
+  _reRenderPanel();
+}
+function _rePlotParcels(fc){
+  try{
+    if(map.getSource('re-parcels'))map.getSource('re-parcels').setData(fc);
+    else{
+      map.addSource('re-parcels',{type:'geojson',data:fc});
+      map.addLayer({id:'re-parcels-fill',type:'fill',source:'re-parcels',paint:{'fill-color':'#f59e0b','fill-opacity':0.2}});
+      map.addLayer({id:'re-parcels-line',type:'line',source:'re-parcels',paint:{'line-color':'#f59e0b','line-width':1.6}});
+      map.addLayer({id:'re-parcels-label',type:'symbol',source:'re-parcels',layout:{'text-field':['get','label'],'text-size':12,'text-allow-overlap':true,'symbol-placement':'point'},paint:{'text-color':'#fff','text-halo-color':'#7c2d12','text-halo-width':1.5}});
+    }
+  }catch(e){ console.warn('re plot parcels:',e); }
+}
+function _reClearParcels(){
+  try{ ['re-parcels-label','re-parcels-line','re-parcels-fill'].forEach(id=>{if(map.getLayer(id))map.removeLayer(id);}); }catch(_){}
+  try{ if(map.getSource('re-parcels'))map.removeSource('re-parcels'); }catch(_){}
 }
 let _nearbyWalkCenter=null,_nearbyRan=false;
 // Show the "Run nearby analysis" button in the float card (does NOT run it yet).

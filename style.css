@@ -532,6 +532,10 @@
   #pfc-realestate-body .re-cut { display:grid; grid-template-columns:auto 1fr; gap:8px; align-items:baseline; padding:2px 0; }
   #pfc-realestate-body .re-cut-l { font-size:0.52rem; text-transform:uppercase; letter-spacing:0.03em; color:rgba(255,255,255,0.32); white-space:nowrap; }
   #pfc-realestate-body .re-cut-v { font-size:0.58rem; color:rgba(255,255,255,0.6); text-align:right; }
+  #pfc-realestate-body .re-plotbtn { width:100%; margin-top:8px; font-family:inherit; font-size:0.68rem; font-weight:600; color:#f59e0b; background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.3); border-radius:8px; padding:7px 0; cursor:pointer; transition:background 0.15s; }
+  #pfc-realestate-body .re-plotbtn:hover { background:rgba(245,158,11,0.18); }
+  #pfc-realestate-body .re-plotbtn.on { background:rgba(245,158,11,0.22); color:#fbbf24; }
+  #pfc-realestate-body .re-cov { margin-top:6px; font-size:0.55rem; color:rgba(251,191,36,0.7); }
   #pfc-realestate-body .re-src { margin-top:6px; font-size:0.53rem; color:rgba(255,255,255,0.3); }
   #pfc-realestate-body .re-note { display:flex; align-items:center; gap:7px; font-size:0.66rem; color:rgba(255,255,255,0.5); padding:4px 0; }
   #pfc-realestate-body .re-empty { font-size:0.64rem; color:rgba(255,255,255,0.45); padding:6px 0; line-height:1.4; }
