@@ -6992,11 +6992,7 @@ const _RE_TYPES={
   5:{en:'Commercial',ka:'კომერციული',c:'#60a5fa'}, 6:{en:'Hotel',ka:'სასტუმრო',c:'#ec4899'}
 };
 let _reActive=false, _reSeq=0, _reLast=null, _reDeal=1, _reParcelsOn=false; // _reDeal: 1 sale · 2 rent
-const _reMedian=a=>{ if(!a||!a.length)return null; const s=[...a].sort((x,y)=>x-y); const m=s.length>>1; return s.length%2?s[m]:(s[m-1]+s[m])/2; };
-function _reTypeId(p){ if(p.property_type_id!=null)return +p.property_type_id; // fall back to matching the text label
-  const t=String(p.property_type||'').toLowerCase();
-  if(/apart|ბინ/.test(t))return 1; if(/country|აგარ/.test(t))return 3; if(/house|სახლ/.test(t))return 2;
-  if(/plot|land|ნაკვ|მიწ/.test(t))return 4; if(/commerc|კომერ/.test(t))return 5; if(/hotel|სასტ/.test(t))return 6; return 0; }
+// (median/type-id are computed server-side now — no client-side aggregation)
 async function _fetchWalk15(lng,lat){
   const url=`https://api.mapbox.com/isochrone/v1/mapbox/walking/${lng},${lat}?contours_minutes=15&polygons=true&denoise=1&access_token=${MAPBOX_TOKEN}`;
   const r=await fetch(url); if(!r.ok)return null; const j=await r.json(); return j.features?.[0]?.geometry||null;

@@ -1,7 +1,9 @@
 "use strict";
 require("dotenv").config();
 const cron = require("node-cron");
+const zlib = require("zlib");
 const { createClient } = require("@supabase/supabase-js");
+const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
 const api = require("./myhome-api");
 
 // ── Myhome.ge listing collector ───────────────────────────────────────────────
@@ -72,6 +74,16 @@ catch { console.warn("[myhome] MYHOME_FILTERS is not valid JSON — ignoring"); 
 
 const sb = (SUPABASE_URL && SUPABASE_KEY)
   ? createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: false } })
+  : null;
+
+// ── R2 archive (optional; same infra as the transit collector) ─────────────────
+const R2_ENDPOINT = process.env.R2_ENDPOINT;
+const R2_KEY_ID   = process.env.R2_ACCESS_KEY_ID;
+const R2_SECRET   = process.env.R2_SECRET_ACCESS_KEY;
+const R2_BUCKET   = process.env.MYHOME_R2_BUCKET || process.env.R2_BUCKET || "urbanyx-myhome";
+const ARCHIVE_CRON = process.env.MYHOME_ARCHIVE_CRON || "30 3 * * *"; // daily 03:30 UTC
+const s3 = (R2_ENDPOINT && R2_KEY_ID && R2_SECRET)
+  ? new S3Client({ region: "auto", endpoint: R2_ENDPOINT, credentials: { accessKeyId: R2_KEY_ID, secretAccessKey: R2_SECRET } })
   : null;
 
 if (!sb) {
@@ -433,6 +445,47 @@ async function markDelisted(days = 30) {
   console.log(`[myhome] delist sweep: ${count ?? 0} listings not seen in ${days} days`);
 }
 
+// ── Daily archive ───────────────────────────────────────────────────────────
+// (1) compute + store the price time-series in Postgres (cheap — no rows leave
+//     the DB), which powers the historical "median ₾/m² over time" overview; and
+// (2) write a raw slim snapshot of the live listings to Cloudflare R2 as gzipped
+//     NDJSON, so there is an offline historical record — same pattern as transit.
+async function archiveSnapshot({ dryRun = false } = {}) {
+  if (!sb) return;
+  const day = new Date().toISOString().slice(0, 10); // YYYY-MM-DD (UTC)
+  try {
+    const { data, error } = await sb.rpc("myhome_snapshot_prices", { p_date: day });
+    if (error) console.error("[myhome] snapshot_prices failed:", error.message);
+    else console.log(`[myhome] price snapshot ${day}: ${data} rows`);
+  } catch (e) { console.error("[myhome] snapshot_prices error:", e.message); }
+
+  if (!s3) { console.warn("[myhome] R2 not configured — price time-series written, raw archive skipped"); return; }
+  const FIELDS = "id,deal_type_id,property_type_id,condition_id,building_status_id," +
+    "price_gel,price_usd,price_per_sqm_gel,area,area_unit,rooms,floor,total_floors," +
+    "city_id,district_id,urban_id,rs_code_primary,lat,lng,geo_suspect,updated_at";
+  const PAGE = 1000; let from = 0, total = 0; const lines = [];
+  while (true) {
+    const { data, error } = await sb.from("myhome_listings").select(FIELDS)
+      .is("delisted_at", null).order("id", { ascending: true }).range(from, from + PAGE - 1);
+    if (error) { console.error("[myhome] archive read failed:", error.message); break; }
+    if (!data || !data.length) break;
+    for (const r of data) lines.push(JSON.stringify(r));
+    total += data.length;
+    if (data.length < PAGE) break;
+    from += PAGE;
+  }
+  if (!total) { console.warn("[myhome] archive: no active listings"); return; }
+  const body = zlib.gzipSync(Buffer.from(lines.join("\n") + "\n", "utf8"));
+  const key  = `listings/${day}.ndjson.gz`;
+  const mb   = (body.length / 1048576).toFixed(1);
+  if (dryRun) { console.log(`[myhome] DRY RUN — would write ${key} (${total} listings, ${mb} MB gz)`); return; }
+  await s3.send(new PutObjectCommand({
+    Bucket: R2_BUCKET, Key: key, Body: body,
+    ContentType: "application/x-ndjson", ContentEncoding: "gzip",
+  }));
+  console.log(`[myhome] archived ${key} — ${total} listings, ${mb} MB gz`);
+}
+
 // ── CLI + schedule ────────────────────────────────────────────────────────────
 
 if (require.main === module) {
@@ -442,7 +495,8 @@ if (require.main === module) {
     console.error("[myhome] refusing to run: Supabase credentials missing (use --dry-run to test the fetch path)");
     process.exit(1);
   }
-  const job = argv.includes("--enrich") ? enrich({ dryRun })
+  const job = argv.includes("--archive") ? archiveSnapshot({ dryRun })
+    : argv.includes("--enrich") ? enrich({ dryRun })
     : argv.includes("--backfill") ? (dryRun
         ? discover({ mode: "backfill", dryRun: true })      // fetch path only
         : backfill({ resume: !argv.includes("--restart") }))
@@ -452,7 +506,8 @@ if (require.main === module) {
   cron.schedule(CRON_EXPR,   () => discover({ mode: "incremental" }).catch(() => {}));
   cron.schedule(ENRICH_CRON, () => enrich().catch(() => {}));
   cron.schedule("40 2 * * 1", () => markDelisted(30).catch(() => {}), { timezone: "UTC" });
-  console.log(`[myhome] scheduled — discovery '${CRON_EXPR}', enrichment '${ENRICH_CRON}', delist sweep Mondays 06:40 Tbilisi`);
+  cron.schedule(ARCHIVE_CRON, () => archiveSnapshot().catch(() => {}), { timezone: "UTC" });
+  console.log(`[myhome] scheduled — discovery '${CRON_EXPR}', enrichment '${ENRICH_CRON}', delist Mondays, archive '${ARCHIVE_CRON}'${s3 ? "" : " (R2 not set — raw archive off)"}`);
 }
 
-module.exports = { discover, backfill, enrich, markDelisted, planSlices };
+module.exports = { discover, backfill, enrich, markDelisted, archiveSnapshot, planSlices };
