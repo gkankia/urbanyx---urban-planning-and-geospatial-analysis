@@ -237,3 +237,5 @@ WHERE delisted_at IS NULL
   AND price_per_sqm_gel IS NOT NULL
   AND price_per_sqm_gel > 0
 GROUP BY city, district, urban, urban_id, deal_type_id, property_type_id;
+-- NOTE: the isochrone real-estate RPCs (myhome_area_stats / myhome_area_listings) live
+-- in myhome-isochrone-rpc.sql (PostGIS, registry-parcel geometry). Run that file next.

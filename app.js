@@ -6991,7 +6991,7 @@ const _RE_TYPES={
   3:{en:'Country house',ka:'აგარაკი',c:'#22c55e'}, 4:{en:'Land plot',ka:'მიწის ნაკვეთი',c:'#f59e0b'},
   5:{en:'Commercial',ka:'კომერციული',c:'#60a5fa'}, 6:{en:'Hotel',ka:'სასტუმრო',c:'#ec4899'}
 };
-let _reActive=false, _reSeq=0, _reLast=null, _reDeal=1; // _reDeal: 1 sale · 2 rent
+let _reActive=false, _reSeq=0, _reLast=null, _reDeal=1, _reParcelsOn=false; // _reDeal: 1 sale · 2 rent
 const _reMedian=a=>{ if(!a||!a.length)return null; const s=[...a].sort((x,y)=>x-y); const m=s.length>>1; return s.length%2?s[m]:(s[m-1]+s[m])/2; };
 function _reTypeId(p){ if(p.property_type_id!=null)return +p.property_type_id; // fall back to matching the text label
   const t=String(p.property_type||'').toLowerCase();
@@ -7032,59 +7032,47 @@ async function _reRun(center){
   let iso; try{ iso=await _fetchWalk15(lng,lat); }catch(_){}
   if(seq!==_reSeq)return;
   if(!iso){ _reShow(`<div class="re-empty">${isKa?'ვერ მოხერხდა 15-წუთიანი ზონის დათვლა':'Could not compute the 15-minute walk area'}</div>`); return; }
-  const poly=turf.feature(iso), bb=turf.bbox(poly);
-  let fc;
+  // Aggregate SERVER-SIDE: pass the isochrone ring to Postgres and get back only the
+  // summary (~1–2 KB), instead of shipping thousands of listing rows (Supabase egress).
+  const ring=(iso.type==='Polygon')?iso.coordinates[0]:(iso.type==='MultiPolygon'?iso.coordinates[0][0]:null);
+  if(!ring||ring.length<4){ _reShow(`<div class="re-empty">${isKa?'ვერ მოხერხდა 15-წუთიანი ზონის დათვლა':'Could not compute the 15-minute walk area'}</div>`); return; }
+  let summary;
   try{
-    const {data,error}=await sb.rpc('myhome_listings_bbox',{min_lng:bb[0],min_lat:bb[1],max_lng:bb[2],max_lat:bb[3],p_deal_type:_reDeal,p_limit:5000});
-    if(error)throw error; fc=data;
+    const {data,error}=await sb.rpc('myhome_area_stats',{p_ring:ring,p_deal_type:_reDeal});
+    if(error)throw error; summary=data;
   }catch(e){ console.warn('real-estate rpc:',e); if(seq!==_reSeq)return;
-    _reShow(`<div class="re-empty">${isKa?'მონაცემი ვერ ჩაიტვირთა':'Could not load listings'}</div>`); return; }
+    _reShow(`<div class="re-empty">${isKa?'ბაზრის მონაცემი ვერ ჩაიტვირთა':'Could not load market data'}</div>`); return; }
   if(seq!==_reSeq)return;
-  const feats=((fc&&fc.features)||[]).filter(f=>{ try{return f.geometry&&turf.booleanPointInPolygon(f.geometry.coordinates,poly);}catch(_){return false;} });
-  const groups={};
-  for(const f of feats){ const p=f.properties||{}; const id=_reTypeId(p); if(!id)continue;
-    const g=(groups[id]=groups[id]||{ppsqm:[],nw:[],ex:[],cond:{},rooms:{}});
-    const ps=+p.price_per_sqm_gel; if(!(isFinite(ps)&&ps>0))continue;
-    g.ppsqm.push(ps);
-    // building status → new (built/under-construction) vs existing (old)
-    const bs=+p.building_status_id; if(bs===2||bs===3)g.nw.push(ps); else if(bs===1)g.ex.push(ps);
-    // condition (source label) and rooms — breakdown buckets
-    const cond=(p.condition||'').toString().trim(); if(cond)(g.cond[cond]=g.cond[cond]||[]).push(ps);
-    const rm=+p.rooms; if(isFinite(rm)&&rm>0){ const k=rm>=4?'4+':String(rm); (g.rooms[k]=g.rooms[k]||[]).push(ps); }
-  }
-  _reLast={groups,total:feats.length,center,deal:_reDeal};
+  _reLast={summary:summary||{total:0,types:[]},center};
   _reRenderPanel();
-  _reOutline(iso); // just the 15-min catchment outline; individual listings are not plotted
+  _reOutline(iso); // just the 15-min catchment outline
 }
 function _reFmtGel(v){ if(v==null)return '—'; return '₾'+Math.round(v).toLocaleString('en-US'); }
 const _reEsc=s=>String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
-// One breakdown line: "Status  new ₾X · existing ₾Y" — only if ≥2 buckets clear the min sample.
-function _reKVline(title,pairs,minN){
-  const parts=[];
-  for(const [lbl,arr] of pairs){ if(!arr||arr.length<(minN||3))continue; const m=_reMedian(arr); if(m!=null)parts.push(`${_reEsc(lbl)}&nbsp;${_reFmtGel(m)}`); }
+// One breakdown line — medians already computed server-side. pairs: [[label, median|null], …]
+function _reKVline(title,pairs){
+  const parts=[]; for(const [lbl,v] of pairs){ if(v==null)continue; parts.push(`${_reEsc(lbl)}&nbsp;${_reFmtGel(v)}`); }
   if(parts.length<2)return '';
   return `<div class="re-cut"><span class="re-cut-l">${title}</span><span class="re-cut-v">${parts.join('&nbsp;·&nbsp;')}</span></div>`;
 }
-function _reDetail(id,g,isKa){
-  let h='';
-  if(id===1||id===2)h+=_reKVline(isKa?'მდგომ.':'Status',[[isKa?'ახალი':'new',g.nw],[isKa?'მეორადი':'existing',g.ex]],3);
-  const condKeys=Object.keys(g.cond).sort((a,b)=>g.cond[b].length-g.cond[a].length).slice(0,4);
-  h+=_reKVline(isKa?'მდგომარეობა':'Condition',condKeys.map(k=>[k,g.cond[k]]),3);
-  if(id===1){ const order=['1','2','3','4+']; h+=_reKVline(isKa?'ოთახები':'Rooms',order.filter(k=>g.rooms[k]).map(k=>[`${k}${isKa?' ოთ':'r'}`,g.rooms[k]]),3); }
+function _reDetail(t,isKa){
+  let h=''; const st=t.status||{}, rm=t.rooms||{}, cd=t.cond||[];
+  if(t.pt===1||t.pt===2)h+=_reKVline(isKa?'მდგომ.':'Status',[[isKa?'ახალი':'new',st.new&&st.new.med],[isKa?'მეორადი':'existing',st.existing&&st.existing.med]]);
+  h+=_reKVline(isKa?'მდგომარეობა':'Condition',cd.slice(0,4).map(c=>[c.k,c.med]));
+  if(t.pt===1){ const order=['1','2','3','4+']; h+=_reKVline(isKa?'ოთახები':'Rooms',order.filter(k=>rm[k]).map(k=>[`${k}${isKa?' ოთ':'r'}`,rm[k].med])); }
   return h;
 }
 function _reRenderPanel(){
-  if(!_reLast)return; const isKa=lang==='ka'; const {groups,total,deal}=_reLast;
-  const m2=isKa?'მ²':'m²'; const rent=deal===2; const unit=rent?(isKa?`/${m2}·თვე`:`/${m2}·mo`):`/${m2}`;
+  if(!_reLast||!_reLast.summary)return; const isKa=lang==='ka'; const s=_reLast.summary; const total=s.total||0, types=s.types||[];
+  const m2=isKa?'მ²':'m²'; const rent=_reDeal===2; const unit=rent?(isKa?`/${m2}·თვე`:`/${m2}·mo`):`/${m2}`;
   const head=`<div class="re-head"><span class="re-title">${isKa?'უძრავი ქონება':'Real estate'}</span><span class="re-sub">${isKa?'მედ. ₾/'+m2+' · 15 წთ':'median ₾/'+m2+' · 15-min'}</span></div>`;
   const toggle=`<div class="re-deal"><button class="re-dbtn${!rent?' on':''}" onclick="event.stopPropagation();_reSetDeal(1)">${isKa?'იყიდება':'For sale'}</button><button class="re-dbtn${rent?' on':''}" onclick="event.stopPropagation();_reSetDeal(2)">${isKa?'ქირავდება':'For rent'}</button></div>`;
-  if(!total){ _reShow(head+toggle+`<div class="re-empty">${rent?(isKa?'ამ ზონაში ქირავნობის განცხადება ვერ მოიძებნა':'No rental listings in this area'):(isKa?'ამ ზონაში გაყიდვის განცხადება ვერ მოიძებნა':'No sale listings in this area')}</div>`); return; }
-  const ids=Object.keys(groups).map(Number).filter(id=>_reMedian(groups[id].ppsqm)!=null).sort((a,b)=>groups[b].ppsqm.length-groups[a].ppsqm.length);
+  if(!total||!types.length){ _reShow(head+toggle+`<div class="re-empty">${rent?(isKa?'ამ ზონაში ქირავნობის განცხადება ვერ მოიძებნა':'No rental listings in this area'):(isKa?'ამ ზონაში გაყიდვის განცხადება ვერ მოიძებნა':'No sale listings in this area')}</div>`); return; }
   let rows='';
-  for(const id of ids){ const g=groups[id]; const ty=_RE_TYPES[id]||{en:'Other',ka:'სხვა',c:'rgba(255,255,255,0.4)'};
-    const med=_reMedian(g.ppsqm), n=g.ppsqm.length, detail=_reDetail(id,g,isKa);
-    rows+=`<div class="re-item${detail?'':' re-nox'}"${detail?` onclick="_reExpand(${id})"`:''}><span class="re-ty"><i style="background:${ty.c}"></i>${isKa?ty.ka:ty.en}</span><span class="re-big">${_reFmtGel(med)}<small>${unit}</small></span><span class="re-n" title="${n} ${isKa?'განცხადება':'listings'}">${n}</span><span class="re-caret"${detail?'':' style="visibility:hidden"'}>▸</span></div>`;
-    if(detail)rows+=`<div class="re-detail" id="re-detail-${id}" hidden>${detail}</div>`;
+  for(const t of types){ if(t.med==null)continue; const ty=_RE_TYPES[t.pt]||{en:'Other',ka:'სხვა',c:'rgba(255,255,255,0.4)'};
+    const detail=_reDetail(t,isKa);
+    rows+=`<div class="re-item${detail?'':' re-nox'}"${detail?` onclick="_reExpand(${t.pt})"`:''}><span class="re-ty"><i style="background:${ty.c}"></i>${isKa?ty.ka:ty.en}</span><span class="re-big">${_reFmtGel(t.med)}<small>${unit}</small></span><span class="re-n" title="${t.n} ${isKa?'განცხადება':'listings'}">${t.n}</span><span class="re-caret"${detail?'':' style="visibility:hidden"'}>▸</span></div>`;
+    if(detail)rows+=`<div class="re-detail" id="re-detail-${t.pt}" hidden>${detail}</div>`;
   }
   if(!rows)rows=`<div class="re-empty">${isKa?'ფასის მონაცემი არასაკმარისია':'Not enough price data in this area'}</div>`;
   const note=`<div class="re-src">${isKa?`წყარო: myhome.ge · ${rent?'ქირავნობა':'გაყიდვა'} · ${total} განცხ.`:`Source: myhome.ge · ${rent?'rent':'sale'} · ${total} listings`}</div>`;

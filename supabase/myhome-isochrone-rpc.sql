@@ -238,3 +238,97 @@ AS $$
 $$;
 
 GRANT EXECUTE ON FUNCTION myhome_area_listings(jsonb, smallint, smallint, integer) TO authenticated;
+
+
+-- ============================================================
+-- myhome_area_breakdowns(area_geojson, …)  — companion to myhome_area_stats.
+-- Per property type inside the isochrone: median ₾/m² split by build status
+-- (new/existing), condition, and room count. The panel fetches it once and
+-- shows each type's detail on expand. Returns { "<pt>": {status,rooms,cond}, … }.
+-- ============================================================
+CREATE OR REPLACE FUNCTION myhome_area_breakdowns(
+  area_geojson jsonb,
+  p_deal_type  smallint DEFAULT 1,
+  p_min_n      integer  DEFAULT 3
+)
+RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY INVOKER SET search_path = public, extensions AS $$
+DECLARE poly geometry; result jsonb;
+BEGIN
+  poly := ST_MakeValid(ST_SetSRID(ST_GeomFromGeoJSON(area_geojson), 4326));
+  WITH inside AS (
+    SELECT property_type_id AS pt,
+           CASE WHEN building_status_id IN (2,3) THEN 'new'
+                WHEN building_status_id = 1     THEN 'existing' END AS status,
+           nullif(btrim(condition),'') AS cond,
+           CASE WHEN rooms IS NULL OR rooms <= 0 THEN NULL
+                WHEN rooms >= 4 THEN '4+' ELSE rooms::text END AS rmb,
+           CASE WHEN area_m2 > 0 AND price_gel > 0 THEN price_gel / area_m2 END AS sqm
+      FROM myhome_listings
+     WHERE delisted_at IS NULL AND geom_best IS NOT NULL
+       AND ST_Contains(poly, geom_best)
+       AND (p_deal_type IS NULL OR deal_type_id = p_deal_type)
+       AND property_type_id IS NOT NULL
+  ),
+  priced AS (SELECT * FROM inside WHERE sqm IS NOT NULL),
+  status_b AS (
+    SELECT pt, jsonb_object_agg(status, jsonb_build_object('med',med,'n',n)) AS sb FROM (
+      SELECT pt, status, count(*) AS n, round(percentile_cont(0.5) WITHIN GROUP (ORDER BY sqm)::numeric,1) AS med
+      FROM priced WHERE status IS NOT NULL GROUP BY pt, status HAVING count(*) >= p_min_n) x GROUP BY pt
+  ),
+  rooms_b AS (
+    SELECT pt, jsonb_object_agg(rmb, jsonb_build_object('med',med,'n',n)) AS rb FROM (
+      SELECT pt, rmb, count(*) AS n, round(percentile_cont(0.5) WITHIN GROUP (ORDER BY sqm)::numeric,1) AS med
+      FROM priced WHERE rmb IS NOT NULL GROUP BY pt, rmb HAVING count(*) >= p_min_n) x GROUP BY pt
+  ),
+  cond_b AS (
+    SELECT pt, jsonb_agg(jsonb_build_object('k',cond,'med',med,'n',n) ORDER BY n DESC) AS cb FROM (
+      SELECT pt, cond, count(*) AS n, round(percentile_cont(0.5) WITHIN GROUP (ORDER BY sqm)::numeric,1) AS med
+      FROM priced WHERE cond IS NOT NULL GROUP BY pt, cond HAVING count(*) >= p_min_n) x GROUP BY pt
+  ),
+  pts AS (SELECT DISTINCT pt FROM priced)
+  SELECT COALESCE(jsonb_object_agg(p.pt::text, jsonb_build_object(
+           'status', COALESCE(s.sb,'{}'::jsonb),
+           'rooms',  COALESCE(r.rb,'{}'::jsonb),
+           'cond',   COALESCE(c.cb,'[]'::jsonb))), '{}'::jsonb)
+    INTO result
+  FROM pts p
+  LEFT JOIN status_b s USING (pt)
+  LEFT JOIN rooms_b  r USING (pt)
+  LEFT JOIN cond_b   c USING (pt);
+  RETURN result;
+END;
+$$;
+GRANT EXECUTE ON FUNCTION myhome_area_breakdowns(jsonb, smallint, integer) TO authenticated;
+
+-- ============================================================
+-- myhome_area_parcels(area_geojson, …) — land-plot listings inside the isochrone
+-- that carry a cadastral code, as a SMALL array of {cadastral, price, pin}. myhome
+-- has no geometry, so the app fetches each parcel POLYGON live from maps.gov.ge by
+-- cadastral code and draws it, labelled with the listing price.
+-- ============================================================
+CREATE OR REPLACE FUNCTION myhome_area_parcels(
+  area_geojson jsonb,
+  p_deal_type  smallint DEFAULT 1,
+  p_limit      integer  DEFAULT 80
+)
+RETURNS jsonb LANGUAGE sql STABLE SECURITY INVOKER SET search_path = public, extensions AS $$
+  WITH poly AS (SELECT ST_MakeValid(ST_SetSRID(ST_GeomFromGeoJSON(area_geojson),4326)) AS g),
+  hits AS (
+    SELECT l.rs_code_primary AS cadastral, l.price_gel, l.price_usd, l.area_m2, l.url,
+           CASE WHEN l.area_m2 > 0 AND l.price_gel > 0 THEN round(l.price_gel/l.area_m2,1) END AS sqm_gel,
+           ST_Y(l.geom_best) AS lat, ST_X(l.geom_best) AS lng
+      FROM myhome_listings l, poly p
+     WHERE l.delisted_at IS NULL
+       AND l.property_type_id = 4
+       AND l.rs_code_primary IS NOT NULL
+       AND l.geom_best IS NOT NULL AND ST_Contains(p.g, l.geom_best)
+       AND (p_deal_type IS NULL OR l.deal_type_id = p_deal_type)
+     ORDER BY l.updated_at DESC
+     LIMIT LEAST(GREATEST(p_limit,1),150)
+  )
+  SELECT COALESCE(jsonb_agg(jsonb_build_object(
+           'cadastral',cadastral,'price_gel',price_gel,'price_usd',price_usd,
+           'sqm_gel',sqm_gel,'area_m2',area_m2,'lat',lat,'lng',lng,'url',url)), '[]'::jsonb)
+  FROM hits;
+$$;
+GRANT EXECUTE ON FUNCTION myhome_area_parcels(jsonb, smallint, integer) TO authenticated;
