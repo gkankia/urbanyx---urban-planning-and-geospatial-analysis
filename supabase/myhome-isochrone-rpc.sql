@@ -241,15 +241,20 @@ GRANT EXECUTE ON FUNCTION myhome_area_listings(jsonb, smallint, smallint, intege
 
 
 -- ============================================================
--- myhome_area_breakdowns(area_geojson, …)  — companion to myhome_area_stats.
--- Per property type inside the isochrone: median ₾/m² split by build status
--- (new/existing), condition, and room count. The panel fetches it once and
--- shows each type's detail on expand. Returns { "<pt>": {status,rooms,cond}, … }.
+-- myhome_area_breakdowns(area_geojson, p_deal_type, p_property_type, …)
+-- Median ₾/m² inside the isochrone, split by each myhome subcategory that applies
+-- to the property type — Status (building_status), Condition, Project type, Rooms —
+-- grouped by the source label so it adapts to any values (e.g. land plots' status =
+-- Agricultural / Non-agricultural / Investment). Pass p_property_type to scope to
+-- one type. Returns { "<pt>": { status:[…], condition:[…], project:[…], rooms:[…] } }
+-- where each dimension is [{k,med,n}] sorted by n.
 -- ============================================================
+DROP FUNCTION IF EXISTS myhome_area_breakdowns(jsonb, smallint, integer);
 CREATE OR REPLACE FUNCTION myhome_area_breakdowns(
-  area_geojson jsonb,
-  p_deal_type  smallint DEFAULT 1,
-  p_min_n      integer  DEFAULT 3
+  area_geojson    jsonb,
+  p_deal_type     smallint DEFAULT 1,
+  p_property_type smallint DEFAULT NULL,
+  p_min_n         integer  DEFAULT 3
 )
 RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY INVOKER SET search_path = public, extensions AS $$
 DECLARE poly geometry; result jsonb;
@@ -257,48 +262,41 @@ BEGIN
   poly := ST_MakeValid(ST_SetSRID(ST_GeomFromGeoJSON(area_geojson), 4326));
   WITH inside AS (
     SELECT property_type_id AS pt,
-           CASE WHEN building_status_id IN (2,3) THEN 'new'
-                WHEN building_status_id = 1     THEN 'existing' END AS status,
-           nullif(btrim(condition),'') AS cond,
+           nullif(btrim(building_status),'') AS status,
+           nullif(btrim(condition),'')       AS cond,
+           nullif(btrim(project_type),'')     AS proj,
            CASE WHEN rooms IS NULL OR rooms <= 0 THEN NULL
-                WHEN rooms >= 4 THEN '4+' ELSE rooms::text END AS rmb,
+                WHEN rooms >= 6 THEN '6+' ELSE rooms::text END AS rmb,
            CASE WHEN area_m2 > 0 AND price_gel > 0 THEN price_gel / area_m2 END AS sqm
       FROM myhome_listings
      WHERE delisted_at IS NULL AND geom_best IS NOT NULL
        AND ST_Contains(poly, geom_best)
-       AND (p_deal_type IS NULL OR deal_type_id = p_deal_type)
+       AND (p_deal_type     IS NULL OR deal_type_id     = p_deal_type)
+       AND (p_property_type IS NULL OR property_type_id = p_property_type)
        AND property_type_id IS NOT NULL
   ),
   priced AS (SELECT * FROM inside WHERE sqm IS NOT NULL),
-  status_b AS (
-    SELECT pt, jsonb_object_agg(status, jsonb_build_object('med',med,'n',n)) AS sb FROM (
-      SELECT pt, status, count(*) AS n, round(percentile_cont(0.5) WITHIN GROUP (ORDER BY sqm)::numeric,1) AS med
-      FROM priced WHERE status IS NOT NULL GROUP BY pt, status HAVING count(*) >= p_min_n) x GROUP BY pt
+  dim AS (                                        -- long form: (pt, dimension, bucket, sqm)
+    SELECT pt, 'status'    AS d, status AS k, sqm FROM priced WHERE status IS NOT NULL
+    UNION ALL SELECT pt, 'condition', cond, sqm FROM priced WHERE cond IS NOT NULL
+    UNION ALL SELECT pt, 'project',   proj, sqm FROM priced WHERE proj IS NOT NULL
+    UNION ALL SELECT pt, 'rooms',     rmb,  sqm FROM priced WHERE rmb  IS NOT NULL
   ),
-  rooms_b AS (
-    SELECT pt, jsonb_object_agg(rmb, jsonb_build_object('med',med,'n',n)) AS rb FROM (
-      SELECT pt, rmb, count(*) AS n, round(percentile_cont(0.5) WITHIN GROUP (ORDER BY sqm)::numeric,1) AS med
-      FROM priced WHERE rmb IS NOT NULL GROUP BY pt, rmb HAVING count(*) >= p_min_n) x GROUP BY pt
+  agg AS (
+    SELECT pt, d, k, count(*) AS n,
+           round(percentile_cont(0.5) WITHIN GROUP (ORDER BY sqm)::numeric, 1) AS med
+    FROM dim GROUP BY pt, d, k HAVING count(*) >= p_min_n
   ),
-  cond_b AS (
-    SELECT pt, jsonb_agg(jsonb_build_object('k',cond,'med',med,'n',n) ORDER BY n DESC) AS cb FROM (
-      SELECT pt, cond, count(*) AS n, round(percentile_cont(0.5) WITHIN GROUP (ORDER BY sqm)::numeric,1) AS med
-      FROM priced WHERE cond IS NOT NULL GROUP BY pt, cond HAVING count(*) >= p_min_n) x GROUP BY pt
+  per_dim AS (
+    SELECT pt, d, jsonb_agg(jsonb_build_object('k',k,'med',med,'n',n) ORDER BY n DESC) AS arr
+    FROM agg GROUP BY pt, d
   ),
-  pts AS (SELECT DISTINCT pt FROM priced)
-  SELECT COALESCE(jsonb_object_agg(p.pt::text, jsonb_build_object(
-           'status', COALESCE(s.sb,'{}'::jsonb),
-           'rooms',  COALESCE(r.rb,'{}'::jsonb),
-           'cond',   COALESCE(c.cb,'[]'::jsonb))), '{}'::jsonb)
-    INTO result
-  FROM pts p
-  LEFT JOIN status_b s USING (pt)
-  LEFT JOIN rooms_b  r USING (pt)
-  LEFT JOIN cond_b   c USING (pt);
+  per_pt AS (SELECT pt, jsonb_object_agg(d, arr) AS obj FROM per_dim GROUP BY pt)
+  SELECT COALESCE(jsonb_object_agg(pt::text, obj), '{}'::jsonb) INTO result FROM per_pt;
   RETURN result;
 END;
 $$;
-GRANT EXECUTE ON FUNCTION myhome_area_breakdowns(jsonb, smallint, integer) TO authenticated;
+GRANT EXECUTE ON FUNCTION myhome_area_breakdowns(jsonb, smallint, smallint, integer) TO authenticated;
 
 -- ============================================================
 -- myhome_area_parcels(area_geojson, …) — land-plot listings inside the isochrone
