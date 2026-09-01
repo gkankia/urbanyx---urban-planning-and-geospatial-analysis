@@ -7059,7 +7059,8 @@ const _reEsc=s=>String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;
 // One breakdown line from an array of {k,med,n}; shown only if ≥2 buckets have a median.
 function _reKVarr(title,arr,isKa,room){
   if(!Array.isArray(arr))return '';
-  const parts=arr.filter(x=>x&&x.med!=null).slice(0,6).map(x=>`${_reEsc(_reL(x.k,isKa))}${room?(isKa?' ოთ':'r'):''}&nbsp;${_reFmtGel(x.med)}`);
+  const rent=_reDeal===2, val=x=>rent?x.medp:x.med; // rent = full ₾/month, sale = ₾/m²
+  const parts=arr.filter(x=>x&&val(x)!=null).slice(0,6).map(x=>`${_reEsc(_reL(x.k,isKa))}${room?(isKa?' ოთ':'r'):''}&nbsp;${_reFmtGel(val(x))}`);
   if(parts.length<2)return '';
   return `<div class="re-cut"><span class="re-cut-l">${_reEsc(title)}</span><span class="re-cut-v">${parts.join('&nbsp;·&nbsp;')}</span></div>`;
 }
@@ -7073,20 +7074,23 @@ function _reBreakdowns(pt,isKa){
 }
 function _reRenderPanel(){
   if(!_reLast||!_reLast.res)return; const isKa=lang==='ka'; const r=_reLast.res, pt=_reLast.pt;
-  const m2=isKa?'მ²':'m²'; const rent=_reDeal===2; const unit=rent?(isKa?`/${m2}·თვე`:`/${m2}·mo`):`/${m2}`;
+  const m2=isKa?'მ²':'m²'; const rent=_reDeal===2;
   const ty=_RE_TYPES[pt]||{en:'Real estate',ka:'უძრავი ქონება',c:'#a78bfa'};
   const s=(r.stats||[]).find(x=>x.property_type_id===pt)||(r.stats||[])[0]||null;
+  // Rent = full price per month; sale = price per m².
+  const heroVal=s?(rent?s.median_price_gel:s.median_sqm_gel):null;
+  const heroUnit=rent?(isKa?'/თვე':'/mo'):`/${m2}`;
   const head=`<div class="re-head"><span class="re-title"><i class="re-dot" style="background:${ty.c}"></i>${isKa?ty.ka:ty.en}</span><span class="re-sub">${isKa?'15 წთ ფეხით':'15-min walk'}</span></div>`;
   const toggle=`<div class="re-deal"><button class="re-dbtn${!rent?' on':''}" onclick="event.stopPropagation();_reSetDeal(1)">${isKa?'იყიდება':'For sale'}</button><button class="re-dbtn${rent?' on':''}" onclick="event.stopPropagation();_reSetDeal(2)">${isKa?'ქირავდება':'For rent'}</button></div>`;
-  if(!s||s.median_sqm_gel==null){ _reShow(head+toggle+`<div class="re-empty">${rent?(isKa?'ამ ზონაში ამ ტიპის ქირავნობა ვერ მოიძებნა':'No rentals of this type in this area'):(isKa?'ამ ზონაში ამ ტიპის გაყიდვა ვერ მოიძებნა':'No sale listings of this type in this area')}</div>`); return; }
+  if(!s||heroVal==null){ _reShow(head+toggle+`<div class="re-empty">${rent?(isKa?'ამ ზონაში ამ ტიპის ქირავნობა ვერ მოიძებნა':'No rentals of this type in this area'):(isKa?'ამ ზონაში ამ ტიპის გაყიდვა ვერ მოიძებნა':'No sale listings of this type in this area')}</div>`); return; }
   const n=s.n_priced||s.n||0;
-  const hero=`<div class="re-hero"><span class="re-hero-v">${_reFmtGel(s.median_sqm_gel)}<small>${unit}</small></span><span class="re-hero-n">${isKa?'მედიანა':'median'} · ${n} ${isKa?'განცხადება':'listings'}</span></div>`;
+  const hero=`<div class="re-hero"><span class="re-hero-v">${_reFmtGel(heroVal)}<small>${heroUnit}</small></span><span class="re-hero-n">${isKa?'მედიანა':'median'} · ${n} ${isKa?'განცხადება':'listings'}</span></div>`;
   const bd=_reBreakdowns(pt,isKa);
   const bdHtml=bd?`<div class="re-bd">${bd}</div>`:'';
   const plotBtn=pt===4?`<button class="re-plotbtn${_reParcelsOn?' on':''}" onclick="event.stopPropagation();_reToggleParcels()">${_reParcelsOn?(isKa?'ნაკვეთების დამალვა':'Hide plots on map'):(isKa?'ნაკვეთების ჩვენება რუკაზე':'Show plots on map')}</button>`:'';
   const cov=r.coverage||{}; const notMapped=+cov.not_geocoded_yet||0;
   const covNote=notMapped>0?`<div class="re-cov">${isKa?`+${notMapped} განცხადება ჯერ არ არის რუკაზე`:`+${notMapped} listings not mapped yet`}</div>`:'';
-  const note=`<div class="re-src">${isKa?`წყარო: myhome.ge · ${rent?'ქირავნობა':'გაყიდვა'} · ₾/${m2}`:`Source: myhome.ge · ${rent?'rent':'sale'} · ₾/${m2}`}</div>`;
+  const note=`<div class="re-src">${isKa?`წყარო: myhome.ge · ${rent?'ქირავნობა · სრული ფასი/თვე':'გაყიდვა · ₾/'+m2}`:`Source: myhome.ge · ${rent?'rent · full ₾/mo':'sale · ₾/'+m2}`}</div>`;
   _reShow(head+toggle+hero+bdHtml+plotBtn+covNote+note);
 }
 function _reSetDeal(deal){ if(deal===_reDeal)return; _reDeal=deal; _reParcelsOn=false; _reClearParcels(); if(_reLast&&_reLast.center)_reRun(_reLast.center,_reLast.pt); }

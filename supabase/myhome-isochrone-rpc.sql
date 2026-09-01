@@ -267,28 +267,29 @@ BEGIN
            nullif(btrim(project_type),'')     AS proj,
            CASE WHEN rooms IS NULL OR rooms <= 0 THEN NULL
                 WHEN rooms >= 6 THEN '6+' ELSE rooms::text END AS rmb,
+           price_gel AS price,                                          -- full price (for rent)
            CASE WHEN area_m2 > 0 AND price_gel > 0 THEN price_gel / area_m2 END AS sqm
       FROM myhome_listings
      WHERE delisted_at IS NULL AND geom_best IS NOT NULL
        AND ST_Contains(poly, geom_best)
        AND (p_deal_type     IS NULL OR deal_type_id     = p_deal_type)
        AND (p_property_type IS NULL OR property_type_id = p_property_type)
-       AND property_type_id IS NOT NULL
+       AND property_type_id IS NOT NULL AND price_gel > 0
   ),
-  priced AS (SELECT * FROM inside WHERE sqm IS NOT NULL),
-  dim AS (                                        -- long form: (pt, dimension, bucket, sqm)
-    SELECT pt, 'status'    AS d, status AS k, sqm FROM priced WHERE status IS NOT NULL
-    UNION ALL SELECT pt, 'condition', cond, sqm FROM priced WHERE cond IS NOT NULL
-    UNION ALL SELECT pt, 'project',   proj, sqm FROM priced WHERE proj IS NOT NULL
-    UNION ALL SELECT pt, 'rooms',     rmb,  sqm FROM priced WHERE rmb  IS NOT NULL
+  dim AS (                                        -- long form: (pt, dimension, bucket, sqm, price)
+    SELECT pt, 'status'    AS d, status AS k, sqm, price FROM inside WHERE status IS NOT NULL
+    UNION ALL SELECT pt, 'condition', cond, sqm, price FROM inside WHERE cond IS NOT NULL
+    UNION ALL SELECT pt, 'project',   proj, sqm, price FROM inside WHERE proj IS NOT NULL
+    UNION ALL SELECT pt, 'rooms',     rmb,  sqm, price FROM inside WHERE rmb  IS NOT NULL
   ),
   agg AS (
     SELECT pt, d, k, count(*) AS n,
-           round(percentile_cont(0.5) WITHIN GROUP (ORDER BY sqm)::numeric, 1) AS med
+           round(percentile_cont(0.5) WITHIN GROUP (ORDER BY sqm)::numeric, 1) AS med,   -- ₾/m² (sale)
+           round(percentile_cont(0.5) WITHIN GROUP (ORDER BY price)::numeric)  AS medp   -- full ₾ (rent)
     FROM dim GROUP BY pt, d, k HAVING count(*) >= p_min_n
   ),
   per_dim AS (
-    SELECT pt, d, jsonb_agg(jsonb_build_object('k',k,'med',med,'n',n) ORDER BY n DESC) AS arr
+    SELECT pt, d, jsonb_agg(jsonb_build_object('k',k,'med',med,'medp',medp,'n',n) ORDER BY n DESC) AS arr
     FROM agg GROUP BY pt, d
   ),
   per_pt AS (SELECT pt, jsonb_object_agg(d, arr) AS obj FROM per_dim GROUP BY pt)
