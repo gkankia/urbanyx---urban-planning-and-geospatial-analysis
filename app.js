@@ -7213,6 +7213,7 @@ function _rePlotPoints(fc, p25, med, p75){
         'circle-stroke-width':2,'circle-stroke-color':color,'circle-stroke-opacity':0.9}});
       map.on('mousemove','re-points',_rePtHover);
       map.on('mouseleave','re-points',_rePtLeave);
+      map.on('click','re-points',_rePtClick);
     }
   }catch(e){ console.warn('re plot points:',e); }
 }
@@ -7237,31 +7238,73 @@ function _rePtHover(e){
   _reStartPtPulse();
   _reEnsurePtPopup().setLngLat(f.geometry.coordinates.slice()).setHTML(_rePtHtml(f.properties||{})).addTo(map);
 }
+// Expected ₾/m² for a listing given ALL of its characteristics (type, renovation,
+// project, room count): the mean of the area medians for each characteristic it has.
+// Falls back to the whole type's area median when none of the buckets are available.
+function _rePeerExpected(p){
+  const bk=(_reLast&&_reLast.breaks&&_reLast.breaks[_rePt])||{};
+  const rk=(+p.rooms>0)?(+p.rooms>=6?'6+':String(+p.rooms)):null;
+  const look=(arr,key)=>{ if(!arr||key==null)return null; const b=arr.find(x=>x.k===key); return (b&&+b.med>0)?+b.med:null; };
+  const terms=[look(bk.status,p.status),look(bk.condition,p.cond),look(bk.project,p.proj),look(bk.rooms,rk)].filter(x=>x!=null);
+  if(!terms.length){ const s=((_reLast&&_reLast.res&&_reLast.res.stats)||[]).find(x=>x.property_type_id===_rePt); return {exp:(s&&+s.median_sqm_gel)||null,dims:0}; }
+  return {exp:terms.reduce((a,b)=>a+b,0)/terms.length, dims:terms.length};
+}
+function _showRePeerInfo(e){
+  const tt=_getRateTooltip();
+  tt.textContent=(lang==='ka'
+    ?'შედარება ეყრდნობა მსგავს განცხადებებს: ვიანგარიშებთ მოსალოდნელ ფასს კვ.მ-ზე ამ განცხადების ტიპის, რემონტის, პროექტისა და ოთახების მიხედვით (თითოეული მახასიათებლის უბნის მედიანების საშუალო), და მას ვადარებთ ფაქტობრივ ფასს კვ.მ-ზე.'
+    :"The comparison is to similar listings: we estimate an expected ₾/m² from this listing’s type, renovation, project and room count — the average of the area medians for each of those factors — then compare it with the listing’s actual ₾/m².");
+  tt.style.left=(e.clientX+12)+"px";tt.style.top=(e.clientY+12)+"px";tt.style.display="block";
+}
+// Cheaper/pricier line vs. the similar-listings baseline. withInfo adds the ⓘ button.
+function _reCmpHtml(p,withInfo){
+  const isKa=lang==='ka', v=+p.v, pe=_rePeerExpected(p), cmpMed=pe.exp;
+  if(!(v>0&&cmpMed>0))return '';
+  const d=Math.round((v-cmpMed)/cmpMed*100);
+  const cheaper=d<0, col=cheaper?'#22c55e':(d>0?'#f87171':'rgba(255,255,255,0.6)'), arr=cheaper?'▼':(d>0?'▲':'•');
+  const lbl=pe.dims>0?(isKa?'მსგავს განცხადებებთან':'vs similar listings'):(isKa?'უბნის მედიანასთან':'vs area median');
+  const info=withInfo?` <button type="button" class="pw-rate-info-btn rpp-info" onmouseenter="_showRePeerInfo(event)" onmousemove="_moveRateInfo(event)" onmouseleave="_hideRateInfo()">ⓘ</button>`:'';
+  return `<div class="rpp-cmp" style="color:${col}">${arr} ${Math.abs(d)}% ${cheaper?(isKa?'იაფი':'cheaper'):(d>0?(isKa?'ძვირი':'pricier'):'—')} · <span style="opacity:.75">${lbl}</span>${info}</div>`;
+}
+// Quick hover tooltip: price, key facts, comparison, and a "click for details" hint.
 function _rePtHtml(p){
   const isKa=lang==='ka', rent=_reDeal===2;
   const v=+p.v, rooms=+p.rooms, area=+p.area_m2, priceGel=+p.price_gel, priceUsd=+p.price_usd;
-  // Comparison baseline = median for listings with the SAME room count if we have one
-  // (similar characteristics), otherwise the whole type's area median.
-  const stats=((_reLast&&_reLast.res&&_reLast.res.stats)||[]).find(x=>x.property_type_id===_rePt);
-  let cmpMed=stats&&+stats.median_sqm_gel, cmpLabel=isKa?'უბნის მედიანასთან':'vs area median';
-  if(rooms>0){ const rk=rooms>=6?'6+':String(rooms);
-    const rb=((_reLast&&_reLast.breaks&&_reLast.breaks[_rePt]&&_reLast.breaks[_rePt].rooms)||[]).find(x=>x.k===rk);
-    if(rb&&rb.med){ cmpMed=+rb.med; cmpLabel=isKa?`${rk}-ოთახიანის მედიანასთან`:`vs ${rk}-room median`; }
-  }
-  let cmp='';
-  if(v>0&&cmpMed>0){ const d=Math.round((v-cmpMed)/cmpMed*100);
-    const cheaper=d<0, col=cheaper?'#22c55e':(d>0?'#f87171':'rgba(255,255,255,0.6)'), arr=cheaper?'▼':(d>0?'▲':'•');
-    cmp=`<div class="rpp-cmp" style="color:${col}">${arr} ${Math.abs(d)}% ${cheaper?(isKa?'იაფი':'cheaper'):(d>0?(isKa?'ძვირი':'pricier'):'—')} · ${cmpLabel}</div>`;
-  }
   const price = priceGel>0?('₾'+Math.round(priceGel).toLocaleString('en-US')):(priceUsd>0?('$'+Math.round(priceUsd).toLocaleString('en-US')):'—');
   const usd = (priceGel>0&&priceUsd>0)?` · $${Math.round(priceUsd).toLocaleString('en-US')}`:'';
   const sub=[area>0?Math.round(area)+' '+(isKa?'მ²':'m²'):'', rooms>0?rooms+(isKa?' ოთახი':' rooms'):'', v>0?('₾'+Math.round(v)+'/'+(isKa?'მ²':'m²')):''].filter(Boolean).join(' · ');
-  return `<div class="rpp"><div class="rpp-price">${price}${rent?(isKa?'/თვე':'/mo'):''}${usd}</div>${sub?`<div class="rpp-sub">${sub}</div>`:''}${cmp}</div>`;
+  const hint=`<div class="rpp-hint">${isKa?'დააწკაპუნე დეტალებისთვის':'Click for details'}</div>`;
+  return `<div class="rpp"><div class="rpp-price">${price}${rent?(isKa?'/თვე':'/mo'):''}${usd}</div>${sub?`<div class="rpp-sub">${sub}</div>`:''}${_reCmpHtml(p,false)}${hint}</div>`;
+}
+// Persistent detail popup (opened on click) — full listing facts incl. who listed it.
+let _reDetailPopup=null;
+function _reEnsureDetailPopup(){ if(!_reDetailPopup)_reDetailPopup=new mapboxgl.Popup({closeButton:true,closeOnClick:true,offset:12,className:'re-pt-popup re-pt-detail',maxWidth:'280px'}); return _reDetailPopup; }
+function _rePtDetailHtml(p){
+  const isKa=lang==='ka', rent=_reDeal===2;
+  const v=+p.v, rooms=+p.rooms, area=+p.area_m2, priceGel=+p.price_gel, priceUsd=+p.price_usd;
+  const price = priceGel>0?('₾'+Math.round(priceGel).toLocaleString('en-US')):(priceUsd>0?('$'+Math.round(priceUsd).toLocaleString('en-US')):'—');
+  const usd = (priceGel>0&&priceUsd>0)?`<span class="rpp-usd">$${Math.round(priceUsd).toLocaleString('en-US')}</span>`:'';
+  const rows=[]; const add=(lbl,val)=>{ if(val)rows.push(`<div class="rpp-row"><span>${lbl}</span><b>${val}</b></div>`); };
+  add(isKa?'ფასი კვ.მ-ზე':'Price / m²', v>0?('₾'+Math.round(v)):'');
+  add(isKa?'ფართი':'Area', area>0?(Math.round(area)+' '+(isKa?'მ²':'m²')):'');
+  add(isKa?'ოთახები':'Rooms', rooms>0?String(rooms):'');
+  add(_rePt===4?(isKa?'დანიშნულება':'Land use'):(isKa?'ტიპი':'Type'), p.status?_reL(p.status,isKa):'');
+  add(isKa?'რემონტი':'Renovation', p.cond?_reL(p.cond,isKa):'');
+  add(isKa?'პროექტი':'Project', p.proj?_reL(p.proj,isKa):'');
+  add(rent?(isKa?'აქირავებს':'Listed by'):(isKa?'ყიდის':'Listed by'), p.seller?_reL(p.seller,isKa):'');
+  const link = p.url?`<a class="rpp-link" href="${p.url}" target="_blank" rel="noopener">${isKa?'myhome-ზე ნახვა':'View on myhome'} ↗</a>`:'';
+  return `<div class="rpp rpp-dtl"><div class="rpp-price">${price}${rent?(isKa?'/თვე':'/mo'):''} ${usd}</div><div class="rpp-rows">${rows.join('')}</div>${_reCmpHtml(p,true)}${link}</div>`;
+}
+function _rePtClick(e){
+  const f=e.features&&e.features[0]; if(!f)return;
+  if(_rePtPopup){ try{_rePtPopup.remove();}catch(_){} }
+  _reEnsureDetailPopup().setLngLat(f.geometry.coordinates.slice()).setHTML(_rePtDetailHtml(f.properties||{})).addTo(map);
 }
 function _reClearPoints(){
-  try{ map.off('mousemove','re-points',_rePtHover); map.off('mouseleave','re-points',_rePtLeave); }catch(_){}
+  try{ map.off('mousemove','re-points',_rePtHover); map.off('mouseleave','re-points',_rePtLeave); map.off('click','re-points',_rePtClick); }catch(_){}
   _reStopPtPulse();
   if(_rePtPopup){ try{_rePtPopup.remove();}catch(_){} }
+  if(_reDetailPopup){ try{_reDetailPopup.remove();}catch(_){} }
   try{ ['re-points-hover-ring','re-points'].forEach(id=>{if(map.getLayer(id))map.removeLayer(id);}); }catch(_){}
   try{ ['re-points-hover','re-points'].forEach(id=>{if(map.getSource(id))map.removeSource(id);}); }catch(_){}
 }

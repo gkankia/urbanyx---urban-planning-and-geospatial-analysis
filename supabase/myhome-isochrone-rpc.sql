@@ -265,7 +265,8 @@ BEGIN
            nullif(btrim(building_status),'') AS status,
            nullif(btrim(condition),'')       AS cond,
            nullif(btrim(project_type),'')     AS proj,
-           nullif(btrim(seller_type),'')      AS seller,
+           CASE WHEN lower(btrim(seller_type)) IN ('agent','broker') THEN 'agent'
+                ELSE nullif(btrim(seller_type),'') END AS seller,   -- agent + broker merged
            CASE WHEN rooms IS NULL OR rooms <= 0 THEN NULL
                 WHEN rooms >= 6 THEN '6+' ELSE rooms::text END AS rmb,
            price_gel AS price,                                          -- full price (for rent)
@@ -343,14 +344,20 @@ CREATE OR REPLACE FUNCTION myhome_area_points(
   area_geojson    jsonb,
   p_deal_type     smallint DEFAULT 1,
   p_property_type smallint DEFAULT NULL,
-  p_limit         integer  DEFAULT 1500
+  p_limit         integer  DEFAULT 6000
 )
 RETURNS jsonb LANGUAGE sql STABLE SECURITY INVOKER SET search_path = public, extensions AS $$
   WITH poly AS (SELECT ST_MakeValid(ST_SetSRID(ST_GeomFromGeoJSON(area_geojson),4326)) AS g),
   hits AS (
     SELECT l.id, l.geom_best,
            CASE WHEN l.area_m2 > 0 AND l.price_gel > 0 THEN round(l.price_gel/l.area_m2, 1) END AS v,
-           l.price_gel, l.price_usd, l.area_m2, l.rooms, l.url
+           l.price_gel, l.price_usd, l.area_m2, l.rooms, l.url,
+           -- agent + broker are one category across the app
+           CASE WHEN lower(btrim(l.seller_type)) IN ('agent','broker') THEN 'agent'
+                ELSE nullif(btrim(l.seller_type),'') END              AS seller,
+           nullif(btrim(l.building_status),'') AS status,
+           nullif(btrim(l.condition),'')       AS cond,
+           nullif(btrim(l.project_type),'')    AS proj
       FROM myhome_listings l, poly p
      WHERE l.delisted_at IS NULL AND l.geom_best IS NOT NULL
        AND ST_Contains(p.g, l.geom_best)
@@ -358,12 +365,14 @@ RETURNS jsonb LANGUAGE sql STABLE SECURITY INVOKER SET search_path = public, ext
        AND (p_property_type IS NULL OR l.property_type_id = p_property_type)
        AND l.price_gel > 0
      ORDER BY l.updated_at DESC
-     LIMIT LEAST(GREATEST(p_limit,1), 3000)
+     LIMIT LEAST(GREATEST(p_limit,1), 8000)
   )
   SELECT jsonb_build_object('type','FeatureCollection','features', COALESCE(jsonb_agg(
     jsonb_build_object('type','Feature','id',id,
       'geometry', ST_AsGeoJSON(geom_best)::jsonb,
-      'properties', jsonb_build_object('v',v,'price_gel',price_gel,'price_usd',price_usd,'area_m2',area_m2,'rooms',rooms,'url',url))
+      'properties', jsonb_build_object('v',v,'price_gel',price_gel,'price_usd',price_usd,
+        'area_m2',area_m2,'rooms',rooms,'url',url,
+        'seller',seller,'status',status,'cond',cond,'proj',proj))
   ),'[]'::jsonb)) FROM hits;
 $$;
 GRANT EXECUTE ON FUNCTION myhome_area_points(jsonb, smallint, smallint, integer) TO authenticated;
