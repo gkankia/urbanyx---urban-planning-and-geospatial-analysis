@@ -541,6 +541,7 @@
   #pfc-realestate-body .re-leg { display:flex; align-items:center; gap:7px; margin-top:6px; font-size:0.54rem; color:rgba(255,255,255,0.42); }
   #pfc-realestate-body .re-leg-bar { flex:1; height:5px; border-radius:3px; background:linear-gradient(90deg,#22c55e,#fbbf24,#ef4444); }
   #pfc-realestate-body .re-cov { margin-top:6px; font-size:0.55rem; color:rgba(251,191,36,0.7); }
+  #pfc-realestate-body .re-cov-info { margin-left:5px; vertical-align:1px; }
   #pfc-realestate-body .re-dot { width:9px; height:9px; border-radius:2px; display:inline-block; margin-right:6px; vertical-align:-1px; }
   #pfc-realestate-body .re-hero { display:flex; align-items:baseline; gap:8px; padding:7px 0 9px; }
   #pfc-realestate-body .re-hero-v { font-size:1.4rem; font-weight:800; color:#fff; font-variant-numeric:tabular-nums; white-space:nowrap; letter-spacing:-0.01em; }

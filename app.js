@@ -1094,6 +1094,14 @@ function _showNearbyInfo(e){
   tt.textContent=(lang==='ka'?'ახლომდებარე ანალიზი აფასებს ნაკვეთის გარშემო არსებულ ინფრასტრუქტურას (მაღაზიები, სკოლები, ტრანსპორტი, ჯანდაცვა, პარკები…) ფეხით სავალ მანძილზე და აჩვენებს მისაწვდომობასა და მრავალფეროვნებას.':"Nearby analysis scans the surrounding area for amenities (shops, schools, transit, healthcare, parks…) within walking distance and scores the parcel's access and land-use diversity.");
   tt.style.left=(e.clientX+12)+"px";tt.style.top=(e.clientY+12)+"px";tt.style.display="block";
 }
+// Real-estate coverage note: explains why some listings aren't in the median yet.
+function _showReCoverageInfo(e){
+  const tt=_getRateTooltip();
+  tt.textContent=(lang==='ka'
+    ?'მედიანა დათვლილია მხოლოდ იმ განცხადებებზე, რომელთა ზუსტი მდებარეობა ცნობილია. ამ უბნებში კიდევაა განცხადებები, რომელთა კოორდინატები ჯერ დამუშავების პროცესშია — ისინი ამ გამოთვლაში ჯერ არ შედის და მონაცემების დამუშავებასთან ერთად თანდათან დაემატება.'
+    :"The median is computed only from listings whose exact location is known. A few more in these neighbourhoods are still being geocoded, so they aren't counted yet — this number drops as more get processed.");
+  tt.style.left=(e.clientX+12)+"px";tt.style.top=(e.clientY+12)+"px";tt.style.display="block";
+}
 function setPwBilling(mode){
   const pw=t().pw;
   const ta=document.getElementById("pw-btog-annual"),tm=document.getElementById("pw-btog-monthly");
@@ -6998,12 +7006,12 @@ const _RE_BTN={1:'cat-btn-re-apart',2:'cat-btn-re-house',4:'cat-btn-re-land'};
 const _reLbl={'New building':'ახალაშენებული','Old building':'ძველი','Under construction':'მშენებარე','Finished':'დასრულებული',
   'Agricultural':'სასოფლო-სამეურნეო','Non-agricultural':'არასასოფლო','Investment / for construction':'საინვესტიციო',
   'Universal':'უნივერსალური','Special':'სპეციალური','Warehousing':'სასაწყობე','Trade':'სავაჭრო','Office':'საოფისე','Garage':'ავტოფარეხი',
-  'Newly Renovated':'ახალი გარემონტ.','Old renovated':'ძველი გარემონტ.','Current renovation':'მიმდ. რემონტი','Repairing':'რემონტში',
+  'Newly Renovated':'ახალი','Old renovated':'ძველი','Current renovation':'მიმდინარე','Repairing':'რემონტში',
   'Green frame':'მწვანე კარკასი','Black frame':'შავი კარკასი','White frame':'თეთრი კარკასი','White Plus':'თეთრი პლიუსი',
   'City':'ქალაქური','Czech':'ჩეხური','Nonstandard':'არასტანდ.','Duplex':'დუპლექსი','Khrushov':'ხრუშოვი','Moscow':'მოსკოვის','Leningrad':'ლენინგრადის','Lvov':'ლვოვის','Villa':'ვილა','Town house':'თაუნჰაუსი',
   'physical':'მესაკუთრე','agent':'აგენტი','broker':'ბროკერი','developer':'დეველოპერი'};
 // seller_type has no natural English label ('physical' → 'Owner'), so translate both ways.
-const _reLblEn={'physical':'Owner','agent':'Agent','broker':'Broker','developer':'Developer'};
+const _reLblEn={'physical':'Owner','agent':'Agent','broker':'Broker','developer':'Developer','Newly Renovated':'New','Old renovated':'Old','Current renovation':'In progress'};
 const _reL=(s,isKa)=> isKa ? (_reLbl[s]||s) : (_reLblEn[s]||s);
 async function _fetchWalk15(lng,lat){
   const url=`https://api.mapbox.com/isochrone/v1/mapbox/walking/${lng},${lat}?contours_minutes=15&polygons=true&denoise=1&access_token=${MAPBOX_TOKEN}`;
@@ -7064,16 +7072,21 @@ const _reEsc=s=>String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;
 function _reKVarr(title,arr,isKa,room){
   if(!Array.isArray(arr))return '';
   const rent=_reDeal===2, val=x=>rent?x.medp:x.med; // rent = full ₾/month, sale = ₾/m²
-  const parts=arr.filter(x=>x&&val(x)!=null).slice(0,6).map(x=>`${_reEsc(_reL(x.k,isKa))}${room?(isKa?' ოთ':'r'):''}&nbsp;${_reFmtGel(val(x))}`);
+  let items=arr.slice();
+  if(room)items.sort((a,b)=>(parseInt(a.k,10)||99)-(parseInt(b.k,10)||99)); // rooms in growth order: 1,2,3…6+
+  // nbsp keeps a label glued to its price; the " · " separators stay breakable so a
+  // long line wraps inside the card instead of overflowing the right edge.
+  const parts=items.filter(x=>x&&val(x)!=null).slice(0,6).map(x=>`${_reEsc(_reL(x.k,isKa))}${room?(isKa?'&nbsp;ოთ':'r'):''}&nbsp;${_reFmtGel(val(x))}`);
   if(parts.length<2)return '';
-  return `<div class="re-cut"><span class="re-cut-l">${_reEsc(title)}</span><span class="re-cut-v">${parts.join('&nbsp;·&nbsp;')}</span></div>`;
+  return `<div class="re-cut"><span class="re-cut-l">${_reEsc(title)}</span><span class="re-cut-v">${parts.join(' · ')}</span></div>`;
 }
 function _reBreakdowns(pt,isKa){
   const bk=(_reLast&&_reLast.breaks&&_reLast.breaks[pt])||{};
-  const statusTitle=pt===4?(isKa?'დანიშნულება':'Land use'):pt===5?(isKa?'ტიპი':'Type'):(isKa?'მდგომ.':'Status');
-  return _reKVarr(isKa?'გამყიდველი':'By seller',bk.seller,isKa)   // owner vs agent vs developer
-       + _reKVarr(statusTitle,bk.status,isKa)
-       + _reKVarr(isKa?'მდგომარეობა':'Condition',bk.condition,isKa)
+  const typeTitle=pt===4?(isKa?'დანიშნულება':'Land use'):(isKa?'ტიპი':'Type'); // building_status → Type
+  const sellerTitle=_reDeal===2?(isKa?'აქირავებს':'Rented by'):(isKa?'ყიდის':'Sold by');
+  return _reKVarr(sellerTitle,bk.seller,isKa)   // owner vs agent vs developer
+       + _reKVarr(typeTitle,bk.status,isKa)
+       + _reKVarr(isKa?'რემონტი':'Renovation',bk.condition,isKa)
        + _reKVarr(isKa?'პროექტი':'Project',bk.project,isKa)
        + _reKVarr(isKa?'ოთახები':'Rooms',bk.rooms,isKa,true);
 }
@@ -7096,7 +7109,7 @@ function _reRenderPanel(){
   const ptsLeg=_rePointsOn?`<div class="re-leg"><span>${isKa?'იაფი':'cheaper'}</span><i class="re-leg-bar"></i><span>${isKa?'ძვირი':'pricier'}</span></div>`:'';
   const plotBtn=pt===4?`<button class="re-plotbtn${_reParcelsOn?' on':''}" onclick="event.stopPropagation();_reToggleParcels()">${_reParcelsOn?(isKa?'ნაკვეთების დამალვა':'Hide plots on map'):(isKa?'ნაკვეთების ჩვენება რუკაზე':'Show plots on map')}</button>`:'';
   const cov=r.coverage||{}; const notMapped=+cov.not_geocoded_yet||0;
-  const covNote=notMapped>0?`<div class="re-cov">${isKa?`+${notMapped} განცხადება ჯერ არ არის რუკაზე`:`+${notMapped} listings not mapped yet`}</div>`:'';
+  const covNote=notMapped>0?`<div class="re-cov">${isKa?`+${notMapped} განცხადება ჯერ არ არის რუკაზე`:`+${notMapped} listings not mapped yet`}<button type="button" class="pw-rate-info-btn re-cov-info" onmouseenter="_showReCoverageInfo(event)" onmousemove="_moveRateInfo(event)" onmouseleave="_hideRateInfo()">ⓘ</button></div>`:'';
   const note=`<div class="re-src">${isKa?`წყარო: myhome.ge · ${rent?'ქირავნობა · სრული ფასი/თვე':'გაყიდვა · ₾/'+m2}`:`Source: myhome.ge · ${rent?'rent · full ₾/mo':'sale · ₾/'+m2}`}</div>`;
   _reShow(head+toggle+hero+bdHtml+ptsBtn+ptsLeg+plotBtn+covNote+note);
 }
