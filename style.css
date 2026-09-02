@@ -197,6 +197,12 @@
   .wind-info-icon { cursor:pointer; color:rgba(147,197,253,0.35); font-size:0.62rem; margin-left:3px; user-select:none; vertical-align:middle; transition:color 0.15s; }
   .wind-info-icon:hover { color:rgba(147,197,253,0.85); }
   .wind-info-popup { position:fixed; z-index:9999; max-width:220px; padding:8px 11px; border-radius:9px; background:rgba(12,12,18,0.97); border:1px solid rgba(147,197,253,0.2); color:rgba(255,255,255,0.65); font-size:0.68rem; line-height:1.5; box-shadow:0 4px 24px rgba(0,0,0,0.55); display:none; pointer-events:none; }
+  /* Real-estate listing-point hover popup */
+  .re-pt-popup .mapboxgl-popup-content { background:rgba(16,16,20,0.96); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); border:1px solid rgba(255,255,255,0.13); border-radius:10px; padding:8px 11px; box-shadow:0 8px 28px rgba(0,0,0,0.55); color:#fff; }
+  .re-pt-popup .mapboxgl-popup-tip { display:none; }
+  .re-pt-popup .rpp-price { font-size:0.82rem; font-weight:700; color:#fff; white-space:nowrap; font-variant-numeric:tabular-nums; }
+  .re-pt-popup .rpp-sub { font-size:0.62rem; color:rgba(255,255,255,0.55); margin-top:2px; white-space:nowrap; }
+  .re-pt-popup .rpp-cmp { font-size:0.66rem; font-weight:600; margin-top:4px; white-space:nowrap; }
   #wind-canvas { position:fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:5; display:none; }
   .user-loc-dot { width:14px; height:14px; border-radius:50%; background:#3b82f6; border:2px solid #fff; box-shadow:0 0 0 0 rgba(59,130,246,0.55); animation:user-loc-pulse 2s ease-out infinite; }
   @keyframes user-loc-pulse { 0%{box-shadow:0 0 0 0 rgba(59,130,246,0.55);} 70%{box-shadow:0 0 0 12px rgba(59,130,246,0);} 100%{box-shadow:0 0 0 0 rgba(59,130,246,0);} }

@@ -7201,16 +7201,69 @@ function _rePlotPoints(fc, p25, med, p75){
     if(map.getSource('re-points'))map.getSource('re-points').setData(fc);
     else{
       map.addSource('re-points',{type:'geojson',data:fc});
+      if(!map.getSource('re-points-hover'))map.addSource('re-points-hover',{type:'geojson',data:{type:'FeatureCollection',features:[]}});
+      // Same look as the urban-functions dots: small colour dot + bright ring.
       map.addLayer({id:'re-points',type:'circle',source:'re-points',paint:{
-        'circle-radius':['interpolate',['linear'],['zoom'],11,3,14,4.5,17,6.5],
-        'circle-color':color,'circle-opacity':0.85,
-        'circle-stroke-width':0.8,'circle-stroke-color':'rgba(0,0,0,0.5)'}});
+        'circle-radius':['interpolate',['linear'],['zoom'],13,2.5,17,5],
+        'circle-color':color,'circle-opacity':0.95,
+        'circle-stroke-width':1.1,'circle-stroke-color':'rgba(255,255,255,0.5)'}});
+      // Pulsing hover ring (radius/opacity animated in _reStartPtPulse), coloured by price.
+      map.addLayer({id:'re-points-hover-ring',type:'circle',source:'re-points-hover',paint:{
+        'circle-radius':6,'circle-color':'rgba(0,0,0,0)',
+        'circle-stroke-width':2,'circle-stroke-color':color,'circle-stroke-opacity':0.9}});
+      map.on('mousemove','re-points',_rePtHover);
+      map.on('mouseleave','re-points',_rePtLeave);
     }
   }catch(e){ console.warn('re plot points:',e); }
 }
+let _rePtRAF=null;
+function _reStartPtPulse(){
+  if(_rePtRAF)return; let t0=null;
+  const step=(ts)=>{ if(!mapReady||!map.getLayer('re-points-hover-ring')){_rePtRAF=null;return;}
+    if(t0==null)t0=ts; const p=((ts-t0)%900)/900;
+    try{ map.setPaintProperty('re-points-hover-ring','circle-radius',6+p*9); map.setPaintProperty('re-points-hover-ring','circle-stroke-opacity',0.9*(1-p)); }catch(_){}
+    _rePtRAF=requestAnimationFrame(step);
+  };
+  _rePtRAF=requestAnimationFrame(step);
+}
+function _reStopPtPulse(){ if(_rePtRAF){cancelAnimationFrame(_rePtRAF);_rePtRAF=null;} }
+let _rePtPopup=null;
+function _reEnsurePtPopup(){ if(!_rePtPopup)_rePtPopup=new mapboxgl.Popup({closeButton:false,closeOnClick:false,offset:10,className:'re-pt-popup',maxWidth:'240px'}); return _rePtPopup; }
+function _rePtLeave(){ try{map.getCanvas().style.cursor='';}catch(_){} try{map.getSource('re-points-hover')?.setData({type:'FeatureCollection',features:[]});}catch(_){} _reStopPtPulse(); if(_rePtPopup)_rePtPopup.remove(); }
+function _rePtHover(e){
+  const f=e.features&&e.features[0]; if(!f){ _rePtLeave(); return; }
+  try{map.getCanvas().style.cursor='pointer';}catch(_){}
+  try{map.getSource('re-points-hover')?.setData({type:'FeatureCollection',features:[{type:'Feature',geometry:f.geometry,properties:{v:f.properties&&f.properties.v}}]});}catch(_){}
+  _reStartPtPulse();
+  _reEnsurePtPopup().setLngLat(f.geometry.coordinates.slice()).setHTML(_rePtHtml(f.properties||{})).addTo(map);
+}
+function _rePtHtml(p){
+  const isKa=lang==='ka', rent=_reDeal===2;
+  const v=+p.v, rooms=+p.rooms, area=+p.area_m2, priceGel=+p.price_gel, priceUsd=+p.price_usd;
+  // Comparison baseline = median for listings with the SAME room count if we have one
+  // (similar characteristics), otherwise the whole type's area median.
+  const stats=((_reLast&&_reLast.res&&_reLast.res.stats)||[]).find(x=>x.property_type_id===_rePt);
+  let cmpMed=stats&&+stats.median_sqm_gel, cmpLabel=isKa?'უბნის მედიანასთან':'vs area median';
+  if(rooms>0){ const rk=rooms>=6?'6+':String(rooms);
+    const rb=((_reLast&&_reLast.breaks&&_reLast.breaks[_rePt]&&_reLast.breaks[_rePt].rooms)||[]).find(x=>x.k===rk);
+    if(rb&&rb.med){ cmpMed=+rb.med; cmpLabel=isKa?`${rk}-ოთახიანის მედიანასთან`:`vs ${rk}-room median`; }
+  }
+  let cmp='';
+  if(v>0&&cmpMed>0){ const d=Math.round((v-cmpMed)/cmpMed*100);
+    const cheaper=d<0, col=cheaper?'#22c55e':(d>0?'#f87171':'rgba(255,255,255,0.6)'), arr=cheaper?'▼':(d>0?'▲':'•');
+    cmp=`<div class="rpp-cmp" style="color:${col}">${arr} ${Math.abs(d)}% ${cheaper?(isKa?'იაფი':'cheaper'):(d>0?(isKa?'ძვირი':'pricier'):'—')} · ${cmpLabel}</div>`;
+  }
+  const price = priceGel>0?('₾'+Math.round(priceGel).toLocaleString('en-US')):(priceUsd>0?('$'+Math.round(priceUsd).toLocaleString('en-US')):'—');
+  const usd = (priceGel>0&&priceUsd>0)?` · $${Math.round(priceUsd).toLocaleString('en-US')}`:'';
+  const sub=[area>0?Math.round(area)+' '+(isKa?'მ²':'m²'):'', rooms>0?rooms+(isKa?' ოთახი':' rooms'):'', v>0?('₾'+Math.round(v)+'/'+(isKa?'მ²':'m²')):''].filter(Boolean).join(' · ');
+  return `<div class="rpp"><div class="rpp-price">${price}${rent?(isKa?'/თვე':'/mo'):''}${usd}</div>${sub?`<div class="rpp-sub">${sub}</div>`:''}${cmp}</div>`;
+}
 function _reClearPoints(){
-  try{ if(map.getLayer('re-points'))map.removeLayer('re-points'); }catch(_){}
-  try{ if(map.getSource('re-points'))map.removeSource('re-points'); }catch(_){}
+  try{ map.off('mousemove','re-points',_rePtHover); map.off('mouseleave','re-points',_rePtLeave); }catch(_){}
+  _reStopPtPulse();
+  if(_rePtPopup){ try{_rePtPopup.remove();}catch(_){} }
+  try{ ['re-points-hover-ring','re-points'].forEach(id=>{if(map.getLayer(id))map.removeLayer(id);}); }catch(_){}
+  try{ ['re-points-hover','re-points'].forEach(id=>{if(map.getSource(id))map.removeSource(id);}); }catch(_){}
 }
 let _nearbyWalkCenter=null,_nearbyRan=false;
 // Show the "Run nearby analysis" button in the float card (does NOT run it yet).
