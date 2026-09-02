@@ -6992,7 +6992,7 @@ const _RE_TYPES={
   3:{en:'Country house',ka:'აგარაკი',c:'#22c55e'}, 4:{en:'Land plot',ka:'მიწის ნაკვეთი',c:'#f59e0b'},
   5:{en:'Commercial',ka:'კომერციული',c:'#60a5fa'}, 6:{en:'Hotel',ka:'სასტუმრო',c:'#ec4899'}
 };
-let _reActive=false, _reSeq=0, _reLast=null, _reDeal=1, _reParcelsOn=false, _rePt=1; // _reDeal: 1 sale·2 rent; _rePt: property type
+let _reActive=false, _reSeq=0, _reLast=null, _reDeal=1, _reParcelsOn=false, _rePointsOn=false, _rePt=1; // _reDeal: 1 sale·2 rent; _rePt: property type
 const _RE_BTN={1:'cat-btn-re-apart',2:'cat-btn-re-house',4:'cat-btn-re-land'};
 // myhome subcategory labels → Georgian (source values are English). Falls back to source.
 const _reLbl={'New building':'ახალაშენებული','Old building':'ძველი','Under construction':'მშენებარე','Finished':'დასრულებული',
@@ -7000,8 +7000,11 @@ const _reLbl={'New building':'ახალაშენებული','Old buil
   'Universal':'უნივერსალური','Special':'სპეციალური','Warehousing':'სასაწყობე','Trade':'სავაჭრო','Office':'საოფისე','Garage':'ავტოფარეხი',
   'Newly Renovated':'ახალი გარემონტ.','Old renovated':'ძველი გარემონტ.','Current renovation':'მიმდ. რემონტი','Repairing':'რემონტში',
   'Green frame':'მწვანე კარკასი','Black frame':'შავი კარკასი','White frame':'თეთრი კარკასი','White Plus':'თეთრი პლიუსი',
-  'City':'ქალაქური','Czech':'ჩეხური','Nonstandard':'არასტანდ.','Duplex':'დუპლექსი','Khrushov':'ხრუშოვი','Moscow':'მოსკოვის','Leningrad':'ლენინგრადის','Lvov':'ლვოვის','Villa':'ვილა','Town house':'თაუნჰაუსი'};
-const _reL=(s,isKa)=>(isKa&&_reLbl[s])?_reLbl[s]:s;
+  'City':'ქალაქური','Czech':'ჩეხური','Nonstandard':'არასტანდ.','Duplex':'დუპლექსი','Khrushov':'ხრუშოვი','Moscow':'მოსკოვის','Leningrad':'ლენინგრადის','Lvov':'ლვოვის','Villa':'ვილა','Town house':'თაუნჰაუსი',
+  'physical':'მესაკუთრე','agent':'აგენტი','broker':'ბროკერი','developer':'დეველოპერი'};
+// seller_type has no natural English label ('physical' → 'Owner'), so translate both ways.
+const _reLblEn={'physical':'Owner','agent':'Agent','broker':'Broker','developer':'Developer'};
+const _reL=(s,isKa)=> isKa ? (_reLbl[s]||s) : (_reLblEn[s]||s);
 async function _fetchWalk15(lng,lat){
   const url=`https://api.mapbox.com/isochrone/v1/mapbox/walking/${lng},${lat}?contours_minutes=15&polygons=true&denoise=1&access_token=${MAPBOX_TOKEN}`;
   const r=await fetch(url); if(!r.ok)return null; const j=await r.json(); return j.features?.[0]?.geometry||null;
@@ -7023,18 +7026,19 @@ function _reToggle(pt){
   _rePt=pt; _reRun(c,pt);
 }
 function _reClear(){
-  _reActive=false; _reParcelsOn=false; _reSeq++;
+  _reActive=false; _reParcelsOn=false; _rePointsOn=false; _reSeq++;
   Object.values(_RE_BTN).forEach(id=>document.getElementById(id)?.classList.remove('active'));
   const row=document.getElementById('pfc-realestate-row'); if(row)row.style.display='none';
   try{ ['re-iso-line','re-iso-fill'].forEach(id=>{if(map.getLayer(id))map.removeLayer(id);}); }catch(_){}
   try{ if(map.getSource('re-iso'))map.removeSource('re-iso'); }catch(_){}
   if(typeof _reClearParcels==='function')_reClearParcels();
+  if(typeof _reClearPoints==='function')_reClearPoints();
 }
 async function _reRun(center,pt){
   pt=pt||_rePt||1; _rePt=pt;
   const seq=++_reSeq; _reActive=true;
   const [lng,lat]=center; const isKa=lang==='ka';
-  _reParcelsOn=false; _reClearParcels();
+  _reParcelsOn=false; _reClearParcels(); _rePointsOn=false; _reClearPoints();
   _reShow(`<div class="re-note"><span class="re-spin"></span> ${isKa?'იტვირთება ბაზრის მონაცემი…':'Loading market data…'}</div>`);
   let iso; try{ iso=await _fetchWalk15(lng,lat); }catch(_){}
   if(seq!==_reSeq)return;
@@ -7067,7 +7071,8 @@ function _reKVarr(title,arr,isKa,room){
 function _reBreakdowns(pt,isKa){
   const bk=(_reLast&&_reLast.breaks&&_reLast.breaks[pt])||{};
   const statusTitle=pt===4?(isKa?'დანიშნულება':'Land use'):pt===5?(isKa?'ტიპი':'Type'):(isKa?'მდგომ.':'Status');
-  return _reKVarr(statusTitle,bk.status,isKa)
+  return _reKVarr(isKa?'გამყიდველი':'By seller',bk.seller,isKa)   // owner vs agent vs developer
+       + _reKVarr(statusTitle,bk.status,isKa)
        + _reKVarr(isKa?'მდგომარეობა':'Condition',bk.condition,isKa)
        + _reKVarr(isKa?'პროექტი':'Project',bk.project,isKa)
        + _reKVarr(isKa?'ოთახები':'Rooms',bk.rooms,isKa,true);
@@ -7087,13 +7092,15 @@ function _reRenderPanel(){
   const hero=`<div class="re-hero"><span class="re-hero-v">${_reFmtGel(heroVal)}<small>${heroUnit}</small></span><span class="re-hero-n">${isKa?'მედიანა':'median'} · ${n} ${isKa?'განცხადება':'listings'}</span></div>`;
   const bd=_reBreakdowns(pt,isKa);
   const bdHtml=bd?`<div class="re-bd">${bd}</div>`:'';
+  const ptsBtn=`<button class="re-ptsbtn${_rePointsOn?' on':''}" onclick="event.stopPropagation();_reTogglePoints()">${_rePointsOn?(isKa?'წერტილების დამალვა':'Hide listings'):(isKa?'განცხადებების ჩვენება რუკაზე':'Show listings on map')}</button>`;
+  const ptsLeg=_rePointsOn?`<div class="re-leg"><span>${isKa?'იაფი':'cheaper'}</span><i class="re-leg-bar"></i><span>${isKa?'ძვირი':'pricier'}</span></div>`:'';
   const plotBtn=pt===4?`<button class="re-plotbtn${_reParcelsOn?' on':''}" onclick="event.stopPropagation();_reToggleParcels()">${_reParcelsOn?(isKa?'ნაკვეთების დამალვა':'Hide plots on map'):(isKa?'ნაკვეთების ჩვენება რუკაზე':'Show plots on map')}</button>`:'';
   const cov=r.coverage||{}; const notMapped=+cov.not_geocoded_yet||0;
   const covNote=notMapped>0?`<div class="re-cov">${isKa?`+${notMapped} განცხადება ჯერ არ არის რუკაზე`:`+${notMapped} listings not mapped yet`}</div>`:'';
   const note=`<div class="re-src">${isKa?`წყარო: myhome.ge · ${rent?'ქირავნობა · სრული ფასი/თვე':'გაყიდვა · ₾/'+m2}`:`Source: myhome.ge · ${rent?'rent · full ₾/mo':'sale · ₾/'+m2}`}</div>`;
-  _reShow(head+toggle+hero+bdHtml+plotBtn+covNote+note);
+  _reShow(head+toggle+hero+bdHtml+ptsBtn+ptsLeg+plotBtn+covNote+note);
 }
-function _reSetDeal(deal){ if(deal===_reDeal)return; _reDeal=deal; _reParcelsOn=false; _reClearParcels(); if(_reLast&&_reLast.center)_reRun(_reLast.center,_reLast.pt); }
+function _reSetDeal(deal){ if(deal===_reDeal)return; _reDeal=deal; _reParcelsOn=false; _reClearParcels(); _rePointsOn=false; _reClearPoints(); if(_reLast&&_reLast.center)_reRun(_reLast.center,_reLast.pt); }
 function _reShow(html){ const row=document.getElementById('pfc-realestate-row'), body=document.getElementById('pfc-realestate-body');
   if(body)body.innerHTML=html; if(row)row.style.display='block';
   const card=document.getElementById('parcel-float-card'); if(card&&card.style.display==='none')card.style.display='flex'; }
@@ -7154,6 +7161,43 @@ function _rePlotParcels(fc){
 function _reClearParcels(){
   try{ ['re-parcels-label','re-parcels-line','re-parcels-fill'].forEach(id=>{if(map.getLayer(id))map.removeLayer(id);}); }catch(_){}
   try{ if(map.getSource('re-parcels'))map.removeSource('re-parcels'); }catch(_){}
+}
+// ── Listing points, coloured by ₾/m² relative to the area median (deal vs value) ──
+async function _reTogglePoints(){
+  const isKa=lang==='ka';
+  if(_rePointsOn){ _rePointsOn=false; _reClearPoints(); _reRenderPanel(); return; }
+  if(!_reLast||!_reLast.iso){ return; }
+  const s=((_reLast.res&&_reLast.res.stats)||[]).find(x=>x.property_type_id===_rePt)||null;
+  const med=s&&s.median_sqm_gel, p25=(s&&s.p25_sqm_gel)||(med?med*0.75:null), p75=(s&&s.p75_sqm_gel)||(med?med*1.25:null);
+  if(med==null){ showToast(isKa?'ჯერ არ არის საკმარისი ფასის მონაცემი':'Not enough price data yet'); return; }
+  const btn=document.querySelector('.re-ptsbtn'); if(btn){btn.textContent=isKa?'იტვირთება…':'Loading points…'; btn.classList.add('on');}
+  let fc;
+  try{ const {data,error}=await sb.rpc('myhome_area_points',{area_geojson:_reLast.iso,p_deal_type:_reDeal,p_property_type:_rePt}); if(error)throw error; fc=data; }
+  catch(e){ console.warn('re points rpc:',e); _reRenderPanel(); return; }
+  const feats=((fc&&fc.features)||[]).filter(f=>f.properties&&f.properties.v!=null);
+  if(!feats.length){ showToast(isKa?'წერტილები ვერ მოიძებნა':'No points to show'); _rePointsOn=false; _reRenderPanel(); return; }
+  _rePointsOn=true;
+  _rePlotPoints({type:'FeatureCollection',features:feats}, p25, med, p75);
+  _reRenderPanel();
+}
+function _rePlotPoints(fc, p25, med, p75){
+  try{
+    // cheaper-than-median = green, at median = amber, pricier = red (clamped to p25/p75)
+    const color=['interpolate',['linear'],['coalesce',['get','v'],med],
+      Math.max(1,p25),'#22c55e', med,'#fbbf24', Math.max(med+1,p75),'#ef4444'];
+    if(map.getSource('re-points'))map.getSource('re-points').setData(fc);
+    else{
+      map.addSource('re-points',{type:'geojson',data:fc});
+      map.addLayer({id:'re-points',type:'circle',source:'re-points',paint:{
+        'circle-radius':['interpolate',['linear'],['zoom'],11,3,14,4.5,17,6.5],
+        'circle-color':color,'circle-opacity':0.85,
+        'circle-stroke-width':0.8,'circle-stroke-color':'rgba(0,0,0,0.5)'}});
+    }
+  }catch(e){ console.warn('re plot points:',e); }
+}
+function _reClearPoints(){
+  try{ if(map.getLayer('re-points'))map.removeLayer('re-points'); }catch(_){}
+  try{ if(map.getSource('re-points'))map.removeSource('re-points'); }catch(_){}
 }
 let _nearbyWalkCenter=null,_nearbyRan=false;
 // Show the "Run nearby analysis" button in the float card (does NOT run it yet).
