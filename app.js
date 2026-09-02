@@ -7871,6 +7871,8 @@ map.on("load",()=>{
     if(e.originalEvent?._ttcHandled)return;
     if(e.originalEvent?._bldHandled)return;
     if(mapReady&&map.getLayer('ttc-stops')&&map.queryRenderedFeatures(e.point,{layers:['ttc-stops']}).length)return;
+    // A click on a real-estate listing pin opens its detail popup, not a parcel lookup.
+    if(mapReady&&map.getLayer('re-points')&&map.queryRenderedFeatures(e.point,{layers:['re-points']}).length)return;
     if(_profileMode)return;
     if(_selectedFloors.size>0&&!window._threeBldHit){_selectFloor(-1);}
     window._threeBldHit=false;
