@@ -4200,7 +4200,7 @@ async function _loadProjectsList(){
       const thumb=p.thumbnail
         ?`<img class="pp-thumb" src="${p.thumbnail}" alt="" loading="lazy">`
         :`<div class="pp-thumb-placeholder"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="rgba(99,102,241,0.35)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg></div>`;
-      return `<div class="pp-project-card">${thumb}<div class="pp-card-body"><div class="pp-card-name">${p.name.replace(/&/g,'&amp;').replace(/</g,'&lt;')}</div><div class="pp-card-meta">${ds}${meta?' · '+meta:''}</div></div><div class="pp-card-footer"><button class="pp-load-btn" onclick="event.stopPropagation();loadProject('${p.id}')">${tr.openBtn}</button><button class="pp-export-btn" onclick="event.stopPropagation();_ppExport('${p.id}',this)" title="${_expTitle()}"><img src="analysis-logos/report.svg">${_expLabel()}</button><button class="pp-del-btn" onclick="event.stopPropagation();deleteProject('${p.id}',this)" title="Delete"><img src="analysis-logos/delete.svg"></button></div></div>`;
+      return `<div class="pp-project-card">${thumb}<div class="pp-card-body"><div class="pp-card-name">${p.name.replace(/&/g,'&amp;').replace(/</g,'&lt;')}</div><div class="pp-card-meta">${ds}${meta?' · '+meta:''}</div></div><div class="pp-card-footer"><button class="pp-load-btn" onclick="event.stopPropagation();loadProject('${p.id}')">${tr.openBtn}</button><button class="pp-del-btn" onclick="event.stopPropagation();deleteProject('${p.id}',this)" title="Delete"><img src="analysis-logos/delete.svg"></button></div></div>`;
     }).join('');
   }catch(err){
     console.error('[projects] list:',err);
@@ -16641,8 +16641,9 @@ function _rptActive(){
     wind:_rptOn('acc-wind-sw'),
     relief:typeof _reliefActiveType!=='undefined'&&!!_reliefActiveType,
     solar:_rptOn('acc-solar-sw')||(typeof _solarOverlayCache!=='undefined'&&!!_solarOverlayCache),
+    realestate:typeof _reActive!=='undefined'&&!!_reActive&&!!(_reLast&&_reLast.res),
   };
-  a.anyArea=a.syntax||a.orient||a.osm||a.transit||a.history||a.schools||a.kg||a.crashes||a.parking||a.isochrone;
+  a.anyArea=a.syntax||a.orient||a.osm||a.transit||a.history||a.schools||a.kg||a.crashes||a.parking||a.isochrone||a.realestate;
   a.anyParcel=a.zoning||a.canopy||a.lst||a.wind||a.relief||a.solar||!!_currentParcelGeoJSON;
   return a;
 }
@@ -16673,6 +16674,12 @@ function _rptExecutiveSummary(uvi){
     parts.push(conf
       ? `A construction permit (${_lastPermitFound.docNo}) on record here appears to conflict with the Tbilisi 2019 Urban Masterplan for this zone.`
       : `A construction permit (${_lastPermitFound.docNo}) is on record for this parcel.`);
+  }
+  if(typeof _reActive!=='undefined'&&_reActive&&_reLast&&_reLast.res){
+    const pt=_reLast.pt, rent=_reDeal===2, ty=(typeof _RE_TYPES!=='undefined'&&_RE_TYPES[pt])||{en:'property'};
+    const s=((_reLast.res.stats)||[]).find(x=>x.property_type_id===pt)||(_reLast.res.stats||[])[0];
+    if(s&&rent&&s.median_price_gel!=null)parts.push(`Median ${(ty.en||'property').toLowerCase()} rent in the catchment is ₾${Math.round(s.median_price_gel).toLocaleString()}/month.`);
+    else if(s&&!rent&&s.median_sqm_gel!=null)parts.push(`Median ${(ty.en||'property').toLowerCase()} price in the catchment is ₾${Math.round(s.median_sqm_gel).toLocaleString()}/m².`);
   }
   return parts.join(' ');
 }
@@ -16916,6 +16923,29 @@ async function exportReportPDF(){
         if(pk)P(`Parking areas: ${pk} (${c.parkingFree||0} free · ${c.parkingPaid||0} paid) — capacity ~${(c.pkCars||0).toLocaleString()} cars, ${(c.pkTaxi||0)} taxi, ${(c.pkLoad||0)} loading.`);
         if(_lastDiversity!=null)P(`Land-use diversity (Shannon SDI): ${_lastDiversity}/100.`);
         src('Amenities: public schools & kindergartens (municipal open data), transit stops & routes (Tbilisi Transport Company), on-street parking (Tbilisi Municipality), land-use POIs (© OpenStreetMap, Overpass API).');
+      }
+    }
+    // Real estate market (myhome.ge catchment medians)
+    if(a.realestate){
+      const rl=_reLast, pt=rl.pt, rent=_reDeal===2;
+      const ty=(typeof _RE_TYPES!=='undefined'&&_RE_TYPES[pt])||{en:'Real estate'};
+      const s=((rl.res.stats)||[]).find(x=>x.property_type_id===pt)||(rl.res.stats||[])[0];
+      if(s){
+        H3('Real estate market · '+(ty.en||''));
+        const areaLbl=rl.usingIso?(_transitAreaLabel()||'the isochrone catchment'):'a 10-minute walk';
+        P(`Catchment: ${areaLbl}. Deal: ${rent?'rent':'sale'}. Listings analysed: ${rl.res.total_in_area||s.n||'—'}.`);
+        if(rent&&s.median_price_gel!=null)P(`Median rent: ₾${Math.round(s.median_price_gel).toLocaleString()}/month${s.n?` (n=${s.n})`:''}.`);
+        if(!rent&&s.median_sqm_gel!=null)P(`Median price: ₾${Math.round(s.median_sqm_gel).toLocaleString()}/m²${(s.p25_sqm_gel&&s.p75_sqm_gel)?` (IQR ₾${Math.round(s.p25_sqm_gel).toLocaleString()}–₾${Math.round(s.p75_sqm_gel).toLocaleString()})`:''}${s.n?` · n=${s.n}`:''}.`);
+        const bk=(rl.breaks&&rl.breaks[pt])||{}, val=x=>rent?x.medp:x.med;
+        const dim=(title,arr,room)=>{ if(!Array.isArray(arr))return; let items=arr.slice(); if(room)items.sort((x,z)=>(parseInt(x.k,10)||99)-(parseInt(z.k,10)||99));
+          const parts=items.filter(x=>x&&val(x)!=null).slice(0,6).map(x=>`${(typeof _reL==='function'?_reL(x.k,false):x.k)} ₾${Math.round(val(x)).toLocaleString()}`);
+          if(parts.length>=2)P(`${title}: ${parts.join(' · ')}.`); };
+        dim(rent?'Rented by':'Sold by', bk.seller);
+        dim(pt===4?'Land use':'Type', bk.status);
+        dim('Renovation', bk.condition);
+        dim('Project', bk.project);
+        dim('Rooms', bk.rooms, true);
+        src('Real estate: myhome.ge listings mirror — median '+(rent?'monthly rent':'₾/m²')+' over the catchment.');
       }
     }
     // Morphology
