@@ -642,8 +642,8 @@ function applyLang(){
     pset("pfc-lbl-owner",lang==="ka"?"მეპატრონე":"Owner");
     pset("pfc-lbl-reg",lang==="ka"?"რეგისტრაციის თარიღი":"Registered");
     {const gb=document.getElementById('pfc-geom-btn');if(gb&&gb.style.display!=='none')gb.textContent=_parcelGeomShown?(lang==="ka"?'საზღვრის დამალვა':'Hide geometry'):(lang==="ka"?'ნაკვეთის საზღვრის ჩვენება':'Show parcel geometry');}
-    {const zb=document.getElementById('pfc-zoomin-btn');if(zb&&zb.style.display!=='none')zb.textContent=(lang==="ka"?'მიუახლოვდი ნაკვეთის სანახავად':'Zoom in to see parcel details');}
-    {const nn=document.getElementById('pfc-noparcel-note');if(nn&&nn.style.display!=='none')nn.textContent=(lang==="ka"?'ამ ადგილას რეგისტრირებული ნაკვეთი არ არის.':'No registered parcel at this location.');}
+    {const zb=document.getElementById('pfc-zoomin-btn');if(zb&&zb.style.display!=='none'){const bz=mapReady&&map.getZoom()<PARCEL_MIN_ZOOM;zb.textContent=bz?(lang==="ka"?'მიუახლოვდი ნაკვეთის სანახავად':'Zoom in to see parcel details'):(lang==="ka"?'ნაკვეთის დეტალების ჩვენება':'Load parcel details');}}
+    {const nn=document.getElementById('pfc-noparcel-note');if(nn&&nn.style.display!=='none')nn.textContent=(lang==="ka"?'ამ ტერიტორიაზე ნაკვეთის მონაცემი არ არის.':'No parcel data for this area.');}
   }
   // Projects / Data panel (was hardcoded English in a core flow).
   if(tr.proj){const pj=tr.proj;const st=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
@@ -7953,7 +7953,9 @@ map.on("load",()=>{
       return;
     }
     const{lng,lat}=e.lngLat;
-    _selectParcelAt(lng,lat);
+    // A click always drops the pin + card — no maps.gov.ge call here, so it works even
+    // when the registry is down. Parcel details load only from the card's button.
+    _dropLocationPin(lng,lat);
   });
 
   // Click on 3D building → open draw popup to adjust height
@@ -8315,27 +8317,26 @@ async function _selectParcelAt(lng,lat){
   }catch(e){
     console.warn("select parcel:",e);
     if(e.message==="no_shape")setStatus(lang==="ka"?"ძიება წარუმატებელია":"Search unsuccessful","error");
-    else setStatus(t().govGeDown,"");
+    else{ setStatus(t().govGeDown,""); showToast(lang==="ka"?'maps.gov.ge ამჟამად მიუწვდომელია — სცადე ხელახლა':'maps.gov.ge is unavailable right now — try again',4200); }
   }
 }
 // ── Cursor-follow "ghost" pin (a hint that clicking drops a pin) ───────────────
 // Shows a small pin under the cursor while the map is in plain select mode and no pin
 // is placed yet. Once a pin exists, this hides and the placed pin shows a move cursor.
-let _pinGhostEl=null;
+// While in "drop a pin" mode, the map-pin graphic replaces the mouse arrow itself
+// (tip as the hotspot), instead of trailing beside it.
+const _PIN_CURSOR="url('analysis-logos/map_pin.svg') 20 38, crosshair";
 function _pinPlacementActive(){
   return mapReady && !_parcelClickPin && !_locPinMarker
     && !_measureMode && !_polyDrawing && !_drawMenuOpen && !_editingBldId && !_profileMode && !_isDrawnArea && !_pinMode;
 }
-function _pinGhost(){
-  if(!_pinGhostEl){ _pinGhostEl=document.createElement('img'); _pinGhostEl.id='map-pin-ghost'; _pinGhostEl.src='analysis-logos/map_pin.svg'; _pinGhostEl.alt=''; document.body.appendChild(_pinGhostEl); }
-  return _pinGhostEl;
+function _pinGhostMove(){
+  if(!mapReady)return;
+  const c=map.getCanvas(); if(!c)return;
+  if(_pinPlacementActive()){ if(c.style.cursor!==_PIN_CURSOR)c.style.cursor=_PIN_CURSOR; }
+  else if(c.style.cursor.indexOf('map_pin.svg')!==-1){ c.style.cursor=''; }
 }
-function _pinGhostMove(e){
-  if(!_pinPlacementActive()){ if(_pinGhostEl)_pinGhostEl.style.display='none'; return; }
-  const oe=(e&&e.originalEvent)||e; if(!oe)return;
-  const g=_pinGhost(); g.style.left=oe.clientX+'px'; g.style.top=oe.clientY+'px'; g.style.display='block';
-}
-function _pinGhostHide(){ if(_pinGhostEl)_pinGhostEl.style.display='none'; }
+function _pinGhostHide(){ try{ const c=map&&map.getCanvas&&map.getCanvas(); if(c&&c.style.cursor.indexOf('map_pin.svg')!==-1)c.style.cursor=''; }catch(_){} }
 function _fitParcelGeom(g){
   if(!g)return;
   const flat=g.type==="Polygon"?g.coordinates.flat():g.type==="MultiPolygon"?g.coordinates.flat(2):g.type==="MultiLineString"?g.coordinates.flat():g.coordinates;
@@ -8374,7 +8375,7 @@ function _dropLocationPin(lng,lat){
   if(_locPinMarker){try{_locPinMarker.setLngLat([lng,lat]);}catch(_){}}
   else{
     _locPinMarker=new mapboxgl.Marker({element:_mapPinEl(),anchor:'bottom',draggable:true}).setLngLat([lng,lat]).addTo(map);
-    _locPinMarker.on('dragend',()=>{ try{const p=_locPinMarker.getLngLat();_selectParcelAt(p.lng,p.lat);}catch(_){} });
+    _locPinMarker.on('dragend',()=>{ try{const p=_locPinMarker.getLngLat();_dropLocationPin(p.lng,p.lat);}catch(_){} });
   }
   _scalePins(); _pinGhostHide();
   _showLocationCard(lng,lat);
@@ -8387,6 +8388,7 @@ function _setParcelRow(lblId,valId,lbl,val){
 function _showLocationCard(lng,lat){
   const card=document.getElementById('parcel-float-card');if(!card)return;
   const ka=lang==='ka';
+  const inGeorgia = _inGeorgia(lng,lat);
   const belowZoom = mapReady && map.getZoom()<PARCEL_MIN_ZOOM;
   const pane=document.getElementById('pfc-pane-parcel');
   const zb=document.getElementById('pfc-zoomin-btn');
@@ -8395,22 +8397,22 @@ function _showLocationCard(lng,lat){
   if(_hdr){_hdr.textContent=lat.toFixed(5)+', '+lng.toFixed(5);_hdr.classList.remove('pfc-editable');_hdr.removeAttribute('contenteditable');_hdr.removeAttribute('title');}
   // Rows that never apply to a bare pin.
   ['pfc-perim-row','pfc-reg-row','pfc-ext-row','pfc-render-row','pfc-concept-info','pfc-zone-row','pfc-kvals-row','pfc-build-params-row','pfc-compliance-row','pfc-permits-row','pfc-geom-btn','pfc-nearby-row'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});
-  if(belowZoom){
-    // Blurred teaser: the parcel-detail rows sit behind a "zoom in" CTA. The values are
-    // placeholders — they're blurred anyway, and get replaced with real data on zoom-in.
+  if(inGeorgia){
+    // Blurred teaser at any zoom: the parcel rows sit behind a CTA. Placeholders (blurred)
+    // become real data only when the button loads the parcel from maps.gov.ge.
     _setParcelRow('pfc-lbl-area','pfc-area', ka?'ფართობი':'Area', '1,234 m²');
     _setParcelRow('pfc-lbl-type','pfc-type', ka?'ტიპი':'Type', ka?'საცხოვრებელი':'Residential');
     _setParcelRow('pfc-lbl-addr','pfc-addr', ka?'მისამართი':'Address', ka?'ქ. თბილისი, …':'Tbilisi, …');
     _setParcelRow('pfc-lbl-owner','pfc-owner', ka?'მესაკუთრე':'Owner', '——— ———');
     if(pane)pane.classList.add('pfc-teaser');
-    if(zb){ zb.style.display=''; zb.textContent=ka?'მიუახლოვდი ნაკვეთის სანახავად':'Zoom in to see parcel details'; zb.onclick=()=>_zoomToPinDetails(lng,lat); }
+    if(zb){ zb.style.display=''; zb.textContent=belowZoom?(ka?'მიუახლოვდი ნაკვეთის სანახავად':'Zoom in to see parcel details'):(ka?'ნაკვეთის დეტალების ჩვენება':'Load parcel details'); zb.onclick=()=>_zoomToPinDetails(lng,lat); }
     {const nn=document.getElementById('pfc-noparcel-note');if(nn)nn.style.display='none';}
   } else {
-    // Zoomed in but nothing registered here — say so in the parcel tab.
+    // Outside Georgia — no registry, just the coordinates.
     if(pane)pane.classList.remove('pfc-teaser');
     ['pfc-lbl-area','pfc-lbl-type','pfc-lbl-addr','pfc-lbl-owner'].forEach(id=>{const r=document.getElementById(id)?.closest('.pfc-row');if(r)r.style.display='none';});
     if(zb)zb.style.display='none';
-    {const nn=document.getElementById('pfc-noparcel-note');if(nn){nn.style.display='';nn.textContent=ka?'ამ ადგილას რეგისტრირებული ნაკვეთი არ არის.':'No registered parcel at this location.';}}
+    {const nn=document.getElementById('pfc-noparcel-note');if(nn){nn.style.display='';nn.textContent=ka?'ამ ტერიტორიაზე ნაკვეთის მონაცემი არ არის.':'No parcel data for this area.';}}
   }
   _clearDimLabels();_hideCircHandle();_mountFloorPanelInCard(false);
   card.classList.remove('minimized');const _mb=document.getElementById('pfc-min-btn');if(_mb)_mb.textContent='−';
@@ -8426,8 +8428,11 @@ function _showLocationCard(lng,lat){
 // real data replaces the blurred teaser and the geometry button takes over.
 function _zoomToPinDetails(lng,lat){
   if(!mapReady)return;
+  // This is where the registry (maps.gov.ge) is actually queried — its availability
+  // surfaces here, not when the pin was placed.
+  if(map.getZoom()>=PARCEL_MIN_ZOOM){ _selectParcelAt(lng,lat); return; }
   map.once('moveend',()=>{ _selectParcelAt(lng,lat); });
-  map.flyTo({center:[lng,lat],zoom:Math.max(16.5,map.getZoom()),essential:true});
+  map.flyTo({center:[lng,lat],zoom:16.5,essential:true});
 }
 function showParcelPopup(lngLat){
   if(!map||!lngLat)return;

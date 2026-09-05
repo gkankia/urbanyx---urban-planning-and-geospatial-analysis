@@ -932,7 +932,6 @@
   .loc-pin { width:16px; height:16px; border-radius:50%; background:#a78bfa; border:3px solid #fff; box-shadow:0 2px 10px rgba(0,0,0,0.55); }
   .map-pin-mk { filter:drop-shadow(0 2px 3px rgba(0,0,0,0.45)); cursor:move; line-height:0; }
   .map-pin-img { display:block; transform-origin:bottom center; transition:transform 0.12s ease-out; }
-  #map-pin-ghost { position:fixed; width:40px; height:40px; pointer-events:none; z-index:9998; transform:translate(-100%,6px); opacity:0.8; filter:drop-shadow(0 1px 3px rgba(0,0,0,0.45)); display:none; }
   /* Blurred parcel-details teaser (below parcel zoom) behind a "zoom in" CTA */
   #pfc-pane-parcel { position:relative; }
   #pfc-pane-parcel.pfc-teaser .pfc-row { filter:blur(4px); opacity:0.6; user-select:none; pointer-events:none; }
