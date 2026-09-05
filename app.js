@@ -641,6 +641,7 @@ function applyLang(){
     pset("pfc-lbl-area",tr.area); pset("pfc-lbl-type",tr.type); pset("pfc-lbl-addr",tr.addr);
     pset("pfc-lbl-owner",lang==="ka"?"მეპატრონე":"Owner");
     pset("pfc-lbl-reg",lang==="ka"?"რეგისტრაციის თარიღი":"Registered");
+    {const gb=document.getElementById('pfc-geom-btn');if(gb&&gb.style.display!=='none')gb.textContent=_parcelGeomShown?(lang==="ka"?'საზღვრის დამალვა':'Hide geometry'):(lang==="ka"?'ნაკვეთის საზღვრის ჩვენება':'Show parcel geometry');}
   }
   // Projects / Data panel (was hardcoded English in a core flow).
   if(tr.proj){const pj=tr.proj;const st=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
@@ -7698,6 +7699,8 @@ function _parkingRenderLayers(polyFeatures,centroidFeatures){
 
 function clearParcelSelection(){
   _clearLocationPin(); // remove any location pin + exit pin mode
+  _clearParcelClickPin(); // remove the map-click pin
+  {const gb=document.getElementById('pfc-geom-btn');if(gb)gb.style.display='none';} _parcelGeomShown=false;
   {const _cs=document.getElementById("center-search");if(_cs&&_cs.classList.contains("compact"))_cs.classList.add("hidden");} // nothing selected → collapse search to the icon
   if(_activeBldId){
     // Drawn area: remove the shape entirely along with any analysis results
@@ -7953,6 +7956,7 @@ map.on("load",()=>{
       const inputEl=document.getElementById("input-center");
       if(inputEl)inputEl.value=name;
       try{resetAnalysis();}catch(_){}
+      _pendingPinLngLat=[lng,lat]; // pin goes exactly where the user clicked
       await loadParcel(lbl,name);
     }catch(e){
       console.warn("map click:",e);
@@ -8239,15 +8243,58 @@ function toggleParcelCardMin(){
 }
 // ── Location pin (outside Georgia): no parcel/zoning, run the global analyses ────
 function _clearLocationPin(){if(_locPinMarker){try{_locPinMarker.remove();}catch(_){}_locPinMarker=null;}_pinMode=false;}
+// ── Parcel click pin + deferred geometry ──────────────────────────────────────
+// A map click drops a pin at the clicked spot and pulls ownership into the card;
+// the parcel outline itself is only drawn when the user asks for it (pfc-geom-btn).
+let _parcelClickPin=null, _pendingPinLngLat=null, _parcelGeomShown=false;
+// Marker element using the shared map_pin.svg graphic (tip at bottom-centre).
+function _mapPinEl(){
+  const el=document.createElement('div');el.className='map-pin-mk';
+  el.innerHTML='<img src="analysis-logos/map_pin.svg" width="34" height="34" alt="" draggable="false">';
+  return el;
+}
+function _dropParcelClickPin(lng,lat){
+  if(!mapReady||typeof mapboxgl==='undefined'||!Number.isFinite(lng)||!Number.isFinite(lat))return;
+  if(_parcelClickPin){try{_parcelClickPin.setLngLat([lng,lat]);}catch(_){}return;}
+  _parcelClickPin=new mapboxgl.Marker({element:_mapPinEl(),anchor:'bottom'}).setLngLat([lng,lat]).addTo(map);
+}
+function _clearParcelClickPin(){ if(_parcelClickPin){try{_parcelClickPin.remove();}catch(_){}_parcelClickPin=null;} }
+function _fitParcelGeom(g){
+  if(!g)return;
+  const flat=g.type==="Polygon"?g.coordinates.flat():g.type==="MultiPolygon"?g.coordinates.flat(2):g.type==="MultiLineString"?g.coordinates.flat():g.coordinates;
+  const lngs=flat.map(c=>c[0]).filter(Number.isFinite),lats=flat.map(c=>c[1]).filter(Number.isFinite);
+  if(lngs.length)map.fitBounds([[Math.min(...lngs),Math.min(...lats)],[Math.max(...lngs),Math.max(...lats)]],{padding:80,duration:800,essential:true});
+}
+function _showParcelGeomButton(){
+  const btn=document.getElementById('pfc-geom-btn');if(!btn)return;
+  _parcelGeomShown=false;
+  btn.style.display=_currentParcelGeoJSON?'':'none';
+  btn.textContent=lang==='ka'?'ნაკვეთის საზღვრის ჩვენება':'Show parcel geometry';
+}
+function _toggleParcelGeom(){
+  if(!_currentParcelGeoJSON)return;
+  const btn=document.getElementById('pfc-geom-btn'),ka=lang==='ka';
+  if(_parcelGeomShown){
+    try{map.getSource('parcel')?.setData({type:'FeatureCollection',features:[]});}catch(_){}
+    _parcelGeomShown=false;
+    if(btn)btn.textContent=ka?'ნაკვეთის საზღვრის ჩვენება':'Show parcel geometry';
+  }else{
+    try{map.getSource('parcel')?.setData({type:'FeatureCollection',features:[{type:'Feature',geometry:_currentParcelGeoJSON,properties:{}}]});}catch(_){}
+    _fitParcelGeom(_currentParcelGeoJSON);
+    _parcelGeomShown=true;
+    if(btn)btn.textContent=ka?'საზღვრის დამალვა':'Hide geometry';
+  }
+}
 function _dropLocationPin(lng,lat){
   if(!mapReady||typeof mapboxgl==='undefined')return;
   try{resetAnalysis();}catch(_){}
+  _clearParcelClickPin(); // outside Georgia: no parcel pin
   _pinMode=true;_isDrawnArea=false;_dbParcelGeoJSON=null;_activeBldId=null;
   parcelCentroid=[lng,lat];
   const buf=turf.buffer(turf.point([lng,lat]),0.3,{units:'kilometers'}); // ~300 m analysis footprint
   _currentParcelGeoJSON=buf.geometry;_currentParcelAreaM2=Math.round(turf.area(buf));
   if(_locPinMarker){try{_locPinMarker.setLngLat([lng,lat]);}catch(_){}}
-  else{const el=document.createElement('div');el.className='loc-pin';_locPinMarker=new mapboxgl.Marker({element:el}).setLngLat([lng,lat]).addTo(map);}
+  else{_locPinMarker=new mapboxgl.Marker({element:_mapPinEl(),anchor:'bottom'}).setLngLat([lng,lat]).addTo(map);}
   try{map.getSource('parcel')?.setData({type:'FeatureCollection',features:[{type:'Feature',geometry:_currentParcelGeoJSON,properties:{}}]});}catch(_){}
   _showLocationCard(lng,lat);
 }
@@ -14634,10 +14681,13 @@ async function loadParcel(lbl, code){
   transitionToSide(name);
   if(!mapReady)await new Promise(res=>map.once("load",res));
   map.getSource("parcel").setData({type:"FeatureCollection",features:[{type:"Feature",geometry:geojson,properties:{}}]});
-  const flat=geojson.type==="Polygon"?geojson.coordinates.flat():geojson.type==="MultiPolygon"?geojson.coordinates.flat(2):geojson.type==="MultiLineString"?geojson.coordinates.flat():geojson.coordinates;
-  const lngs=flat.map(c=>c[0]).filter(Number.isFinite),lats=flat.map(c=>c[1]).filter(Number.isFinite);
-  if(lngs.length)map.fitBounds([[Math.min(...lngs),Math.min(...lats)],[Math.max(...lngs),Math.max(...lats)]],{padding:80,duration:800,essential:true});
+  // The outline is no longer drawn on selection — clear any previous one; the user
+  // reveals this parcel's geometry from the card ("Show parcel geometry").
+  try{map.getSource("parcel").setData({type:"FeatureCollection",features:[]});}catch(_){}
+  _parcelGeomShown=false;
   parcelCentroid=getCentroid(geojson);
+  // Drop a pin at the clicked spot (or the parcel centroid when reached via search).
+  { const pp=_pendingPinLngLat||parcelCentroid; _pendingPinLngLat=null; if(pp)_dropParcelClickPin(pp[0],pp[1]); }
   fetchMapillaryImages(parcelCentroid[0],parcelCentroid[1]).then(imgs=>renderMapillaryCard(imgs)).catch(()=>{});
   // restore info rows hidden by drawn-area mode
   const _cardLbl=document.getElementById("lbl-parcel-info");if(_cardLbl)_cardLbl.textContent=tr.parcelInfo;
@@ -14665,6 +14715,7 @@ async function loadParcel(lbl, code){
     setupProCard();
   }
   showParcelPopup(parcelCentroid);
+  _showParcelGeomButton();
   if(!isLine)_nearbyShowRunButton({});
   setStatus(tr.found,"success");
   const htmlOwners=parseOwners(attrs.owners);
