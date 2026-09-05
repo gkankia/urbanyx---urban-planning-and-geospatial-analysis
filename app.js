@@ -8395,7 +8395,7 @@ function _showLocationCard(lng,lat){
   }
   _clearDimLabels();_hideCircHandle();_mountFloorPanelInCard(false);
   card.classList.remove('minimized');const _mb=document.getElementById('pfc-min-btn');if(_mb)_mb.textContent='−';
-  card.style.display='block';
+  card.style.display='flex';   // flex column → #pfc-body gets a bounded, scrollable height
   _parcelCardLngLat=[lng,lat];_parcelCardDragged=false;
   if(mapReady){const pt=map.project([lng,lat]);const ch=card.offsetHeight||118;_clampCardPos(card,pt.x+88,pt.y-ch/2);}
   // The Analysis tab works from the pin itself — no parcel details required.
