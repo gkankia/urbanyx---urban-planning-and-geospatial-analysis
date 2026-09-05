@@ -411,7 +411,7 @@ function heroMap(){
             if(depth===3&&ringStart!==-1){curPoly.push(inner.slice(ringStart,i).split(",").map(p=>{const[x,y]=p.trim().split(" ");return[+x,+y];}));ringStart=-1;}
             if(depth===2){polys.push(curPoly);curPoly=[];}
             depth--;}}
-        return{type:"MultiPolygon",coordinates:polys.map(r=>[r])};
+        return{type:"MultiPolygon",coordinates:polys}; // each entry is already a ring list
       }
       if(wkt.startsWith("POLYGON")){
         const rings=[];const inner=wkt.slice(7).trim();let depth=0,ringStart=-1;
