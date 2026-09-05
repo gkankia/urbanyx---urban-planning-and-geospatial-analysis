@@ -1755,7 +1755,7 @@ function _showDrawnAreaCard(bld){
   card.style.display='flex';
   const c=getCentroid(bld.geojson);
   _parcelCardLngLat=c;_parcelCardDragged=false;
-  if(mapReady&&c){const pt=map.project(c);const ch=card.offsetHeight||118;card.style.left=(pt.x+88)+'px';card.style.top=(pt.y-ch/2)+'px';}
+  if(mapReady&&c){const pt=map.project(c);const ch=card.offsetHeight||118;_clampCardPos(card,pt.x+88,pt.y-ch/2);}
   const _nr=document.getElementById('pfc-nearby-row');
   const _ea=document.getElementById('pfc-empty-analysis');if(_ea)_ea.style.display='none';
   if(isConceptEl){
@@ -7134,7 +7134,9 @@ function _reRenderPanel(){
 function _reSetDeal(deal){ if(deal===_reDeal)return; _reDeal=deal; _reParcelsOn=false; _reClearParcels(); _rePointsOn=false; _reClearPoints(); if(_reLast&&_reLast.center)_reRun(_reLast.center,_reLast.pt); }
 function _reShow(html){ const row=document.getElementById('pfc-realestate-row'), body=document.getElementById('pfc-realestate-body');
   if(body)body.innerHTML=html; if(row)row.style.display='block';
-  const card=document.getElementById('parcel-float-card'); if(card&&card.style.display==='none')card.style.display='flex'; }
+  const card=document.getElementById('parcel-float-card'); if(card&&card.style.display==='none')card.style.display='flex';
+  // The panel just changed height — keep the (now taller) card fully on-screen.
+  requestAnimationFrame(()=>{try{_updateParcelCardPos();}catch(_){}}); }
 function _reOutline(iso){
   try{
     const isoFc={type:'FeatureCollection',features:[{type:'Feature',geometry:iso,properties:{}}]};
@@ -8134,14 +8136,20 @@ function _initParcelCardDrag(){
     document.removeEventListener('mouseup',onDU);
   }
 }
+// Place the card near an anchor point but always fully inside the viewport, so a tall
+// card near the screen edge never runs its bottom (e.g. the "Show listings" button) off.
+function _clampCardPos(card,x,y){
+  const cw=card.offsetWidth||300, ch=card.offsetHeight||120, m=8;
+  card.style.left=Math.max(m,Math.min(x, window.innerWidth -cw-m))+'px';
+  card.style.top =Math.max(m,Math.min(y, window.innerHeight-ch-m))+'px';
+}
 function _updateParcelCardPos(){
   if(!_parcelCardLngLat||_parcelCardDragged)return;
   const card=document.getElementById('parcel-float-card');
   if(!card||card.style.display==='none')return;
   const pt=map.project(_parcelCardLngLat);
-  const cw=card.offsetWidth||200, ch=card.offsetHeight||120;
-  card.style.left=(pt.x+88)+'px';
-  card.style.top=(pt.y-ch/2)+'px';
+  const ch=card.offsetHeight||120;
+  _clampCardPos(card, pt.x+88, pt.y-ch/2);
 }
 // Floating-card tabs: Parcel · Analysis · Plan.
 let _pfcActiveTab='parcel';
@@ -8389,7 +8397,7 @@ function _showLocationCard(lng,lat){
   card.classList.remove('minimized');const _mb=document.getElementById('pfc-min-btn');if(_mb)_mb.textContent='−';
   card.style.display='block';
   _parcelCardLngLat=[lng,lat];_parcelCardDragged=false;
-  if(mapReady){const pt=map.project([lng,lat]);const ch=card.offsetHeight||118;card.style.left=(pt.x+88)+'px';card.style.top=(pt.y-ch/2)+'px';}
+  if(mapReady){const pt=map.project([lng,lat]);const ch=card.offsetHeight||118;_clampCardPos(card,pt.x+88,pt.y-ch/2);}
   // The Analysis tab works from the pin itself — no parcel details required.
   _updateAnalysisGrid(true);
   {const _ea=document.getElementById('pfc-empty-analysis');if(_ea)_ea.style.display='none';}
@@ -8473,8 +8481,7 @@ function showParcelPopup(lngLat){
   if(typeof _setAnalysisPanel==='function')_setAnalysisPanel(true);
   const pt=map.project(lngLat);
   const ch=card.offsetHeight||118;
-  card.style.left=(pt.x+88)+'px';
-  card.style.top=(pt.y-ch/2)+'px';
+  _clampCardPos(card,pt.x+88,pt.y-ch/2);
   _syncSelectionCards();
 }
 function hideParcelPopup(){
