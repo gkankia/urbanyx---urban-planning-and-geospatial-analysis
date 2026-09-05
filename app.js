@@ -642,6 +642,7 @@ function applyLang(){
     pset("pfc-lbl-owner",lang==="ka"?"მეპატრონე":"Owner");
     pset("pfc-lbl-reg",lang==="ka"?"რეგისტრაციის თარიღი":"Registered");
     {const gb=document.getElementById('pfc-geom-btn');if(gb&&gb.style.display!=='none')gb.textContent=_parcelGeomShown?(lang==="ka"?'საზღვრის დამალვა':'Hide geometry'):(lang==="ka"?'ნაკვეთის საზღვრის ჩვენება':'Show parcel geometry');}
+    {const zb=document.getElementById('pfc-zoomin-btn');if(zb&&zb.style.display!=='none')zb.textContent=(lang==="ka"?'მიუახლოვდი ნაკვეთის სანახავად':'Zoom in to see parcel details');}
   }
   // Projects / Data panel (was hardcoded English in a core flow).
   if(tr.proj){const pj=tr.proj;const st=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
@@ -7701,6 +7702,7 @@ function clearParcelSelection(){
   _clearLocationPin(); // remove any location pin + exit pin mode
   _clearParcelClickPin(); // remove the map-click pin
   {const gb=document.getElementById('pfc-geom-btn');if(gb)gb.style.display='none';} _parcelGeomShown=false;
+  {const zb=document.getElementById('pfc-zoomin-btn');if(zb)zb.style.display='none';}
   {const _cs=document.getElementById("center-search");if(_cs&&_cs.classList.contains("compact"))_cs.classList.add("hidden");} // nothing selected → collapse search to the icon
   if(_activeBldId){
     // Drawn area: remove the shape entirely along with any analysis results
@@ -8318,45 +8320,45 @@ function _toggleParcelGeom(){
 function _dropLocationPin(lng,lat){
   if(!mapReady||typeof mapboxgl==='undefined')return;
   try{resetAnalysis();}catch(_){}
-  _clearParcelClickPin(); // outside Georgia: no parcel pin
+  _clearParcelClickPin();
   _pinMode=true;_isDrawnArea=false;_dbParcelGeoJSON=null;_activeBldId=null;
+  _currentParcelGeoJSON=null;_currentParcelAreaM2=null;
   parcelCentroid=[lng,lat];
-  const buf=turf.buffer(turf.point([lng,lat]),0.3,{units:'kilometers'}); // ~300 m analysis footprint
-  _currentParcelGeoJSON=buf.geometry;_currentParcelAreaM2=Math.round(turf.area(buf));
+  // Just the pin — no circle/footprint is drawn on the map.
+  try{map.getSource('parcel')?.setData({type:'FeatureCollection',features:[]});}catch(_){}
   if(_locPinMarker){try{_locPinMarker.setLngLat([lng,lat]);}catch(_){}}
   else{
     _locPinMarker=new mapboxgl.Marker({element:_mapPinEl(),anchor:'bottom',draggable:true}).setLngLat([lng,lat]).addTo(map);
     _locPinMarker.on('dragend',()=>{ try{const p=_locPinMarker.getLngLat();_selectParcelAt(p.lng,p.lat);}catch(_){} });
   }
   _scalePins(); _pinGhostHide();
-  try{map.getSource('parcel')?.setData({type:'FeatureCollection',features:[{type:'Feature',geometry:_currentParcelGeoJSON,properties:{}}]});}catch(_){}
   _showLocationCard(lng,lat);
 }
 function _showLocationCard(lng,lat){
   const card=document.getElementById('parcel-float-card');if(!card)return;
   const ka=lang==='ka';
+  const belowZoom = mapReady && map.getZoom()<PARCEL_MIN_ZOOM;
   const _hdr=document.getElementById('pfc-code');
-  // No cadastral code without a parcel — show the coordinates in the header instead.
-  if(_hdr){_hdr.textContent='📍 '+lat.toFixed(5)+', '+lng.toFixed(5);_hdr.classList.remove('pfc-editable');_hdr.removeAttribute('contenteditable');_hdr.removeAttribute('title');}
-  const _la=document.getElementById('pfc-lbl-area'),_va=document.getElementById('pfc-area');
-  if(_la)_la.textContent=ka?'ანალიზის არეალი':'Analysis area';
-  if(_va)_va.textContent='~'+(_currentParcelAreaM2/10000).toFixed(1)+' ha';
-  const _lt=document.getElementById('pfc-lbl-type'),_vt=document.getElementById('pfc-type');
-  if(_lt)_lt.textContent=ka?'კოორდინატები':'Coordinates';
-  // Coordinates are geographic lat/lng — state the CRS so the number is quotable.
-  if(_vt)_vt.innerHTML=lat.toFixed(5)+', '+lng.toFixed(5)+' <span style="opacity:0.5;white-space:nowrap">· WGS 84 (EPSG:4326)</span>';
-  const _pr=document.getElementById('pfc-perim-row');if(_pr)_pr.style.display='none';
-  const _ar=document.getElementById('pfc-lbl-addr')?.closest('.pfc-row');if(_ar)_ar.style.display='none';
-  const _or=document.getElementById('pfc-lbl-owner')?.closest('.pfc-row');if(_or)_or.style.display='none';
-  ['pfc-reg-row','pfc-ext-row','pfc-render-row','pfc-concept-info','pfc-zone-row','pfc-kvals-row','pfc-build-params-row','pfc-compliance-row','pfc-permits-row','pfc-geom-btn'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});
+  // No cadastral code without a parcel — the header just carries the coordinates.
+  if(_hdr){_hdr.textContent=lat.toFixed(5)+', '+lng.toFixed(5);_hdr.classList.remove('pfc-editable');_hdr.removeAttribute('contenteditable');_hdr.removeAttribute('title');}
+  // Bare pin card: hide every parcel-detail row and action.
+  ['pfc-perim-row','pfc-reg-row','pfc-ext-row','pfc-render-row','pfc-concept-info','pfc-zone-row','pfc-kvals-row','pfc-build-params-row','pfc-compliance-row','pfc-permits-row','pfc-geom-btn','pfc-nearby-row'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});
+  ['pfc-lbl-area','pfc-lbl-type','pfc-lbl-addr','pfc-lbl-owner'].forEach(id=>{const r=document.getElementById(id)?.closest('.pfc-row');if(r)r.style.display='none';});
+  // Below parcel zoom → one CTA that zooms in and loads the parcel automatically.
+  const zb=document.getElementById('pfc-zoomin-btn');
+  if(zb){ if(belowZoom){ zb.style.display=''; zb.textContent=ka?'მიუახლოვდი ნაკვეთის სანახავად':'Zoom in to see parcel details'; zb.onclick=()=>_zoomToPinDetails(lng,lat); } else zb.style.display='none'; }
   _clearDimLabels();_hideCircHandle();_mountFloorPanelInCard(false);
   card.classList.remove('minimized');const _mb=document.getElementById('pfc-min-btn');if(_mb)_mb.textContent='−';
   card.style.display='block';
   _parcelCardLngLat=[lng,lat];_parcelCardDragged=false;
   if(mapReady){const pt=map.project([lng,lat]);const ch=card.offsetHeight||118;card.style.left=(pt.x+88)+'px';card.style.top=(pt.y-ch/2)+'px';}
-  if(!_nearbyRan)_nearbyShowRunButton({center:[lng,lat]});
-  _updateAnalysisGrid(true);                 // zoning is hidden in pin mode (see _updateAnalysisGrid)
-  _pfcSetTabs(['parcel','analysis'],'analysis');
+  _pfcSetTabs(['parcel'],'parcel');           // only the Parcel tab in pin mode
+}
+// The "Zoom in to see parcel details" action: fly the pin to parcel zoom, then resolve.
+function _zoomToPinDetails(lng,lat){
+  if(!mapReady)return;
+  map.once('moveend',()=>{ _selectParcelAt(lng,lat); });
+  map.flyTo({center:[lng,lat],zoom:Math.max(16.5,map.getZoom()),essential:true});
 }
 function showParcelPopup(lngLat){
   if(!map||!lngLat)return;
