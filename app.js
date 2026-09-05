@@ -8371,6 +8371,9 @@ function _showLocationCard(lng,lat){
   card.style.display='block';
   _parcelCardLngLat=[lng,lat];_parcelCardDragged=false;
   if(mapReady){const pt=map.project([lng,lat]);const ch=card.offsetHeight||118;card.style.left=(pt.x+88)+'px';card.style.top=(pt.y-ch/2)+'px';}
+  // The Analysis tab works from the pin itself — no parcel details required.
+  _updateAnalysisGrid(true);
+  {const _ea=document.getElementById('pfc-empty-analysis');if(_ea)_ea.style.display='none';}
   _pfcSetTabs(['parcel','analysis','plan'],'parcel');   // the full card
 }
 // The "Zoom in to see parcel details" action: fly the pin to parcel zoom, then resolve —
