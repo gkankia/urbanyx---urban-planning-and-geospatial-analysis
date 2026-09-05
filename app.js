@@ -7072,6 +7072,7 @@ async function _reRun(center,pt){
   pt=pt||_rePt||1; _rePt=pt;
   const seq=++_reSeq; _reActive=true;
   const [lng,lat]=center; const isKa=lang==='ka';
+  const wasPoints=_rePointsOn, wasParcels=_reParcelsOn; // re-plot over the new area after the run
   _reParcelsOn=false; _reClearParcels(); _rePointsOn=false; _reClearPoints();
   _reShow(`<div class="re-note"><span class="re-spin"></span> ${isKa?'იტვირთება ბაზრის მონაცემი…':'Loading market data…'}</div>`);
   // Default catchment = a 10-min walk; if the user ran the Isochrone analysis, use that.
@@ -7099,6 +7100,9 @@ async function _reRun(center,pt){
   // When RE rides the user's isochrone it's already drawn — don't double-outline it.
   if(usingIso){ try{['re-iso-line','re-iso-fill'].forEach(id=>{if(map.getLayer(id))map.removeLayer(id);}); if(map.getSource('re-iso'))map.removeSource('re-iso');}catch(_){} }
   else _reOutline(iso);
+  // Re-plot the listings / land plots the user had on, now over the new catchment.
+  if(wasPoints&&typeof _reTogglePoints==='function')_reTogglePoints();
+  if(wasParcels&&typeof _reToggleParcels==='function')_reToggleParcels();
 }
 function _reFmtGel(v){ if(v==null)return '—'; return '₾'+Math.round(v).toLocaleString('en-US'); }
 function _reCompact(v,sym){ if(v==null)return ''; v=+v; if(!isFinite(v)||v<=0)return ''; if(v>=1e6)return sym+(v/1e6).toFixed(1)+'M'; if(v>=1e3)return sym+Math.round(v/1e3)+'k'; return sym+Math.round(v); }
@@ -14715,6 +14719,7 @@ async function runAccessibilityAnalysis(){
     _isoData=isoData;
     _refreshAnalysisGrid(); // unlock the other analyses now the isochrone exists
     map.getSource("isochrone").setData(isoData);
+    _reRefreshFromIso();   // isochrone overrides RE's default catchment — do it now, not after the cascade
     _clearBusStopRoute();
     // Re-run every active isochrone-dependent layer with the new isochrone
     const _rerunActive=async(swId,fn,pre)=>{
@@ -14731,7 +14736,6 @@ async function runAccessibilityAnalysis(){
       _rerunActive('acc-mob-sw',      toggleAccMobility),
       _rerunActive('acc-transit-sw',  toggleAccTransit),
     ]);
-    _reRefreshFromIso();   // RE rides the new isochrone shape (mode/time change)
     // turf.bbox handles both the Mapbox Polygon and the transit MultiPolygon.
     const bb=turf.bbox(isoFeat);
     map.fitBounds([[bb[0],bb[1]],[bb[2],bb[3]]],{padding:60,duration:800});
