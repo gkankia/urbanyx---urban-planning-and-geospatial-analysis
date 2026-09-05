@@ -16749,15 +16749,17 @@ async function exportReportPDF(){
       src('Basemap: © Mapbox, © OpenStreetMap contributors.');
       return true;
     };
-    if(a.anyArea&&(_isoData?.features?.[0]||_isLargeParcel())){
+    // Frame on the isochrone, a large parcel, or (RE-only) the real-estate catchment.
+    const _areaGeom=_isoData?.features?.[0]?.geometry||((a.realestate&&_reLast&&_reLast.iso)||null);
+    if(a.anyArea&&(_areaGeom||_isLargeParcel())){
       const groups=[];
       if(a.history){const h=t().hist;const cur=_histVarDefs(h).find(v=>v.k===_histColorBy)||_histVarDefs(h)[0];
         groups.push({title:'Transit reliability',rows:[[_HIST_OK,cur.leg[0]],[_HIST_WARN,cur.leg[1]],[_HIST_BAD,cur.leg[2]]],note:cur.l});}
       if(a.syntax)groups.push({title:'Street connectivity',rows:[['#3b82f6','≤1'],['#22c55e','2–3'],['#f97316','4–5'],['#ef4444','≥6']],note:'Node degree (segments per junction)'});
-      const others=[a.orient&&('Orientation'+(_orientDom?' ('+_orientDom+')':'')),a.osm&&'Urban functions',a.transit&&!a.history&&'Transit stops',a.schools&&'Schools',a.kg&&'Kindergartens',a.crashes&&'Road incidents',a.parking&&'Parking'].filter(Boolean);
+      const others=[a.orient&&('Orientation'+(_orientDom?' ('+_orientDom+')':'')),a.osm&&'Urban functions',a.transit&&!a.history&&'Transit stops',a.schools&&'Schools',a.kg&&'Kindergartens',a.crashes&&'Road incidents',a.parking&&'Parking',a.realestate&&'Real estate listings'].filter(Boolean);
       if(others.length)groups.push({title:'Other layers on map',rows:others.map(o=>[null,o])});
-      groups.push({title:'Study area',rows:[],note:areaLbl||''});
-      await addMapBlock('Area-scale map',{title:'Area analyses',groups});
+      groups.push({title:'Study area',rows:[],note:areaLbl||(a.realestate?(_reLast&&_reLast.usingIso?'Isochrone catchment':'10-minute walk'):'')});
+      await addMapBlock('Area-scale map',{title:'Area analyses',groups,frameGeom:_areaGeom||undefined});
     }
     const hasParcelAnalysis=a.zoning||a.canopy||a.lst||a.wind||a.relief||a.solar;
     if(hasParcelAnalysis&&_currentParcelGeoJSON){
@@ -17004,13 +17006,23 @@ async function exportReportPDF(){
     if(a.isochrone)src(`Catchment: ${_accMinutes||10}-minute ${_accMode||'walking'} isochrone (${_accMode==='transit'?'TTC network, observed times':'Mapbox Isochrone API'}).`);
 
     // ── Methodology ──
-    H2('Methodology');
-    P(`${UVI_NAME}: a 0–100 composite (graded A–F) of walkable-catchment access. Each component is scored 0–1 with a saturating curve (diminishing returns) and combined as a weighted mean, then scaled to 100. Components and weights — Education 1.0 (schools + kindergartens), Transit 1.0 (route count moderated by a reliability multiplier), Land-use diversity 1.0 (Shannon SDI), on-street Parking 0.75 (vehicle capacity). Weights are renormalised over whichever components have data. Grades: A ≥ 80, B ≥ 70, C ≥ 60, D ≥ 50, E ≥ 40, F below 40.`);
-    P(`Walkable catchment: a walking-network isochrone around the parcel (Mapbox Isochrone API) — real street-network distance, not a straight-line radius. Large parcels and drawn areas of interest are analysed over their own geometry; running the accessibility isochrone replaces the default catchment with the wider isochrone.`);
-    P(`Land-use diversity (Shannon SDI): H = -sum(p*ln p) over amenity-category shares p (food, health, parks, retail, culture, …), normalised to 0–100. Higher values indicate a more balanced land-use mix.`);
-    P(`Transit reliability: the share of arrivals within −60…+300 s of schedule across the catchment's stops, weighted by observation count, over roughly 30 days of archived vehicle positions (sampled every 2 min; stops with fewer than 30 matched observations are excluded). Graded A ≥ 80% … F < 40%.`);
-    P(`Zoning compliance: the parcel's minimum area, width and depth compared with the dominant functional zone's requirements (Tbilisi Land-Use Master Plan, Article 16). Width and depth are measured from the parcel's minimum-area oriented bounding rectangle.`);
-    P(`Data availability: amenity, land-use and transit-reliability layers rely on external services (OpenStreetMap / Overpass, Tbilisi Transport Company, and the archived transit history, the last being a Pro feature). When a service is unavailable the affected component is omitted and the index renormalises; such omissions are noted in the relevant section.`);
+    // Only explain the analyses that are actually in this report — no dead weight.
+    {
+      const meth=[];
+      const usesTransitIso=a.isochrone&&(typeof _accMode!=='undefined')&&_accMode==='transit';
+      if(_lastNearbyCounts)meth.push(`${UVI_NAME}: a 0–100 composite (graded A–F) of walkable-catchment access. Each component is scored 0–1 with a saturating curve (diminishing returns) and combined as a weighted mean, then scaled to 100. Components and weights — Education 1.0 (schools + kindergartens), Transit 1.0 (route count moderated by a reliability multiplier), Land-use diversity 1.0 (Shannon SDI), on-street Parking 0.75 (vehicle capacity). Weights are renormalised over whichever components have data. Grades: A ≥ 80, B ≥ 70, C ≥ 60, D ≥ 50, E ≥ 40, F below 40.`);
+      if((a.isochrone&&!usesTransitIso)||_lastNearbyCounts)meth.push(`Walkable catchment: a walking/cycling/driving-network isochrone around the parcel (Mapbox Isochrone API) — real street-network distance, not a straight-line radius. Large parcels and drawn areas of interest are analysed over their own geometry; running the accessibility isochrone replaces the default catchment with the wider isochrone.`);
+      if(usesTransitIso)meth.push(`Public-transport isochrone: the area reachable by bus, metro and ropeway from the origin on the TTC network. In-vehicle times use observed segment speeds from recent weeks; waits combine each route's scheduled frequency with its observed reliability (actual vs. timetabled headways over ~3 weeks); walking access, egress and transfers are included. It reflects how the network runs now, not the timetable.`);
+      if(_lastDiversity!=null||a.osm)meth.push(`Land-use diversity (Shannon SDI): H = -sum(p*ln p) over amenity-category shares p (food, health, parks, retail, culture, …), normalised to 0–100. Higher values indicate a more balanced land-use mix.`);
+      if(a.history)meth.push(`Transit reliability: the share of arrivals within −60…+300 s of schedule across the catchment's stops, weighted by observation count, over roughly 30 days of archived vehicle positions (sampled every 2 min; stops with fewer than 30 matched observations are excluded). Graded A ≥ 80% … F < 40%.`);
+      if(a.realestate)meth.push(`Real estate market: median asking prices for the selected property type over the catchment, from a mirror of myhome.ge listings. Sale medians are per m² (with interquartile range); rent medians are the full monthly price. Breakdowns split the catchment by seller (owner / agent / developer), building type, renovation, project and room count. Figures are asking prices, not recorded transactions.`);
+      if(a.zoning)meth.push(`Zoning compliance: the parcel's minimum area, width and depth compared with the dominant functional zone's requirements (Tbilisi Land-Use Master Plan, Article 16). Width and depth are measured from the parcel's minimum-area oriented bounding rectangle.`);
+      if(meth.length){
+        meth.push(`Data availability: the layers above rely on external services (OpenStreetMap / Overpass, Tbilisi Transport Company, maps.gov.ge and myhome.ge). When a service is unavailable the affected component is omitted and, where applicable, the index renormalises; such omissions are noted in the relevant section.`);
+        H2('Methodology');
+        meth.forEach(m=>P(m));
+      }
+    }
 
     // ── Sources (ordered by appearance) ──
     if(sources.length){
