@@ -7054,6 +7054,8 @@ function _reClear(){
   if(typeof _reClearParcels==='function')_reClearParcels();
   if(typeof _reClearPoints==='function')_reClearPoints();
 }
+// One retry on error — guards against a request that intermittently loses its apikey.
+async function _reRpc(fn,args){ let r=await sb.rpc(fn,args); if(r&&r.error){ await new Promise(s=>setTimeout(s,300)); r=await sb.rpc(fn,args); } return r; }
 async function _reRun(center,pt){
   pt=pt||_rePt||1; _rePt=pt;
   const seq=++_reSeq; _reActive=true;
@@ -7070,13 +7072,14 @@ async function _reRun(center,pt){
   // to PostGIS so the request stays small and the ST_Contains query stays fast.
   try{ const _sf=turf.simplify(turf.feature(iso),{tolerance:0.0006,highQuality:false}); if(_sf&&_sf.geometry)iso=_sf.geometry; }catch(_){}
   // Server-side aggregation for this ONE property type: stats + its subcategory breakdowns.
+  // Serial (not Promise.all) + one retry — a request that loses its apikey header mid-burst
+  // sails through on the retry, and PostgREST is happy to run these back-to-back.
   let res, breaks={};
   try{
-    const [a,b]=await Promise.all([
-      sb.rpc('myhome_area_stats',{area_geojson:iso,p_deal_type:_reDeal,p_property_type:pt,p_min_sample:5}),
-      sb.rpc('myhome_area_breakdowns',{area_geojson:iso,p_deal_type:_reDeal,p_property_type:pt})
-    ]);
-    if(a.error)throw a.error; res=a.data; if(b&&!b.error&&b.data)breaks=b.data;
+    const a=await _reRpc('myhome_area_stats',{area_geojson:iso,p_deal_type:_reDeal,p_property_type:pt,p_min_sample:5});
+    if(a.error)throw a.error; res=a.data;
+    const b=await _reRpc('myhome_area_breakdowns',{area_geojson:iso,p_deal_type:_reDeal,p_property_type:pt});
+    if(b&&!b.error&&b.data)breaks=b.data;
   }catch(e){ console.warn('real-estate rpc:',e); if(seq!==_reSeq)return;
     _reShow(`<div class="re-empty">${isKa?'ბაზრის მონაცემი ვერ ჩაიტვირთა':'Could not load market data'}</div>`); return; }
   if(seq!==_reSeq)return;
@@ -7174,7 +7177,7 @@ async function _reToggleParcels(){
   if(!_reLast||!_reLast.iso)return;
   const btn=document.querySelector('.re-plotbtn'); if(btn){btn.textContent=isKa?'იტვირთება…':'Loading plots…'; btn.classList.add('on');}
   let list;
-  try{ const {data,error}=await sb.rpc('myhome_area_parcels',{area_geojson:_reLast.iso,p_deal_type:_reDeal}); if(error)throw error; list=(data||[]).slice(0,40); }
+  try{ const {data,error}=await _reRpc('myhome_area_parcels',{area_geojson:_reLast.iso,p_deal_type:_reDeal}); if(error)throw error; list=(data||[]).slice(0,40); }
   catch(e){ console.warn('re parcels rpc:',e); _reRenderPanel(); return; }
   if(!list.length){ showToast(isKa?'ამ ზონაში ნაკვეთი კოდით ვერ მოიძებნა':'No plots with a cadastral code here'); _reRenderPanel(); return; }
   const seq=_reSeq; _reParcelsOn=true;
@@ -7210,7 +7213,7 @@ async function _reTogglePoints(){
   if(med==null){ showToast(isKa?'ჯერ არ არის საკმარისი ფასის მონაცემი':'Not enough price data yet'); return; }
   const btn=document.querySelector('.re-ptsbtn'); if(btn){btn.textContent=isKa?'იტვირთება…':'Loading points…'; btn.classList.add('on');}
   let fc;
-  try{ const {data,error}=await sb.rpc('myhome_area_points',{area_geojson:_reLast.iso,p_deal_type:_reDeal,p_property_type:_rePt}); if(error)throw error; fc=data; }
+  try{ const {data,error}=await _reRpc('myhome_area_points',{area_geojson:_reLast.iso,p_deal_type:_reDeal,p_property_type:_rePt}); if(error)throw error; fc=data; }
   catch(e){ console.warn('re points rpc:',e); _reRenderPanel(); return; }
   const feats=((fc&&fc.features)||[]).filter(f=>f.properties&&f.properties.v!=null);
   if(!feats.length){ showToast(isKa?'წერტილები ვერ მოიძებნა':'No points to show'); _rePointsOn=false; _reRenderPanel(); return; }
