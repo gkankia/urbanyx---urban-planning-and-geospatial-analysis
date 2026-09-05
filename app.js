@@ -6729,8 +6729,9 @@ function toggleZoningPanel(){
   _closeOtherNavPanels('zoning');
   if(_wasActive)btn?.classList.add('active');
   _syncZoningPanel();
-  // Zoning is an analysis — its panel lives in the card's Analysis tab.
+  // Zoning is an analysis — its panel lives in the card's Analysis tab, beneath the row.
   card.style.display='block';
+  _pfcMountInSlot('zoning-panel-card','parcel');
   if(typeof _dockTab==='function')_dockTab('analysis');
   if(typeof _dockOpen==='function')_dockOpen();
   btn?.classList.add('zoning-panel-open');
@@ -7134,6 +7135,7 @@ function _reRenderPanel(){
 function _reSetDeal(deal){ if(deal===_reDeal)return; _reDeal=deal; _reParcelsOn=false; _reClearParcels(); _rePointsOn=false; _reClearPoints(); if(_reLast&&_reLast.center)_reRun(_reLast.center,_reLast.pt); }
 function _reShow(html){ const row=document.getElementById('pfc-realestate-row'), body=document.getElementById('pfc-realestate-body');
   if(body)body.innerHTML=html; if(row)row.style.display='block';
+  _pfcMountInSlot('pfc-realestate-row','re'); // render beneath the Real estate row
   const card=document.getElementById('parcel-float-card'); if(card&&card.style.display==='none')card.style.display='flex';
   // The panel just changed height — keep the (now taller) card fully on-screen.
   requestAnimationFrame(()=>{try{_updateParcelCardPos();}catch(_){}}); }
@@ -9865,6 +9867,13 @@ function toggleProCat(id){
 
 var _activeCatKey=null;
 
+// Each analysis renders directly beneath its own category row: move its sub-panel
+// element into that row's slot (only one sub-panel is open at a time).
+const _CAT_ROW={accessibility:'acc',education:'acc',mobility:'acc',morphology:'acc',relief:'parcel',climate:'parcel',energy:'parcel',zoning:'parcel'};
+function _pfcMountInSlot(panelId,row){
+  const panel=document.getElementById(panelId), slot=document.getElementById('pfc-slot-'+row);
+  if(panel&&slot&&panel.parentNode!==slot)slot.appendChild(panel);
+}
 function showCatInPanel(catKey,btnEl){
   // Climate/Energy/Relief are Pro — show the paywall immediately on click
   // rather than opening an (empty) panel first.
@@ -9883,8 +9892,8 @@ function showCatInPanel(catKey,btnEl){
     return;
   }
   if(proCard){
-    // Docked: the card renders in the dock's Analysis pane; CSS owns position.
     proCard.style.display='block';
+    _pfcMountInSlot('pro-analysis-card', _CAT_ROW[catKey]||'parcel'); // beneath the selected row
     if(typeof _dockTab==='function')_dockTab('analysis');
     if(typeof _dockOpen==='function')_dockOpen();
   }
@@ -14638,6 +14647,9 @@ function toggleReliefOverlay(){
 let _isoRegenTimer=null;
 let _isoActive=false;
 function _scheduleIsoRegen(){clearTimeout(_isoRegenTimer);_isoRegenTimer=setTimeout(()=>runAccessibilityAnalysis(),250);}
+// Real estate follows the isochrone: when its shape changes (mode/time) or is turned off,
+// re-run the active RE analysis so its stats + listings match the new catchment.
+function _reRefreshFromIso(){ if(typeof _reActive!=='undefined'&&_reActive&&_reLast&&_reLast.center)_reRun(_reLast.center,_reLast.pt); }
 
 function toggleAccIsochrone(){
   _isoActive=!_isoActive;
@@ -14652,6 +14664,7 @@ function toggleAccIsochrone(){
     _isoData=null;
     _clearBusStopRoute();
     const res=document.getElementById("acc-iso-result");if(res)res.innerHTML="";
+    _reRefreshFromIso();   // isochrone off → RE falls back to the 10-min walk
   }
   _refreshAnalysisGrid();
 }
@@ -14696,6 +14709,7 @@ async function runAccessibilityAnalysis(){
       _rerunActive('acc-mob-sw',      toggleAccMobility),
       _rerunActive('acc-transit-sw',  toggleAccTransit),
     ]);
+    _reRefreshFromIso();   // RE rides the new isochrone shape (mode/time change)
     const modeIcon={walking:"🚶",cycling:"🚲",driving:"🚗",transit:"🚌"}[_accMode];
     const modeLabel=t().accModes[_accMode];
     // turf.bbox handles both the Mapbox Polygon and the transit MultiPolygon.
