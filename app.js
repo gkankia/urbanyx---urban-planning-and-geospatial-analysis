@@ -7912,57 +7912,7 @@ map.on("load",()=>{
       return;
     }
     const{lng,lat}=e.lngLat;
-    // Beyond Georgia there is no parcel/zoning data — drop a location pin and analyse from it.
-    if(!_inGeorgia(lng,lat)){_dropLocationPin(lng,lat);return;}
-    // NAPR only serves individual parcels from zoom 15+ (below that it returns whole
-    // districts/sectors). Tell the user to zoom in rather than selecting a giant area.
-    if(map.getZoom()<PARCEL_MIN_ZOOM){
-      showToast(lang==='ka'?'ნაკვეთის ასარჩევად მიახლოვდით (მასშტაბი 15+)':'Zoom in to select a parcel (zoom 15+)');
-      return;
-    }
-    const bounds=map.getBounds();
-    setStatus(t().searching,"");
-    try{
-      const form=new FormData();
-      form.append("keyword",`${lng},${lat}`);
-      form.append("keyword_description[coords][]",lng);
-      form.append("keyword_description[coords][]",lat);
-      form.append("keyword_description[bbox][]",bounds.getWest());
-      form.append("keyword_description[bbox][]",bounds.getSouth());
-      form.append("keyword_description[bbox][]",bounds.getEast());
-      form.append("keyword_description[bbox][]",bounds.getNorth());
-      form.append("keyword_description[zoom]",map.getZoom());
-      form.append("keyword_description[lang]",lang);
-      form.append("keyword_description[layers][]",92);
-      form.append("keyword_description[layers][]",97);
-      form.append("keyword_description[getinfo_type]","click");
-      const res=await fetch("https://maps.gov.ge/map/portal/search",{method:"POST",body:form});
-      const data=await res.json();
-      if(!data.status||!data.result?.length){setStatus("","");return;}
-      // Select ONLY real parcels (lbl "lr_parcels:…"). Skip the large registration borders
-      // ("ract_g_borders") and district sectors ("lr_seqtors", e.g. "01.10") that this search
-      // returns at low zoom. Line/forest are separate raster overlays, not this endpoint.
-      const item=data.result.find(r=>/lbl=lr_parcels:/.test(r.details?.info_link||""));
-      if(!item){setStatus("","");return;}
-      const lbl=item.details?.info_link?.split("lbl=")[1];
-      if(!lbl){setStatus("","");return;}
-      const name=item.name||lbl;
-      // Discard an unsaved concept when moving to a DIFFERENT parcel (clicking within the
-      // concept's own parcel keeps it). Saved concepts stay — they're part of the project.
-      if(_conceptOn&&!_conceptSaved&&_conceptParcel){
-        let same=false;try{same=turf.booleanPointInPolygon([lng,lat],turf.feature(_conceptParcel));}catch(_){}
-        if(!same){_clearConcept();showToast(lang==='ka'?'შენახვის გარეშე გენერირებული კონცეფცია წაიშალა. შესანარჩუნებლად შეინახე პროექტი.':'Unsaved concept removed. Save the project to keep it.',4500);}
-      }
-      const inputEl=document.getElementById("input-center");
-      if(inputEl)inputEl.value=name;
-      try{resetAnalysis();}catch(_){}
-      _pendingPinLngLat=[lng,lat]; // pin goes exactly where the user clicked
-      await loadParcel(lbl,name);
-    }catch(e){
-      console.warn("map click:",e);
-      if(e.message==="no_shape")setStatus(lang==="ka"?"ძიება წარუმატებელია":"Search unsuccessful","error");
-      else setStatus(t().govGeDown,"");
-    }
+    _selectParcelAt(lng,lat);
   });
 
   // Click on 3D building → open draw popup to adjust height
@@ -7983,6 +7933,9 @@ map.on("load",()=>{
   map.on("move",_updateMiniCardPositions);
   map.on("mousemove",_updateCoordReadout);
   map.on("mouseout",_hideCoordReadout);
+  map.on("zoom",_scalePins);                 // pin grows/shrinks with the map
+  map.on("mousemove",_pinGhostMove);         // ghost pin trails the cursor before a click
+  map.on("mouseout",_pinGhostHide);
   _hideCoordReadout(); // show the CRS from the start (before the cursor first enters the map)
   // Keep the zoom figure live even when zooming without moving the mouse.
   map.on("zoom",()=>{const el=document.getElementById('coord-readout');if(el&&el.style.display!=='none'&&_coordLL)_renderCoord(el,_coordLL.lng,_coordLL.lat,_mapboxElev(_coordLL.lng,_coordLL.lat));});
@@ -8247,18 +8200,95 @@ function _clearLocationPin(){if(_locPinMarker){try{_locPinMarker.remove();}catch
 // A map click drops a pin at the clicked spot and pulls ownership into the card;
 // the parcel outline itself is only drawn when the user asks for it (pfc-geom-btn).
 let _parcelClickPin=null, _pendingPinLngLat=null, _parcelGeomShown=false;
-// Marker element using the shared map_pin.svg graphic (tip at bottom-centre).
+// Marker element using the shared map_pin.svg graphic (tip at bottom-centre). The
+// outer div is what Mapbox positions; the inner <img> is what we scale with zoom, so
+// scaling never fights Mapbox's own translate on the outer element.
 function _mapPinEl(){
   const el=document.createElement('div');el.className='map-pin-mk';
-  el.innerHTML='<img src="analysis-logos/map_pin.svg" width="34" height="34" alt="" draggable="false">';
+  el.innerHTML='<img class="map-pin-img" src="analysis-logos/map_pin.svg" width="42" height="42" alt="" draggable="false">';
   return el;
+}
+// The pin grows as you zoom in (tip stays put via transform-origin:bottom).
+function _pinScaleForZoom(){ const z=(mapReady?map.getZoom():14); const t=Math.max(0,Math.min(1,(z-11)/6)); return 0.85+t*0.6; }
+function _scalePins(){
+  const s=_pinScaleForZoom().toFixed(3);
+  [_parcelClickPin,_locPinMarker].forEach(m=>{ if(!m)return; const img=m.getElement()?.querySelector('.map-pin-img'); if(img)img.style.transform='scale('+s+')'; });
 }
 function _dropParcelClickPin(lng,lat){
   if(!mapReady||typeof mapboxgl==='undefined'||!Number.isFinite(lng)||!Number.isFinite(lat))return;
   if(_parcelClickPin){try{_parcelClickPin.setLngLat([lng,lat]);}catch(_){}return;}
-  _parcelClickPin=new mapboxgl.Marker({element:_mapPinEl(),anchor:'bottom'}).setLngLat([lng,lat]).addTo(map);
+  _parcelClickPin=new mapboxgl.Marker({element:_mapPinEl(),anchor:'bottom',draggable:true}).setLngLat([lng,lat]).addTo(map);
+  _parcelClickPin.on('dragend',()=>{ try{const p=_parcelClickPin.getLngLat();_selectParcelAt(p.lng,p.lat);}catch(_){} });
+  _scalePins(); _pinGhostHide();
 }
 function _clearParcelClickPin(){ if(_parcelClickPin){try{_parcelClickPin.remove();}catch(_){}_parcelClickPin=null;} }
+// Resolve whatever is at (lng,lat). Zoomed in over Georgia → load the parcel (cadastral
+// header + ownership). Otherwise just drop a pin and show the coordinates card — the user
+// only needs to zoom in when they actually want the parcel. Shared by clicks and pin drags.
+async function _selectParcelAt(lng,lat){
+  if(!mapReady||!Number.isFinite(lng)||!Number.isFinite(lat))return;
+  if(!_inGeorgia(lng,lat)||map.getZoom()<PARCEL_MIN_ZOOM){ _dropLocationPin(lng,lat); return; }
+  const bounds=map.getBounds();
+  setStatus(t().searching,"");
+  try{
+    const form=new FormData();
+    form.append("keyword",`${lng},${lat}`);
+    form.append("keyword_description[coords][]",lng);
+    form.append("keyword_description[coords][]",lat);
+    form.append("keyword_description[bbox][]",bounds.getWest());
+    form.append("keyword_description[bbox][]",bounds.getSouth());
+    form.append("keyword_description[bbox][]",bounds.getEast());
+    form.append("keyword_description[bbox][]",bounds.getNorth());
+    form.append("keyword_description[zoom]",map.getZoom());
+    form.append("keyword_description[lang]",lang);
+    form.append("keyword_description[layers][]",92);
+    form.append("keyword_description[layers][]",97);
+    form.append("keyword_description[getinfo_type]","click");
+    const res=await fetch("https://maps.gov.ge/map/portal/search",{method:"POST",body:form});
+    const data=await res.json();
+    // Nothing registered here (road, water, gap): still drop a pin + coordinates card.
+    if(!data.status||!data.result?.length){ setStatus("",""); _dropLocationPin(lng,lat); return; }
+    // Select ONLY real parcels (lbl "lr_parcels:…"). Skip the large registration borders
+    // ("ract_g_borders") and district sectors ("lr_seqtors", e.g. "01.10") this returns.
+    const item=data.result.find(r=>/lbl=lr_parcels:/.test(r.details?.info_link||""));
+    const lbl=item&&item.details?.info_link?.split("lbl=")[1];
+    if(!lbl){ setStatus("",""); _dropLocationPin(lng,lat); return; }
+    const name=item.name||lbl;
+    // Discard an unsaved concept when moving to a DIFFERENT parcel (clicking within the
+    // concept's own parcel keeps it). Saved concepts stay — they're part of the project.
+    if(_conceptOn&&!_conceptSaved&&_conceptParcel){
+      let same=false;try{same=turf.booleanPointInPolygon([lng,lat],turf.feature(_conceptParcel));}catch(_){}
+      if(!same){_clearConcept();showToast(lang==='ka'?'შენახვის გარეშე გენერირებული კონცეფცია წაიშალა. შესანარჩუნებლად შეინახე პროექტი.':'Unsaved concept removed. Save the project to keep it.',4500);}
+    }
+    const inputEl=document.getElementById("input-center");
+    if(inputEl)inputEl.value=name;
+    try{resetAnalysis();}catch(_){}
+    _pendingPinLngLat=[lng,lat]; // pin goes exactly where the user clicked / dragged
+    await loadParcel(lbl,name);
+  }catch(e){
+    console.warn("select parcel:",e);
+    if(e.message==="no_shape")setStatus(lang==="ka"?"ძიება წარუმატებელია":"Search unsuccessful","error");
+    else setStatus(t().govGeDown,"");
+  }
+}
+// ── Cursor-follow "ghost" pin (a hint that clicking drops a pin) ───────────────
+// Shows a small pin under the cursor while the map is in plain select mode and no pin
+// is placed yet. Once a pin exists, this hides and the placed pin shows a move cursor.
+let _pinGhostEl=null;
+function _pinPlacementActive(){
+  return mapReady && !_parcelClickPin && !_locPinMarker
+    && !_measureMode && !_polyDrawing && !_drawMenuOpen && !_editingBldId && !_profileMode && !_isDrawnArea && !_pinMode;
+}
+function _pinGhost(){
+  if(!_pinGhostEl){ _pinGhostEl=document.createElement('img'); _pinGhostEl.id='map-pin-ghost'; _pinGhostEl.src='analysis-logos/map_pin.svg'; _pinGhostEl.alt=''; document.body.appendChild(_pinGhostEl); }
+  return _pinGhostEl;
+}
+function _pinGhostMove(e){
+  if(!_pinPlacementActive()){ if(_pinGhostEl)_pinGhostEl.style.display='none'; return; }
+  const oe=(e&&e.originalEvent)||e; if(!oe)return;
+  const g=_pinGhost(); g.style.left=oe.clientX+'px'; g.style.top=oe.clientY+'px'; g.style.display='block';
+}
+function _pinGhostHide(){ if(_pinGhostEl)_pinGhostEl.style.display='none'; }
 function _fitParcelGeom(g){
   if(!g)return;
   const flat=g.type==="Polygon"?g.coordinates.flat():g.type==="MultiPolygon"?g.coordinates.flat(2):g.type==="MultiLineString"?g.coordinates.flat():g.coordinates;
@@ -8294,7 +8324,11 @@ function _dropLocationPin(lng,lat){
   const buf=turf.buffer(turf.point([lng,lat]),0.3,{units:'kilometers'}); // ~300 m analysis footprint
   _currentParcelGeoJSON=buf.geometry;_currentParcelAreaM2=Math.round(turf.area(buf));
   if(_locPinMarker){try{_locPinMarker.setLngLat([lng,lat]);}catch(_){}}
-  else{_locPinMarker=new mapboxgl.Marker({element:_mapPinEl(),anchor:'bottom'}).setLngLat([lng,lat]).addTo(map);}
+  else{
+    _locPinMarker=new mapboxgl.Marker({element:_mapPinEl(),anchor:'bottom',draggable:true}).setLngLat([lng,lat]).addTo(map);
+    _locPinMarker.on('dragend',()=>{ try{const p=_locPinMarker.getLngLat();_selectParcelAt(p.lng,p.lat);}catch(_){} });
+  }
+  _scalePins(); _pinGhostHide();
   try{map.getSource('parcel')?.setData({type:'FeatureCollection',features:[{type:'Feature',geometry:_currentParcelGeoJSON,properties:{}}]});}catch(_){}
   _showLocationCard(lng,lat);
 }
@@ -8302,7 +8336,8 @@ function _showLocationCard(lng,lat){
   const card=document.getElementById('parcel-float-card');if(!card)return;
   const ka=lang==='ka';
   const _hdr=document.getElementById('pfc-code');
-  if(_hdr){_hdr.textContent=(ka?'📍 მდებარეობა':'📍 Location');_hdr.classList.remove('pfc-editable');_hdr.removeAttribute('contenteditable');_hdr.removeAttribute('title');}
+  // No cadastral code without a parcel — show the coordinates in the header instead.
+  if(_hdr){_hdr.textContent='📍 '+lat.toFixed(5)+', '+lng.toFixed(5);_hdr.classList.remove('pfc-editable');_hdr.removeAttribute('contenteditable');_hdr.removeAttribute('title');}
   const _la=document.getElementById('pfc-lbl-area'),_va=document.getElementById('pfc-area');
   if(_la)_la.textContent=ka?'ანალიზის არეალი':'Analysis area';
   if(_va)_va.textContent='~'+(_currentParcelAreaM2/10000).toFixed(1)+' ha';
@@ -8313,7 +8348,7 @@ function _showLocationCard(lng,lat){
   const _pr=document.getElementById('pfc-perim-row');if(_pr)_pr.style.display='none';
   const _ar=document.getElementById('pfc-lbl-addr')?.closest('.pfc-row');if(_ar)_ar.style.display='none';
   const _or=document.getElementById('pfc-lbl-owner')?.closest('.pfc-row');if(_or)_or.style.display='none';
-  ['pfc-reg-row','pfc-ext-row','pfc-render-row','pfc-concept-info','pfc-zone-row','pfc-kvals-row','pfc-build-params-row','pfc-compliance-row','pfc-permits-row'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});
+  ['pfc-reg-row','pfc-ext-row','pfc-render-row','pfc-concept-info','pfc-zone-row','pfc-kvals-row','pfc-build-params-row','pfc-compliance-row','pfc-permits-row','pfc-geom-btn'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});
   _clearDimLabels();_hideCircHandle();_mountFloorPanelInCard(false);
   card.classList.remove('minimized');const _mb=document.getElementById('pfc-min-btn');if(_mb)_mb.textContent='−';
   card.style.display='block';
