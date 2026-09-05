@@ -144,6 +144,10 @@
   .acc-mode-btn { flex:1; padding:7px 0; border-radius:7px; border:1px solid rgba(255,255,255,0.1); background:transparent; color:rgba(255,255,255,0.45); font-size:0.78rem; cursor:pointer; transition:all 0.2s; }
   .acc-mode-btn:hover { border-color:rgba(255,255,255,0.2); color:rgba(255,255,255,0.7); }
   .acc-mode-btn.active { background:rgba(99,102,241,0.14); border-color:rgba(99,102,241,0.4); color:#a5b4fc; font-weight:600; }
+  .acc-mode-btn { display:flex; align-items:center; justify-content:center; }
+  .acc-mode-ic { width:22px; height:22px; display:block; opacity:0.5; transition:opacity 0.2s; }
+  .acc-mode-btn:hover .acc-mode-ic { opacity:0.8; }
+  .acc-mode-btn.active .acc-mode-ic { opacity:1; }
   .acc-time-row { display:flex; gap:4px; margin:4px 0 10px; }
   .acc-time-btn { flex:1; padding:5px 2px; border-radius:6px; border:1px solid rgba(255,255,255,0.09); background:transparent; color:rgba(255,255,255,0.38); font-size:0.7rem; cursor:pointer; transition:all 0.2s; }
   .acc-time-btn:hover { border-color:rgba(255,255,255,0.18); color:rgba(255,255,255,0.65); }
