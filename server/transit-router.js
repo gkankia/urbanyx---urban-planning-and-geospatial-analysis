@@ -290,7 +290,7 @@ async function reachableStops(lng, lat, cutoffSec, band) {
 // origin walk-blob ∪ egress disks around every reachable stop. Rasterised to a
 // ~120 m grid and merged as horizontal run-length rectangles — one turf.union of a
 // few hundred axis-aligned rects, not thousands of circles (seconds → tens of ms).
-const CELL_M = 120;
+const CELL_M = 80;
 function buildPolygon(net, label, lng, lat, cutoffSec) {
   const lat0 = lat, lng0 = lng;
   const mPerLat = 111320, mPerLng = 111320 * Math.cos(lat0 * Math.PI / 180);
@@ -339,10 +339,18 @@ function buildPolygon(net, label, lng, lat, cutoffSec) {
   if (!rects.length) return turf.circle([lng, lat], originR / 1000, { steps: 24, units: "kilometers" });
   let merged;
   try { merged = rects.length === 1 ? rects[0] : turf.union(turf.featureCollection(rects)); }
-  catch (_) { merged = turf.featureCollection(rects); }
-  // round the blocky grid edges a touch, then thin the vertices
-  try { merged = turf.buffer(merged, CELL_M * 0.6, { units: "meters" }); } catch (_) {}
-  try { if (merged && merged.geometry) merged = turf.simplify(merged, { tolerance: 0.0006, highQuality: false, mutate: true }); } catch (_) {}
+  catch (_) { merged = rects[0]; }
+  // De-block the grid outline: round the corners, thin the vertices, then Chaikin-smooth
+  // the stair-steps into curves — and merge the result back into a single feature.
+  try { merged = turf.buffer(merged, CELL_M * 0.6, { units: "meters", steps: 8 }); } catch (_) {}
+  try { merged = turf.simplify(merged, { tolerance: 0.0005, highQuality: true, mutate: true }); } catch (_) {}
+  try {
+    const sm = turf.polygonSmooth(merged, { iterations: 3 });
+    const coords = [];
+    turf.geomEach(sm, g => { if (g.type === "Polygon") coords.push(g.coordinates); else if (g.type === "MultiPolygon") g.coordinates.forEach(c => coords.push(c)); });
+    if (coords.length) merged = coords.length === 1 ? turf.polygon(coords[0]) : turf.multiPolygon(coords);
+  } catch (_) {}
+  try { merged = turf.simplify(merged, { tolerance: 0.00018, highQuality: false, mutate: true }); } catch (_) {}
   return merged;
 }
 
