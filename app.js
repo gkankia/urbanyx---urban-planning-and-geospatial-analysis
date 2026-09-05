@@ -7054,8 +7054,20 @@ function _reClear(){
   if(typeof _reClearParcels==='function')_reClearParcels();
   if(typeof _reClearPoints==='function')_reClearPoints();
 }
-// One retry on error — guards against a request that intermittently loses its apikey.
+// One retry on transient error.
 async function _reRpc(fn,args){ let r=await sb.rpc(fn,args); if(r&&r.error){ await new Promise(s=>setTimeout(s,300)); r=await sb.rpc(fn,args); } return r; }
+// Thin a huge/complex isochrone (a 60-min drive can be thousands of vertices) down to a
+// query-friendly outline so PostGIS ST_Contains stays well under Supabase's 8 s statement
+// limit. Small walk/transit areas already have few vertices and are left untouched.
+function _reSimplifyArea(g){
+  try{
+    const nv=x=>{let n=0;turf.coordEach(x,()=>n++);return n;};
+    if(nv(g)<=100)return g;   // ST_Contains cost scales with vertices; keep the outline light
+    let tol=0.0005, cur=turf.simplify(turf.feature(g),{tolerance:tol,highQuality:false}), guard=0;
+    while(cur&&cur.geometry&&nv(cur)>100&&guard++<8){ tol*=1.7; cur=turf.simplify(turf.feature(g),{tolerance:tol,highQuality:false}); }
+    return (cur&&cur.geometry)?cur.geometry:g;
+  }catch(_){ return g; }
+}
 async function _reRun(center,pt){
   pt=pt||_rePt||1; _rePt=pt;
   const seq=++_reSeq; _reActive=true;
@@ -7068,9 +7080,8 @@ async function _reRun(center,pt){
   if(!iso){ try{ iso=await _reFetchWalkArea(lng,lat,10); }catch(_){} }
   if(seq!==_reSeq)return;
   if(!iso){ _reShow(`<div class="re-empty">${isKa?'ვერ მოხერხდა საძიებო ზონის დათვლა':'Could not compute the search area'}</div>`); return; }
-  // A driving/transit isochrone can be huge and very detailed — thin it before sending it
-  // to PostGIS so the request stays small and the ST_Contains query stays fast.
-  try{ const _sf=turf.simplify(turf.feature(iso),{tolerance:0.0006,highQuality:false}); if(_sf&&_sf.geometry)iso=_sf.geometry; }catch(_){}
+  // Thin a huge/complex isochrone so the ST_Contains query stays under the 8 s statement limit.
+  iso=_reSimplifyArea(iso);
   // Server-side aggregation for this ONE property type: stats + its subcategory breakdowns.
   // Serial (not Promise.all) + one retry — a request that loses its apikey header mid-burst
   // sails through on the retry, and PostgREST is happy to run these back-to-back.
