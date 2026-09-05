@@ -7066,6 +7066,9 @@ async function _reRun(center,pt){
   if(!iso){ try{ iso=await _reFetchWalkArea(lng,lat,10); }catch(_){} }
   if(seq!==_reSeq)return;
   if(!iso){ _reShow(`<div class="re-empty">${isKa?'ვერ მოხერხდა საძიებო ზონის დათვლა':'Could not compute the search area'}</div>`); return; }
+  // A driving/transit isochrone can be huge and very detailed — thin it before sending it
+  // to PostGIS so the request stays small and the ST_Contains query stays fast.
+  try{ const _sf=turf.simplify(turf.feature(iso),{tolerance:0.0006,highQuality:false}); if(_sf&&_sf.geometry)iso=_sf.geometry; }catch(_){}
   // Server-side aggregation for this ONE property type: stats + its subcategory breakdowns.
   let res, breaks={};
   try{
@@ -14710,12 +14713,10 @@ async function runAccessibilityAnalysis(){
       _rerunActive('acc-transit-sw',  toggleAccTransit),
     ]);
     _reRefreshFromIso();   // RE rides the new isochrone shape (mode/time change)
-    const modeIcon={walking:"🚶",cycling:"🚲",driving:"🚗",transit:"🚌"}[_accMode];
-    const modeLabel=t().accModes[_accMode];
     // turf.bbox handles both the Mapbox Polygon and the transit MultiPolygon.
     const bb=turf.bbox(isoFeat);
     map.fitBounds([[bb[0],bb[1]],[bb[2],bb[3]]],{padding:60,duration:800});
-    if(resultEl)resultEl.innerHTML=`<div style="font-size:0.7rem;color:rgba(255,255,255,0.35);padding:5px 0 2px">${modeIcon} ${_accMinutes} min · ${modeLabel} — ${isKa?"ზონა გენერირებულია":"Zone generated"}</div>`;
+    if(resultEl)resultEl.innerHTML="";   // the drawn zone is confirmation enough
     // Recompute the livability index over the (larger) isochrone; the panel
     // already owns the map layers, so don't re-render them here.
     if(_nearbyRan)runNearbyAnalysis({area:isoFeat.geometry,renderMap:false});
