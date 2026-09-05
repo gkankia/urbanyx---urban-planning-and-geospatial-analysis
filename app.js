@@ -302,7 +302,7 @@ const T = {
     accModeLabel:"Transport mode",
     accTimeLabel:"Travel time",
     accGenerate:"Generate Isochrone",
-    accModes:{walking:"Walking",cycling:"Cycling",driving:"Driving"},
+    accModes:{walking:"Walking",cycling:"Cycling",driving:"Driving",transit:"Transit"},
     accNoIso:"Generate an isochrone first",
     ttcAreaSmall:"Area under 5,000 m² — generate an isochrone first",
     ttcAoiLabel:"Study area",
@@ -442,7 +442,7 @@ const T = {
     accModeLabel:"სატრანსპორტო საშუალება",
     accTimeLabel:"მგზავრობის დრო",
     accGenerate:"იზოქრონის შექმნა",
-    accModes:{walking:"ფეხით",cycling:"ველოსიპედით",driving:"ავტომობილით"},
+    accModes:{walking:"ფეხით",cycling:"ველოსიპედით",driving:"ავტომობილით",transit:"ტრანსპორტით"},
     accNoIso:"ჯერ შექმენით იზოქრონი",
     ttcAreaSmall:"ტერიტორია 5,000 კვ.მ-ზე ნაკლებია — ჯერ შექმენით იზოქრონი",
     ttcAoiLabel:"საკვლევი არეალი",
@@ -9599,6 +9599,12 @@ async function saveToSupabase(id,cadastral,attrs,shape,owners){
 
 // ── Isochrone + OSM ───────────────────────────────────────────────────────────
 async function fetchIsochrone(lng,lat,minutes=10,mode="walking"){
+  // Public transport uses our own router (TTC network, observed times); the rest use Mapbox.
+  if(mode==="transit"){
+    const res=await fetch(BACKEND_URL+"/api/transit-isochrone",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({lng,lat,minutes})});
+    if(!res.ok)throw new Error("transit_isochrone_fail");
+    return res.json();
+  }
   const url=`https://api.mapbox.com/isochrone/v1/mapbox/${mode}/${lng},${lat}?contours_minutes=${minutes}&polygons=true&access_token=${MAPBOX_TOKEN}`;
   const res=await fetch(url);if(!res.ok)throw new Error("isochrone_fail");return res.json();
 }
@@ -9920,7 +9926,7 @@ function setupProCard(show=false){
       `<div class="lp-row acc-toggle-row" style="padding:4px 0" onclick="toggleAccIsochrone()"><span class="lp-row-name">${isKaAcc?"მისაწვდომობის ზონა":"Accessibility Zone"}</span><div class="lp-sw" id="acc-iso-sw"></div></div>`+
       `<div id="acc-iso-controls" style="display:none">`+
         `<div class="acc-mode-label" style="margin-top:6px">${tr.accModeLabel}</div>`+
-        `<div class="acc-mode-row"><button class="acc-mode-btn" data-mode="walking" onclick="setAccMode('walking')">🚶 ${tr.accModes.walking}</button><button class="acc-mode-btn" data-mode="cycling" onclick="setAccMode('cycling')">🚲 ${tr.accModes.cycling}</button><button class="acc-mode-btn" data-mode="driving" onclick="setAccMode('driving')">🚗 ${tr.accModes.driving}</button></div>`+
+        `<div class="acc-mode-row"><button class="acc-mode-btn" data-mode="walking" onclick="setAccMode('walking')">🚶 ${tr.accModes.walking}</button><button class="acc-mode-btn" data-mode="cycling" onclick="setAccMode('cycling')">🚲 ${tr.accModes.cycling}</button><button class="acc-mode-btn" data-mode="driving" onclick="setAccMode('driving')">🚗 ${tr.accModes.driving}</button><button class="acc-mode-btn" data-mode="transit" onclick="setAccMode('transit')">🚌 ${tr.accModes.transit}</button></div>`+
         `<div class="acc-mode-label" style="margin-top:6px">${tr.accTimeLabel}</div>`+
         `<div class="acc-time-row"><button class="acc-time-btn" data-min="10" onclick="setAccTime(10)">10<span class="acc-time-unit">min</span></button><button class="acc-time-btn" data-min="15" onclick="setAccTime(15)">15<span class="acc-time-unit">min</span></button><button class="acc-time-btn" data-min="20" onclick="setAccTime(20)">20<span class="acc-time-unit">min</span></button><button class="acc-time-btn" data-min="45" onclick="setAccTime(45)">45<span class="acc-time-unit">min</span></button><button class="acc-time-btn" data-min="60" onclick="setAccTime(60)">60<span class="acc-time-unit">min</span></button></div>`+
         `<div id="acc-iso-result"></div>`+
@@ -14690,11 +14696,11 @@ async function runAccessibilityAnalysis(){
       _rerunActive('acc-mob-sw',      toggleAccMobility),
       _rerunActive('acc-transit-sw',  toggleAccTransit),
     ]);
-    const modeIcon={walking:"🚶",cycling:"🚲",driving:"🚗"}[_accMode];
+    const modeIcon={walking:"🚶",cycling:"🚲",driving:"🚗",transit:"🚌"}[_accMode];
     const modeLabel=t().accModes[_accMode];
-    const isoCoords=isoFeat.geometry.coordinates[0];
-    const iLngs=isoCoords.map(c=>c[0]),iLats=isoCoords.map(c=>c[1]);
-    map.fitBounds([[Math.min(...iLngs),Math.min(...iLats)],[Math.max(...iLngs),Math.max(...iLats)]],{padding:60,duration:800});
+    // turf.bbox handles both the Mapbox Polygon and the transit MultiPolygon.
+    const bb=turf.bbox(isoFeat);
+    map.fitBounds([[bb[0],bb[1]],[bb[2],bb[3]]],{padding:60,duration:800});
     if(resultEl)resultEl.innerHTML=`<div style="font-size:0.7rem;color:rgba(255,255,255,0.35);padding:5px 0 2px">${modeIcon} ${_accMinutes} min · ${modeLabel} — ${isKa?"ზონა გენერირებულია":"Zone generated"}</div>`;
     // Recompute the livability index over the (larger) isochrone; the panel
     // already owns the map layers, so don't re-render them here.
@@ -16931,7 +16937,7 @@ async function exportReportPDF(){
       }
       if(a.schools||a.kg){P(`Education access: ${[a.schools&&'public schools',a.kg&&'kindergartens'].filter(Boolean).join(' and ')} shown on the area map.`);src('Education facilities: open municipal datasets.');}
     }
-    if(a.isochrone)src(`Catchment: ${_accMinutes||10}-minute ${_accMode||'walking'} isochrone (Mapbox Isochrone API).`);
+    if(a.isochrone)src(`Catchment: ${_accMinutes||10}-minute ${_accMode||'walking'} isochrone (${_accMode==='transit'?'TTC network, observed times':'Mapbox Isochrone API'}).`);
 
     // ── Methodology ──
     H2('Methodology');

@@ -68,6 +68,22 @@ async function requireAuth(req, res, next) {
 // ── Health check ──────────────────────────────────────────────────────────────
 app.get("/health", (_req, res) => res.json({ ok: true }));
 
+// ── POST /api/transit-isochrone ───────────────────────────────────────────────
+// Public-transport isochrone from the TTC network, timed on observed data.
+// Body: { lng, lat, minutes }. Returns a GeoJSON FeatureCollection (one polygon).
+const { transitIsochrone } = require("./transit-router");
+app.post("/api/transit-isochrone", apiLimiter, async (req, res) => {
+  try {
+    const lng = Number(req.body?.lng), lat = Number(req.body?.lat), minutes = Number(req.body?.minutes) || 30;
+    if (!Number.isFinite(lng) || !Number.isFinite(lat)) return res.status(400).json({ error: "lng/lat required" });
+    const fc = await transitIsochrone({ lng, lat, minutes });
+    res.json(fc);
+  } catch (e) {
+    console.error("[transit-isochrone]", e);
+    res.status(500).json({ error: "transit_isochrone_failed" });
+  }
+});
+
 // ── GET /api/me ───────────────────────────────────────────────────────────────
 app.get("/api/me", apiLimiter, requireAuth, async (req, res) => {
   const [profileRes, subRes] = await Promise.all([
