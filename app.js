@@ -643,6 +643,7 @@ function applyLang(){
     pset("pfc-lbl-reg",lang==="ka"?"რეგისტრაციის თარიღი":"Registered");
     {const gb=document.getElementById('pfc-geom-btn');if(gb&&gb.style.display!=='none')gb.textContent=_parcelGeomShown?(lang==="ka"?'საზღვრის დამალვა':'Hide geometry'):(lang==="ka"?'ნაკვეთის საზღვრის ჩვენება':'Show parcel geometry');}
     {const zb=document.getElementById('pfc-zoomin-btn');if(zb&&zb.style.display!=='none')zb.textContent=(lang==="ka"?'მიუახლოვდი ნაკვეთის სანახავად':'Zoom in to see parcel details');}
+    {const nn=document.getElementById('pfc-noparcel-note');if(nn&&nn.style.display!=='none')nn.textContent=(lang==="ka"?'ამ ადგილას რეგისტრირებული ნაკვეთი არ არის.':'No registered parcel at this location.');}
   }
   // Projects / Data panel (was hardcoded English in a core flow).
   if(tr.proj){const pj=tr.proj;const st=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
@@ -6996,7 +6997,7 @@ async function _fetchWalkArea(lng,lat,meters){
   const j=await res.json();return j.features?.[0]?.geometry||null;
 }
 
-// ── Real-estate market analysis (myhome.ge mirror, 15-min walk catchment) ────────
+// ── Real-estate market analysis (myhome.ge mirror; 10-min walk, or the user's isochrone) ──
 const _RE_TYPES={
   1:{en:'Apartment',ka:'ბინა',c:'#a78bfa'}, 2:{en:'House',ka:'სახლი',c:'#34d399'},
   3:{en:'Country house',ka:'აგარაკი',c:'#22c55e'}, 4:{en:'Land plot',ka:'მიწის ნაკვეთი',c:'#f59e0b'},
@@ -7015,9 +7016,17 @@ const _reLbl={'New building':'ახალაშენებული','Old buil
 // seller_type has no natural English label ('physical' → 'Owner'), so translate both ways.
 const _reLblEn={'physical':'Owner','agent':'Agent','broker':'Broker','developer':'Developer','Newly Renovated':'New','Old renovated':'Old','Current renovation':'In progress'};
 const _reL=(s,isKa)=> isKa ? (_reLbl[s]||s) : (_reLblEn[s]||s);
-async function _fetchWalk15(lng,lat){
-  const url=`https://api.mapbox.com/isochrone/v1/mapbox/walking/${lng},${lat}?contours_minutes=15&polygons=true&denoise=1&access_token=${MAPBOX_TOKEN}`;
+async function _reFetchWalkArea(lng,lat,minutes){
+  const m=minutes||10;
+  const url=`https://api.mapbox.com/isochrone/v1/mapbox/walking/${lng},${lat}?contours_minutes=${m}&polygons=true&denoise=1&access_token=${MAPBOX_TOKEN}`;
   const r=await fetch(url); if(!r.ok)return null; const j=await r.json(); return j.features?.[0]?.geometry||null;
+}
+// Real estate defaults to a 10-minute walk. To widen the search the user runs the
+// Isochrone analysis first — RE then adopts that catchment (its widest contour).
+function _reIsoArea(){
+  const fs=(_isoData&&_isoData.features)||[]; if(!fs.length)return null;
+  let best=fs[0],ba=-1; for(const f of fs){ try{const a=turf.area(f);if(a>ba){ba=a;best=f;}}catch(_){} }
+  return best.geometry;
 }
 function _reCenter(){
   if(Array.isArray(parcelCentroid)&&parcelCentroid.length===2)return parcelCentroid;
@@ -7050,9 +7059,12 @@ async function _reRun(center,pt){
   const [lng,lat]=center; const isKa=lang==='ka';
   _reParcelsOn=false; _reClearParcels(); _rePointsOn=false; _reClearPoints();
   _reShow(`<div class="re-note"><span class="re-spin"></span> ${isKa?'იტვირთება ბაზრის მონაცემი…':'Loading market data…'}</div>`);
-  let iso; try{ iso=await _fetchWalk15(lng,lat); }catch(_){}
+  // Default catchment = a 10-min walk; if the user ran the Isochrone analysis, use that.
+  const usingIso=_hasIsochrone();
+  let iso = usingIso ? _reIsoArea() : null;
+  if(!iso){ try{ iso=await _reFetchWalkArea(lng,lat,10); }catch(_){} }
   if(seq!==_reSeq)return;
-  if(!iso){ _reShow(`<div class="re-empty">${isKa?'ვერ მოხერხდა 15-წუთიანი ზონის დათვლა':'Could not compute the 15-minute walk area'}</div>`); return; }
+  if(!iso){ _reShow(`<div class="re-empty">${isKa?'ვერ მოხერხდა საძიებო ზონის დათვლა':'Could not compute the search area'}</div>`); return; }
   // Server-side aggregation for this ONE property type: stats + its subcategory breakdowns.
   let res, breaks={};
   try{
@@ -7064,8 +7076,11 @@ async function _reRun(center,pt){
   }catch(e){ console.warn('real-estate rpc:',e); if(seq!==_reSeq)return;
     _reShow(`<div class="re-empty">${isKa?'ბაზრის მონაცემი ვერ ჩაიტვირთა':'Could not load market data'}</div>`); return; }
   if(seq!==_reSeq)return;
-  _reLast={res:res||{},breaks,center,iso,pt};
-  _reRenderPanel(); _reOutline(iso);
+  _reLast={res:res||{},breaks,center,iso,pt,usingIso};
+  _reRenderPanel();
+  // When RE rides the user's isochrone it's already drawn — don't double-outline it.
+  if(usingIso){ try{['re-iso-line','re-iso-fill'].forEach(id=>{if(map.getLayer(id))map.removeLayer(id);}); if(map.getSource('re-iso'))map.removeSource('re-iso');}catch(_){} }
+  else _reOutline(iso);
 }
 function _reFmtGel(v){ if(v==null)return '—'; return '₾'+Math.round(v).toLocaleString('en-US'); }
 function _reCompact(v,sym){ if(v==null)return ''; v=+v; if(!isFinite(v)||v<=0)return ''; if(v>=1e6)return sym+(v/1e6).toFixed(1)+'M'; if(v>=1e3)return sym+Math.round(v/1e3)+'k'; return sym+Math.round(v); }
@@ -7100,7 +7115,8 @@ function _reRenderPanel(){
   // Rent = full price per month; sale = price per m².
   const heroVal=s?(rent?s.median_price_gel:s.median_sqm_gel):null;
   const heroUnit=rent?(isKa?'/თვე':'/mo'):`/${m2}`;
-  const head=`<div class="re-head"><span class="re-title"><i class="re-dot" style="background:${ty.c}"></i>${isKa?ty.ka:ty.en}</span><span class="re-sub">${isKa?'15 წთ ფეხით':'15-min walk'}</span></div>`;
+  const areaLbl=(_reLast&&_reLast.usingIso)?(isKa?'იზოქრონის ზონა':'Isochrone area'):(isKa?'10 წთ ფეხით':'10-min walk');
+  const head=`<div class="re-head"><span class="re-title"><i class="re-dot" style="background:${ty.c}"></i>${isKa?ty.ka:ty.en}</span><span class="re-sub">${areaLbl}</span></div>`;
   const toggle=`<div class="re-deal"><button class="re-dbtn${!rent?' on':''}" onclick="event.stopPropagation();_reSetDeal(1)">${isKa?'იყიდება':'For sale'}</button><button class="re-dbtn${rent?' on':''}" onclick="event.stopPropagation();_reSetDeal(2)">${isKa?'ქირავდება':'For rent'}</button></div>`;
   if(!s||heroVal==null){ _reShow(head+toggle+`<div class="re-empty">${rent?(isKa?'ამ ზონაში ამ ტიპის ქირავნობა ვერ მოიძებნა':'No rentals of this type in this area'):(isKa?'ამ ზონაში ამ ტიპის გაყიდვა ვერ მოიძებნა':'No sale listings of this type in this area')}</div>`); return; }
   const n=s.n_priced||s.n||0;
@@ -7704,6 +7720,7 @@ function clearParcelSelection(){
   {const gb=document.getElementById('pfc-geom-btn');if(gb)gb.style.display='none';} _parcelGeomShown=false;
   {const zb=document.getElementById('pfc-zoomin-btn');if(zb)zb.style.display='none';}
   {const pane=document.getElementById('pfc-pane-parcel');if(pane)pane.classList.remove('pfc-teaser');}
+  {const nn=document.getElementById('pfc-noparcel-note');if(nn)nn.style.display='none';}
   {const _cs=document.getElementById("center-search");if(_cs&&_cs.classList.contains("compact"))_cs.classList.add("hidden");} // nothing selected → collapse search to the icon
   if(_activeBldId){
     // Drawn area: remove the shape entirely along with any analysis results
@@ -8360,11 +8377,13 @@ function _showLocationCard(lng,lat){
     _setParcelRow('pfc-lbl-owner','pfc-owner', ka?'მესაკუთრე':'Owner', '——— ———');
     if(pane)pane.classList.add('pfc-teaser');
     if(zb){ zb.style.display=''; zb.textContent=ka?'მიუახლოვდი ნაკვეთის სანახავად':'Zoom in to see parcel details'; zb.onclick=()=>_zoomToPinDetails(lng,lat); }
+    {const nn=document.getElementById('pfc-noparcel-note');if(nn)nn.style.display='none';}
   } else {
-    // Zoomed in but nothing registered here — just the coordinates, no teaser.
+    // Zoomed in but nothing registered here — say so in the parcel tab.
     if(pane)pane.classList.remove('pfc-teaser');
     ['pfc-lbl-area','pfc-lbl-type','pfc-lbl-addr','pfc-lbl-owner'].forEach(id=>{const r=document.getElementById(id)?.closest('.pfc-row');if(r)r.style.display='none';});
     if(zb)zb.style.display='none';
+    {const nn=document.getElementById('pfc-noparcel-note');if(nn){nn.style.display='';nn.textContent=ka?'ამ ადგილას რეგისტრირებული ნაკვეთი არ არის.':'No registered parcel at this location.';}}
   }
   _clearDimLabels();_hideCircHandle();_mountFloorPanelInCard(false);
   card.classList.remove('minimized');const _mb=document.getElementById('pfc-min-btn');if(_mb)_mb.textContent='−';
@@ -8388,7 +8407,8 @@ function showParcelPopup(lngLat){
   _clearLocationPin(); // selecting a Georgian parcel exits pin mode
   // Real data has arrived: drop the blurred teaser + zoom-in CTA.
   {const _pane=document.getElementById('pfc-pane-parcel');if(_pane)_pane.classList.remove('pfc-teaser');
-   const _zb=document.getElementById('pfc-zoomin-btn');if(_zb)_zb.style.display='none';}
+   const _zb=document.getElementById('pfc-zoomin-btn');if(_zb)_zb.style.display='none';
+   const _nn=document.getElementById('pfc-noparcel-note');if(_nn)_nn.style.display='none';}
   {const _cs=document.getElementById("center-search");if(_cs){_cs.classList.add("compact");_cs.classList.remove("hidden");}} // reveal the search bar for the selected parcel
   const tr=t();
   _parcelCardLngLat=lngLat;
