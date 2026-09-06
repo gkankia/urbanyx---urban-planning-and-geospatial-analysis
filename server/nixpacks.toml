@@ -12,5 +12,9 @@ aptPkgs = [
 ]
 
 [variables]
+# sharp (street-imagery re-projection) links libvips, and glibc hands each
+# native thread its own malloc arena. Without this the process keeps a few
+# hundred MB of freed-but-unreturned heap after the first report.
+MALLOC_ARENA_MAX = "2"
 PUPPETEER_SKIP_CHROMIUM_DOWNLOAD = "true"
 PUPPETEER_EXECUTABLE_PATH = "/nix/var/nix/profiles/default/bin/chromium"

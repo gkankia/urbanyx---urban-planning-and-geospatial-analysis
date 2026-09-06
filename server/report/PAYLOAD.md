@@ -114,6 +114,23 @@ Response is `application/pdf` as an attachment.
                                "rent": "₾1,450", "listings": "284" }] }
   },
 
+  // Street-level frames. The client sends URLs and camera geometry only; the
+  // server downloads, re-projects and inlines them. See "Street imagery" below.
+  "streetImagery": {
+    "images": [{
+      "id": "1098419091535107",
+      "url": "https://…/thumb_original",     // Mapillary or fbcdn host, https only
+      "cameraType": "spherical",             // spherical | fisheye | perspective
+      "cameraParams": [0.45, 0.061, 0.0007], // [focal, k1, k2]; null for spherical
+      "rotation": [0.29, -1.75, 2.12],       // computed_rotation, world→camera angle-axis
+      "compass": 156.6,                      // fallback when rotation is absent
+      "bearing": 207.4,                      // camera → site, degrees from north
+      "caption": "15 m north-east of the site · looking south-west · Sept 2023",
+      "link": "https://www.mapillary.com/app/?pKey=…"
+    }],
+    "note": "…", "credit": "…"
+  },
+
   "methodology": [ { "title": "…", "body": "…" } ],  // one per ACTIVE analysis
   "sources":     [ { "label": "…", "text": "…" } ]   // in order of appearance
 }
@@ -174,6 +191,35 @@ happened to leave selected on screen.
 
 The other analyses still send summary lines. They are to be brought up to this
 shape one at a time, each mirroring what its panel actually holds.
+
+## Street imagery
+
+Mapillary's Tbilisi coverage is mostly 360-degree spherical frames, with fisheye
+and plain perspective mixed in. Printed as they are, all three reproduce the
+camera rather than the place: the panorama bends every straight line, the fisheye
+bulges, and both are shot from a moving car, so the horizon is rolled and tilted.
+
+`streetview.js` undoes that. The reconstruction's `computed_rotation` is the
+world-to-camera rotation (angle-axis; world is East/North/Up, camera +Z is the
+optical axis, +Y is down) and `camera_parameters` is OpenSfM's normalised
+`[focal, k1, k2]`. For each output pixel the server builds a world-space ray —
+level, aimed at the site — rotates it into the camera, and projects it through
+that camera's own model to find the source pixel. The result is rectilinear:
+straight lines straight, horizon level, view facing the parcel rather than
+wherever the car was going.
+
+Resolution is protected by sampling the **original** frame, never a thumbnail. A
+70-degree view off a 7680-wide equirectangular draws on ~1500 source pixels, so
+the 1400 px render is a genuine 1400 px — about 300 dpi at the width it prints.
+Only the source region the view touches is decoded.
+
+Frames are dropped rather than printed badly. A fisheye or perspective camera
+cannot be re-aimed beyond what it saw, so the client filters by the angle between
+the camera's compass and the site, and the server shrinks the field of view until
+the view is fully covered, giving up below 97%. A frame that comes back
+featureless — aiming at the site put a blank wall in front of the lens — is
+dropped on an edge-energy check. Five candidates are sent so that four can
+survive.
 
 ## Notes
 

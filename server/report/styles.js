@@ -218,6 +218,14 @@ th.n,td.n{text-align:right}
   color:var(--faint);margin-bottom:3px}
 .hgrid .hours{height:56px}
 
+/* ── street-level frames ─────────────────────── */
+.shots{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 13px}
+.shots.one{grid-template-columns:1fr}
+.shot{margin:0;break-inside:avoid}
+.shot img{display:block;width:100%;height:auto;border-radius:4px;
+  border:1px solid var(--rule)}
+.shot figcaption{font-size:10.5px;color:var(--mute);margin-top:5px;line-height:1.45}
+
 /* ── callout & back matter ───────────────────────────────── */
 .callout{margin-top:11px;display:flex;gap:10px;align-items:flex-start;
   background:#fdf6ec;border:1px solid #f2dfc0;border-radius:5px;padding:11px 13px;

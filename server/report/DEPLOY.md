@@ -47,8 +47,21 @@ this yourself.
 Render time was 0.7–0.9 s per report on those 2 vCPUs, so throughput is not the
 constraint; peak memory is.
 
-**Sizing.** 512 MB works with one render at a time and not much headroom.
-1 GB is comfortable. `compose.js` serialises renders through a promise queue for
+**Street imagery adds to this.** `streetview.js` downloads up to five Mapillary
+frames (a 360 pano original is 7680x3840, ~2 MB) and re-projects them through
+libvips. Measured in isolation, on top of Node's own ~68 MB: peak 168 MB, or
+143 MB with `MALLOC_ARENA_MAX=2`, which `nixpacks.toml` now sets — without it
+glibc keeps roughly 90 MB of freed heap per report. The frames are fetched in
+parallel and re-projected one at a time, before any page is rendered, so this
+peak and Chromium's do not coincide. Budget ~150 MB on top of the figures above.
+
+If `sharp` is missing or fails to load (a prebuilt-binary mismatch on a new base
+image is the likely cause), `streetview.js` reports itself unavailable and the
+report renders without the imagery section rather than failing. That is worth
+checking after any Node or base-image upgrade: `node -e "console.log(require('./report/streetview').available())"`.
+
+**Sizing.** 512 MB is now tight — 1 GB is the sensible floor with street imagery
+enabled. `compose.js` serialises renders through a promise queue for
 exactly this reason — the browser is launched once and reused, and two reports
 never render concurrently. `strictLimiter` bounds request rate but not
 concurrency, so do not remove the queue as an optimisation.

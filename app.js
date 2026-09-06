@@ -207,6 +207,10 @@ const _pulsingDot={
   }
 };
 let _mapillaryImages = [], _currentImageIdx = 0;
+// A longer, equally deduplicated ranking behind the gallery's four — the
+// report draws extra candidates from it, since some frames turn out to be
+// facing a wall once they are aimed at the site.
+let _mapillaryPool = [];
 let _ownerParcels = [];
 let _currentParcelGeoJSON=null;
 let _dbParcelGeoJSON=null;
@@ -8052,7 +8056,7 @@ function resetAnalysis(){
     btn.innerHTML=`<span id="analyse-btn-label">${t().analyseBtn}</span><span style="font-size:0.58rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;background:rgba(167,139,250,0.15);color:#a78bfa;border-radius:4px;padding:2px 5px" id="free-badge">${t().freeBadge}</span>`;
   }
 
-  _mapillaryImages=[];_currentImageIdx=0;
+  _mapillaryImages=[];_mapillaryPool=[];_currentImageIdx=0;
   _climateData=null;_canopyRawData=null;_lstRawData=null;_canopyPct=null;_lstMean=null;_walkData=null;_proData=null;_isoData=null;
   const geodataBtn=document.getElementById("geodata-btn");if(geodataBtn)geodataBtn.style.display="none";
   const gallery=document.getElementById("mapillary-gallery");
@@ -9752,7 +9756,7 @@ async function fetchMapillaryImages(lng,lat){
     }
   }
   if(!bbox)bbox=`${lng-0.002},${lat-0.002},${lng+0.002},${lat+0.002}`;
-  const url=`https://graph.mapillary.com/images?access_token=${MAPILLARY_TOKEN}&fields=id,thumb_256_url,thumb_1024_url,computed_geometry&bbox=${bbox}&limit=50`;
+  const url=`https://graph.mapillary.com/images?access_token=${MAPILLARY_TOKEN}&fields=id,thumb_256_url,thumb_1024_url,computed_geometry,camera_type&bbox=${bbox}&limit=50`;
   try{
     const res=await fetch(url);if(!res.ok)return[];
     const data=await res.json();
@@ -9792,10 +9796,11 @@ async function fetchMapillaryImages(lng,lat){
       const c=img.computed_geometry.coordinates;
       if(selected.every(s=>mDist(c,s.computed_geometry.coordinates)>=20)){
         selected.push(img);
-        if(selected.length===4)break;
+        if(selected.length===10)break;
       }
     }
-    return {images:selected,hasNear:near.length>0};
+    _mapillaryPool=selected;
+    return {images:selected.slice(0,4),hasNear:near.length>0};
   }catch(e){return{images:[],hasNear:false};}
 }
 
@@ -17838,6 +17843,89 @@ async function _rptTransitMatrix(){
   };
 }
 
+// ── street-level imagery ───────────────────────────────────────────────────
+// The gallery already holds the four Mapillary images nearest the site. For the
+// report they need two things the gallery does not: the original-resolution
+// frame, and the camera's full orientation — Mapillary's `computed_rotation` is
+// the world→camera rotation from the reconstruction, which is what lets the
+// server render a rectilinear, level view aimed at the site instead of
+// reproducing the panorama's or the fisheye's own distortion. Those fields are
+// fetched per image only at export time, so the gallery path is unchanged.
+const _RPT_COMPASS=['north','north-east','east','south-east','south','south-west','west','north-west'];
+function _rptCompassWord(deg){
+  return _RPT_COMPASS[Math.round(((deg%360)+360)%360/45)%8];
+}
+// Initial bearing from a to b, in degrees clockwise from north.
+function _rptBearing(a,b){
+  const φ1=a[1]*Math.PI/180,φ2=b[1]*Math.PI/180,Δλ=(b[0]-a[0])*Math.PI/180;
+  const y=Math.sin(Δλ)*Math.cos(φ2);
+  const x=Math.cos(φ1)*Math.sin(φ2)-Math.sin(φ1)*Math.cos(φ2)*Math.cos(Δλ);
+  return (Math.atan2(y,x)*180/Math.PI+360)%360;
+}
+function _rptMetres(a,b){
+  const R=6371000,φ=(a[1]+b[1])/2*Math.PI/180;
+  const dx=(b[0]-a[0])*Math.PI/180*Math.cos(φ)*R,dy=(b[1]-a[1])*Math.PI/180*R;
+  return Math.sqrt(dx*dx+dy*dy);
+}
+
+async function _rptStreetImagery(site){
+  const pool=(_mapillaryPool&&_mapillaryPool.length?_mapillaryPool:_mapillaryImages)||[];
+  if(!site||!pool.length)return null;
+  if(MAPILLARY_TOKEN==='YOUR_MAPILLARY_TOKEN')return null;
+  const at=[site.lng,site.lat];
+  const FIELDS='id,camera_type,camera_parameters,computed_rotation,computed_compass_angle,'+
+    'captured_at,width,height,thumb_original_url,thumb_2048_url,computed_geometry';
+  const out=[];
+  const CAND=5;
+  for(const img of pool){
+    if(out.length>=CAND)break;
+    try{
+      const r=await fetch(`https://graph.mapillary.com/${img.id}?access_token=${MAPILLARY_TOKEN}&fields=${FIELDS}`);
+      if(!r.ok)continue;
+      const d=await r.json();
+      const c=(d.computed_geometry&&d.computed_geometry.coordinates)||
+              (img.computed_geometry&&img.computed_geometry.coordinates);
+      if(!c)continue;
+      const url=d.thumb_original_url||d.thumb_2048_url;
+      if(!url)continue;
+      const toSite=_rptBearing(c,at);
+      const dist=Math.round(_rptMetres(c,at));
+      // A frame can only be re-aimed within what its lens actually saw. A
+      // sphere saw everything; the others did not, and asking for a view they
+      // never captured just costs a download the server will discard.
+      const type=String(d.camera_type||'').toLowerCase();
+      if(type!=='spherical'&&type!=='equirectangular'&&d.computed_compass_angle!=null){
+        const off=Math.abs(((toSite-Number(d.computed_compass_angle)+540)%360)-180);
+        if(off>(type==='fisheye'?70:26))continue;
+      }
+      const when=d.captured_at?new Date(Number(d.captured_at)):null;
+      out.push({
+        id:String(d.id),
+        url,
+        cameraType:d.camera_type||'perspective',
+        cameraParams:Array.isArray(d.camera_parameters)?d.camera_parameters.map(Number):null,
+        rotation:Array.isArray(d.computed_rotation)?d.computed_rotation.map(Number):null,
+        compass:d.computed_compass_angle!=null?Number(d.computed_compass_angle):null,
+        bearing:toSite,
+        // The camera sits opposite the direction it is looking.
+        caption:[
+          dist<=3?'At the site':`${dist} m ${_rptCompassWord((toSite+180)%360)} of the site`,
+          'looking '+_rptCompassWord(toSite),
+          when?when.toLocaleDateString(lang==='ka'?'ka-GE':'en-GB',{month:'short',year:'numeric'}):null,
+        ].filter(Boolean).join(' · '),
+        link:`https://www.mapillary.com/app/?pKey=${d.id}`,
+      });
+    }catch(_){}
+  }
+  if(!out.length)return null;
+  return {
+    images:out,
+    note:'Each frame is re-projected to a rectilinear view aimed at the site — the panoramic and '+
+         'fisheye distortion of the source images is removed, and the horizon levelled.',
+    credit:'Street-level imagery © Mapillary contributors, CC BY-SA 4.0',
+  };
+}
+
 // ── the payload ────────────────────────────────────────────────────────────
 async function _rptCollect(){
   const a=_rptActive();
@@ -18103,6 +18191,12 @@ async function _rptCollect(){
   }
   if(a.isochrone)src('Catchment',`${_accMinutes||10}-minute ${_accMode||'walking'} isochrone (${_accMode==='transit'?'TTC network, observed times':'Mapbox Isochrone API'})`);
 
+  // Fetched last, and credited only if frames were actually found.
+  const streetImagery=await _rptStreetImagery(pin);
+  if(streetImagery)src('Street-level imagery',
+    'Mapillary contributors (CC BY-SA 4.0); frames re-projected from the original panoramic, '+
+    'fisheye or perspective capture to a level rectilinear view');
+
   return {
     // Selects the cover artwork (design-system/report-covers) server-side.
     lang:lang==='ka'?'ka':'en',
@@ -18121,6 +18215,9 @@ async function _rptCollect(){
       gradeLabel:_RPT_GRADE_WORD[uviRaw.grade]||'',partial:!!uviRaw.partial,
       parts:uviRaw.parts.map(p=>({label:p.label,score:Math.round(p.s*100),weight:p.w.toFixed(2).replace(/0$/,'')}))}:null,
     findings:f,
+    // Rendered server-side: the payload carries only the frame URLs and the
+    // camera geometry, and the server does the re-projection.
+    streetImagery,
     methodology:_rptMethodology(a),
     sources,
   };

@@ -494,6 +494,24 @@ function sources(list) {
       them.</div></div>`, null, true);
 }
 
+// Street-level imagery. The frames arrive already re-projected (see
+// streetview.js) - rectilinear, level, and aimed at the site - so this only has
+// to lay them out and carry the licence.
+function streetImagery(si) {
+  // Only frames the server actually re-projected carry a dataUrl; anything the
+  // fetch or the projection dropped is simply not on the page.
+  const imgs = ((si && si.images) || []).filter((im) => im && im.dataUrl);
+  if (!has(imgs)) return "";
+  const n = imgs.length;
+  const grid = `<div class="shots${n === 1 ? " one" : ""}">${imgs.map((im) => `
+    <figure class="shot"><img src="${im.dataUrl}" alt="">
+      ${im.caption ? `<figcaption>${esc(im.caption)}</figcaption>` : ""}</figure>`).join("")}</div>`;
+  const foot = [si.note, si.credit].filter(Boolean)
+    .map((x) => `<p class="note" style="margin-top:9px">${esc(x)}</p>`).join("");
+  return section("Street-level view", "How the site and its immediate surroundings look from the street.",
+    grid + foot, "s");
+}
+
 function buildBody(d) {
   const s = d.subject || {};
   const subject = [s.parcelCode && "Parcel " + s.parcelCode, s.title, s.place]
@@ -517,6 +535,7 @@ function buildBody(d) {
     summaryInner.trim()
       ? `<h2 class="sec">Summary</h2><div class="seclead">At a glance, followed by the reasoning behind the figures.</div>${summaryInner}`
       : "",
+    streetImagery(d.streetImagery),
     findings(d.findings),
     segmentGrid(d.findings && d.findings.transitSegments),
     methodology(d.methodology),

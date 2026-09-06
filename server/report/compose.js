@@ -7,6 +7,7 @@
 const puppeteer = require("puppeteer");
 const { PDFDocument, StandardFonts, rgb } = require("pdf-lib");
 const { buildCover, buildMapPage, buildBody } = require("./template");
+const streetview = require("./streetview");
 
 const MARGIN = { top: "20mm", bottom: "18mm", left: "16mm", right: "16mm" };
 // The cover is a full-bleed artwork, so it gets no page margin at all.
@@ -104,6 +105,19 @@ function renderReport(payload) {
 }
 
 async function _renderReport(payload) {
+  // The street-level frames are fetched and re-projected before any page is
+  // built, because they end up inlined in the body HTML. This is the one part
+  // of a report that touches the network, so it is bounded and optional: if it
+  // fails, or sharp is not installed, the report simply has no imagery section.
+  if (payload.streetImagery) {
+    try {
+      payload.streetImagery = await streetview.prepare(payload.streetImagery);
+    } catch (err) {
+      console.warn("[report] street imagery skipped:", (err && err.message) || err);
+      payload.streetImagery = null;
+    }
+  }
+
   // Three documents: a portrait full-bleed cover, an optional landscape
   // full-bleed map, then the flowing body. Merged in that order because only
   // separate renders can mix page orientation and margins.
