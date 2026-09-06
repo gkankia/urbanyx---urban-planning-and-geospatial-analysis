@@ -17685,8 +17685,14 @@ function _rptTransitHistory(rows,meta){
   const stops=rows.map(r=>{
     const s=stopById.get(r.stop_id);
     const m=Number(r.n_matched||0);
+    // The panel labels a stop by its public code (#1234 on the pole); the
+    // archive keys on TTC's internal id. Report the code, since that is what
+    // anyone checking the stop on the ground or in TTC's own data will use,
+    // and fall back to the id when a stop has no code.
+    const code=s&&s.code!=null&&s.code!==''?String(s.code):null;
     return {
       name:(s&&s.name)||String(r.stop_id),
+      stopId:code||String(r.stop_id),
       routes:((s&&s.routes)||[]).map(rt=>rt.shortName).filter(Boolean).join(', '),
       matched:m?_rptNum(m):null,
       observations:Number(r.n_obs||0)?_rptNum(Number(r.n_obs)):null,

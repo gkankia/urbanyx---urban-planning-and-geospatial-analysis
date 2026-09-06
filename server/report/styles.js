@@ -185,6 +185,9 @@ th.n,td.n{text-align:right}
 .stoptbl tr.thin td{color:var(--faint)}
 .stoptbl.wide td,.stoptbl.wide th{font-size:10px;padding:5px 0}
 .stoptbl.wide td.nm{max-width:130px}
+.stoptbl td.id{font-family:ui-monospace,'SF Mono',Menlo,monospace;font-size:9.5px;
+  color:var(--mute);white-space:nowrap}
+.stoptbl td.id,.stoptbl th.id{padding-right:14px}
 .dotcell{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px}
 
 /* ranked stops: sorted, and coloured along one green-to-red scale */

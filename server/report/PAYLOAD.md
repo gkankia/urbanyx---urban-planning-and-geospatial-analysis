@@ -88,7 +88,8 @@ Response is `application/pdf` as an attachment.
       "thresholds": [{ "label": "On-time share", "bands": ["≥80%","60–80%","<60%"] }],
       "hourly": [{ "hour": 6, "delayMin": 1.2, "matched": 840 }],
       "worst": [ /* stop rows */ ], "best": [ /* stop rows */ ],
-      "stops": [{ "name": "…", "routes": "4, 12", "matched": "240", "observations": "700",
+      "stops": [{ "name": "…", "stopId": "1234",   // public stop code, id as fallback
+                  "routes": "4, 12", "matched": "240", "observations": "700",
                   "onTime": "79%", "late": "20%", "delayMed": "+5.2 min",
                   "delayP90": "+13.3 min", "ewt": "+2.5 min", "headway": "18.7 min",
                   "onTimeNum": 79, "lateNum": 20,   // ranked lists colour by these

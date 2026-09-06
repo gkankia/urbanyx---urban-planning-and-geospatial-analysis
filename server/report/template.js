@@ -308,7 +308,8 @@ function transitHistory(h) {
       return `<li class="it">
         <div class="hd"><span class="pos">${i + 1}</span>
           <span class="n">${esc(s.name)}</span>
-          ${s.routes ? `<span class="r">${esc(s.routes)}</span>` : ""}
+          ${s.stopId ? `<span class="r">#${esc(s.stopId)}</span>` : ""}
+          ${s.routes ? `<span class="r">· ${esc(s.routes)}</span>` : ""}
           <span class="v" style="color:${c}">${esc(s.onTime || "—")}</span></div>
         <div class="bar"><i style="width:${w}%;background:${c}"></i></div>
         <div class="sub2">${esc(s.late || "—")} late · median ${esc(s.delayMed || "—")}${
@@ -399,18 +400,20 @@ function segmentGrid(m) {
 function transitAppendix(h) {
   if (!h || !has(h.stops)) return "";
   const inner = `<table class="stoptbl wide"><thead><tr>
-      <th>Stop</th><th>Routes</th><th class="n">Observed</th><th class="n">Matched</th>
+      <th>Stop</th><th class="id">ID</th><th>Routes</th><th class="n">Observed</th><th class="n">Matched</th>
       <th class="n">On time</th><th class="n">Late</th><th class="n">Median</th>
       <th class="n">P90</th><th class="n">Excess wait</th><th class="n">Headway</th>
     </tr></thead><tbody>${h.stops.map((s) => `<tr${s.thin ? ' class="thin"' : ""}>
       <td class="nm">${s.cls ? `<span class="dotcell" style="background:${CLS_COLOR[s.cls] || "#a1a1aa"}"></span>` : ""}${esc(s.name)}</td>
+      <td class="id">${esc(s.stopId || "—")}</td>
       <td>${esc(s.routes || "—")}</td><td class="n">${esc(s.observations || "—")}</td>
       <td class="n">${esc(s.matched || "—")}</td>
       <td class="n">${esc(s.onTime || "—")}</td><td class="n">${esc(s.late || "—")}</td>
       <td class="n">${esc(s.delayMed || "—")}</td><td class="n">${esc(s.delayP90 || "—")}</td>
       <td class="n">${esc(s.ewt || "—")}</td><td class="n">${esc(s.headway || "—")}</td>
     </tr>`).join("")}</tbody></table>
-    <p class="note" style="margin-top:9px">Ordered by late share. “Observed” counts every vehicle
+    <p class="note" style="margin-top:9px">Ordered by late share. “ID” is the public stop code.
+      “Observed” counts every vehicle
       position archived at the stop; “matched” counts those that could be paired with a timetabled
       trip and are the basis of every share in this table. Greyed rows fall below the
       30-matched-arrival floor and are excluded from the area grade and the rankings. The dot
