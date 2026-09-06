@@ -17434,10 +17434,19 @@ async function _rptCaptureMap(a,pinLngLat){
   const prev={center:map.getCenter(),zoom:map.getZoom(),bearing:map.getBearing(),pitch:map.getPitch()};
   let framed=false;
   try{
+    // The capture is cropped to the landscape-A4 aspect below, so the fit has
+    // to reserve the strips the crop will discard — otherwise a wide viewport
+    // loses a third of its width and takes real content with it.
+    const PAGE_AR=297/210;
+    const cw=map.getCanvas().clientWidth||1, ch=map.getCanvas().clientHeight||1;
+    const keepW=Math.min(cw,ch*PAGE_AR), keepH=Math.min(ch,cw/PAGE_AR);
+    const padX=Math.round((cw-keepW)/2), padY=Math.round((ch-keepH)/2);
+
     const box=_rptFrameBBox(a);
     if(box){
       map.fitBounds([[box[0],box[1]],[box[2],box[3]]],
-        {padding:{top:70,left:70,right:70,bottom:110},bearing:0,pitch:0,duration:0});
+        {padding:{top:70+padY,left:70+padX,right:70+padX,bottom:110+padY},
+         bearing:0,pitch:0,duration:0});
       framed=true;
       await Promise.race([new Promise(r=>map.once('idle',r)),new Promise(r=>setTimeout(r,4500))]);
     }
@@ -17446,18 +17455,28 @@ async function _rptCaptureMap(a,pinLngLat){
     if(!img||!img.url)return null;
 
     const bmp=await new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=img.url;});
-    // 2000 px across a 178 mm plate is ~285 dpi; more is upload cost only.
-    const MAX_W=2000;
-    const k=Math.min(1,MAX_W/bmp.width);
+
+    // Crop to the page aspect. The fit above reserved exactly these strips,
+    // so nothing the report describes falls outside the kept region.
+    let sx=0,sy=0,sw=bmp.width,sh=bmp.height;
+    if(sw/sh>PAGE_AR){const w2=Math.round(sh*PAGE_AR);sx=Math.round((sw-w2)/2);sw=w2;}
+    else{const h2=Math.round(sw/PAGE_AR);sy=Math.round((sh-h2)/2);sh=h2;}
+
+    // 2600 px across 297 mm is ~222 dpi — enough to read street labels in print.
+    const MAX_W=2600;
+    const k=Math.min(1,MAX_W/sw);
     const c=document.createElement('canvas');
-    c.width=Math.round(bmp.width*k);c.height=Math.round(bmp.height*k);
+    c.width=Math.round(sw*k);c.height=Math.round(sh*k);
     const ctx=c.getContext('2d');
     ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
-    ctx.drawImage(bmp,0,0,c.width,c.height);
+    ctx.drawImage(bmp,sx,sy,sw,sh,0,0,c.width,c.height);
 
-    // Canvas px per CSS px, after the downscale.
-    const s=c.width/(map.getCanvas().clientWidth||c.width);
-    const pt=ll=>{const p=map.project(ll);return[p.x*s,p.y*s];};
+    // map.project() gives CSS px; the capture is dpr times that, then cropped
+    // by (sx,sy) and scaled by k. `s` is the resulting output-px-per-CSS-px,
+    // which the parcel stroke and pin are sized against.
+    const dpr=bmp.width/(map.getCanvas().clientWidth||bmp.width);
+    const s=dpr*k;
+    const pt=ll=>{const p=map.project(ll);return[p.x*dpr*k-sx*k,p.y*dpr*k-sy*k];};
 
     // Parcel boundary — drawn from the geometry, so it appears even when the
     // user never pressed "show parcel geometry".
@@ -17575,6 +17594,93 @@ function _rptMethodology(a){
   if(a.lst)m.push({title:'Land surface temperature',body:`Mean land surface temperature from Landsat 8 thermal bands at 30 m, over cloud-free summer passes. This is the temperature of the ground and roof surfaces, which runs warmer than air temperature.`});
   if(m.length)m.push({title:'Data availability',body:`These layers rely on external services. When one is unavailable the affected component is omitted and, where applicable, the index renormalises over the components that remain; such omissions are noted in the relevant section.`});
   return m;
+}
+
+// ── transit reliability, in full ───────────────────────────────────────────
+// The panel computes far more than one sentence: a coverage window, an area
+// grade, four headline metrics, four colour-by variables with thresholds, an
+// hourly delay profile and a per-stop table. All of it goes to the report —
+// the per-stop rows as an appendix table, so nothing is dropped.
+function _rptTransitHistory(){
+  if(!_histStats||!_histStats.length)return null;
+  const h=t().hist;
+  const rows=_histStats;
+  const num=v=>v==null?null:Number(v);
+
+  const tot=rows.reduce((acc,r)=>({m:acc.m+Number(r.n_matched||0),ot:acc.ot+Number(r.on_time||0),
+    l:acc.l+Number(r.late||0),n:acc.n+Number(r.n_obs||0)}),{m:0,ot:0,l:0,n:0});
+  const medOf=arr=>{const s=arr.filter(v=>v!=null).map(Number).sort((p,q)=>p-q);
+    return s.length?s[s.length>>1]:null;};
+  const delayMed=medOf(rows.map(r=>r.delay_med_s));
+  const delayP90=medOf(rows.map(r=>r.delay_p90_s));
+  const ewtRows=rows.filter(r=>r.ewt_s!=null);
+  const ewt=ewtRows.length
+    ? ewtRows.reduce((s,r)=>s+Number(r.ewt_s)*Number(r.n_obs||0),0)/
+      Math.max(1,ewtRows.reduce((s,r)=>s+Number(r.n_obs||0),0))
+    : null;
+  const otPct=tot.m?Math.round(100*tot.ot/tot.m):null;
+  const grade=otPct==null?null:otPct>=80?'A':otPct>=70?'B':otPct>=60?'C':otPct>=50?'D':otPct>=40?'E':'F';
+  const mins=s=>s==null?null:((s>=0?'+':'−')+(Math.abs(s)/60).toFixed(1)+' min');
+
+  const stopById=new Map((_ttcRenderedStops||[]).map(s=>[s.id,s]));
+  const stops=rows.map(r=>{
+    const s=stopById.get(r.stop_id);
+    const m=Number(r.n_matched||0);
+    return {
+      name:(s&&s.name)||String(r.stop_id),
+      routes:((s&&s.routes)||[]).map(rt=>rt.shortName).filter(Boolean).join(', '),
+      matched:m||null,
+      observations:Number(r.n_obs||0)||null,
+      onTime:m?Math.round(100*Number(r.on_time||0)/m)+'%':null,
+      late:m?Math.round(100*Number(r.late||0)/m)+'%':null,
+      delayMed:mins(num(r.delay_med_s)),
+      delayP90:mins(num(r.delay_p90_s)),
+      ewt:r.ewt_s==null?null:'+'+(Number(r.ewt_s)/60).toFixed(1)+' min',
+      headway:r.headway_med_s==null?null:(Number(r.headway_med_s)/60).toFixed(1)+' min',
+      // Below the 30-observation floor the shares are not reported as reliable.
+      thin:m<30,
+      cls:_histClassOf(r),
+    };
+  }).sort((p,q)=>{
+    const pv=parseFloat(p.late),qv=parseFloat(q.late);
+    if(isNaN(pv)&&isNaN(qv))return 0; if(isNaN(pv))return 1; if(isNaN(qv))return -1;
+    return qv-pv;
+  });
+
+  const ranked=stops.filter(s=>!s.thin&&s.late&&parseFloat(s.late)>0);
+  const hourly=(_histHourly||[]).map(r=>({
+    hour:Number(r.hour),
+    delayMin:r.delay_med_s==null?null:Number(r.delay_med_s)/60,
+    matched:Number(r.n_matched||0),
+  })).filter(r=>isFinite(r.hour)).sort((p,q)=>((p.hour+18)%24)-((q.hour+18)%24));
+
+  return {
+    coverage:_histCoverage?{
+      firstDate:_histCoverage.first_date?_rptDate(_histCoverage.first_date):null,
+      days:_histCoverage.days!=null?String(_histCoverage.days):null,
+    }:null,
+    window:_histRange?{from:_histRange.from,to:_histRange.to}:null,
+    filters:{
+      period:_histDays+' days',
+      dayType:(h.days&&h.days[_histDaytype])||String(_histDaytype),
+      timeBand:(h.bands&&h.bands[_histBand])||String(_histBand),
+    },
+    grade, onTimePct:otPct,
+    headline:[
+      {label:'On time',value:otPct==null?'—':otPct+'%',sub:'of matched arrivals'},
+      {label:'Median delay',value:mins(delayMed)||'—',sub:'across stops'},
+      {label:'90th percentile',value:mins(delayP90)||'—',sub:'across stops'},
+      {label:'Excess wait',value:ewt==null?'—':'+'+(ewt/60).toFixed(1)+' min',sub:'observation-weighted'},
+    ],
+    totals:{matched:tot.m||null,observations:tot.n||null,onTime:tot.ot||null,late:tot.l||null},
+    thresholds:_histVarDefs(h).map(v=>({label:v.l,bands:v.leg})),
+    hourly,
+    worst:ranked.slice(0,5),
+    best:ranked.slice().reverse().slice(0,5),
+    stops,
+    stopCount:stops.length,
+    thinCount:stops.filter(s=>s.thin).length,
+  };
 }
 
 // ── the payload ────────────────────────────────────────────────────────────
@@ -17767,6 +17873,7 @@ async function _rptCollect(){
         headline.push({value:Math.round(100*tot.ot/tot.m)+'% on time',label:'Matched arrivals, last 30 days'});
         rows.push(['Transit reliability',`${Math.round(100*tot.ot/tot.m)}% on-time, ${Math.round(100*tot.l/tot.m)}% late (>5 min) across ${_rptNum(tot.m)} matched arrivals at ${_histStats.length} stop-route pairs`]);
       }
+      f.transitHistory=_rptTransitHistory();
       src('Transit reliability','TTC vehicle positions archived every 2 min; arrivals matched to timetable (on-time −60…+300 s); stops with <30 observations excluded');
     }else if(a.transit){
       const n=(_ttcRenderedStops&&_ttcRenderedStops.length)||0;
@@ -17832,13 +17939,9 @@ async function _rptCollect(){
   }
   if(a.isochrone)src('Catchment',`${_accMinutes||10}-minute ${_accMode||'walking'} isochrone (${_accMode==='transit'?'TTC network, observed times':'Mapbox Isochrone API'})`);
 
-  // The project lockup, rasterised from the SVG so the payload stays small.
-  const brandLogo=await _svgToPng('analysis-logos/urbanyx-zaxis-logo.svg',440).catch(()=>null);
-
   return {
     // Selects the cover artwork (design-system/report-covers) server-side.
     lang:lang==='ka'?'ka':'en',
-    brand:brandLogo?{logo:brandLogo.url,w:brandLogo.w,h:brandLogo.h}:null,
     issued:_rptDate(new Date()),
     filename:'urbanyx_report'+(subject.parcelCode?'_'+subject.parcelCode.replace(/\./g,''):''),
     siteLabel:'urbanyx.zaxis.ge',

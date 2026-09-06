@@ -10,9 +10,7 @@ Response is `application/pdf` as an attachment.
 
 ```jsonc
 {
-  // Project lockup, rasterised client-side from analysis-logos/urbanyx-zaxis-logo.svg.
-  // Falls back to the app icon in the template when absent.
-  "brand": { "logo": "data:image/png;base64,…", "w": 440, "h": 0 },
+  "lang": "ka",                        // "ka" | "en" — picks the cover artwork
 
   "issued": "6 September 2026",        // already formatted for the report language
   "filename": "urbanyx_report",        // sanitised server-side
@@ -89,6 +87,37 @@ Response is `application/pdf` as an attachment.
   "sources":     [ { "label": "…", "text": "…" } ]   // in order of appearance
 }
 ```
+
+## The cover
+
+Page 1 is finished artwork from `design-system/report-covers`, one file per
+language, rendered full bleed with no page margins and no stamped footer.
+**Nothing on it is templated** — it carries no address, no parcel code and no
+issue date beyond the year set into the artwork itself. `lang` is the only
+input.
+
+`server/report/assets/` holds both the source `.svg` and a pre-rasterised
+300 dpi `.jpg`. The renderer prefers the JPEG: it avoids re-parsing ~0.8 MB of
+SVG on every export, and it avoids the hairline seams Chromium leaves at the
+edges of the artwork's clip groups when the SVG is drawn as vector. Delete the
+JPEGs and the SVGs are used instead, seams and all. If the artwork changes,
+replace both — a 300 dpi export (2480 × 3508) from the design tool is enough.
+
+## The map
+
+The map gets its own **landscape A4 page**, full bleed, immediately after the
+cover — a wide capture on a portrait page is only ever a third of it. The
+legend is drawn as a card over the map rather than beneath it, for the same
+reason.
+
+The capture is cropped client-side to the landscape page aspect (297:210), and
+`_rptCaptureMap` pads its `fitBounds` by exactly the strips that crop will
+discard, so nothing the report describes falls outside the frame. It is sent at
+up to 2600 px wide — about 222 dpi across 297 mm, enough to read street labels
+in print.
+
+Send **one clean capture**: no baked legend, but the parcel outline and the pin
+are drawn into it by `_rptCaptureMap`, so the page adds neither.
 
 ## Notes
 

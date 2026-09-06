@@ -6,7 +6,7 @@
 // is the only way to get a continuous "Page i / n" across both.
 const puppeteer = require("puppeteer");
 const { PDFDocument, StandardFonts, rgb } = require("pdf-lib");
-const { buildCover, buildBody } = require("./template");
+const { buildCover, buildMapPage, buildBody } = require("./template");
 
 const MARGIN = { top: "20mm", bottom: "18mm", left: "16mm", right: "16mm" };
 // The cover is a full-bleed artwork, so it gets no page margin at all.
@@ -36,7 +36,7 @@ async function closeBrowser() {
   await _closing;
 }
 
-async function renderOne(html, margin) {
+async function renderOne(html, margin, landscape) {
   const b = await browser();
   const page = await b.newPage();
   try {
@@ -46,6 +46,7 @@ async function renderOne(html, margin) {
     await page.evaluateHandle("document.fonts.ready");
     return await page.pdf({
       format: "A4",
+      landscape: !!landscape,
       printBackground: true,
       preferCSSPageSize: false,
       margin: margin || MARGIN,
@@ -56,7 +57,7 @@ async function renderOne(html, margin) {
   }
 }
 
-async function stampFooter(pdfBytes, siteLabel) {
+async function stampFooter(pdfBytes, siteLabel, bleedPages) {
   const pdf = await PDFDocument.load(pdfBytes);
   const font = await pdf.embedFont(StandardFonts.Helvetica);
   const pages = pdf.getPages();
@@ -65,8 +66,8 @@ async function stampFooter(pdfBytes, siteLabel) {
   const rule = rgb(0.882, 0.882, 0.894);
 
   pages.forEach((page, i) => {
-    // Page 1 is the cover artwork; nothing is stamped over it.
-    if (i === 0) return;
+    // The leading full-bleed pages (cover, map) carry no footer.
+    if (i < (bleedPages || 1)) return;
     const { width } = page.getSize();
     const m = 45.4;              // 16mm at 72dpi, matching the render margins
     const y = 34;
@@ -103,13 +104,17 @@ function renderReport(payload) {
 }
 
 async function _renderReport(payload) {
-  const [coverPdf, bodyPdf] = [
-    await renderOne(buildCover(payload), NO_MARGIN),
-    await renderOne(buildBody(payload)),
-  ];
+  // Three documents: a portrait full-bleed cover, an optional landscape
+  // full-bleed map, then the flowing body. Merged in that order because only
+  // separate renders can mix page orientation and margins.
+  const parts = [await renderOne(buildCover(payload), NO_MARGIN)];
+  const mapHtml = buildMapPage(payload);
+  if (mapHtml) parts.push(await renderOne(mapHtml, NO_MARGIN, true));
+  const bleedPages = parts.length;          // pages that carry no stamped footer
+  parts.push(await renderOne(buildBody(payload)));
 
   const out = await PDFDocument.create();
-  for (const bytes of [coverPdf, bodyPdf]) {
+  for (const bytes of parts) {
     const src = await PDFDocument.load(bytes);
     const copied = await out.copyPages(src, src.getPageIndices());
     copied.forEach((p) => out.addPage(p));
@@ -118,7 +123,7 @@ async function _renderReport(payload) {
   out.setProducer("Urbanyx");
   out.setCreationDate(new Date());
 
-  return Buffer.from(await stampFooter(await out.save(), payload.siteLabel || "urbanyx.zaxis.ge"));
+  return Buffer.from(await stampFooter(await out.save(), payload.siteLabel || "urbanyx.zaxis.ge", bleedPages));
 }
 
 module.exports = { renderReport, closeBrowser };

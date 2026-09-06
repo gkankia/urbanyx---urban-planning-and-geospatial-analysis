@@ -5,7 +5,7 @@
 // A section that has no data is not rendered — it leaves no heading, no
 // placeholder and no gap. The payload contract is documented in PAYLOAD.md.
 const STYLES = require("./styles");
-const { LOGO_MARK } = require("./assets");
+const { LOGO_MARK, coverSvg } = require("./assets");
 
 // ── helpers ────────────────────────────────────────────────────────────────
 const esc = (v) =>
@@ -51,58 +51,22 @@ const section = (title, lead, inner, tone, keep) =>
   (lead ? `<div class="seclead">${esc(lead)}</div>` : "") + inner + `</div>`;
 
 // ── cover ──────────────────────────────────────────────────────────────────
-
-// Contour motif — the report's own visual language, not decoration borrowed
-// from elsewhere. Nested offset closed curves, one picked out in the logo's cyan.
-const CONTOURS = `<svg viewBox="0 0 520 520" fill="none" aria-hidden="true">
-  <g stroke="#e4e4e7" stroke-width="1.1">
-    <path d="M486 250C486 372 400 470 274 470C170 470 74 402 74 292C74 176 168 84 286 84C398 84 486 152 486 250Z"/>
-    <path d="M452 254C452 358 378 440 272 440C184 440 106 382 106 290C106 192 186 116 286 116C380 116 452 172 452 254Z"/>
-    <path d="M418 258C418 344 356 410 270 410C198 410 138 362 138 288C138 208 204 148 286 148C362 148 418 194 418 258Z"/>
-    <path d="M384 262C384 330 334 380 268 380C212 380 170 342 170 286C170 224 222 180 286 180C344 180 384 216 384 262Z"/>
-    <path d="M350 266C350 316 312 350 266 350C226 350 202 322 202 284C202 240 240 212 286 212C326 212 350 234 350 266Z"/>
-  </g>
-  <path d="M316 270C316 292 300 308 274 308C252 308 234 294 234 272C234 250 256 236 280 236C302 236 316 250 316 270Z"
-        stroke="#22b8d6" stroke-width="1.4" opacity="0.55"/>
-</svg>`;
-
+// The cover is a finished artwork from design-system/report-covers, one per
+// language. It carries no report data — no address, no parcel, no date beyond
+// the year set into the artwork — so there is nothing to template here: the
+// page is the graphic, edge to edge. Rendered with zero page margins (see
+// compose.js) so it bleeds.
 function buildCover(d) {
-  const s = d.subject || {};
-  const meta = [];
-  if (has(s.parcelCode)) meta.push(["Parcel code", s.parcelCode]);
-  if (has(s.areaLabel)) meta.push(["Area", s.areaLabel]);
-  if (has(s.dominantZone)) meta.push(["Dominant zone", s.dominantZone]);
-  if (has(s.analysesLabel)) meta.push(["Analyses", s.analysesLabel]);
-
-  const cols = Math.min(4, Math.max(2, meta.length || 2));
-  const brand = d.brand && d.brand.logo ? d.brand.logo : LOGO_MARK;
-
-  return doc(s.title || "Urbanyx report", "cover", `
-<div class="cv">
-  <div class="contours">${CONTOURS}</div>
-
-  <div class="lockup">
-    <img src="${esc(brand)}" alt="Urbanyx">
-    <div class="issued">Issued<b>${esc(d.issued)}</b></div>
-  </div>
-
-  <div class="rule-accent"></div>
-  <span class="eyebrow">Site &amp; area analysis report</span>
-  <h1>${esc(s.title || "Analysis report")}</h1>
-  ${has(s.place) ? `<div class="place">${esc(s.place)}</div>` : ""}
-
-  ${meta.length ? `<div class="meta" style="grid-template-columns:repeat(${cols},minmax(0,1fr))">
-    ${meta.map(([k, v]) => `<div><div class="k">${esc(k)}</div><div class="v">${esc(v)}</div></div>`).join("")}
-  </div>` : ""}
-
-  <div class="foot"${meta.length ? "" : ` style="margin-top:auto"`}>
-    <div>${[
-      has(d.preparedFor) ? `<div class="k">Prepared for</div><div class="v">${esc(d.preparedFor)}</div>` : "",
-      has(d.preparedBy) ? `<div class="k"${has(d.preparedFor) ? ` style="margin-top:15px"` : ""}>Prepared by</div><div class="v">${esc(d.preparedBy)}</div>` : "",
-    ].join("")}</div>
-    <div class="zx">${has(s.reportId) ? esc(s.reportId) + "<br>" : ""}a Z.axis product</div>
-  </div>
-</div>`);
+  const lang = d.lang === "ka" ? "ka" : "en";
+  return doc((d.subject && d.subject.title) || "Urbanyx report", "cover", `
+<style>
+  html,body{margin:0;padding:0;height:100%;background:#fff}
+  .cover{width:100%;height:100vh;display:block;overflow:hidden}
+  /* assets.coverSvg returns an <img> for the pre-rasterised artwork and an
+     inline <svg> as the fallback; both fill the page. */
+  .cover img,.cover svg{width:100%;height:100%;display:block;object-fit:cover}
+</style>
+<div class="cover">${coverSvg(lang)}</div>`);
 }
 
 // ── body sections ──────────────────────────────────────────────────────────
@@ -146,20 +110,50 @@ function indexBlock(uvi) {
   </div>`;
 }
 
-function mapSection(m) {
-  if (!m || !has(m.dataUrl)) return "";
+// The map is its own landscape page, rendered edge to edge so the capture is
+// as large as the sheet allows. The legend sits on it as a card rather than
+// below it, because splitting them costs the map half the page.
+function buildMapPage(d) {
+  const m = d.map;
+  if (!m || !has(m.dataUrl)) return null;
   const groups = (m.legend || []).filter((g) => has(g.rows) || has(g.note));
-  return section("Map", "All active analysis layers on one capture, with a combined legend.", `
-    <div class="mapplate"><img src="${esc(m.dataUrl)}" alt=""></div>
-    <div class="attrib">Basemap © Mapbox, © OpenStreetMap contributors.</div>
-    ${groups.length ? `<div class="legend">${groups.map((g) => `<div class="lg">
+  const cols = Math.min(3, Math.max(1, Math.ceil(groups.length / 4)));
+
+  return doc((d.subject && d.subject.title) || "Map", "mappage", `
+<style>
+  html,body{margin:0;padding:0;height:100%;background:#fff}
+  .sheet{position:relative;width:100%;height:100vh;overflow:hidden;background:#ececed}
+  .sheet > img{width:100%;height:100%;object-fit:cover;display:block}
+  .cap{position:absolute;left:10mm;bottom:6mm;font-size:9px;color:#52525b;
+    background:rgba(255,255,255,0.82);padding:3px 7px;border-radius:3px}
+  .key{position:absolute;left:10mm;top:10mm;max-width:104mm;
+    background:rgba(255,255,255,0.93);border:1px solid rgba(0,0,0,0.10);
+    border-radius:4px;padding:13px 15px 14px;
+    box-shadow:0 2px 10px rgba(0,0,0,0.10)}
+  .key .h{font-size:9.5px;font-weight:600;letter-spacing:0.13em;text-transform:uppercase;
+    color:#a1a1aa;margin-bottom:9px}
+  .key .cols{display:grid;grid-template-columns:repeat(${cols},minmax(0,1fr));gap:11px 18px}
+  .key .t{font-size:8.5px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;
+    color:#71717a;margin-bottom:5px}
+  .key .r{display:flex;align-items:center;gap:6px;font-size:10px;color:#3f3f46;padding:1.5px 0}
+  .key .sw{width:13px;height:6px;border-radius:2px;flex:none}
+  .key .dot{width:7px;height:7px;border-radius:50%;flex:none}
+  .key .n{font-size:8.5px;color:#a1a1aa;margin-top:4px;line-height:1.45}
+</style>
+<div class="sheet">
+  <img src="${esc(m.dataUrl)}" alt="">
+  ${groups.length ? `<div class="key">
+    <div class="h">${esc(m.keyTitle || "Legend")}</div>
+    <div class="cols">${groups.map((g) => `<div>
       <div class="t">${esc(g.title)}</div>
       ${(g.rows || []).map((r) => `<div class="r">${
         r.color ? `<span class="${r.shape === "dot" ? "dot" : "sw"}" style="background:${color(r.color, "#a1a1aa")}"></span>` : ""
       }${esc(r.label)}</div>`).join("")}
       ${has(g.note) ? `<div class="n">${esc(g.note)}</div>` : ""}
-    </div>`).join("")}</div>` : ""}
-  `, "s");
+    </div>`).join("")}</div>
+  </div>` : ""}
+  <div class="cap">${esc(m.caption || "Study area.")} Basemap © Mapbox, © OpenStreetMap contributors.</div>
+</div>`);
 }
 
 function ownership(o) {
@@ -331,7 +325,6 @@ function buildBody(d) {
     summaryInner.trim()
       ? `<h2 class="sec">Summary</h2><div class="seclead">At a glance, followed by the reasoning behind the figures.</div>${summaryInner}`
       : "",
-    mapSection(d.map),
     findings(d.findings),
     methodology(d.methodology),
     sources(d.sources),
@@ -341,4 +334,4 @@ function buildBody(d) {
   return doc(s.title || "Urbanyx report", "body", inner);
 }
 
-module.exports = { buildCover, buildBody };
+module.exports = { buildCover, buildMapPage, buildBody };

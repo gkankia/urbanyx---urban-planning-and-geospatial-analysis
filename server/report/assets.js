@@ -8,13 +8,26 @@ const A = path.join(__dirname, "assets");
 const uri = (f, mime) =>
   `data:${mime};base64,${fs.readFileSync(path.join(A, f)).toString("base64")}`;
 
-// The cover is a finished, fixed artwork per language — nothing on it is
-// templated. Loaded on first use rather than at require time: each one is
-// ~0.8 MB, and a render only ever needs one of them.
+// Returned as markup rather than a data: URI so the artwork stays vector all
+// the way into the PDF. Wrapped in <img> it is rasterised, and the tile seams
+// of its embedded images show as faint boxes.
 const _covers = {};
 function coverSvg(lang) {
   const key = lang === "ka" ? "ka" : "en";
-  if (!_covers[key]) _covers[key] = uri(`report-cover-${key}.svg`, "image/svg+xml");
+  if (!_covers[key]) {
+    // Prefer the pre-rasterised 300 dpi artwork when it is present.
+    const jpg = path.join(A, `report-cover-${key}.jpg`);
+    if (fs.existsSync(jpg)) {
+      _covers[key] = `<img src="${uri(`report-cover-${key}.jpg`, "image/jpeg")}" alt="">`;
+      return _covers[key];
+    }
+    _covers[key] = fs.readFileSync(path.join(A, `report-cover-${key}.svg`), "utf8")
+      // Drop the XML prolog; it is invalid inside an HTML document.
+      .replace(/^[\s\S]*?(?=<svg)/, "")
+      // Let the page drive the size.
+      .replace(/<svg([^>]*)>/, (m, attrs) =>
+        `<svg${attrs.replace(/\s(width|height)="[^"]*"/g, "")} width="100%" height="100%" preserveAspectRatio="xMidYMid slice">`);
+  }
   return _covers[key];
 }
 

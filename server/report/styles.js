@@ -174,39 +174,4 @@ th.n,td.n{text-align:right}
   color:var(--faint);margin-bottom:7px}
 .disc .d{font-size:12px;line-height:1.65;color:var(--mute)}
 
-/* ── cover ───────────────────────────────────────────────────────
-   A title page rather than a title block: the project lockup up top, the
-   street name carrying the page, and a contour motif — the visual language
-   of the analysis itself — sitting behind the lower half. The cyan hairline
-   is sampled from the logo's own glow, and is the only accent on the page. */
-.cv{position:relative;display:flex;flex-direction:column;height:259mm;overflow:hidden}
-.cv .contours{position:absolute;right:-30mm;top:88mm;width:132mm;height:132mm;
-  opacity:0.75;pointer-events:none}
-.cv .contours svg{width:100%;height:100%;display:block}
-.cv > *{position:relative}
-
-.cv .lockup{display:flex;align-items:flex-start;justify-content:space-between}
-.cv .lockup img{height:104px;width:auto;display:block}
-.cv .lockup .issued{text-align:right;font-size:10px;font-weight:600;
-  letter-spacing:0.11em;text-transform:uppercase;color:var(--faint);padding-top:4px}
-.cv .lockup .issued b{display:block;font-size:13px;font-weight:400;letter-spacing:0;
-  text-transform:none;color:var(--ink);margin-top:5px}
-
-.cv .rule-accent{height:2px;background:#22b8d6;width:54px;margin:44px 0 0}
-.cv .eyebrow{margin-top:20px;display:block}
-.cv h1{font-size:50px;font-weight:600;color:var(--ink);letter-spacing:-0.028em;
-  line-height:1.02;margin-top:12px;max-width:15ch}
-.cv .place{font-size:20px;color:var(--mute);margin-top:14px;letter-spacing:-0.005em}
-
-.cv .meta{display:grid;gap:18px;margin-top:auto;padding-top:19px;
-  border-top:1px solid var(--rule)}
-.cv .meta .k{font-size:10px;font-weight:600;letter-spacing:0.11em;
-  text-transform:uppercase;color:var(--faint)}
-.cv .meta .v{font-size:14px;color:var(--ink);margin-top:5px}
-.cv .foot{margin-top:26px;display:grid;grid-template-columns:1fr auto;gap:26px;
-  padding-top:18px;border-top:1px solid var(--rule);align-items:end}
-.cv .foot .k{font-size:10px;font-weight:600;letter-spacing:0.11em;
-  text-transform:uppercase;color:var(--faint)}
-.cv .foot .v{font-size:14px;color:var(--ink);margin-top:5px}
-.cv .zx{font-size:11px;color:var(--faint);text-align:right;line-height:1.6}
 `;
