@@ -799,8 +799,7 @@ function updateUserUI(){
     const _navAvEl2=document.getElementById("nav-u-avatar");if(_navAvEl2){const _ti=_navAvEl2.querySelector(".avatar-initials");if(_ti)_ti.textContent="";}
     {const _pf=document.getElementById("pf-avatar");if(_pf)setAvatar(_pf,null,"?");}
   }
-  // Re-evaluate the default basemap now that the account is known (exempt accounts keep
-  // Z.axis Hillshade even from abroad).
+  // Re-evaluate the location-based basemap once the account/session is settled.
   try{ if(typeof _applyLocationBasemap==='function'&&mapReady)_applyLocationBasemap(); }catch(_){}
 }
 
@@ -6092,12 +6091,10 @@ const _BASEMAP_STYLES={
 };
 const _MAPBOX_STANDARD_DAY="mapbox://styles/mapbox/standard"; // Mapbox Standard, day light preset
 let _dayIsStandardNow=false; // whether the day slot currently shows Mapbox Standard (vs Hillshade)
-// Account exception: admins / the owner keep Z.axis Hillshade everywhere, so the Georgia
-// experience stays testable from abroad.
-function _basemapExemptAccount(){ try{return !!currentUser&&(currentUser.isAdmin||currentUser.email==="giorgi@zaxis.ge");}catch(_){return false;} }
-// The day slot is Z.axis Hillshade inside Georgia (or always, for exempt accounts) and
-// Mapbox Standard Day elsewhere.
-function _dayInGeorgia(){ if(_basemapExemptAccount())return true; try{const c=map.getCenter();return _inGeorgia(c.lng,c.lat);}catch(_){return true;} }
+// The day slot is Z.axis Hillshade only while the map is over Georgia — anywhere else
+// (including on load from abroad) it is Mapbox Standard Day, in the map and the label.
+// No account exemption: panning to Georgia brings Hillshade back for everyone.
+function _dayInGeorgia(){ try{const c=map.getCenter();return _inGeorgia(c.lng,c.lat);}catch(_){return false;} }
 function _dayStyle(){ return _dayInGeorgia()?_BASEMAP_STYLES.day:_MAPBOX_STANDARD_DAY; }
 function _dayBasemapLabel(){ return _dayInGeorgia()?t().layers.day:(lang==='ka'?'Mapbox Standard':'Mapbox Standard Day'); }
 // Set the day-slot label; if that slot is active and the wanted style differs from what's
@@ -7986,7 +7983,7 @@ map.on("load",()=>{
   map.on("mouseleave","extrusion-layer",()=>{map.getCanvas().style.cursor="";});
 
   // Pointer cursor when hovering parcel
-  map.on("moveend",function(){fetchDBParcelsIfEnabled();_updateSearchPlaceholder();});
+  map.on("moveend",function(){fetchDBParcelsIfEnabled();_updateSearchPlaceholder();try{_applyLocationBasemap();}catch(_){}});
   map.on("move",_updateParcelCardPos);
   map.on("move",_updateMiniCardPositions);
   map.on("mousemove",_updateCoordReadout);
