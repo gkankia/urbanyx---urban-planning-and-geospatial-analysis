@@ -145,7 +145,7 @@
   .acc-mode-btn:hover { border-color:rgba(255,255,255,0.2); color:rgba(255,255,255,0.7); }
   .acc-mode-btn.active { background:rgba(99,102,241,0.14); border-color:rgba(99,102,241,0.4); color:#a5b4fc; font-weight:600; }
   .acc-mode-btn { display:flex; align-items:center; justify-content:center; }
-  .acc-mode-ic { width:22px; height:22px; display:block; opacity:0.5; transition:opacity 0.2s; }
+  .acc-mode-ic { width:39px; height:39px; display:block; opacity:0.5; transition:opacity 0.2s; }
   .acc-mode-btn:hover .acc-mode-ic { opacity:0.8; }
   .acc-mode-btn.active .acc-mode-ic { opacity:1; }
   .acc-time-row { display:flex; gap:4px; margin:4px 0 10px; }
@@ -533,7 +533,7 @@
   .pfc-cat-lbl { font-size:0.63rem; font-weight:700; letter-spacing:0.07em; text-transform:uppercase; color:rgba(255,255,255,0.5); margin-bottom:5px; }
   .pfc-cat-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:4px; }
   .pfc-cat-btn { position:relative; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; gap:2px; padding:5px 2px 4px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:7px; cursor:pointer; transition:background 0.13s,border-color 0.13s,box-shadow 0.2s; }
-  .pfc-cat-btn img { width:34px; height:34px; opacity:0.72; transition:opacity 0.13s; pointer-events:none; }
+  .pfc-cat-btn img { width:39px; height:39px; opacity:0.72; transition:opacity 0.13s; pointer-events:none; }
   .pfc-cat-cap { font-size:0.5rem; line-height:1.08; text-align:center; color:rgba(255,255,255,0.6); pointer-events:none; word-break:break-word; }
   .pfc-cat-btn.active .pfc-cat-cap { color:rgba(199,210,254,0.95); }
   /* Real-estate market panel */
@@ -904,7 +904,7 @@
   /* Bottom geometry reshape toolbar — placeholder */
   #geo-toolbar { position:absolute; bottom:28px; left:50%; transform:translateX(-50%); z-index:20; display:none; align-items:center; gap:1px; background:var(--glass-bg); backdrop-filter:var(--glass-blur); -webkit-backdrop-filter:var(--glass-blur); border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:2px; box-shadow:0 6px 24px rgba(0,0,0,0.45); }
   .geo-tb-sep { width:1px; height:22px; background:rgba(255,255,255,0.08); margin:0 3px; flex-shrink:0; }
-  .geo-tb-btn { position:relative; width:46px; height:46px; display:flex; align-items:center; justify-content:center; border-radius:9px; border:1px solid transparent; background:none; cursor:default; color:rgba(255,255,255,0.22); font-size:15px; transition:all 0.15s; opacity:0.6; }
+  .geo-tb-btn { position:relative; width:52px; height:52px; display:flex; align-items:center; justify-content:center; border-radius:9px; border:1px solid transparent; background:none; cursor:default; color:rgba(255,255,255,0.22); font-size:15px; transition:all 0.15s; opacity:0.6; }
   .geo-tb-btn:not([disabled]):hover { background:rgba(255,255,255,0.07); border-color:rgba(255,255,255,0.14); color:rgba(255,255,255,0.65); opacity:1; cursor:pointer; }
   .geo-tb-btn.geo-tool-btn { opacity:1; cursor:pointer; }
   .geo-tb-btn.geo-tool-btn:hover { background:rgba(255,255,255,0.08); border-color:rgba(255,255,255,0.14); }
@@ -1038,7 +1038,7 @@
   #icon-nav .nav-group.bottom { margin-top:0; padding-bottom:0; }
   #icon-nav .nav-lbl { display:none; }  /* icon-only, like the zoom control panel */
   #icon-nav .nav-sep { display:none; }
-  #icon-nav .nav-btn { width:40px; height:38px; border-radius:0; }  /* flush, matching .mzc-btn */
+  #icon-nav .nav-btn { width:54px; height:52px; border-radius:0; }  /* flush, matching .mzc-btn */
   #icon-nav .nav-tip { display:none; }  /* overflow:hidden clips them — use native title tooltips instead */
   /* Floating map icons (search top-left, profile top-right): transparent, with a
      soft shadow so they read against any basemap. */
@@ -1055,8 +1055,8 @@
   .nav-lbl { font-size:0.42rem; line-height:1; letter-spacing:0.045em; text-transform:uppercase; font-weight:700; opacity:0.66; }
   .nav-btn img, .nav-btn svg { flex-shrink:0; }
   .nav-group.bottom { margin-top:auto; padding-bottom:8px; }
-  .nav-sep { width:32px; height:1px; background:rgba(255,255,255,0.07); margin:4px 0; flex-shrink:0; }
-  .nav-btn { width:40px; height:42px; border-radius:9px; border:none; outline:none; background:transparent; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0; transition:background 0.15s,color 0.15s; color:rgba(255,255,255,0.28); position:relative; flex-shrink:0; font-family:inherit; }
+  .nav-sep { width:38px; height:1px; background:rgba(255,255,255,0.07); margin:4px 0; flex-shrink:0; }
+  .nav-btn { width:54px; height:52px; border-radius:9px; border:none; outline:none; background:transparent; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0; transition:background 0.15s,color 0.15s; color:rgba(255,255,255,0.28); position:relative; flex-shrink:0; font-family:inherit; }
   .nav-btn:hover { background:rgba(255,255,255,0.07); color:rgba(255,255,255,0.72); }
   /* Free tier — Climate/Energy/Relief/Draw/3D-Extrude are Pro per the plan
      comparison table; Accessibility, Education, Mobility, Morphology, Zoning
@@ -1090,7 +1090,7 @@
   .zp-link:hover { text-decoration:underline; }
   .zp-spin { display:inline-block; width:11px; height:11px; border:1.5px solid rgba(255,255,255,0.2); border-top-color:#a78bfa; border-radius:50%; animation:spin 0.7s linear infinite; }
 
-  #nav-u-avatar { width:20px; height:20px; border-radius:50%; background:rgba(167,139,250,0.18); border:1.5px solid rgba(167,139,250,0.35); display:flex; align-items:center; justify-content:center; font-size:0.62rem; font-weight:700; color:#a78bfa; overflow:hidden; flex-shrink:0; }
+  #nav-u-avatar { width:34px; height:34px; border-radius:50%; background:rgba(167,139,250,0.18); border:1.5px solid rgba(167,139,250,0.35); display:flex; align-items:center; justify-content:center; font-size:0.82rem; font-weight:700; color:#a78bfa; overflow:hidden; flex-shrink:0; }
   #nav-u-avatar .avatar-img { width:100%; height:100%; object-fit:cover; }
   .nav-btn .nav-tip { position:absolute; left:calc(100% + 10px); top:50%; transform:translateY(-50%); background:rgba(10,10,10,0.95); color:rgba(255,255,255,0.78); font-size:0.62rem; font-weight:600; letter-spacing:0.04em; white-space:nowrap; padding:4px 9px; border-radius:6px; opacity:0; pointer-events:none; transition:opacity 0.12s; border:1px solid rgba(255,255,255,0.08); z-index:100; }
   .nav-btn:hover .nav-tip { opacity:1; }
