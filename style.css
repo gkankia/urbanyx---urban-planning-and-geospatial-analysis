@@ -938,6 +938,12 @@
   #pfc-pane-parcel.pfc-teaser #pfc-zoomin-btn { position:absolute !important; left:50% !important; top:50% !important; transform:translate(-50%,-50%); width:auto !important; margin:0 !important; white-space:nowrap; z-index:4; box-shadow:0 4px 18px rgba(0,0,0,0.45); }
   /* Per-row sub-analysis slot: takes no space until a panel is moved into it */
   .pfc-cat-slot:empty { display:none; }
+  /* Export flyout: icon-only buttons, same footprint as the nav panels */
+  .rpt-ico-btn { width:54px; height:52px; display:flex; align-items:center; justify-content:center;
+    background:transparent; border:1px solid transparent; border-radius:9px; cursor:pointer; padding:0;
+    transition:background 0.15s, border-color 0.15s; }
+  .rpt-ico-btn:hover { background:rgba(255,255,255,0.08); border-color:rgba(255,255,255,0.14); }
+  .rpt-ico-btn:active { background:rgba(255,255,255,0.14); }
   .geo-circ-handle { width:16px; height:16px; border-radius:50%; background:rgba(167,139,250,0.95); border:2px solid #fff; box-shadow:0 2px 8px rgba(0,0,0,0.5); cursor:ew-resize; }
   .geo-circ-handle:hover { background:#c4b5fd; }
   .geo-rot-deg { position:absolute; top:-24px; left:50%; transform:translateX(-50%); background:rgba(15,15,15,0.92); color:#fff; font-size:0.64rem; font-weight:700; letter-spacing:0.03em; padding:2px 7px; border-radius:5px; white-space:nowrap; display:none; border:1px solid rgba(255,255,255,0.1); }

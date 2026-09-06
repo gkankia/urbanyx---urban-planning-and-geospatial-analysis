@@ -105,13 +105,20 @@ function _updateAnalysisGrid(show){
   // a recurring "I can't tell what these do" finding). Falls back to the tooltip name.
   const _CAP={'nav-zoning-btn':['Zoning','ზონირება'],'cat-btn-relief':['Relief','რელიეფი'],'cat-btn-climate':['Climate','კლიმატი'],'cat-btn-energy':['Energy','ენერგია'],'cat-btn-accessibility':['Isochrone','იზოქრონი'],'cat-btn-education':['Education','განათლება'],'cat-btn-mobility':['Mobility','მობილობა'],'cat-btn-morphology':['Morphology','მორფოლოგია'],'cat-btn-re-apart':['Apartments','ბინა'],'cat-btn-re-house':['Houses','სახლი'],'cat-btn-re-land':['Land plots','ნაკვეთი']};
   Object.keys(_TT).forEach(id=>{const b=document.getElementById(id);if(b){b.title=_TT[id][ka?1:0];const cap=b.querySelector('.pfc-cat-cap');if(cap)cap.textContent=(_CAP[id]||_TT[id])[ka?1:0];}});
-  // Zoning is Georgia-only — hide it entirely at a location pin (outside Georgia).
-  const _zb=document.getElementById('nav-zoning-btn');if(_zb)_zb.style.display=_pinMode?'none':'';
+  // Zoning needs a registered parcel. At a bare location pin it stays VISIBLE but
+  // locked (like the other gated analyses) so the user can see it exists and why.
+  const _zb=document.getElementById('nav-zoning-btn');
+  if(_zb){
+    _zb.style.display='';
+    const zLocked=!!_pinMode;
+    _zb.classList.toggle('pfc-cat-locked',zLocked);
+    _zb.setAttribute('data-lock-tip',ka?'ზონირების ანალიზისთვის აირჩიე ნაკვეთი':'Switch to a parcel to run zoning analysis');
+  }
   const area=_currentParcelAreaM2||0;
-  // Parcel analyses: Zoning & Climate always active; Relief & Clean energy need ≥ 1,000 m².
+  // Parcel analyses: Climate always active; Relief & Clean energy need ≥ 1,000 m².
   const reLocked=area<1000;
   const reTip=ka?'რელიეფი და სუფთა ენერგია საჭიროებს მინიმუმ 1000 მ² ფართობის ნაკვეთს':'Relief & Clean energy need a parcel of at least 1,000 m²';
-  ['nav-zoning-btn','cat-btn-climate'].forEach(id=>{const b=document.getElementById(id);if(b)b.classList.remove('pfc-cat-locked');});
+  {const b=document.getElementById('cat-btn-climate');if(b)b.classList.remove('pfc-cat-locked');}
   ['cat-btn-relief','cat-btn-energy'].forEach(id=>{const b=document.getElementById(id);if(!b)return;b.classList.toggle('pfc-cat-locked',reLocked);b.setAttribute('data-lock-tip',reTip);});
   // (Lock reasons are shown as hover tooltips on the buttons — no in-card note boxes.)
   // Accessibility analyses: Isochrone always active; Education/Mobility/Morphology need an
@@ -150,9 +157,13 @@ function _repositionOpenAnalysisPanels(){ /* docked — CSS owns the layout */ }
 // Unified click for the in-card analysis buttons — blocks locked ones with a hint.
 function _pfcCatClick(key,el){
   if(el&&el.classList.contains('pfc-cat-locked')){
-    showToast(lang==='ka'?'ჯერ ჩართე იზოქრონის ანალიზი':'Run the Isochrone analysis first');
-    const acc=document.getElementById('cat-btn-accessibility');
-    if(acc){acc.classList.add('pfc-cat-pulse');setTimeout(()=>acc.classList.remove('pfc-cat-pulse'),1300);}
+    // Each locked button explains its own reason (data-lock-tip), not a blanket one.
+    showToast(el.getAttribute('data-lock-tip')||(lang==='ka'?'ჯერ ჩართე იზოქრონის ანალიზი':'Run the Isochrone analysis first'));
+    // Only nudge the Isochrone button when the isochrone is what's actually missing.
+    if(key!=='zoning'){
+      const acc=document.getElementById('cat-btn-accessibility');
+      if(acc){acc.classList.add('pfc-cat-pulse');setTimeout(()=>acc.classList.remove('pfc-cat-pulse'),1300);}
+    }
     return;
   }
   if(key==='zoning')toggleZoningPanel();
@@ -17130,19 +17141,21 @@ function _rptMenuToggle(btn){
   let m=document.getElementById('rpt-menu');
   if(m){m.remove();document.getElementById('nav-report-icon')?.style.setProperty('opacity','0.55');return;}
   const isKa=lang==='ka';
-  const btnS='display:flex;align-items:center;gap:9px;width:100%;text-align:left;font-family:inherit;font-size:0.66rem;font-weight:600;line-height:1.3;padding:8px 11px;border-radius:8px;margin-top:5px;cursor:pointer;';
-  const icS='width:39px;height:39px;flex-shrink:0';
+  // Icon-only strip that slides out beside the rail button — no labels, native
+  // tooltips carry the meaning (matches the rail's own icon-only treatment).
+  const icS='width:39px;height:39px;display:block;pointer-events:none';
   m=document.createElement('div');m.id='rpt-menu';
-  m.style.cssText='position:fixed;left:52px;z-index:220;width:248px;background:var(--glass-bg,rgba(8,8,8,0.9));backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,0.09);border-radius:11px;padding:9px 10px 11px;box-shadow:0 8px 28px rgba(0,0,0,0.45)';
+  m.style.cssText='position:fixed;left:52px;z-index:220;display:flex;align-items:center;gap:4px;background:var(--glass-bg,rgba(8,8,8,0.9));backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,0.09);border-radius:12px;padding:6px;box-shadow:0 8px 28px rgba(0,0,0,0.45)';
   m.innerHTML=
-    `<div style="font-family:ui-monospace,monospace;font-size:0.52rem;letter-spacing:0.14em;text-transform:uppercase;color:rgba(255,255,255,0.35)">${isKa?'რეპორტი':'Report'}</div>`+
-    `<button onclick="_rptMenuToggle();exportReportPDF()" style="${btnS}border:1px solid rgba(167,139,250,0.3);background:rgba(167,139,250,0.12);color:#a78bfa"><img src="analysis-logos/pdf-report.svg" style="${icS}">${isKa?'PDF რეპორტის ექსპორტი':'Export PDF report'}</button>`+
-    `<button onclick="_rptMenuToggle();_rptExportGeoJSON()" style="${btnS}border:1px solid rgba(255,255,255,0.09);background:rgba(255,255,255,0.03);color:rgba(255,255,255,0.6)"><img src="analysis-logos/export-vector.svg" style="${icS}">${isKa?'აქტიური ფენები · GeoJSON':'Active layers · GeoJSON'}</button>`+
-    `<button onclick="_rptMenuToggle();_rptExportGeoTIFF()" style="${btnS}border:1px solid rgba(255,255,255,0.09);background:rgba(255,255,255,0.03);color:rgba(255,255,255,0.6)"><img src="analysis-logos/export-raster.svg" style="${icS}">${isKa?'აქტიური რასტრები · GeoTIFF':'Active rasters · GeoTIFF'}</button>`;
+    `<button class="rpt-ico-btn" title="${isKa?'PDF რეპორტის ექსპორტი':'Export PDF report'}" onclick="_rptMenuToggle();exportReportPDF()"><img src="analysis-logos/pdf-report.svg" style="${icS}"></button>`+
+    `<button class="rpt-ico-btn" title="${isKa?'აქტიური ფენები · GeoJSON':'Active layers · GeoJSON'}" onclick="_rptMenuToggle();_rptExportGeoJSON()"><img src="analysis-logos/export-vector.svg" style="${icS}"></button>`+
+    `<button class="rpt-ico-btn" title="${isKa?'აქტიური რასტრები · GeoTIFF':'Active rasters · GeoTIFF'}" onclick="_rptMenuToggle();_rptExportGeoTIFF()"><img src="analysis-logos/export-raster.svg" style="${icS}"></button>`;
   document.body.appendChild(m);
   const r=btn?.getBoundingClientRect();
-  if(r){m.style.left=Math.max(8,Math.min(r.left,window.innerWidth-258))+'px';}
-  m.style.top=Math.max(8,Math.min((r?.bottom||120)+6,window.innerHeight-m.offsetHeight-10))+'px';
+  if(r){
+    m.style.left=Math.max(8,Math.min(r.right+8,window.innerWidth-m.offsetWidth-8))+'px';
+    m.style.top=Math.max(8,Math.min(r.top+r.height/2-m.offsetHeight/2,window.innerHeight-m.offsetHeight-8))+'px';
+  }else{ m.style.top='120px'; }
   document.getElementById('nav-report-icon')?.style.setProperty('opacity','1');
   setTimeout(()=>document.addEventListener('click',function _c(e){
     if(!m.contains(e.target)&&!e.target.closest('.pp-export-btn')){
