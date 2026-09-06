@@ -16312,6 +16312,26 @@ async function _histComposeCapture(spec){
   const c=document.createElement('canvas');c.width=W;c.height=H;
   const ctx=c.getContext('2d');
   ctx.drawImage(src,0,0);
+  // The map pin is a DOM marker, so it never appears in the WebGL canvas — draw it.
+  if(spec&&spec.pinLngLat){
+    try{
+      const p=map.project([spec.pinLngLat.lng,spec.pinLngLat.lat]);
+      const dpr=W/(src.clientWidth||W);
+      const px=p.x*dpr, py=p.y*dpr, ps=Math.max(28,W/40), r=ps*0.32;
+      ctx.save();ctx.translate(px,py);
+      ctx.beginPath();ctx.moveTo(0,0);
+      ctx.quadraticCurveTo(-r*0.95,-ps*0.55,-r,-ps*0.72);
+      ctx.arc(0,-ps*0.72,r,Math.PI,0,false);
+      ctx.quadraticCurveTo(r*0.95,-ps*0.55,0,0);
+      ctx.closePath();
+      ctx.shadowColor='rgba(0,0,0,0.45)';ctx.shadowBlur=ps*0.18;ctx.shadowOffsetY=ps*0.05;
+      ctx.fillStyle='#a78bfa';ctx.fill();
+      ctx.shadowColor='transparent';
+      ctx.lineWidth=Math.max(1.5,ps*0.07);ctx.strokeStyle='#ffffff';ctx.stroke();
+      ctx.beginPath();ctx.arc(0,-ps*0.72,r*0.4,0,Math.PI*2);ctx.fillStyle='#ffffff';ctx.fill();
+      ctx.restore();
+    }catch(_){}
+  }
   // legend card, bottom-right, scaled to capture resolution (spec-driven so
   // any analysis section can reuse this capture with its own symbology).
   // Two shapes: spec.groups (titled, separated sections — one per analysis,
@@ -16709,9 +16729,33 @@ async function exportReportPDF(){
     const T=(str,x,yy,opts)=>{setFor(str,opts&&opts.w);doc.text(str,x,yy,opts&&opts.o);};
     const ensure=(need)=>{if(y+need>BOT){doc.addPage();y=M;}};
     const H1=(txt)=>{doc.setFontSize(15);doc.setTextColor(20);T(txt,M,y,{w:'bold'});y+=7;};
-    const H2=(txt)=>{ensure(11);y+=2;doc.setFontSize(11);doc.setTextColor(30);T(txt,M,y,{w:'bold'});y+=1.5;doc.setDrawColor(210);doc.line(M,y,PW-M,y);y+=4.5;};
-    const H3=(txt)=>{ensure(8);y+=1;doc.setFontSize(9);doc.setTextColor(40);T(txt,M,y,{w:'bold'});y+=4.5;};
+    const H2=(txt,accent)=>{ensure(11);y+=2;doc.setFontSize(11);doc.setTextColor(30);
+      if(accent){doc.setFillColor(accent);doc.roundedRect(M,y-3.3,2.2,4.3,0.9,0.9,'F');}
+      T(txt,M+(accent?4.8:0),y,{w:'bold'});y+=1.5;doc.setDrawColor(210);doc.line(M,y,PW-M,y);y+=4.5;};
+    const H3=(txt,accent)=>{ensure(8);y+=1;doc.setFontSize(9);doc.setTextColor(40);
+      if(accent){doc.setFillColor(accent);doc.circle(M+1.3,y-1.1,1.3,'F');}
+      T(txt,M+(accent?4.4:0),y,{w:'bold'});y+=4.5;};
     const P=(txt,col)=>{doc.setFontSize(8.5);doc.setTextColor(col??60);setFor(txt);const ls=doc.splitTextToSize(txt,PW-M*2);ensure(ls.length*4+1);ls.forEach(l=>{setFor(l);doc.text(l,M,y);y+=4;});y+=1.5;};
+    // Headline stat tiles — big number + label, colour-accented, up to 4 per row.
+    // Gives the report a scannable "at a glance" band instead of a wall of prose.
+    const tiles=(items)=>{
+      items=(items||[]).filter(Boolean); if(!items.length)return;
+      for(let off=0;off<items.length;off+=4){
+        const row=items.slice(off,off+4), n=row.length, gap=3, w=(PW-M*2-gap*(n-1))/n, h=17;
+        ensure(h+4);
+        row.forEach((it,i)=>{
+          const x=M+i*(w+gap);
+          doc.setFillColor(247,247,250);doc.roundedRect(x,y,w,h,1.6,1.6,'F');
+          doc.setFillColor(it.color||'#6366f1');doc.roundedRect(x,y,1.7,h,0.85,0.85,'F');
+          doc.setFontSize(11.5);doc.setTextColor(22);setFor(String(it.value),'bold');
+          doc.text(String(it.value),x+4.8,y+7.6);
+          doc.setFontSize(6.2);doc.setTextColor(125);setFor(String(it.label));
+          doc.text(String(it.label).toUpperCase(),x+4.8,y+11.9);
+          if(it.sub){doc.setFontSize(6);doc.setTextColor(155);setFor(String(it.sub));doc.text(String(it.sub),x+4.8,y+15.2);}
+        });
+        y+=h+4;
+      }
+    };
     // color-swatch legend row
     const legend=(pairs)=>{doc.setFontSize(7.5);let lx=M;ensure(7);pairs.forEach(([c,l])=>{const tw=doc.getTextWidth(l)+9;if(lx+tw>PW-M){y+=5;lx=M;}doc.setFillColor(c);doc.circle(lx+2,y-1.2,1.6,'F');doc.setTextColor(70);doc.text(l,lx+5,y);lx+=tw+3;});y+=5;};
 
@@ -16725,27 +16769,46 @@ async function exportReportPDF(){
     if(areaLbl)ctx.push(areaLbl);
     T(ctx.join('   ·   '),M,y);y+=8;
 
-    // ── Executive summary (natural language) + headline livability index ──
+    // ── Key figures at a glance (scannable band, only what's active) ──
+    const uvi=_lastNearbyCounts?_computeUVI(_lastNearbyCounts):null;
     {
-      const uvi=_lastNearbyCounts?_computeUVI(_lastNearbyCounts):null;
+      const kt=[];
+      if(uvi)kt.push({label:'Livability',value:uvi.score+'/100',sub:'Grade '+uvi.grade,
+        color:uvi.grade==='A'?'#22c55e':uvi.grade==='B'?'#84cc16':uvi.grade==='C'?'#eab308':uvi.grade==='D'?'#f97316':'#ef4444'});
+      if(a.realestate&&_reLast&&_reLast.res){
+        const _pt=_reLast.pt,_rent=_reDeal===2;
+        const _s=((_reLast.res.stats)||[]).find(x=>x.property_type_id===_pt)||(_reLast.res.stats||[])[0];
+        const _ty=(typeof _RE_TYPES!=='undefined'&&_RE_TYPES[_pt])||{en:'Property'};
+        if(_s&&_rent&&_s.median_price_gel!=null)kt.push({label:(_ty.en||'')+' rent',value:'₾'+Math.round(_s.median_price_gel).toLocaleString(),sub:'median / month',color:'#a78bfa'});
+        else if(_s&&_s.median_sqm_gel!=null)kt.push({label:(_ty.en||'')+' price',value:'₾'+Math.round(_s.median_sqm_gel).toLocaleString(),sub:'median / m²',color:'#a78bfa'});
+        if(_reLast.res.total_in_area)kt.push({label:'Listings',value:Number(_reLast.res.total_in_area).toLocaleString(),sub:'in catchment',color:'#8b5cf6'});
+      }
+      if(a.canopy&&typeof _canopyPct==='number'&&_canopyPct!=null)kt.push({label:'Tree canopy',value:_canopyPct+'%',sub:'covered',color:_canopyPct>40?'#22c55e':_canopyPct>20?'#84cc16':'#f97316'});
+      if(a.lst&&typeof _lstMean==='number'&&_lstMean!=null)kt.push({label:'Surface temp',value:_lstMean+'°C',sub:'mean',color:_lstMean>40?'#ef4444':_lstMean>35?'#f97316':'#eab308'});
+      if(_currentParcelAreaM2)kt.push({label:'Parcel area',value:(_currentParcelAreaM2>=1e6?(_currentParcelAreaM2/1e6).toFixed(2)+' km²':Math.round(_currentParcelAreaM2).toLocaleString()+' m²'),sub:(rp.code&&rp.code!=='—')?rp.code:'',color:'#0ea5e9'});
+      else if(areaLbl)kt.push({label:'Catchment',value:(areaLbl.split('·')[0]||'').trim(),sub:(areaLbl.split('·')[1]||'').trim(),color:'#0ea5e9'});
+      tiles(kt);
+    }
+
+    // ── Executive summary (natural language) ──
+    {
       const summary=_rptExecutiveSummary(uvi);
       if(summary){
-        H2('Summary');
+        H2('Summary','#6366f1');
         P(summary);
         if(uvi){
           H3(`${UVI_NAME}: ${uvi.score}/100 · grade ${uvi.grade}`);
           P('Component scores (0–100, weighted mean): '+uvi.parts.map(p=>`${p.label} ${Math.round(p.s*100)}`).join('  ·  ')+'.');
+          P('How to read this: the index blends walkable access to amenities, public transport, land-use diversity and on-street parking into one 0–100 score (A best, F worst). Each component and its underlying figures are detailed in the sections below; see Methodology for definitions.',110);
         }
-        P('How to read this: the index blends walkable access to amenities, public transport, land-use diversity and on-street parking into one 0–100 score (A best, F worst). Each component and its underlying figures are detailed in the sections below; see Methodology for definitions.',110);
       }
     }
 
-    // ── Maps: area and parcel are two separate, independently captured maps ──
-    H2('Maps');
+    // ── Map: ONE capture with ONE combined legend, and the placed pin drawn on it ──
     const addMapBlock=async(caption,spec)=>{
       const img=await _histCaptureMapImage(spec);
       if(!img)return false;
-      H3(caption);
+      if(caption)H3(caption);
       const w=PW-M*2;const hh=Math.min(120,w*(img.h/img.w));ensure(hh+2);
       doc.addImage(img.url,'JPEG',M,y,w,hh);doc.setDrawColor(200);doc.rect(M,y,w,hh);
       y+=hh+2;
@@ -16755,19 +16818,17 @@ async function exportReportPDF(){
     };
     // Frame on the isochrone, a large parcel, or (RE-only) the real-estate catchment.
     const _areaGeom=_isoData?.features?.[0]?.geometry||((a.realestate&&_reLast&&_reLast.iso)||null);
+    const groups=[];   // one legend, one map — area + parcel symbology combined
     if(a.anyArea&&(_areaGeom||_isLargeParcel())){
-      const groups=[];
       if(a.history){const h=t().hist;const cur=_histVarDefs(h).find(v=>v.k===_histColorBy)||_histVarDefs(h)[0];
         groups.push({title:'Transit reliability',rows:[[_HIST_OK,cur.leg[0]],[_HIST_WARN,cur.leg[1]],[_HIST_BAD,cur.leg[2]]],note:cur.l});}
       if(a.syntax)groups.push({title:'Street connectivity',rows:[['#3b82f6','≤1'],['#22c55e','2–3'],['#f97316','4–5'],['#ef4444','≥6']],note:'Node degree (segments per junction)'});
       const others=[a.orient&&('Orientation'+(_orientDom?' ('+_orientDom+')':'')),a.osm&&'Urban functions',a.transit&&!a.history&&'Transit stops',a.schools&&'Schools',a.kg&&'Kindergartens',a.crashes&&'Road incidents',a.parking&&'Parking',a.realestate&&'Real estate listings'].filter(Boolean);
       if(others.length)groups.push({title:'Other layers on map',rows:others.map(o=>[null,o])});
       groups.push({title:'Study area',rows:[],note:areaLbl||(a.realestate?(_reLast&&_reLast.usingIso?'Isochrone catchment':'10-minute walk'):'')});
-      await addMapBlock('Area-scale map',{title:'Area analyses',groups,frameGeom:_areaGeom||undefined});
     }
     const hasParcelAnalysis=a.zoning||a.canopy||a.lst||a.wind||a.relief||a.solar;
     if(hasParcelAnalysis&&_currentParcelGeoJSON){
-      const groups=[];
       // Each analysis is its own titled section, with the same mini-chart the
       // in-app card shows (zoning=donut of area share, canopy=bar, LST=gauge).
       if(a.zoning&&window._rptZones?.length){
@@ -16804,14 +16865,23 @@ async function exportReportPDF(){
       if(a.wind)groups.push({title:'Wind analysis',rows:[]});
       const m2=_currentParcelAreaM2||0;
       groups.push({title:'Parcel',rows:[],note:m2?(m2>=1e6?(m2/1e6).toFixed(2)+' km²':Math.round(m2).toLocaleString()+' m²'):''});
-      await addMapBlock('Parcel-scale map',{title:'Parcel analyses',groups});
+    }
+    if(groups.length){
+      const _frameGeom=_areaGeom||_currentParcelGeoJSON||null;
+      let _pinLL=null;
+      try{ _pinLL=(_parcelClickPin&&_parcelClickPin.getLngLat&&_parcelClickPin.getLngLat())
+        ||(_locPinMarker&&_locPinMarker.getLngLat&&_locPinMarker.getLngLat())
+        ||(parcelCentroid?{lng:parcelCentroid[0],lat:parcelCentroid[1]}:null); }catch(_){}
+      if(_pinLL)groups.push({title:'Site',rows:[['#a78bfa','Selected location (pin)']]});
+      H2('Map','#0ea5e9');
+      await addMapBlock(null,{title:'Analyses',groups,frameGeom:_frameGeom||undefined,pinLngLat:_pinLL});
     }
 
     // ── Findings ──
-    H2('Findings');
+    H2('Findings','#22c55e');
     // Ownership analysis — always included when a parcel is selected
     if(_currentParcelGeoJSON){
-      H3('Ownership');
+      H3('Ownership','#64748b');
       // labelled key/value rows (label in muted ink, value in near-black)
       const kv=(label,val)=>{if(!val||val==='—')return;doc.setFontSize(8.5);ensure(5);
         setFor(label);doc.setTextColor(120);doc.text(label,M,y);
@@ -16834,7 +16904,7 @@ async function exportReportPDF(){
     }
     // Zoning
     if(a.zoning){
-      H3('Zoning & development limits');
+      H3('Zoning & development limits','#6366f1');
       const zonesK=(window._rptZones||[]).filter(z=>z.k1!=null||z.k2!=null||z.k3!=null);
       if(zonesK.length){
         if(zonesK.length>1)P('This parcel spans multiple zoning categories. Development parameters below are calculated per zone, proportional to that zone’s share of the parcel area, then summed for the totals.');
@@ -16889,7 +16959,7 @@ async function exportReportPDF(){
     {
       const reg=(typeof _zoneDominantRegs==='function')?_zoneDominantRegs():null;
       if(reg&&(reg.minArea||reg.minWidth||reg.minDepth||reg.maxH)&&_currentParcelGeoJSON){
-        H3('Parcel compliance (Article 16)');
+        H3('Parcel compliance (Article 16)','#6366f1');
         const dims=(typeof _parcelDims==='function')?_parcelDims(_currentParcelGeoJSON):null;
         const pa=_currentParcelAreaM2||0;
         const rows=[];
@@ -16903,7 +16973,7 @@ async function exportReportPDF(){
     }
     // Construction permits
     if(_lastPermitFound){
-      H3('Construction permits');
+      H3('Construction permits','#f97316');
       const p=_lastPermitFound,d=_lastPermitDecision||{};
       const lines=[`latest application ${p.docNo}${p.count>1?` (of ${p.count} on this parcel)`:''}`];
       if(p.address)lines.push(`address ${p.address}`);
@@ -16921,7 +16991,7 @@ async function exportReportPDF(){
       const c=_lastNearbyCounts;
       const tot=(c.schools||0)+(c.kg||0)+(c.transit||0)+(c.parkingFree||0)+(c.parkingPaid||0);
       if(tot>0||_lastDiversity!=null){
-        H3('Nearby amenities (walkable catchment)');
+        H3('Nearby amenities (walkable catchment)','#22c55e');
         if(c.schools)P(`Schools: ${c.schools}.`);
         if(c.kg)P(`Kindergartens: ${c.kg}.`);
         if(c.transit){let tr=`Transit stops: ${c.transit}`;if(c.routes&&c.routes.length)tr+=` · ${c.routes.length} routes (${c.routes.join(', ')})`;if(c.reliability)tr+=` · reliability ${c.reliability.grade} (${c.reliability.pct}% on-time)`;P(tr+'.');}
@@ -16937,7 +17007,9 @@ async function exportReportPDF(){
       const ty=(typeof _RE_TYPES!=='undefined'&&_RE_TYPES[pt])||{en:'Real estate'};
       const s=((rl.res.stats)||[]).find(x=>x.property_type_id===pt)||(rl.res.stats||[])[0];
       if(s){
-        H3('Real estate market · '+(ty.en||''));
+        H3('Real estate market · '+(ty.en||''),'#a78bfa');
+        // Mirrors the map symbology: listings are coloured against the area median.
+        legend([['#22c55e','Below median'],['#fbbf24','Near median'],['#ef4444','Above median']]);
         const areaLbl=rl.usingIso?(_transitAreaLabel()||'the isochrone catchment'):'a 10-minute walk';
         P(`Catchment: ${areaLbl}. Deal: ${rent?'rent':'sale'}. Listings analysed: ${rl.res.total_in_area||s.n||'—'}.`);
         if(rent&&s.median_price_gel!=null)P(`Median rent: ₾${Math.round(s.median_price_gel).toLocaleString()}/month${s.n?` (n=${s.n})`:''}.`);
@@ -16956,7 +17028,7 @@ async function exportReportPDF(){
     }
     // Morphology
     if(a.syntax||a.orient){
-      H3('Street network & morphology');
+      H3('Street network & morphology','#3b82f6');
       if(a.syntax){const degs=_syntaxGJ.features.map(f=>Number(f.properties?.connectivity||0));
         P(`Connectivity: ${degs.length} segments · ${_morphTotalKm(_syntaxGJ).toFixed(1)} km · mean node degree ${(degs.reduce((x,b)=>x+b,0)/Math.max(1,degs.length)).toFixed(2)}, max ${Math.max(...degs)}.`);
         legend([['#3b82f6','≤1'],['#22c55e','2–3'],['#f97316','4–5'],['#ef4444','≥6']]);}
@@ -16966,7 +17038,7 @@ async function exportReportPDF(){
     }
     // Relief / slope / aspect — only when a relief layer is actually active
     if(a.relief){
-      H3('Relief · slope · aspect');
+      H3('Relief · slope · aspect','#a16207');
       const typeLbl={height:'Elevation',slope:'Slope',aspect:'Aspect'}[_reliefActiveType]||_reliefActiveType;
       P('Active layer: '+typeLbl+'.');
       const rl=_rptCardLines('relief-legend').concat(_rptCardLines('relief-stats'));
@@ -16976,13 +17048,13 @@ async function exportReportPDF(){
     }
     // Energy — only sub-analyses actually run
     if(a.solar||a.wind){
-      H3('Energy potential');
+      H3('Energy potential','#fbbf24');
       if(a.solar){const sl=_rptCardLines('solar-result');if(sl.length)P('Solar: '+sl.join(' · '));src('Solar: slope/aspect irradiation model on the DTM.');}
       if(a.wind){const wd=_windData||{};P('Wind: '+[wd.speed&&wd.speed.toFixed(1)+' m/s mean',wd.powerDensity&&Math.round(wd.powerDensity)+' W/m²',wd.annualYield&&Math.round(wd.annualYield).toLocaleString()+' kWh/yr (5 kW ref.)'].filter(Boolean).join(' · ')+'.');src('Wind: Global Wind Atlas / Open-Meteo.');}
     }
     // Climate — per active layer
     if(a.canopy||a.lst){
-      H3('Climate & land cover');
+      H3('Climate & land cover','#14b8a6');
       // Values come from the underlying numbers, not the DOM — the on-screen
       // card mixes in provenance text ("Landsat 8 · 30m"), which belongs only
       // in Sources, not the body.
@@ -16991,7 +17063,7 @@ async function exportReportPDF(){
     }
     // Mobility & access
     if(a.transit||a.history||a.crashes||a.schools||a.kg||a.parking){
-      H3('Mobility & access');
+      H3('Mobility & access','#0ea5e9');
       if(a.history&&_histStats?.length){
         const tot=_histStats.reduce((x,r)=>({m:x.m+Number(r.n_matched),ot:x.ot+Number(r.on_time),l:x.l+Number(r.late)}),{m:0,ot:0,l:0});
         if(tot.m){P(`Transit reliability (${_histRange?.from} → ${_histRange?.to}, ${t().hist.days[_histDaytype]}/${t().hist.bands[_histBand]}): ${Math.round(100*tot.ot/tot.m)}% on-time, ${Math.round(100*tot.l/tot.m)}% late (>5 min), ${tot.m.toLocaleString()} matched arrivals at ${_histStats.length} stop-route pairs.`);
@@ -17023,14 +17095,14 @@ async function exportReportPDF(){
       if(a.zoning)meth.push(`Zoning compliance: the parcel's minimum area, width and depth compared with the dominant functional zone's requirements (Tbilisi Land-Use Master Plan, Article 16). Width and depth are measured from the parcel's minimum-area oriented bounding rectangle.`);
       if(meth.length){
         meth.push(`Data availability: the layers above rely on external services (OpenStreetMap / Overpass, Tbilisi Transport Company, maps.gov.ge and myhome.ge). When a service is unavailable the affected component is omitted and, where applicable, the index renormalises; such omissions are noted in the relevant section.`);
-        H2('Methodology');
+        H2('Methodology','#94a3b8');
         meth.forEach(m=>P(m));
       }
     }
 
     // ── Sources (ordered by appearance) ──
     if(sources.length){
-      H2('Sources');
+      H2('Sources','#cbd5e1');
       doc.setFontSize(7.5);doc.setTextColor(120);
       sources.forEach((s,i)=>{const ls=doc.splitTextToSize(`${i+1}.  ${s}`,PW-M*2);ensure(ls.length*3.6+1);ls.forEach(l=>{setFor(l);doc.text(l,M,y);y+=3.6;});y+=1;});
     }
