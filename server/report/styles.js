@@ -62,6 +62,7 @@ p.note{font-size:12px;line-height:1.6;color:var(--mute)}
 .blk{margin-top:22px;break-inside:avoid-page}
 .blk.loose{break-inside:auto}
 .sect{margin-top:26px}
+.sect.brk{break-before:page;margin-top:0}
 /* Sources + disclaimer travel together, so neither is orphaned onto a page alone. */
 .sect.keep{break-inside:avoid}
 
@@ -182,7 +183,27 @@ th.n,td.n{text-align:right}
 .stoptbl td,.stoptbl th{font-size:11px}
 .stoptbl td.nm{max-width:150px}
 .stoptbl tr.thin td{color:var(--faint)}
+.stoptbl.wide td,.stoptbl.wide th{font-size:10px;padding:5px 0}
+.stoptbl.wide td.nm{max-width:130px}
 .dotcell{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px}
+
+/* segment grid: period × day type × time band */
+.segtbl td,.segtbl th{font-size:10.5px;padding:5px 0}
+.segtbl td.nm{color:var(--ink)}
+.segtbl tr.band td{border-bottom:none}
+.segtbl tr.day td{padding-top:10px}
+.segtbl tr.day td.nm{font-weight:600}
+.segtbl tr.base td{background:#eceef5}
+.segtbl tr.base td.nm{box-shadow:inset 2px 0 0 var(--good)}
+.segtbl td.g{width:20px}
+.gpill{display:inline-block;min-width:15px;text-align:center;font-size:9.5px;
+  font-weight:600;border-radius:3px;padding:1px 3px;line-height:1.35}
+.segnote{display:flex;gap:16px;flex-wrap:wrap;margin-top:9px}
+.hgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 22px;margin-top:8px}
+.hgrid .hcell{break-inside:avoid}
+.hgrid .hcap{font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;
+  color:var(--faint);margin-bottom:3px}
+.hgrid .hours{height:56px}
 
 /* ── callout & back matter ───────────────────────────────── */
 .callout{margin-top:11px;display:flex;gap:10px;align-items:flex-start;

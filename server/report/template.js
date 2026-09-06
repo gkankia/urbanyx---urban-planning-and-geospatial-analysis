@@ -45,9 +45,9 @@ const lines = (rows) =>
     .map(([k, v]) => `<div class="li"><span class="k">${esc(k)}</span><span>${esc(v)}</span></div>`)
     .join("")}</div>`;
 
-const section = (title, lead, inner, tone, keep) =>
+const section = (title, lead, inner, tone, keep, cls) =>
   !inner ? "" :
-  `<div class="sect${keep ? " keep" : ""}"><h2 class="sec${tone ? " " + tone : ""}">${esc(title)}</h2>` +
+  `<div class="sect${keep ? " keep" : ""}${cls ? " " + cls : ""}"><h2 class="sec${tone ? " " + tone : ""}">${esc(title)}</h2>` +
   (lead ? `<div class="seclead">${esc(lead)}</div>` : "") + inner + `</div>`;
 
 // ── cover ──────────────────────────────────────────────────────────────────
@@ -289,25 +289,106 @@ function transitHistory(h) {
     ? `<div class="blk loose" style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
         ${rank("Least reliable stops", h.worst)}${rank("Most reliable stops", h.best)}</div>` : "";
 
-  const table = has(h.stops) ? `<div class="blk loose">
-    <h3 class="sub">Every stop in the catchment</h3>
-    <table class="stoptbl"><thead><tr>
-      <th>Stop</th><th>Routes</th><th class="n">Matched</th><th class="n">On time</th>
-      <th class="n">Late</th><th class="n">Median</th><th class="n">P90</th>
-      <th class="n">Excess wait</th><th class="n">Headway</th>
+  return `<div class="blk loose"><h3 class="sub g">Transit reliability</h3>
+    ${grade}${headline}${scope}</div>${hours}${thresholds}${ranked}`;
+}
+
+// Every period x day type x time band the archive can be sliced by. On screen
+// these are chips the reader clicks one at a time; in a report they have to sit
+// side by side, because the difference between them is the finding.
+function segmentGrid(m) {
+  if (!m || !has(m.periods)) return "";
+
+  const pill = (g) => {
+    const c = GRADE_COLOR[g] || "#71717a";
+    return g ? `<span class="gpill" style="background:${c}1f;border:1px solid ${c}55;color:${c}">${esc(g)}</span>` : "";
+  };
+
+  const table = (p) => {
+    let last = null;
+    const body = p.rows.map((r) => {
+      const newDay = r.dayType !== last;
+      last = r.dayType;
+      const cls = [newDay ? "day" : "band", r.baseline ? "base" : ""].filter(Boolean).join(" ");
+      return `<tr class="${cls}">
+        <td class="nm">${newDay ? esc(r.dayType) : ""}</td>
+        <td>${esc(r.timeBand)}</td>
+        <td class="g">${pill(r.grade)}</td>
+        <td class="n">${esc(r.onTime || "—")}</td>
+        <td class="n">${esc(r.late || "—")}</td>
+        <td class="n">${esc(r.delayMed || "—")}</td>
+        <td class="n">${esc(r.delayP90 || "—")}</td>
+        <td class="n">${esc(r.ewt || "—")}</td>
+        <td class="n">${esc(r.headway || "—")}</td>
+        <td class="n">${esc(r.matched || "—")}</td>
+      </tr>`;
+    }).join("");
+    return `<div class="blk loose">
+      <h3 class="sub">Reliability by service segment — ${esc(p.label)}</h3>
+      <p class="note" style="margin:-2px 0 7px">${esc(p.from)} → ${esc(p.to)}</p>
+      <table class="segtbl"><thead><tr>
+        <th>Day type</th><th>Time band</th><th></th><th class="n">On time</th>
+        <th class="n">Late</th><th class="n">Median</th><th class="n">P90</th>
+        <th class="n">Excess wait</th><th class="n">Headway</th><th class="n">Matched</th>
+      </tr></thead><tbody>${body}</tbody></table></div>`;
+  };
+
+  // Diverging hourly profile, one per day type - the shape of the day is the
+  // point, so they are drawn on a shared scale and read as a small-multiple.
+  let hours = "";
+  if (has(m.hourly)) {
+    const max = Math.max(1, ...m.hourly.flatMap((d) => d.rows.map((r) => Math.abs(r.delayMin || 0))));
+    hours = `<div class="blk loose"><h3 class="sub">Delay by hour, by day type</h3>
+      <div class="hgrid">${m.hourly.map((d) => `<div class="hcell">
+        <div class="hcap">${esc(d.dayType)}</div>
+        <div class="hours"><span class="zero"></span>${d.rows.map((r) => {
+          if (r.delayMin == null) return `<span class="b"></span>`;
+          const pct = Math.max(3, Math.min(48, Math.abs(r.delayMin) / max * 46));
+          return `<span class="b"><i class="${r.delayMin >= 0 ? "up" : "dn"}" style="height:${pct}%"></i></span>`;
+        }).join("")}</div>
+        <div class="hourlab">${d.rows.filter((_, i) => i % 4 === 0)
+          .map((r) => `<span>${String(r.hour).padStart(2, "0")}</span>`).join("")}</div>
+      </div>`).join("")}</div>
+      <p class="note" style="margin-top:9px">Median delay per service hour. Above the line is late,
+        below is early. All panels share one scale, so their heights are comparable.</p></div>`;
+  }
+
+  return `<h2 class="sec g">Transit reliability by segment</h2>
+    <div class="seclead">The archive is re-queried for every combination of period, day type and
+      time band, over the same ${m.stopCount ? esc(m.stopCount) + " stops" : "stop set"} in the
+      catchment. Shaded rows are the all-day, all-week baseline the summary above reports.</div>
+    ${m.periods.map(table).join("")}${hours}
+    <p class="note" style="margin-top:15px">Excess wait and scheduled headway are defined over the whole service day only,
+      so they are left blank in the peak, midday and evening rows. “Matched” is the number of
+      observed arrivals that could be paired with a timetabled trip in that segment; segments with
+      no matched arrivals are omitted.</p>`;
+}
+
+// The per-stop detail: too long to sit inside Findings, too specific to drop.
+function transitAppendix(h) {
+  if (!h || !has(h.stops)) return "";
+  const inner = `<table class="stoptbl wide"><thead><tr>
+      <th>Stop</th><th>Routes</th><th class="n">Observed</th><th class="n">Matched</th>
+      <th class="n">On time</th><th class="n">Late</th><th class="n">Median</th>
+      <th class="n">P90</th><th class="n">Excess wait</th><th class="n">Headway</th>
     </tr></thead><tbody>${h.stops.map((s) => `<tr${s.thin ? ' class="thin"' : ""}>
       <td class="nm">${s.cls ? `<span class="dotcell" style="background:${CLS_COLOR[s.cls] || "#a1a1aa"}"></span>` : ""}${esc(s.name)}</td>
-      <td>${esc(s.routes || "—")}</td><td class="n">${esc(s.matched || "—")}</td>
+      <td>${esc(s.routes || "—")}</td><td class="n">${esc(s.observations || "—")}</td>
+      <td class="n">${esc(s.matched || "—")}</td>
       <td class="n">${esc(s.onTime || "—")}</td><td class="n">${esc(s.late || "—")}</td>
       <td class="n">${esc(s.delayMed || "—")}</td><td class="n">${esc(s.delayP90 || "—")}</td>
       <td class="n">${esc(s.ewt || "—")}</td><td class="n">${esc(s.headway || "—")}</td>
     </tr>`).join("")}</tbody></table>
-    <p class="note" style="margin-top:9px">Ordered by late share. Greyed rows fall below the
-      30-matched-arrival floor and are excluded from the area grade and the rankings.</p>
-  </div>` : "";
-
-  return `<div class="blk loose"><h3 class="sub g">Transit reliability</h3>
-    ${grade}${headline}${scope}</div>${hours}${thresholds}${ranked}${table}`;
+    <p class="note" style="margin-top:9px">Ordered by late share. “Observed” counts every vehicle
+      position archived at the stop; “matched” counts those that could be paired with a timetabled
+      trip and are the basis of every share in this table. Greyed rows fall below the
+      30-matched-arrival floor and are excluded from the area grade and the rankings. The dot
+      repeats the on-time colour the stop carries on the map.</p>`;
+  return section(
+    "Appendix A — Transit stops in the catchment",
+    `Every stop inside the isochrone, with its observed arrivals and service levels over the
+     ${h.filters ? esc(h.filters.period) : "reporting"} baseline window.`,
+    inner, "g", false, "brk");
 }
 
 function mobility(m) {
@@ -406,8 +487,10 @@ function buildBody(d) {
       ? `<h2 class="sec">Summary</h2><div class="seclead">At a glance, followed by the reasoning behind the figures.</div>${summaryInner}`
       : "",
     findings(d.findings),
+    segmentGrid(d.findings && d.findings.transitSegments),
     methodology(d.methodology),
     sources(d.sources),
+    transitAppendix(d.findings && d.findings.transitHistory),
     `</div></td></tr></tbody></table>`,
   ]);
 

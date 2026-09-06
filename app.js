@@ -17614,28 +17614,67 @@ function _rptSlug(s,max){
 // ── transit reliability, in full ───────────────────────────────────────────
 // The panel computes far more than one sentence: a coverage window, an area
 // grade, four headline metrics, four colour-by variables with thresholds, an
-// hourly delay profile and a per-stop table. All of it goes to the report —
-// the per-stop rows as an appendix table, so nothing is dropped.
-function _rptTransitHistory(){
-  if(!_histStats||!_histStats.length)return null;
-  const h=t().hist;
-  const rows=_histStats;
-  const num=v=>v==null?null:Number(v);
+// hourly delay profile and a per-stop table — but all of it for one slice of
+// the archive at a time (period × day type × time band). Those slices are the
+// analysis, not a filter convenience: a corridor can be a B all day and an E in
+// the evening peak. The export therefore re-queries the archive across every
+// slice, reports the whole grid, and moves the per-stop rows to an appendix.
 
-  const tot=rows.reduce((acc,r)=>({m:acc.m+Number(r.n_matched||0),ot:acc.ot+Number(r.on_time||0),
-    l:acc.l+Number(r.late||0),n:acc.n+Number(r.n_obs||0)}),{m:0,ot:0,l:0,n:0});
-  const medOf=arr=>{const s=arr.filter(v=>v!=null).map(Number).sort((p,q)=>p-q);
-    return s.length?s[s.length>>1]:null;};
-  const delayMed=medOf(rows.map(r=>r.delay_med_s));
-  const delayP90=medOf(rows.map(r=>r.delay_p90_s));
+const _RPT_SEG_PERIODS=[30,7];
+const _RPT_SEG_DAYTYPES=['all','weekday','sat','sun'];
+const _RPT_SEG_BANDS=['all','am_peak','midday','pm_peak','evening'];
+
+// Bounded-concurrency map. The full grid is 40 round-trips; firing them at once
+// only queues them behind PostgREST, and a failed slice must not fail the export.
+async function _rptPool(items,fn,n){
+  const out=new Array(items.length);
+  let i=0;
+  await Promise.all(Array.from({length:Math.min(n||4,items.length)},async()=>{
+    while(i<items.length){const k=i++;
+      try{out[k]=await fn(items[k],k);}catch(e){console.warn('rpt pool:',e);out[k]=null;}}
+  }));
+  return out;
+}
+
+const _rptMedOf=arr=>{const s=arr.filter(v=>v!=null).map(Number).filter(v=>isFinite(v)).sort((p,q)=>p-q);
+  return s.length?s[s.length>>1]:null;};
+const _rptMins=s=>s==null?null:((s>=0?'+':'−')+(Math.abs(s)/60).toFixed(1)+' min');
+const _rptGrade=p=>p==null?null:p>=80?'A':p>=70?'B':p>=60?'C':p>=50?'D':p>=40?'E':'F';
+
+// One slice of stop-aggregate rows → the numbers the panel puts in its tiles.
+function _rptTransitAgg(rows){
+  if(!rows||!rows.length)return null;
+  const tot=rows.reduce((a,r)=>({m:a.m+Number(r.n_matched||0),ot:a.ot+Number(r.on_time||0),
+    l:a.l+Number(r.late||0),n:a.n+Number(r.n_obs||0)}),{m:0,ot:0,l:0,n:0});
   const ewtRows=rows.filter(r=>r.ewt_s!=null);
   const ewt=ewtRows.length
     ? ewtRows.reduce((s,r)=>s+Number(r.ewt_s)*Number(r.n_obs||0),0)/
       Math.max(1,ewtRows.reduce((s,r)=>s+Number(r.n_obs||0),0))
     : null;
   const otPct=tot.m?Math.round(100*tot.ot/tot.m):null;
-  const grade=otPct==null?null:otPct>=80?'A':otPct>=70?'B':otPct>=60?'C':otPct>=50?'D':otPct>=40?'E':'F';
-  const mins=s=>s==null?null:((s>=0?'+':'−')+(Math.abs(s)/60).toFixed(1)+' min');
+  return {
+    matched:tot.m||null,observations:tot.n||null,onTime:tot.ot||null,late:tot.l||null,
+    onTimePct:otPct,latePct:tot.m?Math.round(100*tot.l/tot.m):null,
+    delayMedS:_rptMedOf(rows.map(r=>r.delay_med_s)),
+    delayP90S:_rptMedOf(rows.map(r=>r.delay_p90_s)),
+    ewtS:ewt,
+    headwayS:_rptMedOf(rows.map(r=>r.headway_med_s)),
+    grade:_rptGrade(otPct),
+    stopsWithData:rows.length,
+    thin:rows.filter(r=>Number(r.n_matched||0)<30).length,
+  };
+}
+
+// The narrative block: grade, headline tiles, scope, hourly profile, map
+// thresholds, ranked stops and the full per-stop list (rendered as an appendix).
+// `rows` defaults to whatever slice the panel is showing; the export passes the
+// baseline slice (deepest period, all days, all day) so the report's reference
+// numbers do not depend on which chips the user happened to leave selected.
+function _rptTransitHistory(rows,meta){
+  rows=rows||_histStats;
+  if(!rows||!rows.length)return null;
+  const h=t().hist;
+  const agg=_rptTransitAgg(rows);
 
   const stopById=new Map((_ttcRenderedStops||[]).map(s=>[s.id,s]));
   const stops=rows.map(r=>{
@@ -17648,8 +17687,8 @@ function _rptTransitHistory(){
       observations:Number(r.n_obs||0)||null,
       onTime:m?Math.round(100*Number(r.on_time||0)/m)+'%':null,
       late:m?Math.round(100*Number(r.late||0)/m)+'%':null,
-      delayMed:mins(num(r.delay_med_s)),
-      delayP90:mins(num(r.delay_p90_s)),
+      delayMed:_rptMins(r.delay_med_s==null?null:Number(r.delay_med_s)),
+      delayP90:_rptMins(r.delay_p90_s==null?null:Number(r.delay_p90_s)),
       ewt:r.ewt_s==null?null:'+'+(Number(r.ewt_s)/60).toFixed(1)+' min',
       headway:r.headway_med_s==null?null:(Number(r.headway_med_s)/60).toFixed(1)+' min',
       // Below the 30-observation floor the shares are not reported as reliable.
@@ -17674,20 +17713,20 @@ function _rptTransitHistory(){
       firstDate:_histCoverage.first_date?_rptDate(_histCoverage.first_date):null,
       days:_histCoverage.days!=null?String(_histCoverage.days):null,
     }:null,
-    window:_histRange?{from:_histRange.from,to:_histRange.to}:null,
-    filters:{
+    window:(meta&&meta.window)||(_histRange?{from:_histRange.from,to:_histRange.to}:null),
+    filters:(meta&&meta.filters)||{
       period:_histDays+' days',
       dayType:(h.days&&h.days[_histDaytype])||String(_histDaytype),
       timeBand:(h.bands&&h.bands[_histBand])||String(_histBand),
     },
-    grade, onTimePct:otPct,
+    grade:agg.grade, onTimePct:agg.onTimePct,
     headline:[
-      {label:'On time',value:otPct==null?'—':otPct+'%',sub:'of matched arrivals'},
-      {label:'Median delay',value:mins(delayMed)||'—',sub:'across stops'},
-      {label:'90th percentile',value:mins(delayP90)||'—',sub:'across stops'},
-      {label:'Excess wait',value:ewt==null?'—':'+'+(ewt/60).toFixed(1)+' min',sub:'observation-weighted'},
+      {label:'On time',value:agg.onTimePct==null?'—':agg.onTimePct+'%',sub:'of matched arrivals'},
+      {label:'Median delay',value:_rptMins(agg.delayMedS)||'—',sub:'across stops'},
+      {label:'90th percentile',value:_rptMins(agg.delayP90S)||'—',sub:'across stops'},
+      {label:'Excess wait',value:agg.ewtS==null?'—':'+'+(agg.ewtS/60).toFixed(1)+' min',sub:'observation-weighted'},
     ],
-    totals:{matched:tot.m||null,observations:tot.n||null,onTime:tot.ot||null,late:tot.l||null},
+    totals:{matched:agg.matched,observations:agg.observations,onTime:agg.onTime,late:agg.late},
     thresholds:_histVarDefs(h).map(v=>({label:v.l,bands:v.leg})),
     hourly,
     worst:ranked.slice(0,5),
@@ -17695,6 +17734,103 @@ function _rptTransitHistory(){
     stops,
     stopCount:stops.length,
     thinCount:stops.filter(s=>s.thin).length,
+  };
+}
+
+// Re-query the archive across every segment the panel can show, so the report
+// carries the structure the on-screen chips only reveal one slice at a time.
+// Returns the segment grid, an hourly profile per day type, and the baseline
+// slice's rows for the narrative block and the appendix.
+async function _rptTransitMatrix(){
+  if(typeof sb==='undefined'||!sb)return null;
+  if(!_ttcRenderedStops||!_ttcRenderedStops.length)return null;
+  if(!_histCoverage||!_histCoverage.first_date)return null;
+  const h=t().hist;
+  const ids=_ttcRenderedStops.map(s=>s.id);
+  // Supabase caps any response at 1000 rows and the stats RPC returns one row
+  // per stop, so the stop set is chunked exactly as the panel chunks it.
+  const CH=800, chunks=[];
+  for(let i=0;i<ids.length;i+=CH)chunks.push(ids.slice(i,i+CH));
+  const to=_histCoverage.last_date;
+  const rangeFor=days=>{
+    const from=new Date(Math.max(new Date(_histCoverage.first_date),
+      new Date(new Date(to).getTime()-(days-1)*86400000))).toISOString().slice(0,10);
+    return {from,to};
+  };
+  // Only offer the 7-day comparison when the archive actually holds more than a
+  // week, and drop it on very large catchments where every slice already costs
+  // several chunked round-trips.
+  const deep=Math.max(..._RPT_SEG_PERIODS);
+  const periods=_RPT_SEG_PERIODS.filter(p=>p===deep||
+    (chunks.length===1&&Number(_histCoverage.days||0)>p));
+
+  const jobs=[];
+  for(const p of periods)for(const d of _RPT_SEG_DAYTYPES)for(const b of _RPT_SEG_BANDS)
+    jobs.push({p,d,b});
+  const done=await _rptPool(jobs,async j=>{
+    const {from,to:t2}=rangeFor(j.p);
+    const res=await Promise.all(chunks.map(c=>sb.rpc('transit_history_stats',
+      {p_stop_ids:c,p_from:from,p_to:t2,p_daytype:j.d,p_band:j.b})));
+    if(res.some(r=>r.error))return null;
+    return Object.assign({},j,{rows:res.flatMap(r=>r.data||[]),from,to:t2});
+  },5);
+
+  const cells=done.filter(Boolean);
+  if(!cells.length)return null;
+
+  const label=(kind,k)=>(h[kind]&&h[kind][k])||String(k);
+  const pct=v=>v==null?null:v+'%';
+  const periodsOut=periods.map(p=>{
+    const mine=cells.filter(c=>c.p===p);
+    if(!mine.length)return null;
+    const rows=[];
+    for(const d of _RPT_SEG_DAYTYPES)for(const b of _RPT_SEG_BANDS){
+      const c=mine.find(x=>x.d===d&&x.b===b);
+      const g=c&&_rptTransitAgg(c.rows);
+      if(!g||!g.matched)continue;
+      rows.push({
+        dayType:label('days',d),timeBand:label('bands',b),
+        dayKey:d,bandKey:b,
+        grade:g.grade,onTime:pct(g.onTimePct),late:pct(g.latePct),
+        delayMed:_rptMins(g.delayMedS),delayP90:_rptMins(g.delayP90S),
+        // EWT and scheduled headway are only defined over the whole service
+        // day — the panel says as much next to those tiles.
+        ewt:b==='all'&&g.ewtS!=null?'+'+(g.ewtS/60).toFixed(1)+' min':null,
+        headway:b==='all'&&g.headwayS!=null?(g.headwayS/60).toFixed(1)+' min':null,
+        matched:g.matched?_rptNum(g.matched):null,
+        stops:g.stopsWithData,thin:g.thin,
+        baseline:d==='all'&&b==='all',
+      });
+    }
+    const r0=mine[0];
+    return rows.length?{days:p,label:p+' days',from:r0.from,to:r0.to,rows}:null;
+  }).filter(Boolean);
+  if(!periodsOut.length)return null;
+
+  // Hourly profile per day type, for the deepest period. The hourly RPC groups
+  // to ≤24 rows and takes no band, so this is four cheap calls.
+  const hr=rangeFor(deep);
+  const hourly=(await _rptPool(_RPT_SEG_DAYTYPES,async d=>{
+    const {data,error}=await sb.rpc('transit_history_hourly',
+      {p_stop_ids:ids,p_from:hr.from,p_to:hr.to,p_daytype:d});
+    if(error||!data||!data.length)return null;
+    const rows=data.map(r=>({hour:Number(r.hour),
+      delayMin:r.delay_med_s==null?null:Number(r.delay_med_s)/60,
+      matched:Number(r.n_matched||0)}))
+      .filter(r=>isFinite(r.hour)).sort((p,q)=>((p.hour+18)%24)-((q.hour+18)%24));
+    return rows.length?{dayType:label('days',d),dayKey:d,rows}:null;
+  },4)).filter(Boolean);
+
+  const base=cells.find(c=>c.p===deep&&c.d==='all'&&c.b==='all');
+  return {
+    periods:periodsOut,
+    hourly,
+    stopCount:ids.length,
+    baseline:base?{
+      rows:base.rows,
+      window:{from:base.from,to:base.to},
+      filters:{period:deep+' days',dayType:label('days','all'),timeBand:label('bands','all')},
+    }:null,
   };
 }
 
@@ -17882,13 +18018,22 @@ async function _rptCollect(){
   if(a.transit||a.history||a.crashes||a.schools||a.kg||a.parking){
     const headline=[],rows=[];
     const c=_lastNearbyCounts;
-    if(a.history&&_histStats&&_histStats.length){
-      const tot=_histStats.reduce((x,r)=>({m:x.m+Number(r.n_matched),ot:x.ot+Number(r.on_time),l:x.l+Number(r.late)}),{m:0,ot:0,l:0});
-      if(tot.m){
-        headline.push({value:Math.round(100*tot.ot/tot.m)+'% on time',label:'Matched arrivals, last 30 days'});
-        rows.push(['Transit reliability',`${Math.round(100*tot.ot/tot.m)}% on-time, ${Math.round(100*tot.l/tot.m)}% late (>5 min) across ${_rptNum(tot.m)} matched arrivals at ${_histStats.length} stop-route pairs`]);
+    // Re-query the archive across every period × day type × time band the panel
+    // can show, and report from the baseline slice rather than from whichever
+    // chips happen to be left selected on screen.
+    const tm=a.history?await _rptTransitMatrix():null;
+    const baseRows=(tm&&tm.baseline&&tm.baseline.rows)||_histStats;
+    if(a.history&&baseRows&&baseRows.length){
+      const agg=_rptTransitAgg(baseRows);
+      if(agg&&agg.matched){
+        headline.push({value:agg.onTimePct+'% on time',
+          label:'Matched arrivals, '+((tm&&tm.baseline&&tm.baseline.filters.period)||'last 30 days')});
+        rows.push(['Transit reliability',`${agg.onTimePct}% on-time, ${agg.latePct}% late (>5 min) across ${_rptNum(agg.matched)} matched arrivals at ${agg.stopsWithData} stop-route pairs`]);
       }
-      f.transitHistory=_rptTransitHistory();
+      f.transitHistory=tm&&tm.baseline
+        ? _rptTransitHistory(tm.baseline.rows,tm.baseline)
+        : _rptTransitHistory();
+      if(tm)f.transitSegments={periods:tm.periods,hourly:tm.hourly,stopCount:tm.stopCount};
       src('Transit reliability','TTC vehicle positions archived every 2 min; arrivals matched to timetable (on-time −60…+300 s); stops with <30 observations excluded');
     }else if(a.transit){
       const n=(_ttcRenderedStops&&_ttcRenderedStops.length)||0;

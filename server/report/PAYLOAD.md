@@ -94,6 +94,19 @@ Response is `application/pdf` as an attachment.
                   "thin": false, "cls": "warn" }],
       "stopCount": 20, "thinCount": 4
     },
+    // The same archive re-queried across every slice the panel can show.
+    "transitSegments": {
+      "stopCount": 23,
+      "periods": [{ "days": 30, "label": "30 days", "from": "2026-08-07", "to": "2026-09-05",
+        "rows": [{ "dayType": "Weekdays", "timeBand": "PM peak", "dayKey": "weekday",
+                   "bandKey": "pm_peak", "grade": "E", "onTime": "49%", "late": "49%",
+                   "delayMed": "+2.5 min", "delayP90": "+12.2 min",
+                   "ewt": null, "headway": null,          // all-day rows only
+                   "matched": "1,136", "stops": 23, "thin": 0,
+                   "baseline": false }] }],
+      "hourly": [{ "dayType": "Weekdays", "dayKey": "weekday",
+                   "rows": [{ "hour": 6, "delayMin": 1.2, "matched": 840 }] }]
+    },
     "amenities":  { "rows": [["Schools","3"]] },
     "realestate": { "note": "…",
                     "rows": [{ "type": "Flat", "priceSqm": "₾3,840",
@@ -145,6 +158,18 @@ the archive coverage, the hourly delay profile, the four map thresholds, the
 ranked best and worst stops, and **every stop as an appendix table** — ordered
 by late share, with rows under the 30-matched-arrival floor greyed and excluded
 from the grade and the rankings.
+
+Transit goes one step further, because its archive is *segmented*: the panel
+shows one slice at a time (period × day type × time band) and the difference
+between those slices is the finding — a corridor can be a B all day and an E in
+the evening peak. `_rptTransitMatrix()` therefore re-queries
+`transit_history_stats` for every combination (2 periods × 4 day types × 5 time
+bands, bounded to 5 concurrent calls, dropping the 7-day comparison when the
+archive is shorter than that or the catchment needs chunked stop sets) plus
+`transit_history_hourly` once per day type, and the report prints the whole
+grid. Every number the report quotes outside that grid comes from the **baseline
+slice** — deepest period, all days, all day — not from whichever chips the user
+happened to leave selected on screen.
 
 The other analyses still send summary lines. They are to be brought up to this
 shape one at a time, each mirroring what its panel actually holds.
