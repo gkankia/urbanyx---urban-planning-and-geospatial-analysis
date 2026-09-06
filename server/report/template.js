@@ -231,6 +231,85 @@ function simpleBlock(title, tone, body) {
   return `<div class="blk"><h3 class="sub${tone ? " " + tone : ""}">${esc(title)}</h3>${body}</div>`;
 }
 
+
+const GRADE_COLOR = { A: "#16a34a", B: "#65a30d", C: "#d97706", D: "#ea580c", E: "#dc2626", F: "#dc2626" };
+const CLS_COLOR = { ok: "#16a34a", warn: "#d97706", bad: "#dc2626" };
+
+// Transit reliability, reported in full rather than summarised: the panel's
+// grade, its four headline metrics, the hourly delay profile, the thresholds
+// the map colours by, the ranked stops, and every stop as an appendix table.
+function transitHistory(h) {
+  if (!h) return "";
+  const g = GRADE_COLOR[h.grade] || "#71717a";
+
+  const grade = h.grade ? `<div class="grade-row">
+    <span class="g" style="background:${g}1f;border:1px solid ${g}55;color:${g}">${esc(h.grade)}</span>
+    <span class="t">Area reliability across every stop in the catchment, weighted by matched arrivals.</span>
+    <span class="p" style="color:${g}">${esc(h.onTimePct)}%</span>
+  </div>` : "";
+
+  const headline = has(h.headline) ? `<div class="hl">${h.headline.map((c) =>
+    `<div class="c"><div class="v">${esc(c.value)}</div><div class="k">${esc(c.label)}</div>
+     ${has(c.sub) ? `<div class="s">${esc(c.sub)}</div>` : ""}</div>`).join("")}</div>` : "";
+
+  const scope = lines([
+    h.window && ["Window", `${h.window.from} → ${h.window.to}`],
+    h.filters && ["Filters", `${h.filters.period} · ${h.filters.dayType} · ${h.filters.timeBand}`],
+    h.coverage && h.coverage.firstDate && ["Archive", `since ${h.coverage.firstDate}${h.coverage.days ? ` · ${h.coverage.days} days` : ""}`],
+    h.totals && ["Sample", `${h.totals.matched || 0} matched arrivals from ${h.totals.observations || 0} observations at ${h.stopCount} stops`],
+    h.thinCount ? ["Below sample floor", `${h.thinCount} stop${h.thinCount === 1 ? "" : "s"} under 30 matched arrivals — shares not reported`] : null,
+  ].filter(Boolean));
+
+  // Diverging hourly profile: late above the line, early below, as on screen.
+  let hours = "";
+  if (has(h.hourly)) {
+    const max = Math.max(1, ...h.hourly.map((r) => Math.abs(r.delayMin || 0)));
+    hours = `<div class="blk"><h3 class="sub">Delay by hour of service</h3>
+      <div class="hours"><span class="zero"></span>${h.hourly.map((r) => {
+        if (r.delayMin == null) return `<span class="b"></span>`;
+        const pct = Math.max(3, Math.min(48, Math.abs(r.delayMin) / max * 46));
+        return `<span class="b"><i class="${r.delayMin >= 0 ? "up" : "dn"}" style="height:${pct}%"></i></span>`;
+      }).join("")}</div>
+      <div class="hourlab">${h.hourly.filter((_, i) => i % 3 === 0)
+        .map((r) => `<span>${String(r.hour).padStart(2, "0")}</span>`).join("")}</div>
+      <p class="note" style="margin-top:8px">Median delay per service hour. Above the line is late,
+        below is early. Bars are scaled to the largest absolute value in the window.</p></div>`;
+  }
+
+  const thresholds = has(h.thresholds) ? `<div class="blk"><h3 class="sub">Map thresholds</h3>
+    <div class="thr">${h.thresholds.map((v) =>
+      `<div class="r"><span class="k">${esc(v.label)}</span><span>${(v.bands || []).map(esc).join(" · ")}</span></div>`
+    ).join("")}</div></div>` : "";
+
+  const rank = (title, list) => !has(list) ? "" :
+    `<div><h3 class="sub">${esc(title)}</h3>${lines(list.map((s) =>
+      [s.name + (s.routes ? ` · ${s.routes}` : ""), `${s.late} late · ${s.onTime} on time · median ${s.delayMed || "—"}`]))}</div>`;
+
+  const ranked = (has(h.worst) || has(h.best))
+    ? `<div class="blk loose" style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+        ${rank("Least reliable stops", h.worst)}${rank("Most reliable stops", h.best)}</div>` : "";
+
+  const table = has(h.stops) ? `<div class="blk loose">
+    <h3 class="sub">Every stop in the catchment</h3>
+    <table class="stoptbl"><thead><tr>
+      <th>Stop</th><th>Routes</th><th class="n">Matched</th><th class="n">On time</th>
+      <th class="n">Late</th><th class="n">Median</th><th class="n">P90</th>
+      <th class="n">Excess wait</th><th class="n">Headway</th>
+    </tr></thead><tbody>${h.stops.map((s) => `<tr${s.thin ? ' class="thin"' : ""}>
+      <td class="nm">${s.cls ? `<span class="dotcell" style="background:${CLS_COLOR[s.cls] || "#a1a1aa"}"></span>` : ""}${esc(s.name)}</td>
+      <td>${esc(s.routes || "—")}</td><td class="n">${esc(s.matched || "—")}</td>
+      <td class="n">${esc(s.onTime || "—")}</td><td class="n">${esc(s.late || "—")}</td>
+      <td class="n">${esc(s.delayMed || "—")}</td><td class="n">${esc(s.delayP90 || "—")}</td>
+      <td class="n">${esc(s.ewt || "—")}</td><td class="n">${esc(s.headway || "—")}</td>
+    </tr>`).join("")}</tbody></table>
+    <p class="note" style="margin-top:9px">Ordered by late share. Greyed rows fall below the
+      30-matched-arrival floor and are excluded from the area grade and the rankings.</p>
+  </div>` : "";
+
+  return `<div class="blk loose"><h3 class="sub g">Transit reliability</h3>
+    ${grade}${headline}${scope}</div>${hours}${thresholds}${ranked}${table}`;
+}
+
 function mobility(m) {
   if (!m) return "";
   const mini = has(m.headline)
@@ -270,6 +349,7 @@ function findings(f) {
     simpleBlock("Energy potential", "", lines(f.energy && f.energy.rows)),
     simpleBlock("Climate & land cover", "", lines(f.climate && f.climate.rows)),
     mobility(f.mobility),
+    transitHistory(f.transitHistory),
     simpleBlock("Nearby amenities — walkable catchment", "g", lines(f.amenities && f.amenities.rows)),
     realestate(f.realestate),
   ]);

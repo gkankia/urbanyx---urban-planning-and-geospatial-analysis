@@ -154,6 +154,36 @@ th.n,td.n{text-align:right}
   justify-content:flex-end}
 .a16 .verdict.ok{color:var(--good)} .a16 .verdict.no{color:var(--bad)}
 
+/* ── transit reliability, in full ───────────────────────────── */
+.grade-row{display:flex;align-items:center;gap:13px;border:1px solid var(--rule);
+  border-radius:5px;padding:12px 15px;margin-bottom:11px;break-inside:avoid}
+.grade-row .g{width:34px;height:34px;border-radius:7px;display:flex;align-items:center;
+  justify-content:center;font-size:17px;font-weight:600;flex:none}
+.grade-row .t{font-size:13px;color:var(--body);flex:1}
+.grade-row .p{font-size:17px;font-weight:600}
+.hl{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;break-inside:avoid}
+.hl .c{border:1px solid var(--rule);border-radius:5px;padding:11px 12px}
+.hl .v{font-size:19px;font-weight:600;color:var(--ink);line-height:1.1}
+.hl .k{font-size:9.5px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;
+  color:var(--mute);margin-top:6px}
+.hl .s{font-size:10.5px;color:var(--faint);margin-top:2px}
+.hours{display:flex;align-items:stretch;gap:2px;height:86px;margin-top:6px;
+  border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);position:relative}
+.hours .zero{position:absolute;left:0;right:0;top:50%;border-top:1px dashed var(--rule-mid)}
+.hours .b{flex:1;position:relative}
+.hours .b i{position:absolute;left:1px;right:1px;border-radius:1.5px;display:block}
+.hours .b i.up{bottom:50%;background:#d97706}
+.hours .b i.dn{top:50%;background:#6366f1}
+.hourlab{display:flex;justify-content:space-between;font-size:9px;color:var(--faint);
+  margin-top:4px}
+.thr{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px 20px;margin-top:4px}
+.thr .r{display:flex;justify-content:space-between;gap:10px;font-size:11.5px;color:var(--body)}
+.thr .r .k{color:var(--mute)}
+.stoptbl td,.stoptbl th{font-size:11px}
+.stoptbl td.nm{max-width:150px}
+.stoptbl tr.thin td{color:var(--faint)}
+.dotcell{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px}
+
 /* ── callout & back matter ───────────────────────────────── */
 .callout{margin-top:11px;display:flex;gap:10px;align-items:flex-start;
   background:#fdf6ec;border:1px solid #f2dfc0;border-radius:5px;padding:11px 13px;

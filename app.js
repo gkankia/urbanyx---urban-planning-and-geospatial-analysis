@@ -17596,6 +17596,21 @@ function _rptMethodology(a){
   return m;
 }
 
+// Filenames must survive every OS and the server's own sanitiser, which keeps
+// only [A-Za-z0-9_-]. Georgian would be stripped to nothing, so it goes through
+// the app's existing national-transliteration helper first.
+function _rptSlug(s,max){
+  if(!s)return '';
+  return _kaToLat(String(s))
+    // The national scheme marks ejectives with an apostrophe (ტ → t'); in a
+    // filename that would become a stray underscore.
+    .replace(/'/g,'')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/[^A-Za-z0-9]+/g,'_')
+    .replace(/^_+|_+$/g,'')
+    .slice(0,max||48);
+}
+
 // ── transit reliability, in full ───────────────────────────────────────────
 // The panel computes far more than one sentence: a coverage window, an area
 // grade, four headline metrics, four colour-by variables with thresholds, an
@@ -17943,7 +17958,11 @@ async function _rptCollect(){
     // Selects the cover artwork (design-system/report-covers) server-side.
     lang:lang==='ka'?'ka':'en',
     issued:_rptDate(new Date()),
-    filename:'urbanyx_report'+(subject.parcelCode?'_'+subject.parcelCode.replace(/\./g,''):''),
+    // Cadastral code when there is one, otherwise the street — so a saved file
+    // is identifiable without opening it.
+    filename:'urbanyx_report_'+(
+      subject.parcelCode?subject.parcelCode.replace(/\./g,'')
+      :_rptSlug(subject.title)||new Date().toISOString().slice(0,10)),
     siteLabel:'urbanyx.zaxis.ge',
     subject,
     map:map_,

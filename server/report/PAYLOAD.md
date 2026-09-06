@@ -77,6 +77,23 @@ Response is `application/pdf` as an attachment.
     "climate":    { "rows": [["Tree canopy","23% covered"]] },
     "mobility":   { "headline": [{ "value": "11 stops · 7 routes", "label": "…" }],
                     "rows": [["Parking split","…"]] },
+    // Transit reliability in full — see "Depth" below.
+    "transitHistory": {
+      "coverage": { "firstDate": "3 June 2026", "days": "96" },
+      "window":   { "from": "2026-08-08", "to": "2026-09-06" },
+      "filters":  { "period": "30 days", "dayType": "Weekdays", "timeBand": "All day" },
+      "grade": "B", "onTimePct": 74,
+      "headline": [{ "label": "On time", "value": "74%", "sub": "of matched arrivals" }],
+      "totals": { "matched": 18422, "observations": 52140, "onTime": 13632, "late": 3180 },
+      "thresholds": [{ "label": "On-time share", "bands": ["≥80%","60–80%","<60%"] }],
+      "hourly": [{ "hour": 6, "delayMin": 1.2, "matched": 840 }],
+      "worst": [ /* stop rows */ ], "best": [ /* stop rows */ ],
+      "stops": [{ "name": "…", "routes": "4, 12", "matched": 240, "observations": 700,
+                  "onTime": "79%", "late": "20%", "delayMed": "+5.2 min",
+                  "delayP90": "+13.3 min", "ewt": "+2.5 min", "headway": "18.7 min",
+                  "thin": false, "cls": "warn" }],
+      "stopCount": 20, "thinCount": 4
+    },
     "amenities":  { "rows": [["Schools","3"]] },
     "realestate": { "note": "…",
                     "rows": [{ "type": "Flat", "priceSqm": "₾3,840",
@@ -118,6 +135,19 @@ in print.
 
 Send **one clean capture**: no baked legend, but the parcel outline and the pin
 are drawn into it by `_rptCaptureMap`, so the page adds neither.
+
+## Depth
+
+An analysis sends everything it computed, not a summary of it. Transit
+reliability is the reference implementation: the panel's A–F area grade, its
+four headline metrics, the observation window and filters that produced them,
+the archive coverage, the hourly delay profile, the four map thresholds, the
+ranked best and worst stops, and **every stop as an appendix table** — ordered
+by late share, with rows under the 30-matched-arrival floor greyed and excluded
+from the grade and the rankings.
+
+The other analyses still send summary lines. They are to be brought up to this
+shape one at a time, each mirroring what its panel actually holds.
 
 ## Notes
 
