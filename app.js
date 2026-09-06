@@ -2973,7 +2973,7 @@ function _movShowHandle(){
   const bld=_activeBld();if(!bld||!mapReady||typeof mapboxgl==='undefined')return;
   const c=turf.centroid(turf.feature(bld.geojson)).geometry.coordinates;
   const hel=document.createElement('div');hel.className='geo-mov-handle';
-  hel.innerHTML='<img src="analysis-logos/move.svg" width="22" height="22" draggable="false">';
+  hel.innerHTML='<img src="analysis-logos/move.svg" width="39" height="39" draggable="false">';
   _movHandle=new mapboxgl.Marker({element:hel,draggable:true}).setLngLat(c).addTo(map);
   _movHandle.on('dragstart',_movHStart);
   _movHandle.on('drag',_movHDrag);
@@ -3107,7 +3107,7 @@ function _rotShowHandle(){
   _rotPivotM=new mapboxgl.Marker({element:pel}).setLngLat(_rotPivot).addTo(map);
   // Rotate handle
   const hel=document.createElement('div');hel.className='geo-rot-handle';
-  hel.innerHTML='<img src="analysis-logos/rotate.svg" width="20" height="20"><span class="geo-rot-deg"></span>';
+  hel.innerHTML='<img src="analysis-logos/rotate.svg" width="39" height="39"><span class="geo-rot-deg"></span>';
   _rotHandle=new mapboxgl.Marker({element:hel,draggable:true}).setLngLat(hpos).addTo(map);
   _rotHandle.on('dragstart',_rotHStart);
   _rotHandle.on('drag',_rotHDrag);
@@ -8258,7 +8258,7 @@ let _parcelClickPin=null, _pendingPinLngLat=null, _parcelGeomShown=false;
 // scaling never fights Mapbox's own translate on the outer element.
 function _mapPinEl(){
   const el=document.createElement('div');el.className='map-pin-mk';
-  el.innerHTML='<img class="map-pin-img" src="analysis-logos/map_pin.svg" width="42" height="42" alt="" draggable="false">';
+  el.innerHTML='<img class="map-pin-img" src="analysis-logos/map_pin.svg" width="39" height="39" alt="" draggable="false">';
   return el;
 }
 // The pin grows as you zoom in (tip stays put via transform-origin:bottom).
@@ -10683,8 +10683,8 @@ function _showKgContact(props){
   let h='<div style="margin:4px 0 2px;padding:7px 8px;background:rgba(192,38,211,0.07);border:1px solid rgba(192,38,211,0.15);border-radius:7px">';
   h+='<div style="font-size:0.72rem;font-weight:600;color:rgba(255,255,255,0.88);margin-bottom:4px;line-height:1.35">'+escapeHtml(props.name)+'</div>';
   if(props.type)h+='<div style="font-size:0.6rem;color:rgba(255,255,255,0.28);margin-bottom:5px">'+escapeHtml(props.type)+'</div>';
-  if(props.name_location)h+='<div style="display:flex;align-items:flex-start;gap:5px;margin-bottom:6px"><img src="analysis-logos/pin.svg" width="15" height="15" style="opacity:0.5;flex-shrink:0;margin-top:2px"><span style="font-size:0.63rem;color:rgba(255,255,255,0.45);line-height:1.4">'+escapeHtml(props.name_location)+'</span></div>';
-  const _kgIco=(name,href,target)=>'<a href="'+escapeHtml(safeUrl(href))+'"'+(target?' target="'+target+'" rel="noopener"':'')+' style="display:inline-flex;opacity:0.65"><img src="analysis-logos/'+name+'.svg" width="24" height="24"></a>';
+  if(props.name_location)h+='<div style="display:flex;align-items:flex-start;gap:5px;margin-bottom:6px"><img src="analysis-logos/pin.svg" width="39" height="39" style="opacity:0.5;flex-shrink:0;margin-top:2px"><span style="font-size:0.63rem;color:rgba(255,255,255,0.45);line-height:1.4">'+escapeHtml(props.name_location)+'</span></div>';
+  const _kgIco=(name,href,target)=>'<a href="'+escapeHtml(safeUrl(href))+'"'+(target?' target="'+target+'" rel="noopener"':'')+' style="display:inline-flex;opacity:0.65"><img src="analysis-logos/'+name+'.svg" width="39" height="39"></a>';
   if(phones.length||props.email||props.facebook_link){
     h+='<div style="display:flex;align-items:center;gap:10px;margin-top:2px">';
     phones.forEach(function(p,i){if(i===0)h+=_kgIco('phone','tel:'+p,'');});
