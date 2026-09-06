@@ -16420,7 +16420,10 @@ async function _histComposeCapture(spec){
     bh=pad*2+lh*(rows.length+1+lines.length);
   }
   const bx=W-bw-16*s,by=H-bh-16*s;
-  chip(bx,by,bw,bh);
+  // Callers that want a bare capture pass no legend content; without this the
+  // chip still paints as an empty rounded box in the corner.
+  const _hasLegend=(groups&&groups.length)||(spec?.rows?.length)||(spec?.lines?.length)||spec?.title;
+  if(_hasLegend)chip(bx,by,bw,bh);
   let ty=by+pad;
   if(groups){
     for(const g of groups){
@@ -17273,6 +17276,95 @@ function _rptCardLines(id){
 
 const _RPT_GRADE_WORD={A:'excellent',B:'good',C:'moderate',D:'limited',E:'poor',F:'very poor'};
 
+// ── Georgian address formatting ────────────────────────────────────────────
+// The registry returns broad-to-narrow, with the street type leading its name:
+//   "საქართველო, ქალაქი თბილისი, ვაკე, ქუჩა სამტრედია 18"
+// A report wants the street first, in natural Georgian word order, with the
+// place below it: "სამტრედიის ქუჩა 18" / "ვაკე, თბილისი".
+const _RPT_ST_TYPES=['ქუჩა','გამზირი','ჩიხი','შესახვევი','მოედანი','გზატკეცილი',
+  'ხეივანი','დასახლება','კვარტალი','მასივი','ჩიხი-ქუჩა'];
+const _RPT_KA=/[\u10A0-\u10FF]/;
+
+// Genitive of a place name, which is what precedes ქუჩა / გამზირი.
+// Vowel-final stems syncopate (სამტრედია → სამტრედიის, რუსთაველი → რუსთაველის);
+// ო/უ take -ს; consonant-final take -ის.
+function _rptKaGenitive(w){
+  if(!w)return w;
+  if(/(ის|ს)$/.test(w))return w;            // already declined — leave it
+  if(/[აეი]$/.test(w))return w.slice(0,-1)+'ის';
+  if(/[ოუ]$/.test(w))return w+'ს';
+  return w+'ის';
+}
+// "ქუჩა სამტრედია 18" → "სამტრედიის ქუჩა 18"
+function _rptKaStreet(seg){
+  const t=String(seg).trim().split(/\s+/);
+  const i=t.findIndex(w=>_RPT_ST_TYPES.includes(w));
+  if(i<0)return t.join(' ');
+  const type=t[i];
+  const rest=t.slice(0,i).concat(t.slice(i+1));
+  const num=[];
+  while(rest.length&&/^[0-9]+[^\s]*$/.test(rest[rest.length-1]))num.unshift(rest.pop());
+  if(!rest.length)return [type,...num].join(' ');
+  rest[rest.length-1]=_rptKaGenitive(rest[rest.length-1]);
+  return [...rest,type,...num].join(' ');
+}
+// Reverse geocode the site for the report's address.
+// Preferred over the registry string: Mapbox returns the street already in the
+// right form for the language ("სამტრედიის ქუჩა 18", not "ქუჩა სამტრედია 18")
+// and hands back the surrounding places as structured context, so nothing has
+// to be re-ordered or declined by hand.
+async function _rptReverseGeocode(lng,lat){
+  if(!(isFinite(lng)&&isFinite(lat)))return null;
+  const base='https://api.mapbox.com/geocoding/v5/mapbox.places/'+
+    `${lng.toFixed(6)},${lat.toFixed(6)}.json?access_token=${MAPBOX_TOKEN}`+
+    `&language=${lang==='ka'?'ka':'en'}`+(_inGeorgia(lng,lat)?'&country=ge':'');
+  // Ask for a street address first; rural sites often have none, so fall back
+  // to whatever feature Mapbox does have there.
+  for(const types of ['&types=address','']){
+    try{
+      const r=await fetch(base+types+'&limit=1');
+      if(!r.ok)continue;
+      const d=await r.json();
+      const f=(d.features||[])[0];
+      if(!f)continue;
+      // place_name is already locale-formatted; its first segment is the street
+      // line, which is exactly what the cover wants.
+      const street=String(f.place_name||f.text||'').split(',')[0].trim();
+      if(!street)continue;
+      // Context runs local → broad. Keep the settlement-level entries only.
+      const KEEP=/^(neighborhood|locality|place|district)\./;
+      const seen=new Set(),place=[];
+      for(const c of (f.context||[])){
+        if(!KEEP.test(c.id||''))continue;
+        const t=String(c.text||'').replace(/^(ქალაქი|ქ\.)\s+/,'').trim();
+        if(t&&!seen.has(t)){seen.add(t);place.push(t);}
+      }
+      return {street,place:place.join(', ')||null,source:'mapbox'};
+    }catch(_){}
+  }
+  return null;
+}
+
+// → {street, place} — street leads the cover, place sits under it.
+function _rptAddress(raw){
+  if(!raw||raw==='—')return null;
+  let parts=String(raw).split(',').map(s=>s.trim()).filter(Boolean);
+  parts=parts.filter(p=>!/^(საქართველო|Georgia)$/i.test(p));
+  // "ქალაქი თბილისი" is how the registry writes it; a report just says თბილისი.
+  parts=parts.map(p=>p.replace(/^(ქალაქი|ქ\.|დაბა|სოფელი)\s+/,'').trim()).filter(Boolean);
+  if(!parts.length)return null;
+  const looksStreet=p=>_RPT_ST_TYPES.some(t=>p.split(/\s+/).includes(t))||/\d/.test(p);
+  let si=parts.findIndex(looksStreet);
+  if(si<0)si=parts.length-1;
+  const street=_RPT_KA.test(parts[si])?_rptKaStreet(parts[si]):parts[si];
+  // The registry writes broad-to-narrow (street last), so the remainder is
+  // reversed to put the local name first. An address that already leads with
+  // the street is narrow-to-broad and keeps its order.
+  let place=parts.filter((_,i)=>i!==si);
+  if(si===parts.length-1)place=place.reverse();
+  return {street,place:place.join(', ')||null};
+}
+
 function _rptNum(n){return Number(n).toLocaleString(lang==='ka'?'ka-GE':'en-GB');}
 function _rptM2(m2){
   if(!m2)return null;
@@ -17287,28 +17379,133 @@ function _rptDate(d){
 function _rptRows(pairs){return pairs.filter(([,v])=>v!=null&&v!=='' &&v!=='—');}
 
 // ── the map capture ────────────────────────────────────────────────────────
-// One clean capture, no baked legend: the cover crops it to fill the page and
-// the Map page typesets the legend from data. Passing no groups suppresses the
-// legend card that _histComposeCapture would otherwise draw into the bitmap.
-async function _rptCaptureMap(frameGeom,pinLngLat){
-  const img=await _histCaptureMapImage({groups:[],frameGeom:frameGeom||undefined,pinLngLat});
-  if(!img||!img.url)return null;
-  // The raw capture is the full retina canvas at q0.92 — several MB of base64.
-  // The plate prints 178 mm wide, so 2000 px is already ~285 dpi; anything more
-  // is upload cost for no visible gain.
-  const MAX_W=2000;
+// The report frames and composes its own capture rather than reusing
+// _histCaptureMapImage, for three reasons: the frame has to cover everything
+// the report talks about (listing points included, not just the parcel), the
+// parcel boundary must be drawn whether or not the user asked to see it, and
+// the pin has to be the app's own map_pin.svg — the shared composer draws a
+// synthetic violet one.
+
+// Walk any GeoJSON geometry and widen a [w,s,e,n] box.
+function _rptGrowBBox(box,geom){
+  if(!geom||!geom.coordinates)return box;
+  (function walk(c){
+    if(typeof c[0]==='number'){
+      if(c[0]<box[0])box[0]=c[0]; if(c[1]<box[1])box[1]=c[1];
+      if(c[0]>box[2])box[2]=c[0]; if(c[1]>box[3])box[3]=c[1];
+    } else c.forEach(walk);
+  })(geom.coordinates);
+  return box;
+}
+function _rptSourceData(id){
   try{
-    if(img.w<=MAX_W)return{dataUrl:img.url,w:img.w,h:img.h};
+    const src=map.getSource(id); if(!src)return null;
+    if(typeof src.serialize==='function'){const s=src.serialize();if(s&&s.data&&s.data.type)return s.data;}
+    return src._data&&src._data.type?src._data:null;
+  }catch(_){return null;}
+}
+// Everything the report describes should be inside the frame.
+function _rptFrameBBox(a){
+  const box=[Infinity,Infinity,-Infinity,-Infinity];
+  _rptGrowBBox(box,_isoData?.features?.[0]?.geometry);
+  _rptGrowBBox(box,_currentParcelGeoJSON);
+  if(a.realestate){
+    if(_reLast&&_reLast.iso)_rptGrowBBox(box,_reLast.iso.geometry||_reLast.iso);
+    // Listing points are the usual overflow — they spread past the isochrone.
+    for(const id of ['re-points','re-parcels']){
+      const d=_rptSourceData(id);
+      if(d&&d.features)d.features.forEach(f=>_rptGrowBBox(box,f.geometry));
+    }
+  }
+  return isFinite(box[0])?box:null;
+}
+// Rasterised app pin, fetched once per session.
+let _rptPinImg=null;
+async function _rptPinBitmap(){
+  if(_rptPinImg!==null)return _rptPinImg;
+  const png=await _svgToPng('analysis-logos/map_pin.svg',78).catch(()=>null);
+  if(!png){_rptPinImg=false;return false;}
+  _rptPinImg=await new Promise(res=>{const i=new Image();i.onload=()=>res(i);i.onerror=()=>res(false);i.src=png.url;});
+  return _rptPinImg;
+}
+
+async function _rptCaptureMap(a,pinLngLat){
+  if(!mapReady)return null;
+  const prev={center:map.getCenter(),zoom:map.getZoom(),bearing:map.getBearing(),pitch:map.getPitch()};
+  let framed=false;
+  try{
+    const box=_rptFrameBBox(a);
+    if(box){
+      map.fitBounds([[box[0],box[1]],[box[2],box[3]]],
+        {padding:{top:70,left:70,right:70,bottom:110},bearing:0,pitch:0,duration:0});
+      framed=true;
+      await Promise.race([new Promise(r=>map.once('idle',r)),new Promise(r=>setTimeout(r,4500))]);
+    }
+    // No pin and no legend from the shared composer — both are drawn below.
+    const img=await _histComposeCapture({groups:[]});
+    if(!img||!img.url)return null;
+
     const bmp=await new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=img.url;});
-    const k=MAX_W/bmp.width;
+    // 2000 px across a 178 mm plate is ~285 dpi; more is upload cost only.
+    const MAX_W=2000;
+    const k=Math.min(1,MAX_W/bmp.width);
     const c=document.createElement('canvas');
     c.width=Math.round(bmp.width*k);c.height=Math.round(bmp.height*k);
     const ctx=c.getContext('2d');
     ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
     ctx.drawImage(bmp,0,0,c.width,c.height);
+
+    // Canvas px per CSS px, after the downscale.
+    const s=c.width/(map.getCanvas().clientWidth||c.width);
+    const pt=ll=>{const p=map.project(ll);return[p.x*s,p.y*s];};
+
+    // Parcel boundary — drawn from the geometry, so it appears even when the
+    // user never pressed "show parcel geometry".
+    if(_currentParcelGeoJSON&&_currentParcelGeoJSON.coordinates){
+      try{
+        const rings=[];
+        (function walk(co,d){
+          if(!co.length)return;
+          if(typeof co[0][0]==='number')rings.push(co);
+          else co.forEach(z=>walk(z,d+1));
+        })(_currentParcelGeoJSON.coordinates,0);
+        ctx.save();
+        ctx.lineJoin='round';
+        for(const ring of rings){
+          ctx.beginPath();
+          ring.forEach((co,i)=>{const[x,y]=pt(co);i?ctx.lineTo(x,y):ctx.moveTo(x,y);});
+          ctx.closePath();
+          ctx.fillStyle='rgba(251,146,60,0.18)';ctx.fill();
+          ctx.lineWidth=Math.max(2,3*s);
+          ctx.strokeStyle='rgba(0,0,0,0.35)';ctx.stroke();
+          ctx.lineWidth=Math.max(1.4,2*s);
+          ctx.strokeStyle='#fb923c';ctx.stroke();
+        }
+        ctx.restore();
+      }catch(_){}
+    }
+
+    // The app's own pin, anchored at its tip like the DOM marker.
+    if(pinLngLat){
+      try{
+        const pin=await _rptPinBitmap();
+        if(pin){
+          const[px,py]=pt([pinLngLat.lng,pinLngLat.lat]);
+          const w=Math.max(30,44*s),h=w*(pin.height/pin.width);
+          ctx.save();
+          ctx.shadowColor='rgba(0,0,0,0.35)';ctx.shadowBlur=w*0.16;ctx.shadowOffsetY=w*0.06;
+          ctx.drawImage(pin,px-w/2,py-h,w,h);
+          ctx.restore();
+        }
+      }catch(_){}
+    }
+
     return{dataUrl:c.toDataURL('image/jpeg',0.85),w:c.width,h:c.height};
-  }catch(_){
-    return{dataUrl:img.url,w:img.w,h:img.h};
+  }catch(e){
+    console.warn('report capture:',e);
+    return null;
+  }finally{
+    if(framed)map.jumpTo(prev);
   }
 }
 
@@ -17389,16 +17586,24 @@ async function _rptCollect(){
   const sources=[];
   const src=(label,text)=>{if(!sources.some(s=>s.label===label))sources.push({label,text});};
 
+  // The site point: the dropped pin, else the parcel centroid. Used both for
+  // the address lookup and for drawing the pin onto the capture.
+  let pin=null;
+  try{pin=(_parcelClickPin&&_parcelClickPin.getLngLat&&_parcelClickPin.getLngLat())
+    ||(_locPinMarker&&_locPinMarker.getLngLat&&_locPinMarker.getLngLat())
+    ||(parcelCentroid?{lng:parcelCentroid[0],lat:parcelCentroid[1]}:null);}catch(_){}
+
   // ── subject ──
-  // The registry address arrives as "Street 37, Vake, Tbilisi"; the street line
-  // is the headline and the rest becomes the place line under it.
-  const addr=(_currentParcelGeoJSON&&rp.address&&rp.address!=='—')
-    ?String(rp.address).split(',').map(x=>x.trim()).filter(Boolean):null;
+  // Mapbox first; the registry string is the fallback when the lookup fails or
+  // the site has no addressable feature.
+  const regAddr=_currentParcelGeoJSON?_rptAddress(rp.address):null;
+  let addr=pin?await _rptReverseGeocode(pin.lng,pin.lat):null;
+  if(!addr)addr=regAddr;
   const subject={
-    title:addr&&addr.length?addr[0]
+    title:addr?addr.street
          :_isDrawnArea?'Drawn area of interest'
          :(areaLbl||'Analysis area'),
-    place:addr&&addr.length>1?addr.slice(1).join(', '):null,
+    place:addr?addr.place:null,
     parcelCode:rp.code&&rp.code!=='—'?rp.code:null,
     areaLabel:_rptM2(_currentParcelAreaM2),
     reportId:'Report '+new Date().toISOString().slice(0,10)+(rp.code&&rp.code!=='—'?'-'+rp.code.replace(/\./g,''):''),
@@ -17444,7 +17649,8 @@ async function _rptCollect(){
   if(_currentParcelGeoJSON){
     const rows=_rptRows([
       ['Parcel code',rp.code],['Area',_rptM2(_currentParcelAreaM2)],['Parcel type',rp.type],
-      ['Ownership type',rp.ownershipType],['Address',rp.address],
+      ['Ownership type',rp.ownershipType],
+      ['Address',regAddr?[regAddr.street,regAddr.place].filter(Boolean).join(', '):rp.address],
       ['Registered',rp.regDate?_rptDate(rp.regDate):null],
       ['Owner(s)',(rp.owners&&rp.owners.length?rp.owners.map(o=>o.name).filter(Boolean).join('; '):rp.ownersRaw)],
     ]);
@@ -17616,13 +17822,7 @@ async function _rptCollect(){
   }
 
   // ── map, framed on the study area ──
-  let pin=null;
-  try{pin=(_parcelClickPin&&_parcelClickPin.getLngLat&&_parcelClickPin.getLngLat())
-    ||(_locPinMarker&&_locPinMarker.getLngLat&&_locPinMarker.getLngLat())
-    ||(parcelCentroid?{lng:parcelCentroid[0],lat:parcelCentroid[1]}:null);}catch(_){}
-  const frameGeom=_isoData?.features?.[0]?.geometry||_currentParcelGeoJSON||
-    ((a.realestate&&_reLast&&_reLast.iso)||null);
-  const cap=await _rptCaptureMap(frameGeom,pin);
+  const cap=await _rptCaptureMap(a,pin);
   let map_=null;
   if(cap){
     map_={dataUrl:cap.dataUrl,
@@ -17632,7 +17832,11 @@ async function _rptCollect(){
   }
   if(a.isochrone)src('Catchment',`${_accMinutes||10}-minute ${_accMode||'walking'} isochrone (${_accMode==='transit'?'TTC network, observed times':'Mapbox Isochrone API'})`);
 
+  // The project lockup, rasterised from the SVG so the payload stays small.
+  const brandLogo=await _svgToPng('analysis-logos/urbanyx-zaxis-logo.svg',440).catch(()=>null);
+
   return {
+    brand:brandLogo?{logo:brandLogo.url,w:brandLogo.w,h:brandLogo.h}:null,
     issued:_rptDate(new Date()),
     filename:'urbanyx_report'+(subject.parcelCode?'_'+subject.parcelCode.replace(/\./g,''):''),
     siteLabel:'urbanyx.zaxis.ge',

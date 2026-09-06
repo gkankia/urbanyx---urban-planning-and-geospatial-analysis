@@ -10,13 +10,17 @@ Response is `application/pdf` as an attachment.
 
 ```jsonc
 {
+  // Project lockup, rasterised client-side from analysis-logos/urbanyx-zaxis-logo.svg.
+  // Falls back to the app icon in the template when absent.
+  "brand": { "logo": "data:image/png;base64,…", "w": 440, "h": 0 },
+
   "issued": "6 September 2026",        // already formatted for the report language
   "filename": "urbanyx_report",        // sanitised server-side
   "siteLabel": "urbanyx.zaxis.ge",     // stamped in the page footer
 
   "subject": {
-    "title": "Chavchavadze Avenue 37", // or the drawn-area label
-    "place": "Vake District, Tbilisi",
+    "title": "ზაქარია ფალიაშვილის ქუჩა 82", // Mapbox reverse geocode, locale-formatted
+    "place": "ვაკე, თბილისი",          // from the geocode context, local name first
     "parcelCode": "01.14.09.023",      // omit when no parcel is selected
     "areaLabel": "2,480 m²",
     "dominantZone": "Residential mixed-use", // only when zoning is active
@@ -88,6 +92,11 @@ Response is `application/pdf` as an attachment.
 
 ## Notes
 
+- **The address is reverse-geocoded, not taken from the registry.** Mapbox
+  returns the street already declined for the language ("სამტრედიის ქუჩა 18")
+  and the surrounding places as structured context, so nothing is re-ordered
+  here. The registry string is the fallback, and remains what the Ownership
+  section reports, since that section is sourced to NAPR.
 - **All values arrive pre-formatted as strings.** The server does no number
   formatting, unit conversion or localisation — the frontend already knows the
   report language and the app's own conventions.

@@ -51,6 +51,21 @@ const section = (title, lead, inner, tone, keep) =>
   (lead ? `<div class="seclead">${esc(lead)}</div>` : "") + inner + `</div>`;
 
 // ── cover ──────────────────────────────────────────────────────────────────
+
+// Contour motif — the report's own visual language, not decoration borrowed
+// from elsewhere. Nested offset closed curves, one picked out in the logo's cyan.
+const CONTOURS = `<svg viewBox="0 0 520 520" fill="none" aria-hidden="true">
+  <g stroke="#e4e4e7" stroke-width="1.1">
+    <path d="M486 250C486 372 400 470 274 470C170 470 74 402 74 292C74 176 168 84 286 84C398 84 486 152 486 250Z"/>
+    <path d="M452 254C452 358 378 440 272 440C184 440 106 382 106 290C106 192 186 116 286 116C380 116 452 172 452 254Z"/>
+    <path d="M418 258C418 344 356 410 270 410C198 410 138 362 138 288C138 208 204 148 286 148C362 148 418 194 418 258Z"/>
+    <path d="M384 262C384 330 334 380 268 380C212 380 170 342 170 286C170 224 222 180 286 180C344 180 384 216 384 262Z"/>
+    <path d="M350 266C350 316 312 350 266 350C226 350 202 322 202 284C202 240 240 212 286 212C326 212 350 234 350 266Z"/>
+  </g>
+  <path d="M316 270C316 292 300 308 274 308C252 308 234 294 234 272C234 250 256 236 280 236C302 236 316 250 316 270Z"
+        stroke="#22b8d6" stroke-width="1.4" opacity="0.55"/>
+</svg>`;
+
 function buildCover(d) {
   const s = d.subject || {};
   const meta = [];
@@ -58,25 +73,34 @@ function buildCover(d) {
   if (has(s.areaLabel)) meta.push(["Area", s.areaLabel]);
   if (has(s.dominantZone)) meta.push(["Dominant zone", s.dominantZone]);
   if (has(s.analysesLabel)) meta.push(["Analyses", s.analysesLabel]);
-  meta.push(["Issued", d.issued]);
 
-  const cols = Math.min(4, Math.max(2, meta.length));
+  const cols = Math.min(4, Math.max(2, meta.length || 2));
+  const brand = d.brand && d.brand.logo ? d.brand.logo : LOGO_MARK;
+
   return doc(s.title || "Urbanyx report", "cover", `
 <div class="cv">
-  <div class="mk"><img src="${LOGO_MARK}" alt=""><span class="wm">Urbanyx</span></div>
-  <div class="top-rule"></div>
+  <div class="contours">${CONTOURS}</div>
+
+  <div class="lockup">
+    <img src="${esc(brand)}" alt="Urbanyx">
+    <div class="issued">Issued<b>${esc(d.issued)}</b></div>
+  </div>
+
+  <div class="rule-accent"></div>
   <span class="eyebrow">Site &amp; area analysis report</span>
   <h1>${esc(s.title || "Analysis report")}</h1>
   ${has(s.place) ? `<div class="place">${esc(s.place)}</div>` : ""}
-  <div class="meta" style="grid-template-columns:repeat(${cols},minmax(0,1fr))">
+
+  ${meta.length ? `<div class="meta" style="grid-template-columns:repeat(${cols},minmax(0,1fr))">
     ${meta.map(([k, v]) => `<div><div class="k">${esc(k)}</div><div class="v">${esc(v)}</div></div>`).join("")}
-  </div>
-  <div class="foot">
+  </div>` : ""}
+
+  <div class="foot"${meta.length ? "" : ` style="margin-top:auto"`}>
     <div>${[
       has(d.preparedFor) ? `<div class="k">Prepared for</div><div class="v">${esc(d.preparedFor)}</div>` : "",
       has(d.preparedBy) ? `<div class="k"${has(d.preparedFor) ? ` style="margin-top:15px"` : ""}>Prepared by</div><div class="v">${esc(d.preparedBy)}</div>` : "",
     ].join("")}</div>
-    <div class="zx">${has(s.reportId) ? esc(s.reportId) + "<br>" : ""}Urbanyx &nbsp;·&nbsp; a Z.axis product</div>
+    <div class="zx">${has(s.reportId) ? esc(s.reportId) + "<br>" : ""}a Z.axis product</div>
   </div>
 </div>`);
 }
