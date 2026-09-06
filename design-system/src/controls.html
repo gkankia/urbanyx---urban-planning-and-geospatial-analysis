@@ -1,0 +1,81 @@
+<!-- @dsCard group="Components" name="Controls" subtitle="Switches, segmented toggle, range, rows" -->
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<title>Urbanyx — Controls</title>__BASE__
+<style>
+  .card{background:var(--glass-bg-card);backdrop-filter:var(--glass-blur-card);border:1px solid var(--line-2);
+    border-radius:var(--glass-radius);padding:14px 16px;font-size:0.8rem;max-width:290px}
+  .card-label{font-size:0.6rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--tx-5);margin-bottom:12px}
+  .toggle{position:relative;width:34px;height:19px;flex-shrink:0;display:inline-block}
+  .toggle input{opacity:0;width:0;height:0;position:absolute}
+  .toggle-slider{position:absolute;inset:0;background:var(--fill-1);border-radius:19px;transition:background .2s;cursor:pointer}
+  .toggle-slider::before{content:'';position:absolute;width:13px;height:13px;background:#fff;border-radius:50%;
+    left:3px;top:3px;transition:transform .2s}
+  .toggle input:checked + .toggle-slider{background:var(--brand-indigo)}
+  .toggle input:checked + .toggle-slider::before{transform:translateX(15px)}
+  .toggle-row{display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;padding:7px 0}
+  .toggle-row + .toggle-row{border-top:1px solid var(--line-3)}
+  .row-name{color:var(--tx-3);font-size:0.75rem;transition:color .15s}
+  .toggle-row:hover .row-name{color:var(--tx-2)}
+  .seg{display:inline-flex;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);
+    border-radius:50px;padding:2px}
+  .seg button{background:none;border:none;color:var(--tx-3);font-size:0.74rem;font-weight:600;
+    padding:5px 16px;border-radius:50px;cursor:pointer;font-family:inherit;transition:background .15s,color .15s}
+  .seg button.active{background:#fff;color:#0a0a0a}
+  .range{position:relative;height:18px;max-width:250px}
+  .range .track{position:absolute;top:7px;left:0;right:0;height:4px;border-radius:2px;background:var(--fill-1)}
+  .range .fill{position:absolute;top:7px;left:22%;right:28%;height:4px;border-radius:2px;background:var(--brand-indigo-light)}
+  .range .thumb{position:absolute;top:1.5px;width:15px;height:15px;border-radius:50%;background:#fff;
+    border:3px solid var(--brand-indigo-light);box-shadow:0 1px 4px rgba(0,0,0,0.5);cursor:pointer}
+  .range-lbl{display:flex;justify-content:space-between;max-width:250px;margin-top:7px;
+    font-family:var(--mono);font-size:0.6rem;color:var(--tx-4)}
+  .rail{display:flex;flex-direction:column;background:var(--glass-bg);backdrop-filter:var(--glass-blur);
+    border:1px solid var(--glass-border);border-radius:10px;overflow:hidden;box-shadow:var(--glass-shadow);width:max-content}
+  .rail button{width:54px;height:52px;border:none;background:transparent;cursor:pointer;
+    color:var(--tx-5);font-size:1.05rem;transition:background .15s,color .15s}
+  .rail button:hover{background:var(--fill-1);color:var(--tx-2)}
+  .rail button.active{background:rgba(167,139,250,0.16);color:var(--brand-violet)}
+</style></head>
+<body class="ds-map">
+  <div class="ds-head"><img src="__LOGO_MARK__" alt=""><h1>Controls</h1></div>
+  <p class="ds-sub">Controls are indigo, not violet — violet is reserved for state that the map reflects
+    back at you. A switch that turns a layer on is structure; a selected tool is state.</p>
+
+  <div class="ds-sec"><h2>Switches</h2>
+    <div class="card">
+      <div class="card-label">Layers</div>
+      <label class="toggle-row"><span class="row-name">Buildings</span><span class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></span></label>
+      <label class="toggle-row"><span class="row-name">Transit network</span><span class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></span></label>
+      <label class="toggle-row"><span class="row-name">Terrain relief</span><span class="toggle"><input type="checkbox"><span class="toggle-slider"></span></span></label>
+      <label class="toggle-row"><span class="row-name">Solar exposure</span><span class="toggle"><input type="checkbox"><span class="toggle-slider"></span></span></label>
+    </div>
+    <p class="ds-note">34 × 19 track, 13px knob, 15px travel. The whole row is the label and the hit
+      target — hover lifts the row name from 50% to 70%, never the switch alone.</p>
+  </div>
+
+  <div class="ds-sec"><h2>Segmented</h2>
+    <div class="seg"><button class="active">EN</button><button>ქარ</button></div>
+    <p class="ds-note">Pill inside a pill. The active segment is solid white on dark — the same
+      inversion the primary button uses, so “selected” reads identically everywhere.</p>
+  </div>
+
+  <div class="ds-sec"><h2>Dual range</h2>
+    <div class="range"><span class="track"></span><span class="fill"></span>
+      <span class="thumb" style="left:calc(22% - 7px)"></span><span class="thumb" style="left:calc(72% - 7px)"></span></div>
+    <div class="range-lbl"><span>3 floors</span><span>11 floors</span></div>
+    <p class="ds-note">Two stacked inputs with <span class="ds-code">pointer-events</span> handed to the
+      thumbs only, so the invisible tracks don't fight each other.</p>
+  </div>
+
+  <div class="ds-sec"><h2>Tool rail</h2>
+    <div class="rail">
+      <button class="active" title="Search">◎</button>
+      <button title="Layers">▦</button>
+      <button title="Draw polygon">✎</button>
+      <button title="Measure">⟺</button>
+      <button title="Data">⛁</button>
+      <button title="Export">↥</button>
+    </div>
+    <p class="ds-note">Left edge, vertically centred, 16px inset. Buttons are flush — the rail's
+      10px radius and overflow:hidden do the rounding, so no button carries its own corner.</p>
+  </div>
+</body></html>

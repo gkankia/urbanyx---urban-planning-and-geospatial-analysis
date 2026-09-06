@@ -1,0 +1,63 @@
+<!-- @dsCard group="Foundations" name="Typography" subtitle="Google Sans UI + tabular mono for data" -->
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<title>Urbanyx — Typography</title>__BASE__
+<style>
+  .spec{display:grid;grid-template-columns:1fr auto;gap:14px 20px;align-items:baseline;
+    border-bottom:1px solid var(--line-3);padding:13px 0}
+  .spec:last-child{border-bottom:none}
+  .spec .ex{min-width:0}
+  .spec .mt{font-family:var(--mono);font-size:0.6rem;color:var(--tx-4);white-space:nowrap;text-align:right;line-height:1.6}
+  .cmp{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .cmp > div{border:1px solid var(--line-3);border-radius:var(--r-md);padding:14px}
+  .cmp h3{font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--tx-5);margin-bottom:9px}
+  table.align{width:100%;border-collapse:collapse;font-size:0.8rem}
+  table.align td{padding:3px 0;color:var(--tx-2)}
+  table.align td:last-child{text-align:right}
+</style></head>
+<body class="ds-map">
+  <div class="ds-head"><img src="__LOGO_MARK__" alt=""><h1>Typography</h1></div>
+  <p class="ds-sub">One UI face, one data face. Google Sans is self-hosted and subset for Latin and
+    Georgian, so the Georgian interface never falls back mid-sentence.</p>
+
+  <div class="ds-sec"><h2>Faces</h2>
+    <div class="cmp">
+      <div>
+        <h3>UI — Google Sans</h3>
+        <p style="font-size:1.35rem;font-weight:600;line-height:1.25">Urbanyx ურბანიქსი</p>
+        <p style="font-size:0.72rem;color:var(--tx-4);margin-top:8px;line-height:1.6">Weights 400 / 500 / 600 / 700.
+          Self-hosted from <span class="ds-code">fonts/static/</span>, subset woff2 for the web build.</p>
+      </div>
+      <div>
+        <h3>Data — JetBrains Mono</h3>
+        <p class="mono" style="font-size:1.35rem;font-weight:700;line-height:1.25">41.6934, 44.8015</p>
+        <p style="font-size:0.72rem;color:var(--tx-4);margin-top:8px;line-height:1.6">Tabular figures only.
+          Applied via <span class="ds-code">.num</span>, <span class="ds-code">.mono</span>, <span class="ds-code">[data-num]</span>.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="ds-sec"><h2>Scale</h2>
+    <div class="spec"><div class="ex" style="font-size:2.2rem;font-weight:700;line-height:1;font-family:var(--mono);font-variant-numeric:tabular-nums">87.4</div><div class="mt">score<br>2.2rem / 700 / mono</div></div>
+    <div class="spec"><div class="ex" style="font-size:1.5rem;font-weight:700;line-height:1;font-family:var(--mono);font-variant-numeric:tabular-nums">1,284</div><div class="mt">stat value<br>1.5rem / 700 / mono</div></div>
+    <div class="spec"><div class="ex" style="font-size:1.1rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;opacity:0.9">Urbanyx</div><div class="mt">brand<br>1.1rem / 600 / +0.08em</div></div>
+    <div class="spec"><div class="ex" style="font-size:0.95rem">Search an address or draw a polygon</div><div class="mt">input<br>0.95rem / 400</div></div>
+    <div class="spec"><div class="ex" style="font-size:0.85rem;font-weight:700">Run analysis</div><div class="mt">button<br>0.85rem / 700</div></div>
+    <div class="spec"><div class="ex" style="font-size:0.8rem;line-height:1.6;color:var(--tx-2)">Body copy inside a panel card, set at 1.6 line height so dense readouts stay scannable.</div><div class="mt">body<br>0.8rem / 400 / 1.6</div></div>
+    <div class="spec"><div class="ex" style="font-size:0.7rem;color:var(--tx-3)">Secondary label · 0.7rem</div><div class="mt">label<br>0.7rem / 400</div></div>
+    <div class="spec"><div class="ex" style="font-size:0.65rem;color:var(--tx-4)">Metadata, timestamps, row counts</div><div class="mt">meta<br>0.65rem / 400</div></div>
+    <div class="spec"><div class="ex" style="font-size:0.6rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--tx-5)">Section label</div><div class="mt">eyebrow<br>0.6rem / 700 / +0.12em</div></div>
+  </div>
+
+  <div class="ds-sec"><h2>Why tabular</h2>
+    <table class="align">
+      <tr><td>Built area</td><td class="mono">12,480 m²</td></tr>
+      <tr><td>Footprint</td><td class="mono">3,105 m²</td></tr>
+      <tr><td>Coverage</td><td class="mono">41.2 %</td></tr>
+      <tr><td>Floors</td><td class="mono">9</td></tr>
+    </table>
+    <p class="ds-note">Numeric columns align on the decimal because the mono face is tabular. This is
+      applied to numeric-only cells only — mixed cells that also hold addresses or owner names
+      (<span class="ds-code">.pfc-val</span>, <span class="ds-code">.info-value</span>) stay in Google Sans so
+      Georgian text renders correctly.</p>
+  </div>
+</body></html>

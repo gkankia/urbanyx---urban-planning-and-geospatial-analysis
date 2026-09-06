@@ -1,0 +1,96 @@
+<!-- @dsCard group="Components" name="Search" subtitle="Hero bar, docked bar, suggestions, matched chip" -->
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<title>Urbanyx — Search</title>__BASE__
+<style>
+  .search-wrap{position:relative;width:100%;max-width:520px}
+  .search-bar{width:100%;display:flex;align-items:center;background:var(--glass-bg-search);
+    backdrop-filter:var(--glass-blur-search);-webkit-backdrop-filter:var(--glass-blur-search);
+    border:1px solid var(--line-1);border-radius:50px;padding:7px 7px 7px 16px;gap:9px;
+    box-shadow:0 8px 32px rgba(0,0,0,0.30), inset 0 1px 0 rgba(255,255,255,0.13);
+    transition:border-color .28s ease,background .28s ease,box-shadow .32s ease,transform .32s var(--ease-spring)}
+  .search-bar.focus{background:rgba(22,22,28,0.72);border-color:rgba(167,139,250,0.55);
+    box-shadow:0 12px 44px rgba(0,0,0,0.42), inset 0 1px 0 rgba(255,255,255,0.16), 0 0 0 3px rgba(167,139,250,0.22);
+    transform:translateY(-1px)}
+  .search-ic{flex-shrink:0;color:var(--tx-3);transition:color .2s}
+  .search-bar.focus .search-ic{color:rgba(199,180,252,0.9)}
+  .search-bar input{flex:1;background:none;border:none;outline:none;color:#fff;font-size:0.95rem;
+    font-family:inherit;min-width:0;text-shadow:0 1px 2px rgba(0,0,0,0.35)}
+  .search-bar input::placeholder{color:var(--tx-3)}
+  .search-btn{background:#fff;color:#0a0a0a;border:none;border-radius:50px;padding:8px 18px;
+    font-size:0.82rem;font-weight:600;font-family:inherit;cursor:pointer;white-space:nowrap;
+    box-shadow:0 2px 8px rgba(0,0,0,0.22)}
+  .suggest{margin-top:8px;background:rgba(16,16,20,0.72);backdrop-filter:blur(26px) saturate(180%);
+    -webkit-backdrop-filter:blur(26px) saturate(180%);border:1px solid rgba(255,255,255,0.12);
+    border-radius:16px;box-shadow:0 16px 44px rgba(0,0,0,0.46), inset 0 1px 0 rgba(255,255,255,0.08);
+    overflow:hidden;padding:5px;max-width:520px}
+  .ss-item{display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:11px;cursor:pointer;
+    color:rgba(255,255,255,0.88);font-size:0.86rem;transition:background .12s}
+  .ss-item.active,.ss-item:hover{background:rgba(167,139,250,0.18)}
+  .ss-ic{flex-shrink:0;opacity:.65;width:16px;text-align:center}
+  .ss-tx{min-width:0;flex:1}
+  .ss-nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ss-sub{font-size:0.7rem;color:rgba(255,255,255,0.42);margin-top:1px}
+  .brand-hero{color:#fff;font-size:1.1rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;
+    opacity:.9;text-shadow:0 2px 12px rgba(0,0,0,0.4)}
+  .hero{display:flex;flex-direction:column;align-items:center;gap:16px;padding:44px 20px}
+  .mpc{display:inline-flex;align-items:center;gap:8px;padding:8px 10px 8px 14px;background:rgba(20,20,22,0.92);
+    backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.14);border-radius:50px;
+    box-shadow:0 6px 24px rgba(0,0,0,0.4);font-size:0.82rem;color:#fff}
+  .mpc-label{color:var(--tx-3);flex-shrink:0}
+  .mpc button{background:none;border:none;color:var(--tx-4);cursor:pointer;font-size:0.9rem;padding:0 3px;font-family:inherit}
+  .frame{border:1px solid var(--line-3);border-radius:var(--r-lg);padding:22px;background:rgba(0,0,0,0.12)}
+</style></head>
+<body class="ds-map">
+  <div class="ds-head"><img src="__LOGO_MARK__" alt=""><h1>Search</h1></div>
+  <p class="ds-sub">The search bar is the entry point to everything. It opens centred over a blurred map,
+    then springs to the top-left corner once a place is chosen — the same element, two positions.</p>
+
+  <div class="ds-sec"><h2>Hero state</h2>
+    <div class="frame">
+      <div class="hero">
+        <div class="brand-hero">Urbanyx</div>
+        <div class="search-wrap">
+          <div class="search-bar"><span class="search-ic">⌕</span>
+            <input placeholder="Search an address, district or coordinates" value="">
+            <button class="search-btn">Search</button></div>
+        </div>
+      </div>
+    </div>
+    <p class="ds-note">Max-width 520px, centred, over <span class="ds-code">#map-blur</span> at
+      blur(8px) + 40% black. The blur clears over 0.8s once the map becomes the subject.</p>
+  </div>
+
+  <div class="ds-sec"><h2>Focused</h2>
+    <div class="frame">
+      <div class="search-wrap">
+        <div class="search-bar focus"><span class="search-ic">⌕</span>
+          <input value="Vake, Tbilisi"><button class="search-btn">Search</button></div>
+        <div class="suggest">
+          <div class="ss-item active"><span class="ss-ic">◎</span><span class="ss-tx"><span class="ss-nm">Vake District</span><div class="ss-sub">Tbilisi · district</div></span></div>
+          <div class="ss-item"><span class="ss-ic">⌂</span><span class="ss-tx"><span class="ss-nm">Vake Park</span><div class="ss-sub">Tbilisi · park</div></span></div>
+          <div class="ss-item"><span class="ss-ic">⌖</span><span class="ss-tx"><span class="ss-nm">Chavchavadze Ave 37</span><div class="ss-sub">Vake, Tbilisi · address</div></span></div>
+        </div>
+      </div>
+    </div>
+    <p class="ds-note">Focus keeps the dark glass and adds a violet ring — it never flips to white,
+      because white text has to survive whatever basemap is underneath.</p>
+  </div>
+
+  <div class="ds-sec"><h2>Docked</h2>
+    <div class="frame" style="display:flex">
+      <div class="search-wrap" style="max-width:300px">
+        <div class="search-bar"><span class="search-ic">⌕</span><input value="Vake, Tbilisi"></div>
+      </div>
+    </div>
+    <p class="ds-note">Compact at top-left, 14px inset, max-width 300px — growing to 392px on focus.
+      The Search button and brand drop away; the standalone search FAB hides while this is open.</p>
+  </div>
+
+  <div class="ds-sec"><h2>Matched place</h2>
+    <div class="frame" style="display:flex;justify-content:center">
+      <div class="mpc"><span class="mpc-label">Showing</span> Vake District, Tbilisi <button>×</button></div>
+    </div>
+    <p class="ds-note">Confirms what the map snapped to when the match wasn't exact. Top-centre, dismissible,
+      never blocks the map.</p>
+  </div>
+</body></html>

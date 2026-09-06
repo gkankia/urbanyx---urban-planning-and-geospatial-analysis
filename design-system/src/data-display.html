@@ -1,0 +1,108 @@
+<!-- @dsCard group="Components" name="Data display" subtitle="Score, stat grid, badges, legends, status" -->
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<title>Urbanyx — Data display</title>__BASE__
+<style>
+  .card{background:var(--glass-bg-card);backdrop-filter:var(--glass-blur-card);border:1px solid var(--line-2);
+    border-radius:var(--glass-radius);padding:14px 16px;font-size:0.8rem;line-height:1.6}
+  .card-label{font-size:0.6rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--tx-5);margin-bottom:12px}
+  .score-wrap{display:flex;align-items:center;gap:16px}
+  .score-meta{flex:1}
+  .score-num{font-size:2.2rem;font-weight:700;line-height:1;font-family:var(--mono);font-variant-numeric:tabular-nums}
+  .score-sub{font-size:0.7rem;color:var(--tx-4);margin-top:2px}
+  .score-verdict{font-size:0.78rem;font-weight:600;margin-top:5px}
+  .dash-stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;max-width:360px}
+  .dash-stat{background:var(--fill-2);border:1px solid rgba(255,255,255,0.07);border-radius:10px;padding:12px 14px}
+  .dash-stat-val{font-size:1.5rem;font-weight:700;color:#fff;line-height:1;margin-bottom:3px;
+    font-family:var(--mono);font-variant-numeric:tabular-nums}
+  .dash-stat-label{font-size:0.65rem;color:var(--tx-4)}
+  .solar-badge{padding:6px 9px;border-radius:8px;background:rgba(251,191,36,0.07);border:1px solid rgba(251,191,36,0.18);max-width:250px}
+  .solar-badge-header{display:flex;align-items:baseline;justify-content:space-between}
+  .solar-badge-title{font-size:0.68rem;color:rgba(251,191,36,0.8);font-weight:600}
+  .solar-badge-pct{font-size:0.95rem;font-weight:700;color:var(--warn);font-family:var(--mono)}
+  .solar-badge-desc{font-size:0.61rem;color:var(--tx-5);margin-top:2px}
+  .plan-badge{font-size:0.62rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;padding:3px 8px;border-radius:5px}
+  .plan-badge.free{background:var(--fill-1);color:var(--tx-4)}
+  .plan-badge.pro{background:rgba(167,139,250,0.18);color:var(--brand-violet)}
+  .legend-row{display:flex;align-items:center;gap:8px;font-size:0.75rem;color:rgba(255,255,255,0.45);padding:2px 0}
+  .legend-swatch{width:22px;height:7px;border-radius:3px;flex-shrink:0}
+  .relief-legend-bar{width:100%;max-width:240px;height:8px;border-radius:4px;display:block;
+    background:linear-gradient(90deg,#34d399,#86efac,#fbbf24,#f97316,#ef4444)}
+  .relief-legend-labels{display:flex;justify-content:space-between;font-size:0.6rem;color:var(--tx-4);margin-top:3px;max-width:240px}
+  .status-pill{display:inline-flex;align-items:center;gap:7px;background:var(--glass-bg);
+    backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,0.1);border-radius:20px;
+    padding:5px 14px 5px 10px;font-size:0.7rem;color:var(--tx-2);white-space:nowrap}
+  .spinner{display:inline-block;width:11px;height:11px;border:1.5px solid rgba(167,139,250,0.3);
+    border-top-color:var(--brand-violet);border-radius:50%;animation:spin .7s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .autosave-chip{display:inline-flex;align-items:center;gap:6px;background:rgba(10,10,16,0.88);
+    backdrop-filter:blur(12px);border:1px solid var(--line-2);border-radius:20px;padding:5px 8px 5px 9px;
+    color:var(--tx-3);font-size:0.68rem;font-weight:500}
+</style></head>
+<body class="ds-map">
+  <div class="ds-head"><img src="__LOGO_MARK__" alt=""><h1>Data display</h1></div>
+  <p class="ds-sub">Every number in the product is monospaced and tabular. Colour carries the verdict;
+    the figure itself stays white so the eye reads the value before the judgement.</p>
+
+  <div class="ds-sec"><h2>Score</h2>
+    <div class="card" style="max-width:290px">
+      <div class="card-label">Walkability</div>
+      <div class="score-wrap">
+        <svg width="60" height="60" viewBox="0 0 42 42"><circle cx="21" cy="21" r="15.9" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="7"/><circle cx="21" cy="21" r="15.9" fill="none" stroke="#a78bfa" stroke-width="7" stroke-dasharray="74 100" stroke-dashoffset="25" transform="rotate(-90 21 21)" stroke-linecap="round"/></svg>
+        <div class="score-meta">
+          <div class="score-num" style="color:var(--brand-violet)">74</div>
+          <div class="score-sub">of 100 · 12 amenities within 800 m</div>
+          <div class="score-verdict" style="color:var(--ok)">Very walkable</div>
+        </div>
+      </div>
+    </div>
+    <p class="ds-note">Donut stroke and figure share one colour, drawn from the sequential scale.
+      The verdict line is the only place the semantic green/amber/red appears.</p>
+  </div>
+
+  <div class="ds-sec"><h2>Stat grid</h2>
+    <div class="dash-stat-grid">
+      <div class="dash-stat"><div class="dash-stat-val">1,284</div><div class="dash-stat-label">Buildings analysed</div></div>
+      <div class="dash-stat"><div class="dash-stat-val">41.2%</div><div class="dash-stat-label">Site coverage</div></div>
+      <div class="dash-stat"><div class="dash-stat-val">9</div><div class="dash-stat-label">Max floors</div></div>
+      <div class="dash-stat"><div class="dash-stat-val">512m</div><div class="dash-stat-label">Mean elevation</div></div>
+    </div>
+    <p class="ds-note">Two columns, 8px gap. Value 1.5rem/700 mono, label 0.65rem at 35% — the ratio is
+      what makes a grid of four scan as one object.</p>
+  </div>
+
+  <div class="ds-sec"><h2>Badges</h2>
+    <div class="ds-row" style="align-items:flex-start">
+      <div class="solar-badge">
+        <div class="solar-badge-header"><span class="solar-badge-title">Solar potential</span><span class="solar-badge-pct">68%</span></div>
+        <div class="solar-badge-desc">Roof area receiving &gt;4 kWh/m²/day</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;padding-top:6px">
+        <span class="plan-badge free">Free</span><span class="plan-badge pro">Pro</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="ds-sec"><h2>Legends</h2>
+    <div class="ds-row" style="gap:34px;align-items:flex-start">
+      <div>
+        <div class="legend-row"><span class="legend-swatch" style="background:#a78bfa"></span>Residential</div>
+        <div class="legend-row"><span class="legend-swatch" style="background:#818cf8"></span>Commercial</div>
+        <div class="legend-row"><span class="legend-swatch" style="background:#38bdf8"></span>Institutional</div>
+        <div class="legend-row"><span class="legend-swatch" style="background:#34d399"></span>Green space</div>
+      </div>
+      <div style="flex:1;max-width:240px">
+        <span class="relief-legend-bar"></span>
+        <div class="relief-legend-labels"><span>0°</span><span>slope</span><span>35°</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="ds-sec"><h2>Status</h2>
+    <div class="ds-row" style="align-items:center">
+      <span class="status-pill"><span class="spinner"></span> Loading parcels — 8,204 of 14,308</span>
+      <span class="autosave-chip">✓ Saved</span>
+    </div>
+    <p class="ds-note">The map status pill is pointer-events:none and fades at 0.18s — it reports,
+      it never intercepts a click on the map.</p>
+  </div>
+</body></html>

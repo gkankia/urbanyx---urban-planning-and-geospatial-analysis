@@ -8650,7 +8650,7 @@ function toggleMeasureFlyout(){
   if(fo.classList.contains('open')){fo.classList.remove('open');if(!_measureMode)btn.classList.remove('active');return;}
   const r=btn.getBoundingClientRect();
   fo.style.top=r.top+'px';
-  fo.style.right=(window.innerWidth-r.left+8)+'px';
+  fo.style.right=(window.innerWidth-r.left+10)+'px';
   fo.classList.add('open');btn.classList.add('active');
 }
 function _measureBtnStates(){
@@ -12736,7 +12736,7 @@ function showWindInfo(key,e){
   popup.textContent=t;
   popup.style.display='block';
   const r=e.target.getBoundingClientRect();
-  let top=r.bottom+6,left=r.left;
+  let top=r.bottom+10,left=r.left;
   if(left+230>window.innerWidth)left=window.innerWidth-238;
   if(top+120>window.innerHeight)top=r.top-90;
   popup.style.top=top+'px';popup.style.left=left+'px';
@@ -16232,7 +16232,7 @@ function _histInfoShow(key,anchor){
   document.body.appendChild(pop);
   const r=anchor.getBoundingClientRect();
   pop.style.left=Math.min(r.left,window.innerWidth-245)+'px';
-  pop.style.top=Math.min(r.bottom+6,window.innerHeight-pop.offsetHeight-10)+'px';
+  pop.style.top=Math.min(r.bottom+10,window.innerHeight-pop.offsetHeight-10)+'px';
 }
 
 // ── History: exports ─────────────────────────────────────────────────────────
@@ -17142,7 +17142,7 @@ function _rptMenuToggle(btn){
   // tooltips carry the meaning (matches the rail's own icon-only treatment).
   const icS='width:39px;height:39px;display:block;pointer-events:none';
   m=document.createElement('div');m.id='rpt-menu';
-  m.style.cssText='position:fixed;left:52px;z-index:220;display:flex;align-items:center;gap:4px;background:var(--glass-bg,rgba(8,8,8,0.9));backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,0.09);border-radius:12px;padding:6px;box-shadow:0 8px 28px rgba(0,0,0,0.45)';
+  m.style.cssText='position:fixed;left:82px;z-index:220;display:flex;align-items:center;gap:4px;background:var(--glass-bg,rgba(8,8,8,0.9));backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,0.09);border-radius:12px;padding:6px;box-shadow:0 8px 28px rgba(0,0,0,0.45)';
   m.innerHTML=
     `<button class="rpt-ico-btn" title="${isKa?'PDF რეპორტის ექსპორტი':'Export PDF report'}" onclick="_rptMenuToggle();exportReportPDF()"><img src="analysis-logos/pdf-report.svg" style="${icS}"></button>`+
     `<button class="rpt-ico-btn" title="${isKa?'აქტიური ფენები · GeoJSON':'Active layers · GeoJSON'}" onclick="_rptMenuToggle();_rptExportGeoJSON()"><img src="analysis-logos/export-vector.svg" style="${icS}"></button>`+
@@ -17150,7 +17150,7 @@ function _rptMenuToggle(btn){
   document.body.appendChild(m);
   const r=btn?.getBoundingClientRect();
   if(r){
-    m.style.left=Math.max(8,Math.min(r.right+8,window.innerWidth-m.offsetWidth-8))+'px';
+    m.style.left=Math.max(8,Math.min(r.right+10,window.innerWidth-m.offsetWidth-8))+'px';
     m.style.top=Math.max(8,Math.min(r.top+r.height/2-m.offsetHeight/2,window.innerHeight-m.offsetHeight-8))+'px';
   }else{ m.style.top='120px'; }
   document.getElementById('nav-report-icon')?.style.setProperty('opacity','1');

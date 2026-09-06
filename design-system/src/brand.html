@@ -1,0 +1,78 @@
+<!-- @dsCard group="Brand" name="Logo & lockup" subtitle="Mark, wordmark, clearspace, endorsement" -->
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<title>Urbanyx — Brand</title>__BASE__
+<style>
+  .lockup{display:flex;align-items:center;gap:10px}
+  .lockup .mark{height:52px;width:auto;display:block}
+  .lockup .word{height:40px;width:auto;display:block}
+  .stage{border:1px solid var(--line-2);border-radius:var(--r-lg);padding:34px 30px;
+    display:flex;align-items:center;justify-content:center;min-height:150px}
+  .stage.on-dark{background:var(--bg)}
+  .stage.on-glass{background:var(--glass-bg);backdrop-filter:var(--glass-blur)}
+  .stage.on-light{background:#f4f4f6}
+  .clearspace{position:relative;display:inline-flex;padding:26px;border:1px dashed rgba(167,139,250,0.45);border-radius:8px}
+  .clearspace::after{content:'x = mark height ÷ 2';position:absolute;right:-4px;bottom:-20px;
+    font-size:0.58rem;color:var(--brand-violet);letter-spacing:0.04em}
+  .rules{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .rule{border:1px solid var(--line-3);border-radius:var(--r-md);padding:12px 14px;font-size:0.72rem;line-height:1.6}
+  .rule b{display:block;font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:5px}
+  .rule.do b{color:var(--ok)} .rule.dont b{color:var(--danger-soft)}
+  .rule span{color:var(--tx-3)}
+</style></head>
+<body class="ds-map">
+  <div class="ds-head"><img src="__LOGO_MARK__" alt=""><h1>Brand</h1></div>
+  <p class="ds-sub">The mark is a location pin drawn in white line on a blue gradient tile — the only
+    place blue appears in the whole product. It always leads; the wordmark follows on its right, never above.</p>
+
+  <div class="ds-sec"><h2>Primary lockup</h2>
+    <div class="stage on-dark">
+      <div class="lockup"><img class="mark" src="__LOGO_MARK__" alt="Urbanyx"><img class="word" src="__LOGO_TEXT__" alt="Urbanyx"></div>
+    </div>
+    <p class="ds-note">Wordmark is set at roughly 0.78× the mark height, optically baseline-aligned —
+      not box-aligned. Gap is 10px at a 52px mark, scaling proportionally.</p>
+  </div>
+
+  <div class="ds-sec"><h2>Mark alone</h2>
+    <div class="ds-row">
+      <div class="stage on-glass" style="flex:1"><div class="clearspace"><img class="mark" src="__LOGO_MARK__" alt="Urbanyx" style="height:44px"></div></div>
+      <div class="stage on-light" style="flex:1"><img class="mark" src="__LOGO_MARK__" alt="Urbanyx" style="height:44px"></div>
+    </div>
+    <p class="ds-note">Use the mark alone at 28px and below — in the app header, the browser tab,
+      and any map overlay where the wordmark would not survive the basemap behind it.</p>
+  </div>
+
+  <div class="ds-sec"><h2>In product</h2>
+    <div class="stage on-glass">
+      <div class="lockup"><img class="mark" src="__LOGO_MARK__" alt="" style="height:28px"><img class="word" src="__LOGO_TEXT__" alt="Urbanyx" style="height:22px"></div>
+    </div>
+    <p class="ds-note">App header size: 28px mark / 22px wordmark. Footer drops to 24 / 18.</p>
+  </div>
+
+  <div class="ds-sec"><h2>Rules</h2>
+    <div class="rules">
+      <div class="rule do"><b>Do</b><span>Place on the dark canvas, on glass, or on a photographic basemap dark enough to hold white type.</span></div>
+      <div class="rule do"><b>Do</b><span>Keep clearspace of half the mark height on every side.</span></div>
+      <div class="rule dont"><b>Don't</b><span>Recolour the mark, add a drop shadow, or set it in the violet accent.</span></div>
+      <div class="rule dont"><b>Don't</b><span>Stack the wordmark under the mark, or letterspace it to fill a width.</span></div>
+    </div>
+  </div>
+
+  <div class="ds-sec"><h2>Mark colour</h2>
+    <div class="ds-row" style="align-items:center;gap:16px">
+      <span style="width:66px;height:66px;border-radius:14px;display:block;
+        background:radial-gradient(circle at 50% 78%, #0a63c4, #004aad 62%)"></span>
+      <div style="font-size:0.75rem;color:var(--tx-3);line-height:1.7;max-width:52ch">
+        <span class="ds-code" style="font-size:0.68rem;color:var(--tx-2)">#004AAD</span>
+        with a lighter radial highlight toward the base of the pin.<br>
+        <b style="color:var(--tx-2);font-weight:600">This blue is asset-only.</b> It lives inside the mark and
+        nowhere else — the interface accent is violet. Never sample the mark to colour a button, a
+        link or a map layer.
+      </div>
+    </div>
+  </div>
+
+  <div class="ds-sec"><h2>Endorsement</h2>
+    <p class="ds-note">Urbanyx is a Z.axis product. The Z.axis mark appears once, in the footer only,
+      in white at 60% opacity — never beside the Urbanyx lockup in a header.</p>
+  </div>
+</body></html>

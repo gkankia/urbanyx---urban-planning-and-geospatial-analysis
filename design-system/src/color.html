@@ -1,0 +1,91 @@
+<!-- @dsCard group="Foundations" name="Colour" subtitle="Brand, canvas, text ramp, data scales" -->
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<title>Urbanyx — Colour</title>__BASE__
+<style>
+  .sw-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:10px}
+  .sw{border:1px solid var(--line-3);border-radius:var(--r-md);overflow:hidden;background:var(--fill-3)}
+  .sw .chip{height:56px;display:block}
+  .sw .meta{padding:8px 10px 9px}
+  .sw .nm{font-size:0.7rem;font-weight:600;color:var(--tx-2)}
+  .sw .hex{font-family:var(--mono);font-size:0.6rem;color:var(--tx-4);margin-top:2px}
+  .sw .use{font-size:0.6rem;color:var(--tx-5);margin-top:4px;line-height:1.45}
+  .ramp{display:flex;border-radius:var(--r-md);overflow:hidden;border:1px solid var(--line-3)}
+  .ramp div{flex:1;height:36px}
+  .ramp-lbl{display:flex;justify-content:space-between;font-family:var(--mono);font-size:0.58rem;color:var(--tx-4);margin-top:5px}
+  .txrow{display:flex;flex-direction:column;gap:7px}
+  .txrow p{font-size:0.86rem}
+</style></head>
+<body class="ds-map">
+  <div class="ds-head"><img src="__LOGO_MARK__" alt=""><h1>Colour</h1></div>
+  <p class="ds-sub">Urbanyx is a dark-only product: the interface floats over a live basemap, so every
+    surface is translucent and every colour is chosen to stay legible over satellite imagery, street
+    tiles and terrain alike.</p>
+
+  <div class="ds-sec"><h2>Brand</h2>
+    <div class="sw-grid">
+      <div class="sw"><span class="chip" style="background:#a78bfa"></span><div class="meta"><div class="nm">Violet</div><div class="hex">#a78bfa</div><div class="use">Primary accent. Focus rings, active nav, Pro.</div></div></div>
+      <div class="sw"><span class="chip" style="background:#c4b5fd"></span><div class="meta"><div class="nm">Violet soft</div><div class="hex">#c4b5fd</div><div class="use">Hover text on violet surfaces.</div></div></div>
+      <div class="sw"><span class="chip" style="background:#8b5cf6"></span><div class="meta"><div class="nm">Violet deep</div><div class="hex">#8b5cf6</div><div class="use">Pressed states, dense data marks.</div></div></div>
+      <div class="sw"><span class="chip" style="background:#211a3a"></span><div class="meta"><div class="nm">Ink</div><div class="hex">#211a3a</div><div class="use">Text on solid violet fills.</div></div></div>
+      <div class="sw"><span class="chip" style="background:#6366f1"></span><div class="meta"><div class="nm">Indigo</div><div class="hex">#6366f1</div><div class="use">Secondary. Switches, data actions.</div></div></div>
+      <div class="sw"><span class="chip" style="background:#a5b4fc"></span><div class="meta"><div class="nm">Indigo soft</div><div class="hex">#a5b4fc</div><div class="use">Label text on indigo-tinted buttons.</div></div></div>
+      <div class="sw"><span class="chip" style="background:#818cf8"></span><div class="meta"><div class="nm">Indigo light</div><div class="hex">#818cf8</div><div class="use">Slider thumbs, second series.</div></div></div>
+    </div>
+    <div class="ds-row" style="margin-top:12px;align-items:center;gap:12px">
+      <span style="width:44px;height:44px;border-radius:10px;flex-shrink:0;
+        background:radial-gradient(circle at 50% 78%, #0a63c4, #004aad 62%)"></span>
+      <div style="font-size:0.68rem;color:var(--tx-4);line-height:1.6;max-width:56ch">
+        <span class="ds-code" style="color:var(--tx-2)">#004AAD</span> — the logo mark's blue.
+        Asset-only: it never appears in the interface, and no UI element may sample it.
+      </div>
+    </div>
+    <p class="ds-note">Violet carries state; indigo carries structure. Never use both as the accent on
+      one surface — pick the one that matches what the control does.</p>
+  </div>
+
+  <div class="ds-sec"><h2>Canvas</h2>
+    <div class="sw-grid">
+      <div class="sw"><span class="chip" style="background:#0a0a0a"></span><div class="meta"><div class="nm">Canvas</div><div class="hex">#0a0a0a</div><div class="use">Body under the map.</div></div></div>
+      <div class="sw"><span class="chip" style="background:#111"></span><div class="meta"><div class="nm">Raised</div><div class="hex">#111111</div><div class="use">Modal box — opaque, no blur.</div></div></div>
+      <div class="sw"><span class="chip" style="background:rgba(18,18,22,0.98)"></span><div class="meta"><div class="nm">Elevated</div><div class="hex">rgba(18,18,22,.98)</div><div class="use">Onboarding card.</div></div></div>
+    </div>
+  </div>
+
+  <div class="ds-sec"><h2>Text ramp</h2>
+    <div class="txrow">
+      <p style="color:var(--tx-1)">Primary — values, headings, anything the eye lands on first <span class="ds-code">#fff</span></p>
+      <p style="color:var(--tx-2)">Secondary — body copy, panel content <span class="ds-code">72%</span></p>
+      <p style="color:var(--tx-3)">Tertiary — placeholders, inactive icons <span class="ds-code">50%</span></p>
+      <p style="color:var(--tx-4)">Quaternary — captions, metadata <span class="ds-code">35%</span></p>
+      <p style="color:var(--tx-5)">Faint — section labels, disabled <span class="ds-code">28%</span></p>
+    </div>
+    <p class="ds-note">Five steps of white, never grey hex values — opacity lets the basemap show
+      through consistently. Text below 35% is decorative and must never be the only carrier of meaning.</p>
+  </div>
+
+  <div class="ds-sec"><h2>Semantic</h2>
+    <div class="sw-grid">
+      <div class="sw"><span class="chip" style="background:#34d399"></span><div class="meta"><div class="nm">Good</div><div class="hex">#34d399</div><div class="use">Passing scores, healthy condition.</div></div></div>
+      <div class="sw"><span class="chip" style="background:#fbbf24"></span><div class="meta"><div class="nm">Caution</div><div class="hex">#fbbf24</div><div class="use">Solar, marginal condition.</div></div></div>
+      <div class="sw"><span class="chip" style="background:#f97316"></span><div class="meta"><div class="nm">Heat</div><div class="hex">#f97316</div><div class="use">Temperature, exposure gauges.</div></div></div>
+      <div class="sw"><span class="chip" style="background:#ef4444"></span><div class="meta"><div class="nm">Critical</div><div class="hex">#ef4444</div><div class="use">Failure, destructive actions.</div></div></div>
+      <div class="sw"><span class="chip" style="background:#3b82f6"></span><div class="meta"><div class="nm">Transit</div><div class="hex">#3b82f6</div><div class="use">Bus routes, network links.</div></div></div>
+      <div class="sw"><span class="chip" style="background:#38bdf8"></span><div class="meta"><div class="nm">Sky</div><div class="hex">#38bdf8</div><div class="use">Wind, water, air.</div></div></div>
+    </div>
+  </div>
+
+  <div class="ds-sec"><h2>Data scales</h2>
+    <div style="display:grid;gap:16px">
+      <div>
+        <div class="ramp"><div style="background:#34d399"></div><div style="background:#86efac"></div><div style="background:#fbbf24"></div><div style="background:#f97316"></div><div style="background:#ef4444"></div></div>
+        <div class="ramp-lbl"><span>Sequential — slope, exposure, risk</span><span>low → high</span></div>
+      </div>
+      <div>
+        <div class="ramp"><div style="background:#a78bfa"></div><div style="background:#818cf8"></div><div style="background:#38bdf8"></div><div style="background:#34d399"></div><div style="background:#fbbf24"></div></div>
+        <div class="ramp-lbl"><span>Categorical — land use, diversity, mix</span><span>5 max</span></div>
+      </div>
+    </div>
+    <p class="ds-note">Categorical stops beyond five become unreadable at map scale — group the tail
+      into “Other” instead of extending the scale.</p>
+  </div>
+</body></html>

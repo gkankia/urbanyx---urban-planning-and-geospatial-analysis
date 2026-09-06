@@ -1,0 +1,67 @@
+<!-- @dsCard group="Foundations" name="Surfaces & elevation" subtitle="Glass tiers, radius, hairlines, motion" -->
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<title>Urbanyx — Surfaces</title>__BASE__
+<style>
+  .tier{border-radius:var(--glass-radius);padding:16px 18px;min-height:104px;display:flex;
+    flex-direction:column;justify-content:space-between}
+  .tier .t{font-size:0.75rem;font-weight:600}
+  .tier .d{font-family:var(--mono);font-size:0.58rem;color:var(--tx-4);line-height:1.6}
+  .t1{background:var(--glass-bg);backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);border:1px solid var(--glass-border);box-shadow:var(--glass-shadow)}
+  .t2{background:var(--glass-bg-card);backdrop-filter:var(--glass-blur-card);-webkit-backdrop-filter:var(--glass-blur-card);border:1px solid var(--line-2)}
+  .t3{background:var(--glass-bg-search);backdrop-filter:var(--glass-blur-search);-webkit-backdrop-filter:var(--glass-blur-search);border:1px solid var(--line-1);box-shadow:0 8px 32px rgba(0,0,0,0.30), inset 0 1px 0 rgba(255,255,255,0.13)}
+  .t4{background:var(--bg-raised);border:1px solid rgba(255,255,255,0.11);box-shadow:0 32px 80px rgba(0,0,0,0.7);border-radius:var(--r-xl)}
+  .radii{display:flex;gap:12px;flex-wrap:wrap}
+  .radii div{width:74px;height:56px;background:var(--fill-1);border:1px solid var(--line-2);
+    display:flex;align-items:flex-end;justify-content:center;padding-bottom:6px;
+    font-family:var(--mono);font-size:0.56rem;color:var(--tx-4)}
+  .fills{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+  .fills div{border-radius:var(--r-md);padding:14px;font-family:var(--mono);font-size:0.58rem;color:var(--tx-3)}
+</style></head>
+<body class="ds-map">
+  <div class="ds-head"><img src="__LOGO_MARK__" alt=""><h1>Surfaces</h1></div>
+  <p class="ds-sub">Everything the user touches is glass sitting on a moving map. Four tiers, each with
+    a fixed blur and opacity — the tier tells you how far the surface is from the map, and nothing else varies.</p>
+
+  <div class="ds-sec"><h2>Glass tiers</h2>
+    <div class="ds-grid" style="grid-template-columns:repeat(auto-fit,minmax(210px,1fr))">
+      <div class="tier t1"><span class="t">1 · Chrome</span><span class="d">rgba(8,8,8,.82)<br>blur(16px)<br>nav, layers, status</span></div>
+      <div class="tier t2"><span class="t">2 · Card</span><span class="d">rgba(8,8,8,.72)<br>blur(18px)<br>panel content</span></div>
+      <div class="tier t3"><span class="t">3 · Search</span><span class="d">rgba(16,16,20,.6)<br>blur(24px) sat(180%)<br>+ inset highlight</span></div>
+      <div class="tier t4"><span class="t">4 · Modal</span><span class="d">#111 — opaque<br>no blur<br>over a dimmed scrim</span></div>
+    </div>
+    <p class="ds-note">Tier 3 saturates as well as blurs, which is what keeps white input text legible over
+      bright satellite tiles. Tier 4 stops being glass on purpose: once a dialog is open the map is no
+      longer the subject.</p>
+  </div>
+
+  <div class="ds-sec"><h2>Radius</h2>
+    <div class="radii">
+      <div style="border-radius:5px">5 · sm</div>
+      <div style="border-radius:9px">9 · md</div>
+      <div style="border-radius:11px">11 · lg</div>
+      <div style="border-radius:18px">18 · xl</div>
+      <div style="border-radius:50px">pill</div>
+    </div>
+    <p class="ds-note">11px is the house radius — it is <span class="ds-code">--glass-radius</span> and every
+      chrome surface uses it. Pills are reserved for things that float free of a panel: the search bar,
+      the matched-place chip, the language toggle.</p>
+  </div>
+
+  <div class="ds-sec"><h2>Hairlines & fills</h2>
+    <div class="fills">
+      <div style="background:var(--fill-1);border:1px solid var(--line-1)">fill 8% / line 14%</div>
+      <div style="background:var(--fill-2);border:1px solid var(--line-2)">fill 4% / line 9%</div>
+      <div style="background:var(--fill-3);border:1px solid var(--line-3)">fill 3% / line 6%</div>
+    </div>
+    <p class="ds-note">Borders are white at low alpha, never a grey — they have to read against both a
+      dark basemap and a bright one.</p>
+  </div>
+
+  <div class="ds-sec"><h2>Motion</h2>
+    <div class="ds-row">
+      <div class="ds-tile" style="flex:1"><div style="font-size:0.72rem;font-weight:600;margin-bottom:4px">Spring</div><div class="ds-code">cubic-bezier(.23,1,.32,1)</div><div class="ds-note" style="margin-top:6px">Anything that moves in space — panels, the search bar docking, modal entry.</div></div>
+      <div class="ds-tile" style="flex:1"><div style="font-size:0.72rem;font-weight:600;margin-bottom:4px">Ease</div><div class="ds-code">ease · 0.15–0.24s</div><div class="ds-note" style="margin-top:6px">Anything that only changes colour or opacity — hover, focus, fades.</div></div>
+      <div class="ds-tile" style="flex:1"><div style="font-size:0.72rem;font-weight:600;margin-bottom:4px">Press</div><div class="ds-code">scale(0.97–0.98) · 0.1s</div><div class="ds-note" style="margin-top:6px">Every button. Nothing else scales.</div></div>
+    </div>
+  </div>
+</body></html>
