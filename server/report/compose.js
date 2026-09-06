@@ -9,6 +9,8 @@ const { PDFDocument, StandardFonts, rgb } = require("pdf-lib");
 const { buildCover, buildBody } = require("./template");
 
 const MARGIN = { top: "20mm", bottom: "18mm", left: "16mm", right: "16mm" };
+// The cover is a full-bleed artwork, so it gets no page margin at all.
+const NO_MARGIN = { top: "0", bottom: "0", left: "0", right: "0" };
 const LAUNCH_ARGS = [
   "--no-sandbox",
   "--disable-setuid-sandbox",
@@ -34,7 +36,7 @@ async function closeBrowser() {
   await _closing;
 }
 
-async function renderOne(html) {
+async function renderOne(html, margin) {
   const b = await browser();
   const page = await b.newPage();
   try {
@@ -46,7 +48,7 @@ async function renderOne(html) {
       format: "A4",
       printBackground: true,
       preferCSSPageSize: false,
-      margin: MARGIN,
+      margin: margin || MARGIN,
       timeout: 30000,
     });
   } finally {
@@ -63,6 +65,8 @@ async function stampFooter(pdfBytes, siteLabel) {
   const rule = rgb(0.882, 0.882, 0.894);
 
   pages.forEach((page, i) => {
+    // Page 1 is the cover artwork; nothing is stamped over it.
+    if (i === 0) return;
     const { width } = page.getSize();
     const m = 45.4;              // 16mm at 72dpi, matching the render margins
     const y = 34;
@@ -100,7 +104,7 @@ function renderReport(payload) {
 
 async function _renderReport(payload) {
   const [coverPdf, bodyPdf] = [
-    await renderOne(buildCover(payload)),
+    await renderOne(buildCover(payload), NO_MARGIN),
     await renderOne(buildBody(payload)),
   ];
 

@@ -17836,6 +17836,8 @@ async function _rptCollect(){
   const brandLogo=await _svgToPng('analysis-logos/urbanyx-zaxis-logo.svg',440).catch(()=>null);
 
   return {
+    // Selects the cover artwork (design-system/report-covers) server-side.
+    lang:lang==='ka'?'ka':'en',
     brand:brandLogo?{logo:brandLogo.url,w:brandLogo.w,h:brandLogo.h}:null,
     issued:_rptDate(new Date()),
     filename:'urbanyx_report'+(subject.parcelCode?'_'+subject.parcelCode.replace(/\./g,''):''),
