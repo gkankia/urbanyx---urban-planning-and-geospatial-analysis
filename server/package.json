@@ -1,7 +1,7 @@
 {
   "name": "parcel-viewer-server",
   "version": "1.0.0",
-  "description": "Parcel Viewer backend — auth, subscriptions, payment webhooks",
+  "description": "Parcel Viewer backend \u2014 auth, subscriptions, payment webhooks",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -16,6 +16,8 @@
     "express": "^4.19.2",
     "express-rate-limit": "^8.5.2",
     "node-cron": "^3.0.3",
-    "node-fetch": "^3.3.2"
+    "node-fetch": "^3.3.2",
+    "pdf-lib": "^1.17.1",
+    "puppeteer": "^23.11.1"
   }
 }

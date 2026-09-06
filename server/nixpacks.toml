@@ -1,0 +1,16 @@
+# Railway builds this service from server/. Chromium is installed as a system
+# package rather than downloaded by Puppeteer: the image stays smaller, the
+# build is faster, and the shared libraries Chromium links against come with it.
+# Without this, the first report render fails with:
+#   error while loading shared libraries: libnss3.so
+[phases.setup]
+nixPkgs = ["nodejs", "chromium"]
+aptPkgs = [
+  "libnss3", "libatk1.0-0", "libatk-bridge2.0-0", "libcups2", "libdrm2",
+  "libxkbcommon0", "libxcomposite1", "libxdamage1", "libxfixes3", "libxrandr2",
+  "libgbm1", "libasound2", "libpango-1.0-0", "libcairo2"
+]
+
+[variables]
+PUPPETEER_SKIP_CHROMIUM_DOWNLOAD = "true"
+PUPPETEER_EXECUTABLE_PATH = "/nix/var/nix/profiles/default/bin/chromium"

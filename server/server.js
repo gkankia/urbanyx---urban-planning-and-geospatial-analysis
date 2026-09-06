@@ -6,6 +6,8 @@ const cors      = require("cors");
 const crypto    = require("crypto");
 const rateLimit = require("express-rate-limit");
 const { createClient } = require("@supabase/supabase-js");
+const { reportRouter } = require("./report/router");
+const { closeBrowser } = require("./report/compose");
 
 const app  = express();
 const PORT = process.env.PORT || 3001;
@@ -49,7 +51,12 @@ const webhookLimiter = rateLimit({
 
 // Raw body must be parsed before json() for webhook signature verification
 app.use("/webhooks", express.raw({ type: "*/*", limit: "512kb" }));
-app.use(express.json({ limit: "256kb" }));
+// The report route carries an inlined map image and parses its own body at a
+// larger limit; everything else stays capped tight.
+app.use((req, res, next) =>
+  req.path.startsWith("/api/report")
+    ? next()
+    : express.json({ limit: "256kb" })(req, res, next));
 app.use(cors({
   origin: ALLOWED_ORIGIN || false,
   credentials: true,
@@ -246,6 +253,15 @@ async function handlePaddleEvent(event) {
 // ── POST /api/paddle/cancel ───────────────────────────────────────────────────
 // Monthly: cancels at end of current billing period.
 // Yearly within 30 days of start: cancels immediately (refund eligible).
+// ── Report export ─────────────────────────────────────────────────────────────
+// Renders the client-facing analysis PDF. Open to any authenticated user; the
+// rate limiter, not a plan, is what protects the renderer. Pass an `isPro`
+// predicate here to gate it again.
+app.use("/api/report", reportRouter({
+  requireAuth,
+  limiter: strictLimiter,
+}));
+
 app.post("/api/paddle/cancel", strictLimiter, requireAuth, async (req, res) => {
   const { data: sub, error } = await supabase
     .from("subscriptions")
@@ -312,3 +328,8 @@ process.on("SIGTERM", () => {
 });
 
 module.exports = app;
+
+// The report renderer holds a Chromium process open between requests; close it
+// on shutdown so the container exits cleanly instead of waiting on the child.
+process.on("SIGTERM", async () => { await closeBrowser(); process.exit(0); });
+process.on("SIGINT",  async () => { await closeBrowser(); process.exit(0); });

@@ -16716,8 +16716,11 @@ function _rptExecutiveSummary(uvi){
   return parts.join(' ');
 }
 
-async function exportReportPDF(){
-  if(!currentUser||currentUser.plan!=='pro'){openPaywall(true);return;}
+// Legacy client-side generator. Kept as the fallback path while the server
+// renderer beds in — see exportReportPDF() at the end of this file.
+async function _exportReportPDFLegacy(){
+  // Reached only as exportReportPDF()'s fallback, which has already checked
+  // sign-in — no plan gate here either, or a fallback would paywall.
   const a=_rptActive();
   if(!a.anyArea&&!a.anyParcel){showToast(lang==='ka'?'აქტიური ანალიზი არ არის':'No active analysis layers to export');return;}
   showToast(lang==='ka'?'რეპორტი მზადდება…':'Composing report…');
@@ -17257,4 +17260,437 @@ function _rptCardLines(id){
   const el=document.getElementById(id);
   if(!el)return[];
   return (el.innerText||"").split("\n").map(s=>s.trim()).filter(s=>s.length>1);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Report export — server-rendered PDF
+//
+// The frontend's only job is to describe what is currently on the map. Every
+// value is formatted here (the server does no localisation) and every section
+// is omitted when its analysis is inactive, so the PDF mirrors the map exactly.
+// Layout lives in server/report/. Payload shape: server/report/PAYLOAD.md.
+// ═══════════════════════════════════════════════════════════════════════════
+
+const _RPT_GRADE_WORD={A:'excellent',B:'good',C:'moderate',D:'limited',E:'poor',F:'very poor'};
+
+function _rptNum(n){return Number(n).toLocaleString(lang==='ka'?'ka-GE':'en-GB');}
+function _rptM2(m2){
+  if(!m2)return null;
+  return m2>=1e6?(m2/1e6).toFixed(2)+' km²':_rptNum(Math.round(m2))+' m²';
+}
+function _rptDate(d){
+  return new Date(d).toLocaleDateString(lang==='ka'?'ka-GE':'en-GB',
+    {day:'numeric',month:'long',year:'numeric'});
+}
+// Drop rows whose value never materialised, so a half-loaded analysis prints
+// the half that exists rather than a column of dashes.
+function _rptRows(pairs){return pairs.filter(([,v])=>v!=null&&v!=='' &&v!=='—');}
+
+// ── the map capture ────────────────────────────────────────────────────────
+// One clean capture, no baked legend: the cover crops it to fill the page and
+// the Map page typesets the legend from data. Passing no groups suppresses the
+// legend card that _histComposeCapture would otherwise draw into the bitmap.
+async function _rptCaptureMap(frameGeom,pinLngLat){
+  const img=await _histCaptureMapImage({groups:[],frameGeom:frameGeom||undefined,pinLngLat});
+  if(!img||!img.url)return null;
+  // The raw capture is the full retina canvas at q0.92 — several MB of base64.
+  // The plate prints 178 mm wide, so 2000 px is already ~285 dpi; anything more
+  // is upload cost for no visible gain.
+  const MAX_W=2000;
+  try{
+    if(img.w<=MAX_W)return{dataUrl:img.url,w:img.w,h:img.h};
+    const bmp=await new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=img.url;});
+    const k=MAX_W/bmp.width;
+    const c=document.createElement('canvas');
+    c.width=Math.round(bmp.width*k);c.height=Math.round(bmp.height*k);
+    const ctx=c.getContext('2d');
+    ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
+    ctx.drawImage(bmp,0,0,c.width,c.height);
+    return{dataUrl:c.toDataURL('image/jpeg',0.85),w:c.width,h:c.height};
+  }catch(_){
+    return{dataUrl:img.url,w:img.w,h:img.h};
+  }
+}
+
+// ── legend, assembled per active layer ─────────────────────────────────────
+function _rptLegendGroups(a){
+  const g=[];
+  if(a.zoning&&window._rptZones&&window._rptZones.length){
+    const seen=new Map();
+    for(const z of window._rptZones){
+      const label=_zoneNameEN(z.kve_zona)||'Zone';
+      if(!seen.has(label))seen.set(label,{color:_zoneInfo(z.kve_zona).f,pct:0});
+      seen.get(label).pct+=Number(z.pct)||0;
+    }
+    const rows=[...seen.entries()].map(([label,v])=>({color:v.color,label:`${label} — ${Math.round(v.pct)}%`}));
+    if(_setbackRingAreaM2)rows.push({color:'#dc2626',label:'3 m setback ring'});
+    g.push({title:'Zoning',rows,note:_noDevZone?'One or more zones are not designated for development':null});
+  }
+  if(a.history)g.push({title:'Transit reliability',
+    rows:[{color:_HIST_OK,shape:'dot',label:'80% or better on time'},
+          {color:_HIST_WARN,shape:'dot',label:'60–80%'},
+          {color:_HIST_BAD,shape:'dot',label:'below 60%'}],
+    note:'Matched arrivals against timetable'});
+  if(a.syntax)g.push({title:'Street connectivity',
+    rows:[{color:'#0284c7',shape:'dot',label:'1 or fewer'},{color:'#16a34a',shape:'dot',label:'2–3'},
+          {color:'#ea580c',shape:'dot',label:'4–5'},{color:'#dc2626',shape:'dot',label:'6 or more'}],
+    note:'Node degree (segments per junction)'});
+  if(a.relief&&(_reliefActiveType==='slope'||_reliefActiveType==='aspect')){
+    g.push({title:'Relief · '+_reliefActiveType,
+      rows:t().slopeClasses.map((c,i)=>({color:t().slopeClassColors[i],label:c.l+' '+c.r}))});
+  }
+  if(a.solar)g.push({title:'Solar zone',
+    rows:[{color:'#d97706',label:'High irradiation'},{color:'#1e3a8a',label:'Low irradiation'}]});
+  const others=[a.osm&&'Urban functions',a.transit&&!a.history&&'Transit stops',a.schools&&'Schools',
+    a.kg&&'Kindergartens',a.crashes&&'Road incidents',a.parking&&'Parking',
+    a.realestate&&'Real estate listings',a.orient&&('Orientation'+(_orientDom?' ('+_orientDom+')':''))]
+    .filter(Boolean);
+  if(others.length)g.push({title:'Other layers',rows:others.map(o=>({label:o}))});
+  const areaLbl=_transitAreaLabel();
+  if(_currentParcelGeoJSON||areaLbl){
+    const rows=[];
+    if(_currentParcelGeoJSON)rows.push({color:'#8b5cf6',label:'Selected parcel'});
+    if(areaLbl)rows.push({label:areaLbl});
+    g.push({title:'Study area',rows});
+  }
+  return g;
+}
+
+// ── methodology, one entry per active analysis ─────────────────────────────
+// Mirrors the conditions the legacy generator used. Relief, solar, wind,
+// canopy and surface temperature had no entries there; they have them here,
+// because a report carrying only those layers otherwise printed sources with
+// no methodology at all.
+function _rptMethodology(a){
+  const m=[];
+  const transitIso=a.isochrone&&typeof _accMode!=='undefined'&&_accMode==='transit';
+  if(_lastNearbyCounts)m.push({title:UVI_NAME,body:`A weighted mean of up to four components, each normalised to 0–1 with a saturating curve and reported on a 0–100 scale: education access (weight 1.0), public transport (1.0, moderated by a route reliability factor), land-use diversity (1.0) and on-street parking (0.75). Weights are renormalised over whichever components have data. Grades: A 80+, B 70–79, C 60–69, D 50–59, E 40–49, F below 40. Counts saturate rather than scale linearly, so a fifth school adds less than a second one.`});
+  if((a.isochrone&&!transitIso)||_lastNearbyCounts)m.push({title:'Walkable catchment',body:`A street-network isochrone around the site (Mapbox Isochrone API) — real walking distance, not a straight-line radius. Large parcels and drawn areas of interest are analysed over their own geometry; running the accessibility isochrone replaces the default catchment with the wider one.`});
+  if(transitIso)m.push({title:'Public-transport isochrone',body:`The area reachable by bus, metro and ropeway from the origin on the TTC network. In-vehicle times use observed segment speeds from recent weeks; waits combine each route's scheduled frequency with its observed reliability; walking access, egress and transfers are included. It reflects how the network runs now, not the timetable.`});
+  if(_lastDiversity!=null||a.osm)m.push({title:'Land-use diversity',body:`Shannon diversity index over amenity-category shares in the catchment, normalised to 0–100. Higher values indicate a more even mix of functions, not more of them.`});
+  if(a.history)m.push({title:'Transit reliability',body:`The share of arrivals within −60…+300 s of schedule across the catchment's stops, weighted by observation count, over roughly 30 days of archived vehicle positions sampled every 2 minutes. Stops with fewer than 30 matched observations are excluded. Graded A 80%+ down to F below 40%.`});
+  if(a.realestate)m.push({title:'Real estate market',body:`Median asking prices for the selected property type across the catchment. Sale medians are per m²; rent medians are the full monthly price. These are asking prices, not recorded transactions.`});
+  if(a.zoning)m.push({title:'Zoning coefficients',body:`K1 is the maximum building footprint ratio, K2 the maximum floor-area ratio and K3 the minimum greening ratio, each defined per functional zone. Where a parcel spans several zones each coefficient is applied to that zone's share of the parcel area and the results summed. Indicative height is K2 ÷ K1, rounded down. Statutory minimums for area, width and depth follow the Tbilisi Land-Use Master Plan, Article 16; width and depth are measured from the parcel's minimum-area oriented bounding rectangle, not its street frontage.`});
+  if(a.relief)m.push({title:'Relief',body:`Slope and aspect are derived on the fly from a digital terrain model over the study area. Slope classes are fixed bands, not quantiles, so they are comparable between reports.`});
+  if(a.solar)m.push({title:'Solar potential',body:`Irradiation modelled from the terrain's slope and aspect against the sun path for this latitude. It describes the ground and roof surface, and accounts for neither shading by adjacent buildings nor local cloud climatology.`});
+  if(a.wind)m.push({title:'Wind',body:`Mean wind speed and power density at the study area from Global Wind Atlas / Open-Meteo reanalysis. Annual yield is a reference figure for a 5 kW turbine and is not a siting assessment.`});
+  if(a.canopy)m.push({title:'Tree canopy',body:`Share of the study area classified as tree cover in ESA WorldCover at 10 m resolution. At that resolution individual street trees are not resolved, so dense street planting reads lower than it appears on the ground.`});
+  if(a.lst)m.push({title:'Land surface temperature',body:`Mean land surface temperature from Landsat 8 thermal bands at 30 m, over cloud-free summer passes. This is the temperature of the ground and roof surfaces, which runs warmer than air temperature.`});
+  if(m.length)m.push({title:'Data availability',body:`These layers rely on external services. When one is unavailable the affected component is omitted and, where applicable, the index renormalises over the components that remain; such omissions are noted in the relevant section.`});
+  return m;
+}
+
+// ── the payload ────────────────────────────────────────────────────────────
+async function _rptCollect(){
+  const a=_rptActive();
+  const rp=window._rptParcel||{};
+  const areaLbl=_transitAreaLabel();
+  const uviRaw=_lastNearbyCounts?_computeUVI(_lastNearbyCounts):null;
+  const sources=[];
+  const src=(label,text)=>{if(!sources.some(s=>s.label===label))sources.push({label,text});};
+
+  // ── subject ──
+  // The registry address arrives as "Street 37, Vake, Tbilisi"; the street line
+  // is the headline and the rest becomes the place line under it.
+  const addr=(_currentParcelGeoJSON&&rp.address&&rp.address!=='—')
+    ?String(rp.address).split(',').map(x=>x.trim()).filter(Boolean):null;
+  const subject={
+    title:addr&&addr.length?addr[0]
+         :_isDrawnArea?'Drawn area of interest'
+         :(areaLbl||'Analysis area'),
+    place:addr&&addr.length>1?addr.slice(1).join(', '):null,
+    parcelCode:rp.code&&rp.code!=='—'?rp.code:null,
+    areaLabel:_rptM2(_currentParcelAreaM2),
+    reportId:'Report '+new Date().toISOString().slice(0,10)+(rp.code&&rp.code!=='—'?'-'+rp.code.replace(/\./g,''):''),
+  };
+  if(!subject.areaLabel&&areaLbl)subject.areaLabel=areaLbl;
+  if(a.zoning&&window._rptZones&&window._rptZones.length)
+    subject.dominantZone=_zoneNameEN(window._rptZones[0].kve_zona)||null;
+  if(!subject.parcelCode&&!subject.dominantZone){
+    const on=[a.relief&&'Relief',a.solar&&'Solar',a.wind&&'Wind',a.canopy&&'Canopy',
+      a.lst&&'Surface temp',a.zoning&&'Zoning',a.realestate&&'Real estate',
+      (a.transit||a.history)&&'Transit'].filter(Boolean);
+    if(on.length)subject.analysesLabel=on.join(' · ');
+  }
+
+  // ── headline tiles ──
+  const tiles=[];
+  if(uviRaw)tiles.push({label:'Livability',value:uviRaw.score+'/100',
+    sub:'Grade '+uviRaw.grade+(uviRaw.partial?' · provisional':''),color:'#8b5cf6'});
+  if(a.realestate&&_reLast&&_reLast.res){
+    const pt=_reLast.pt,rent=_reDeal===2;
+    const st=((_reLast.res.stats)||[]).find(x=>x.property_type_id===pt)||(_reLast.res.stats||[])[0];
+    const ty=(typeof _RE_TYPES!=='undefined'&&_RE_TYPES[pt])||{en:'Property'};
+    if(st&&rent&&st.median_price_gel!=null)
+      tiles.push({label:(ty.en||'Property')+' rent',value:'₾'+_rptNum(Math.round(st.median_price_gel)),
+        sub:'median / month',color:'#6366f1'});
+    else if(st&&st.median_sqm_gel!=null)
+      tiles.push({label:(ty.en||'Property')+' price',value:'₾'+_rptNum(Math.round(st.median_sqm_gel)),
+        sub:'median / m²',color:'#6366f1'});
+  }
+  if(a.canopy&&typeof _canopyPct==='number'&&_canopyPct!=null)
+    tiles.push({label:'Tree canopy',value:_canopyPct+'%',sub:'of study area',
+      color:_canopyPct>40?'#16a34a':_canopyPct>20?'#65a30d':'#ea580c'});
+  if(a.lst&&typeof _lstMean==='number'&&_lstMean!=null)
+    tiles.push({label:'Surface temp',value:_lstMean+'°C',sub:'mean',
+      color:_lstMean>40?'#dc2626':_lstMean>35?'#ea580c':'#d97706'});
+  if(_currentParcelAreaM2)tiles.push({label:'Parcel area',value:_rptM2(_currentParcelAreaM2),
+    sub:subject.parcelCode||'',color:'#0284c7'});
+  else if(areaLbl)tiles.push({label:'Catchment',value:(areaLbl.split('·')[0]||'').trim(),
+    sub:(areaLbl.split('·')[1]||'').trim(),color:'#0284c7'});
+
+  // ── findings ──
+  const f={};
+  if(_currentParcelGeoJSON){
+    const rows=_rptRows([
+      ['Parcel code',rp.code],['Area',_rptM2(_currentParcelAreaM2)],['Parcel type',rp.type],
+      ['Ownership type',rp.ownershipType],['Address',rp.address],
+      ['Registered',rp.regDate?_rptDate(rp.regDate):null],
+      ['Owner(s)',(rp.owners&&rp.owners.length?rp.owners.map(o=>o.name).filter(Boolean).join('; '):rp.ownersRaw)],
+    ]);
+    if(rows.length){
+      f.ownership={rows,owners:(rp.owners||[]).filter(o=>o.id).map(o=>({name:o.name,id:o.id,type:o.type}))};
+      src('Ownership & registration','National Agency of Public Registry (NAPR), Georgia');
+    }
+  }
+  if(a.zoning&&window._rptZones&&window._rptZones.length){
+    const zs=window._rptZones;
+    const withK=zs.filter(z=>z.k1!=null||z.k2!=null||z.k3!=null);
+    const use=withK.length?withK:zs;
+    let tf=0,ta=0,tg=0;
+    const zones=use.map(z=>{
+      const fp=z.k1!=null?Math.round((z.area||0)*z.k1):null;
+      const fa=z.k2!=null?Math.round((z.area||0)*z.k2):null;
+      const gr=z.k3!=null?Math.round((z.area||0)*z.k3):null;
+      if(fp)tf+=fp; if(fa)ta+=fa; if(gr)tg+=gr;
+      return {name:_zoneNameEN(z.kve_zona)||'Zone',pct:z.pct!=null?z.pct+'%':null,
+        k1:z.k1!=null?z.k1.toFixed(2):null,k2:z.k2!=null?z.k2.toFixed(2):null,
+        k3:z.k3!=null?z.k3.toFixed(2):null,
+        footprint:fp?_rptNum(fp):null,floorArea:fa?_rptNum(fa):null,greening:gr?_rptNum(gr):null,
+        height:(z.k1&&z.k2)?Math.floor(z.k2/z.k1)+' fl':null};
+    });
+    f.zoning={multi:use.length>1,hasCoefficients:!!withK.length,noDev:!!_noDevZone,zones,
+      totals:{footprint:tf?_rptNum(tf):null,floorArea:ta?_rptNum(ta):null,
+        greening:tg?_rptNum(tg):null,height:(tf&&ta)?Math.floor(ta/tf)+' fl':null}};
+    if(_setbackRingAreaM2&&_currentParcelAreaM2)
+      f.zoning.setback={label:`${_rptNum(_setbackRingAreaM2)} m² (${Math.round(_setbackRingAreaM2/_currentParcelAreaM2*100)}% of parcel)`};
+    src('Zoning','Tbilisi Municipality functional-zone WFS; K-coefficient limits per zone');
+  }
+  {
+    const reg=(typeof _zoneDominantRegs==='function')?_zoneDominantRegs():null;
+    if(reg&&_currentParcelGeoJSON&&(reg.minArea||reg.minWidth||reg.minDepth||reg.maxH)){
+      const dims=(typeof _parcelDims==='function')?_parcelDims(_currentParcelGeoJSON):null;
+      const pa=_currentParcelAreaM2||0;
+      const rows=[];
+      if(reg.minArea)rows.push({requirement:'Minimum parcel area',
+        required:'required '+_rptNum(reg.minArea)+' m²',actual:'actual '+_rptNum(Math.round(pa))+' m²',
+        verdict:pa>=reg.minArea?'ok':'below'});
+      if(reg.minWidth&&dims)rows.push({requirement:'Minimum width',
+        required:'required '+reg.minWidth+' m',actual:'actual '+dims.width.toFixed(1)+' m',
+        verdict:dims.width>=reg.minWidth-0.5?'ok':'below'});
+      if(reg.minDepth&&dims)rows.push({requirement:'Minimum depth',
+        required:'required '+reg.minDepth+' m',actual:'actual '+dims.depth.toFixed(1)+' m',
+        verdict:dims.depth>=reg.minDepth-0.5?'ok':'below'});
+      if(reg.maxH)rows.push({requirement:'Maximum building height',
+        required:'limit '+reg.maxH+' '+(reg.maxHUnit==='floors'?'floors':'m'),actual:null,verdict:null});
+      if(rows.length){
+        f.article16={rows,note:'Dimensions are taken from the minimum-area oriented bounding rectangle of the parcel geometry; requirements per the Tbilisi Land-Use Master Plan, Article 16.'};
+        src('Statutory requirements','Tbilisi Land-Use Master Plan, Article 16');
+      }
+    }
+  }
+  if(_lastPermitFound){
+    const pm=_lastPermitFound,d=_lastPermitDecision||{};
+    const rows=_rptRows([
+      ['Latest application',pm.docNo+(pm.count>1?` (of ${pm.count} on this parcel)`:'')],
+      ['Address',pm.address],['Nomenclature',_lastPermitNomen],
+      ['Registered',d.registered],['Issued',d.issued],['Result',d.result],
+    ]);
+    if(rows.length){
+      f.permits={rows,conflict:!!((typeof _permitZoningConflict==='function')&&_permitZoningConflict())};
+      src('Construction permits','Tbilisi Architecture Service (docs.tbilisi.gov.ge); ms.gov.ge spatial permit registry');
+    }
+  }
+  if(a.syntax||a.orient||a.osm){
+    const rows=[];
+    if(a.syntax&&_syntaxGJ&&_syntaxGJ.features){
+      const degs=_syntaxGJ.features.map(x=>Number(x.properties?.connectivity||0));
+      rows.push(['Connectivity',`${degs.length} segments · ${_morphTotalKm(_syntaxGJ).toFixed(1)} km · mean node degree ${(degs.reduce((x,b)=>x+b,0)/Math.max(1,degs.length)).toFixed(2)}, max ${Math.max(...degs)}`]);
+    }
+    if(a.orient&&_orientGJ&&_orientGJ.features)
+      rows.push(['Orientation',`${_orientGJ.features.length} street ways${_orientDom?', dominant axis '+_orientDom:''}`]);
+    if(a.osm){const ol=_rptCardLines('osm-legend');if(ol.length)rows.push(['Urban functions',ol.join(' · ')]);}
+    if(rows.length){f.street={rows};src('Street network & functions','© OpenStreetMap contributors (Overpass API)');}
+  }
+  if(a.relief){
+    const typeLbl={height:'Elevation',slope:'Slope',aspect:'Aspect'}[_reliefActiveType]||_reliefActiveType;
+    const rows=[['Active layer',typeLbl]];
+    const rl=_rptCardLines('relief-stats');
+    if(rl.length)rows.push(['Statistics',rl.join(' · ')]);
+    f.relief={rows};
+    src('Elevation','Digital terrain model; slope and aspect derived on the fly');
+  }
+  if(a.solar||a.wind){
+    const rows=[];
+    if(a.solar){const sl=_rptCardLines('solar-result');if(sl.length)rows.push(['Solar',sl.join(' · ')]);
+      src('Solar','Slope/aspect irradiation model on the DTM');}
+    if(a.wind){const wd=_windData||{};
+      const bits=[wd.speed&&wd.speed.toFixed(1)+' m/s mean',
+        wd.powerDensity&&Math.round(wd.powerDensity)+' W/m²',
+        wd.annualYield&&_rptNum(Math.round(wd.annualYield))+' kWh/yr (5 kW ref.)'].filter(Boolean);
+      if(bits.length)rows.push(['Wind',bits.join(' · ')]);
+      src('Wind','Global Wind Atlas / Open-Meteo');}
+    if(rows.length)f.energy={rows};
+  }
+  if(a.canopy||a.lst){
+    const rows=[];
+    if(a.canopy&&typeof _canopyPct==='number'&&_canopyPct!=null){
+      rows.push(['Tree canopy',_canopyPct+'% covered']);
+      src('Tree canopy','ESA WorldCover 10 m (2021)');}
+    if(a.lst&&typeof _lstMean==='number'&&_lstMean!=null){
+      rows.push(['Land surface temperature',_lstMean+'°C mean']);
+      src('Land surface temperature','Landsat 8, 30 m resolution');}
+    if(rows.length)f.climate={rows};
+  }
+  if(a.transit||a.history||a.crashes||a.schools||a.kg||a.parking){
+    const headline=[],rows=[];
+    const c=_lastNearbyCounts;
+    if(a.history&&_histStats&&_histStats.length){
+      const tot=_histStats.reduce((x,r)=>({m:x.m+Number(r.n_matched),ot:x.ot+Number(r.on_time),l:x.l+Number(r.late)}),{m:0,ot:0,l:0});
+      if(tot.m){
+        headline.push({value:Math.round(100*tot.ot/tot.m)+'% on time',label:'Matched arrivals, last 30 days'});
+        rows.push(['Transit reliability',`${Math.round(100*tot.ot/tot.m)}% on-time, ${Math.round(100*tot.l/tot.m)}% late (>5 min) across ${_rptNum(tot.m)} matched arrivals at ${_histStats.length} stop-route pairs`]);
+      }
+      src('Transit reliability','TTC vehicle positions archived every 2 min; arrivals matched to timetable (on-time −60…+300 s); stops with <30 observations excluded');
+    }else if(a.transit){
+      const n=(_ttcRenderedStops&&_ttcRenderedStops.length)||0;
+      if(n)headline.push({value:n+' stops',label:'Public transport in the study area'});
+      src('Transit stops','Tbilisi Transport Company (TTC)');
+    }
+    if(a.parking){
+      const ps=window._parkingSummary;
+      if(ps){
+        headline.push({value:`${ps.totalAreas} areas · ~${_rptNum(ps.cars)} cars`,label:'On-street parking capacity'});
+        rows.push(['Parking split',`${ps.freeAreas} free · ${ps.paidAreas} paid; ${_rptNum(ps.cars)} car spaces${ps.accessible?`, ${ps.accessible} accessible`:''}${ps.ev?`, ${ps.ev} EV`:''}${ps.taxi?`, ${ps.taxi} taxi`:''}${ps.distribution?`, ${ps.distribution} loading`:''}`]);
+      }
+      src('Parking','Tbilisi Municipality on-street parking dataset');
+    }
+    if(a.crashes){rows.push(['Road incidents','Layer active — see map']);
+      src('Road incidents','Ministry of Internal Affairs crash records');}
+    if(a.schools||a.kg)src('Education facilities','Open municipal datasets');
+    if(headline.length||rows.length)f.mobility={headline:headline.slice(0,3),rows};
+  }
+  if(_lastNearbyCounts){
+    const c=_lastNearbyCounts;
+    const rows=_rptRows([
+      ['Schools',c.schools||null],['Kindergartens',c.kg||null],
+      ['Transit stops',c.transit?`${c.transit}${c.routes&&c.routes.length?` — ${c.routes.length} routes (${c.routes.join(', ')})`:''}${c.reliability?` · reliability ${c.reliability.grade} (${c.reliability.pct}% on-time)`:''}`:null],
+      ['Parking areas',((c.parkingFree||0)+(c.parkingPaid||0))?`${(c.parkingFree||0)+(c.parkingPaid||0)} (${c.parkingFree||0} free · ${c.parkingPaid||0} paid) — capacity ~${_rptNum(c.pkCars||0)} cars`:null],
+      ['Land-use diversity',_lastDiversity!=null?`${_lastDiversity}/100 (Shannon SDI, normalised)`:null],
+    ]);
+    if(rows.length){
+      f.amenities={rows};
+      src('Amenities','Public schools & kindergartens (municipal open data); transit stops & routes (Tbilisi Transport Company); on-street parking (Tbilisi Municipality); land-use POIs © OpenStreetMap via Overpass API');
+    }
+  }
+  if(a.realestate&&_reLast&&_reLast.res){
+    // The two median fields are mode-dependent: in sale mode median_price_gel is
+    // the full asking price, not a rent. Report only the metric the user is
+    // actually looking at, and label the column for it.
+    const rent=_reDeal===2;
+    const stats=_reLast.res.stats||[];
+    const rows=stats.map(st=>{
+      const ty=(typeof _RE_TYPES!=='undefined'&&_RE_TYPES[st.property_type_id])||{en:'Property'};
+      const v=rent?st.median_price_gel:st.median_sqm_gel;
+      const n=st.n_priced!=null?st.n_priced:(st.n!=null?st.n:null);
+      return {type:ty.en||'Property',
+        value:v!=null?'₾'+_rptNum(Math.round(v)):null,
+        listings:n!=null?_rptNum(n):null};
+    }).filter(r=>r.value);
+    if(rows.length){
+      f.realestate={rows,
+        valueHeader:rent?'Median rent / month':'Median price / m²',
+        note:_reLast.res.total_in_area?`${_rptNum(_reLast.res.total_in_area)} listings in the catchment, collected over the preceding 30 days. Asking prices, not recorded transactions.`:null};
+      src('Real estate','Aggregated public listings, 30-day window');
+    }
+  }
+
+  // ── map, framed on the study area ──
+  let pin=null;
+  try{pin=(_parcelClickPin&&_parcelClickPin.getLngLat&&_parcelClickPin.getLngLat())
+    ||(_locPinMarker&&_locPinMarker.getLngLat&&_locPinMarker.getLngLat())
+    ||(parcelCentroid?{lng:parcelCentroid[0],lat:parcelCentroid[1]}:null);}catch(_){}
+  const frameGeom=_isoData?.features?.[0]?.geometry||_currentParcelGeoJSON||
+    ((a.realestate&&_reLast&&_reLast.iso)||null);
+  const cap=await _rptCaptureMap(frameGeom,pin);
+  let map_=null;
+  if(cap){
+    map_={dataUrl:cap.dataUrl,
+      caption:_currentParcelGeoJSON?'Study area and selected parcel.':'Study area.',
+      legend:_rptLegendGroups(a)};
+    src('Basemap','© Mapbox, © OpenStreetMap contributors');
+  }
+  if(a.isochrone)src('Catchment',`${_accMinutes||10}-minute ${_accMode||'walking'} isochrone (${_accMode==='transit'?'TTC network, observed times':'Mapbox Isochrone API'})`);
+
+  return {
+    issued:_rptDate(new Date()),
+    filename:'urbanyx_report'+(subject.parcelCode?'_'+subject.parcelCode.replace(/\./g,''):''),
+    siteLabel:'urbanyx.zaxis.ge',
+    subject,
+    map:map_,
+    tiles,
+    summary:_rptExecutiveSummary(uviRaw)||null,
+    uvi:uviRaw?{name:UVI_NAME,score:uviRaw.score,grade:uviRaw.grade,
+      gradeLabel:_RPT_GRADE_WORD[uviRaw.grade]||'',partial:!!uviRaw.partial,
+      parts:uviRaw.parts.map(p=>({label:p.label,score:Math.round(p.s*100),weight:p.w.toFixed(2).replace(/0$/,'')}))}:null,
+    findings:f,
+    methodology:_rptMethodology(a),
+    sources,
+  };
+}
+
+// ── the export ─────────────────────────────────────────────────────────────
+async function exportReportPDF(){
+  // No plan gate: the export is open to any signed-in user. The request still
+  // carries a Supabase token because the render endpoint requires one.
+  if(!currentUser){openAuthModal("view-signup");return;}
+  const a=_rptActive();
+  if(!a.anyArea&&!a.anyParcel){
+    showToast(lang==='ka'?'აქტიური ანალიზი არ არის':'No active analysis layers to export');return;
+  }
+  showToast(lang==='ka'?'რეპორტი მზადდება…':'Composing report…');
+  let payload;
+  try{
+    payload=await _rptCollect();
+  }catch(e){
+    console.warn('report collect:',e);
+    showToast('Report failed: '+(e.message||''));return;
+  }
+  try{
+    const{data:{session}}=await sb.auth.getSession();
+    const res=await fetch(BACKEND_URL+'/api/report/pdf',{
+      method:'POST',
+      headers:{'Authorization':'Bearer '+session.access_token,'Content-Type':'application/json'},
+      body:JSON.stringify(payload),
+    });
+    if(!res.ok){
+      let msg='';try{msg=(await res.json()).error||'';}catch(_){}
+      // 402/401 are decisions, not faults — surface them rather than silently
+      // falling back to a report the user was not entitled to.
+      if(res.status===401||res.status===402){showToast(msg||'Report export requires a Pro plan');return;}
+      throw new Error(msg||('HTTP '+res.status));
+    }
+    const blob=await res.blob();
+    const url=URL.createObjectURL(blob);
+    const link=document.createElement('a');
+    link.href=url;link.download=(payload.filename||'urbanyx_report')+'.pdf';
+    document.body.appendChild(link);link.click();link.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),4000);
+    logFeatureUse('pdf_export').catch(()=>{});
+  }catch(e){
+    console.warn('report pdf (server):',e);
+    showToast(lang==='ka'?'სერვერი მიუწვდომელია — ლოკალური ვერსია':'Report service unavailable — generating locally');
+    try{await _exportReportPDFLegacy();}
+    catch(e2){console.warn('report pdf (legacy):',e2);showToast('PDF failed: '+(e2.message||''));}
+  }
 }
