@@ -17130,14 +17130,15 @@ function _rptMenuToggle(btn){
   let m=document.getElementById('rpt-menu');
   if(m){m.remove();document.getElementById('nav-report-icon')?.style.setProperty('opacity','0.55');return;}
   const isKa=lang==='ka';
-  const btnS='display:block;width:100%;text-align:left;font-family:inherit;font-size:0.66rem;font-weight:600;padding:8px 11px;border-radius:8px;margin-top:5px;cursor:pointer;';
+  const btnS='display:flex;align-items:center;gap:9px;width:100%;text-align:left;font-family:inherit;font-size:0.66rem;font-weight:600;line-height:1.3;padding:8px 11px;border-radius:8px;margin-top:5px;cursor:pointer;';
+  const icS='width:17px;height:17px;flex-shrink:0';
   m=document.createElement('div');m.id='rpt-menu';
   m.style.cssText='position:fixed;left:52px;z-index:220;width:198px;background:var(--glass-bg,rgba(8,8,8,0.9));backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,0.09);border-radius:11px;padding:9px 10px 11px;box-shadow:0 8px 28px rgba(0,0,0,0.45)';
   m.innerHTML=
     `<div style="font-family:ui-monospace,monospace;font-size:0.52rem;letter-spacing:0.14em;text-transform:uppercase;color:rgba(255,255,255,0.35)">${isKa?'რეპორტი':'Report'}</div>`+
-    `<button onclick="_rptMenuToggle();exportReportPDF()" style="${btnS}border:1px solid rgba(167,139,250,0.3);background:rgba(167,139,250,0.12);color:#a78bfa">${isKa?'PDF რეპორტის ექსპორტი':'Export PDF report'}</button>`+
-    `<button onclick="_rptMenuToggle();_rptExportGeoJSON()" style="${btnS}border:1px solid rgba(255,255,255,0.09);background:rgba(255,255,255,0.03);color:rgba(255,255,255,0.6)">${isKa?'აქტიური ფენები · GeoJSON':'Active layers · GeoJSON'}</button>`+
-    `<button onclick="_rptMenuToggle();_rptExportGeoTIFF()" style="${btnS}border:1px solid rgba(255,255,255,0.09);background:rgba(255,255,255,0.03);color:rgba(255,255,255,0.6)">${isKa?'აქტიური რასტრები · GeoTIFF':'Active rasters · GeoTIFF'}</button>`;
+    `<button onclick="_rptMenuToggle();exportReportPDF()" style="${btnS}border:1px solid rgba(167,139,250,0.3);background:rgba(167,139,250,0.12);color:#a78bfa"><img src="analysis-logos/pdf-report.svg" style="${icS}">${isKa?'PDF რეპორტის ექსპორტი':'Export PDF report'}</button>`+
+    `<button onclick="_rptMenuToggle();_rptExportGeoJSON()" style="${btnS}border:1px solid rgba(255,255,255,0.09);background:rgba(255,255,255,0.03);color:rgba(255,255,255,0.6)"><img src="analysis-logos/export-vector.svg" style="${icS}">${isKa?'აქტიური ფენები · GeoJSON':'Active layers · GeoJSON'}</button>`+
+    `<button onclick="_rptMenuToggle();_rptExportGeoTIFF()" style="${btnS}border:1px solid rgba(255,255,255,0.09);background:rgba(255,255,255,0.03);color:rgba(255,255,255,0.6)"><img src="analysis-logos/export-raster.svg" style="${icS}">${isKa?'აქტიური რასტრები · GeoTIFF':'Active rasters · GeoTIFF'}</button>`;
   document.body.appendChild(m);
   const r=btn?.getBoundingClientRect();
   if(r){m.style.left=Math.max(8,Math.min(r.left,window.innerWidth-208))+'px';}
