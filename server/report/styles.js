@@ -187,6 +187,19 @@ th.n,td.n{text-align:right}
 .stoptbl.wide td.nm{max-width:130px}
 .dotcell{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px}
 
+/* ranked stops: sorted, and coloured along one green-to-red scale */
+.rank{list-style:none;margin:2px 0 0;padding:0;display:grid;gap:9px}
+.rank .it{break-inside:avoid}
+.rank .hd{display:flex;align-items:baseline;gap:5px}
+.rank .hd .pos{font-size:9px;font-weight:600;color:var(--faint);min-width:9px}
+.rank .hd .n{font-size:11.5px;font-weight:600;color:var(--ink);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rank .hd .r{font-size:9.5px;color:var(--faint);white-space:nowrap}
+.rank .hd .v{margin-left:auto;font-size:11.5px;font-weight:600;white-space:nowrap}
+.rank .bar{height:5px;border-radius:2.5px;background:var(--rule-mid);margin-top:4px;overflow:hidden}
+.rank .bar i{display:block;height:100%;border-radius:2.5px}
+.rank .sub2{font-size:10px;color:var(--mute);margin-top:2.5px}
+
 /* segment grid: period × day type × time band */
 .segtbl td,.segtbl th{font-size:10.5px;padding:5px 0}
 .segtbl td.nm{color:var(--ink)}

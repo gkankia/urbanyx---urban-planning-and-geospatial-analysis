@@ -17683,10 +17683,14 @@ function _rptTransitHistory(rows,meta){
     return {
       name:(s&&s.name)||String(r.stop_id),
       routes:((s&&s.routes)||[]).map(rt=>rt.shortName).filter(Boolean).join(', '),
-      matched:m||null,
-      observations:Number(r.n_obs||0)||null,
+      matched:m?_rptNum(m):null,
+      observations:Number(r.n_obs||0)?_rptNum(Number(r.n_obs)):null,
       onTime:m?Math.round(100*Number(r.on_time||0)/m)+'%':null,
       late:m?Math.round(100*Number(r.late||0)/m)+'%':null,
+      // Numeric twins for the ranked lists, which colour and size each entry
+      // by its on-time share rather than only printing it.
+      onTimeNum:m?Math.round(100*Number(r.on_time||0)/m):null,
+      lateNum:m?Math.round(100*Number(r.late||0)/m):null,
       delayMed:_rptMins(r.delay_med_s==null?null:Number(r.delay_med_s)),
       delayP90:_rptMins(r.delay_p90_s==null?null:Number(r.delay_p90_s)),
       ewt:r.ewt_s==null?null:'+'+(Number(r.ewt_s)/60).toFixed(1)+' min',

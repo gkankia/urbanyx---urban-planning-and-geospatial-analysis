@@ -233,6 +233,23 @@ function simpleBlock(title, tone, body) {
 
 
 const GRADE_COLOR = { A: "#16a34a", B: "#65a30d", C: "#d97706", D: "#ea580c", E: "#dc2626", F: "#dc2626" };
+// Continuous green-to-red ramp over the on-time share, anchored on the same
+// breaks the map legend uses (>=80 good, 60-80 warning, <60 bad) so a stop's
+// colour means the same thing in the report as it does on screen.
+const RAMP = [[35, [190, 24, 33]], [50, [220, 38, 38]], [60, [234, 88, 12]],
+              [70, [217, 119, 6]], [80, [101, 163, 13]], [90, [22, 163, 74]],
+              [100, [21, 128, 61]]];
+function rampColor(pct) {
+  if (pct == null || !isFinite(pct)) return "#a1a1aa";
+  const p = Math.max(RAMP[0][0], Math.min(100, pct));
+  let a = RAMP[0], b = RAMP[RAMP.length - 1];
+  for (let i = 0; i < RAMP.length - 1; i++) {
+    if (p >= RAMP[i][0] && p <= RAMP[i + 1][0]) { a = RAMP[i]; b = RAMP[i + 1]; break; }
+  }
+  const k = b[0] === a[0] ? 0 : (p - a[0]) / (b[0] - a[0]);
+  const hex = (n) => Math.round(n).toString(16).padStart(2, "0");
+  return "#" + a[1].map((v, i) => hex(v + (b[1][i] - v) * k)).join("");
+}
 const CLS_COLOR = { ok: "#16a34a", warn: "#d97706", bad: "#dc2626" };
 
 // Transit reliability, reported in full rather than summarised: the panel's
@@ -281,9 +298,23 @@ function transitHistory(h) {
       `<div class="r"><span class="k">${esc(v.label)}</span><span>${(v.bands || []).map(esc).join(" · ")}</span></div>`
     ).join("")}</div></div>` : "";
 
+  // Ranked, and coloured by where each stop sits on the same scale the map
+  // uses — so the two lists read as one gradient, best green to worst red,
+  // rather than as two anonymous lists that happen to be ordered.
   const rank = (title, list) => !has(list) ? "" :
-    `<div><h3 class="sub">${esc(title)}</h3>${lines(list.map((s) =>
-      [s.name + (s.routes ? ` · ${s.routes}` : ""), `${s.late} late · ${s.onTime} on time · median ${s.delayMed || "—"}`]))}</div>`;
+    `<div><h3 class="sub">${esc(title)}</h3><ol class="rank">${list.map((s, i) => {
+      const c = rampColor(s.onTimeNum);
+      const w = Math.max(2, Math.min(100, s.onTimeNum == null ? 0 : s.onTimeNum));
+      return `<li class="it">
+        <div class="hd"><span class="pos">${i + 1}</span>
+          <span class="n">${esc(s.name)}</span>
+          ${s.routes ? `<span class="r">${esc(s.routes)}</span>` : ""}
+          <span class="v" style="color:${c}">${esc(s.onTime || "—")}</span></div>
+        <div class="bar"><i style="width:${w}%;background:${c}"></i></div>
+        <div class="sub2">${esc(s.late || "—")} late · median ${esc(s.delayMed || "—")}${
+          s.matched ? ` · ${esc(s.matched)} matched` : ""}</div>
+      </li>`;
+    }).join("")}</ol></div>`;
 
   const ranked = (has(h.worst) || has(h.best))
     ? `<div class="blk loose" style="display:grid;grid-template-columns:1fr 1fr;gap:24px">

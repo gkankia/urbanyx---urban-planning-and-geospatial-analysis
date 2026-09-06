@@ -88,9 +88,10 @@ Response is `application/pdf` as an attachment.
       "thresholds": [{ "label": "On-time share", "bands": ["≥80%","60–80%","<60%"] }],
       "hourly": [{ "hour": 6, "delayMin": 1.2, "matched": 840 }],
       "worst": [ /* stop rows */ ], "best": [ /* stop rows */ ],
-      "stops": [{ "name": "…", "routes": "4, 12", "matched": 240, "observations": 700,
+      "stops": [{ "name": "…", "routes": "4, 12", "matched": "240", "observations": "700",
                   "onTime": "79%", "late": "20%", "delayMed": "+5.2 min",
                   "delayP90": "+13.3 min", "ewt": "+2.5 min", "headway": "18.7 min",
+                  "onTimeNum": 79, "lateNum": 20,   // ranked lists colour by these
                   "thin": false, "cls": "warn" }],
       "stopCount": 20, "thinCount": 4
     },
@@ -185,7 +186,10 @@ shape one at a time, each mirroring what its panel actually holds.
   formatting, unit conversion or localisation — the frontend already knows the
   report language and the app's own conventions.
 - **Colours** must be `#rgb`/`#rrggbb`; anything else falls back to a neutral.
-  This is the only styling the client can influence.
+  This is the only styling the client can influence. The ranked-stop gradient is
+  the exception: it is computed server-side from `onTimeNum`, along a ramp
+  anchored on the same 80 / 60 breaks the map legend uses, so a stop's colour
+  means the same thing in the report as it does on screen.
 - **The map capture must carry no legend.** Send the legend as `map.legend` so
   the Map page can typeset it. The capture is used once, in that section.
 - Sending an empty `findings`, `methodology` and `sources` produces a valid
